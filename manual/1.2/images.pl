@@ -361,7 +361,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{multline}frac{partial^2J(omega)}{partial{mathfrak{G}{_jcdotpartialS^2_f}=-frac{au_i)tau_s}{(tau_s+tau_i)^2+(omegatau_stau_i)^2}Bigg)Bigg).{multline};LFS=11;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="654" HEIGHT="127" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="653" HEIGHT="127" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img250.png"
  ALT="\begin{multline}
 \frac{\partial^2 J(\omega)}{\partial \mathfrak{G}_j \cdot \par...
@@ -513,7 +513,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/displaystylefrac{partialJ(omega)}{partial{mathfrak{O}{_j}=frac{2}{5}sum_{i=-k}^ktau_s+tau_i)tau_s}{(tau_s+tau_i)^2+(omegatau_stau_i)^2}Bigg).;MSF=1.6;LFS=11;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="643" HEIGHT="73" ALIGN="MIDDLE" BORDER="0"
+ WIDTH="644" HEIGHT="73" ALIGN="MIDDLE" BORDER="0"
  SRC="|."$dir".q|img242.png"
  ALT="$\displaystyle \frac{\partial J(\omega)}{\partial \mathfrak{O}_j} = \frac{2}{5} ...
 ...\tau_s + \tau_i)\tau_s}{(\tau_s + \tau_i)^2 + (\omega \tau_s \tau_i)^2} \Bigg).$">|; 
@@ -1752,7 +1752,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/mathfrak{S};MSF=1.6;LFS=11;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="19" HEIGHT="15" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="19" HEIGHT="16" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img115.png"
  ALT="$ \mathfrak{S}$">|; 
 
@@ -1979,7 +1979,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/displaystyleJ(omega)=frac{2}{5}sum_{i=-k}^kc_icdottau_iBigg(frac{S^2}{1+(omegatatau_s+tau_i)tau_s}{(tau_s+tau_i)^2+(omegatau_stau_i)^2}Bigg).;MSF=1.6;LFS=11;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="619" HEIGHT="73" ALIGN="MIDDLE" BORDER="0"
+ WIDTH="620" HEIGHT="73" ALIGN="MIDDLE" BORDER="0"
  SRC="|."$dir".q|img220.png"
  ALT="$\displaystyle J(\omega) = \frac{2}{5} \sum_{i=-k}^k c_i \cdot \tau_i \Bigg( \fr...
 ...\tau_s + \tau_i)\tau_s}{(\tau_s + \tau_i)^2 + (\omega \tau_s \tau_i)^2} \Bigg).$">|; 
@@ -2377,7 +2377,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/displaystylefrac{partial^2J(omega)}{partial{mathfrak{O}{_jcdotpartialS^2_f}=fractau_s+tau_i)tau_s}{(tau_s+tau_i)^2+(omegatau_stau_i)^2}Bigg).;MSF=1.6;LFS=11;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="670" HEIGHT="73" ALIGN="MIDDLE" BORDER="0"
+ WIDTH="671" HEIGHT="73" ALIGN="MIDDLE" BORDER="0"
  SRC="|."$dir".q|img272.png"
  ALT="$\displaystyle \frac{\partial^2 J(\omega)}{\partial \mathfrak{O}_j \cdot \partia...
 ...\tau_s + \tau_i)\tau_s}{(\tau_s + \tau_i)^2 + (\omega \tau_s \tau_i)^2} \Bigg).$">|; 
