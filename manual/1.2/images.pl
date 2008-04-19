@@ -286,14 +286,6 @@ $cached_env_img{$key} = q|<IMG
  SRC="|."$dir".q|img333.png"
  ALT="$\displaystyle C_\mathrm{O}(\tau) = \frac{1}{5} \sum^1_{i=-1} c_i e^{-\frac{\tau}{\tau_i}}.$">|; 
 
-$key = q/%latex2htmlidmarker26732displaystylerenewedcommand{theequation}{theparentequatio8&={S^2,tau_f,S^2_f,tau_s,R_{ex}},m9&={R_{ex}}.{align};MSF=1.6;LFS=11;TAGS=R;AAT/;
-$cached_env_img{$key} = q|<IMG
- WIDTH="4" HEIGHT="31" ALIGN="MIDDLE" BORDER="0"
- SRC="|."$dir".q|img104.png"
- ALT="% latex2html id marker 26732
-$\displaystyle \renewedcommand{theequation}{\thepa...
-...\ m8 &amp;= \{S^2, \tau_f, S^2_f, \tau_s, R_{ex}\},\ m9 &amp;= \{R_{ex}\}.\end{align}$">|; 
-
 $key = q/mathfrak{D}_r;MSF=1.6;LFS=11;AAT/;
 $cached_env_img{$key} = q|<IMG
  WIDTH="26" HEIGHT="34" ALIGN="MIDDLE" BORDER="0"
@@ -317,6 +309,14 @@ $cached_env_img{$key} = q|<IMG
  WIDTH="29" HEIGHT="14" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img113.png"
  ALT="$ m1$">|; 
+
+$key = q/%latex2htmlidmarker27242displaystylerenewedcommand{theequation}{theparentequatio,tau_f,S^2_f,tau_s,R_{ex}},tm9&={tau_m,R_{ex}}.{align};MSF=1.6;LFS=11;TAGS=R;AAT/;
+$cached_env_img{$key} = q|<IMG
+ WIDTH="5" HEIGHT="31" ALIGN="MIDDLE" BORDER="0"
+ SRC="|."$dir".q|img107.png"
+ ALT="% latex2html id marker 27242
+$\displaystyle \renewedcommand{theequation}{\thepa...
+..., S^2, \tau_f, S^2_f, \tau_s, R_{ex}\},\ tm9 &amp;= \{\tau_m, R_{ex}\}.\end{align}$">|; 
 
 $key = q/mathrm{R}_2(theta);MSF=1.6;LFS=11;AAT/;
 $cached_env_img{$key} = q|<IMG
@@ -439,6 +439,14 @@ $cached_env_img{$key} = q|<IMG
 \Bigg)
 \Bigg).
 \end{multline}">|; 
+
+$key = q/%latex2htmlidmarker27229displaystylerenewedcommand{theequation}{theparentequatio8&={S^2,tau_f,S^2_f,tau_s,R_{ex}},m9&={R_{ex}}.{align};MSF=1.6;LFS=11;TAGS=R;AAT/;
+$cached_env_img{$key} = q|<IMG
+ WIDTH="4" HEIGHT="31" ALIGN="MIDDLE" BORDER="0"
+ SRC="|."$dir".q|img104.png"
+ ALT="% latex2html id marker 27229
+$\displaystyle \renewedcommand{theequation}{\thepa...
+...\ m8 &amp;= \{S^2, \tau_f, S^2_f, \tau_s, R_{ex}\},\ m9 &amp;= \{R_{ex}\}.\end{align}$">|; 
 
 $key = q/displaystyleC_mathrm{I}(tau)=S^2+(1-S^2)e^{-tauslashtau_e},;MSF=1.6;LFS=11;AAT/;
 $cached_env_img{$key} = q|<IMG
@@ -1670,18 +1678,18 @@ $cached_env_img{$key} = q|<IMG
  SRC="|."$dir".q|img102.png"
  ALT="$ \tau_0$">|; 
 
-$key = q/^mathrm{th};MSF=1.6;LFS=11;AAT/;
-$cached_env_img{$key} = q|<IMG
- WIDTH="18" HEIGHT="20" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img404.png"
- ALT="$ ^\mathrm{th}$">|; 
-
 $key = q/displaystyle+(1-3mathfrak{D}_r)Bigg(delta_y^2left(delta_yfrac{partial^2delta_y}{rac{partialdelta_y}{partialmathfrak{O}_j}right)phantom{Bigg)};MSF=1.6;LFS=11;AAT/;
 $cached_env_img{$key} = q|<IMG
  WIDTH="373" HEIGHT="71" ALIGN="MIDDLE" BORDER="0"
  SRC="|."$dir".q|img300.png"
  ALT="$\displaystyle + (1 - 3\mathfrak{D}_r) \Bigg( \delta_y^2 \left( \delta_y \frac{\...
 ...cdot \frac{\partial \delta_y}{\partial \mathfrak{O}_j} \right) \phantom{\Bigg)}$">|; 
+
+$key = q/^mathrm{th};MSF=1.6;LFS=11;AAT/;
+$cached_env_img{$key} = q|<IMG
+ WIDTH="18" HEIGHT="20" ALIGN="BOTTOM" BORDER="0"
+ SRC="|."$dir".q|img404.png"
+ ALT="$ ^\mathrm{th}$">|; 
 
 $key = q/includegraphics[width=0.8textwidth,bb=00437523]{imagesslashmodel_freeslashinit_diff_est.eps.gz};LFS=11;AAT/;
 $cached_env_img{$key} = q|<IMG
@@ -1721,14 +1729,6 @@ $cached_env_img{$key} = q|<IMG
  SRC="|."$dir".q|img305.png"
  ALT="$\displaystyle + \delta_x^2 \left( \delta_y \frac{\partial^2 \delta_y}{\partial ...
 ...cdot \frac{\partial \delta_y}{\partial \mathfrak{O}_j} \right) \phantom{\Bigg)}$">|; 
-
-$key = q/%latex2htmlidmarker26745displaystylerenewedcommand{theequation}{theparentequatio,tau_f,S^2_f,tau_s,R_{ex}},tm9&={tau_m,R_{ex}}.{align};MSF=1.6;LFS=11;TAGS=R;AAT/;
-$cached_env_img{$key} = q|<IMG
- WIDTH="5" HEIGHT="31" ALIGN="MIDDLE" BORDER="0"
- SRC="|."$dir".q|img107.png"
- ALT="% latex2html id marker 26745
-$\displaystyle \renewedcommand{theequation}{\thepa...
-..., S^2, \tau_f, S^2_f, \tau_s, R_{ex}\},\ tm9 &amp;= \{\tau_m, R_{ex}\}.\end{align}$">|; 
 
 $key = q/displaystylefrac{partial^2J(omega)}{partialS^2cdotpartialtau_e}=-frac{2}{5}sum_{etau_i)^2}{left((tau_e+tau_i)^2+(omegatau_etau_i)^2right)^2}.;MSF=1.6;LFS=11;AAT/;
 $cached_env_img{$key} = q|<IMG
