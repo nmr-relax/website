@@ -500,162 +500,148 @@
     </td>
   </tr></table>
   
-  <pre class="literalblock">
-The model-free minimisation class.
-
-This class should be initialised before every calculation.
-
-
-Arguments
-~~~~~~~~~
-
-equation:  The model-free equation string which should be either 'mf_orig' or 'mf_ext'.
-
-param_types:  An array of the parameter types used in minimisation.
-
-relax_data:  An array containing the experimental relaxation values.
-
-errors:  An array containing the experimental errors.
-
-bond_length:  The fixed bond length in meters.
-
-csa:  The fixed CSA value.
-
-diff_type:  The diffusion tensor string which should be either 'sphere', 'spheroid', or
-'ellipsoid'.
-
-diff_params:  An array with the diffusion parameters.
-
-scaling_matrix:  A diagonal matrix of scaling factors.
-
+  <p>The model-free minimisation class.</p>
+  <p>This class should be initialised before every calculation.</p>
+  <h1 class="heading">Arguments</h1>
+    <p>equation:  The model-free equation string which should be either 
+    'mf_orig' or 'mf_ext'.</p>
+    <p>param_types:  An array of the parameter types used in 
+    minimisation.</p>
+    <p>relax_data:  An array containing the experimental relaxation 
+    values.</p>
+    <p>errors:  An array containing the experimental errors.</p>
+    <p>bond_length:  The fixed bond length in meters.</p>
+    <p>csa:  The fixed CSA value.</p>
+    <p>diff_type:  The diffusion tensor string which should be either 
+    'sphere', 'spheroid', or 'ellipsoid'.</p>
+    <p>diff_params:  An array with the diffusion parameters.</p>
+    <p>scaling_matrix:  A diagonal matrix of scaling factors.</p>
+  <h1 class="heading">Additional layer of equations to simplify the relaxation equations, gradients, and Hessians.</h1>
+    <p>The R1 and R2 equations are left alone, while the NOE is calculated 
+    from the R1 and sigma_noe values.</p>
+  <h1 class="heading">The relaxation equations</h1>
+    <p>Data structure:  data.ri Dimension:  1D, (relaxation data) Type:  
+    numpy, float64 Dependencies:  data.ri_prime Required by:  data.chi2, 
+    data.dchi2, data.d2chi2</p>
+    <p>The equations are:</p>
+<pre class="literalblock">
+   R1()  =  R1'()
 
 
-Additional layer of equations to simplify the relaxation equations, gradients, and Hessians.
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   R2()  =  R2'()
 
-The R1 and R2 equations are left alone, while the NOE is calculated from the R1 and
-sigma_noe values.
-
-
-The relaxation equations
-~~~~~~~~~~~~~~~~~~~~~~~~
-
-Data structure:  data.ri
-Dimension:  1D, (relaxation data)
-Type:  numpy, float64
-Dependencies:  data.ri_prime
-Required by:  data.chi2, data.dchi2, data.d2chi2
-
-
-R1()  =  R1'()
-
-
-R2()  =  R2'()
-
-               gH   sigma_noe()
-NOE()  =  1 +  -- . -----------
-               gN      R1()
-
-
-
-The relaxation gradients
-~~~~~~~~~~~~~~~~~~~~~~~~
-
-Data structure:  data.dri
-Dimension:  2D, (parameters, relaxation data)
-Type:  numpy array, float64
-Dependencies:  data.ri_prime, data.dri_prime
-Required by:  data.dchi2, data.d2chi2
-
-
- dR1()       dR1'()
--------  =  -------
-dthetaj     dthetaj
-
-
- dR2()       dR2'()
--------  =  -------
-dthetaj     dthetaj
-
-
- dNOE()     gH      1      /        dsigma_noe()                    dR1()  \ 
--------  =  -- . ------- . | R1() . ------------  -  sigma_noe() . ------- |
-dthetaj     gN   R1()**2   \          dthetaj                      dthetaj /
-
-
-
-The relaxation Hessians
-~~~~~~~~~~~~~~~~~~~~~~~
-
-Data structure:  data.d2ri
-Dimension:  3D, (parameters, parameters, relaxation data)
-Type:  numpy array, float64
-Dependencies:  data.ri_prime, data.dri_prime, data.d2ri_prime
-Required by:  data.d2chi2
-
-
-     d2R1()             d2R1'()
----------------  =  ---------------
-dthetai.dthetaj     dthetai.dthetaj
-
-
-     d2R2()             d2R2'()
----------------  =  ---------------
-dthetai.dthetaj     dthetai.dthetaj
-
-
-    d2NOE()         gH      1      /               /      dR1()     dR1()                  d2R1()     \ 
----------------  =  -- . ------- . | sigma_noe() . | 2 . ------- . -------  -  R1() . --------------- |
-dthetai.dthetaj     gN   R1()**3   \               \     dthetai   dthetaj            dthetai.dthetaj /
-
-             / dsigma_noe()    dR1()       dR1()    dsigma_noe()             d2sigma_noe()  \ \ 
-    - R1() . | ------------ . -------  +  ------- . ------------  -  R1() . --------------- | |
-             \   dthetai      dthetaj     dthetai     dthetaj               dthetai.dthetaj / /
-
-
-
-The chi-sqared equation
-~~~~~~~~~~~~~~~~~~~~~~~
-        _n_
-        \    (Ri - Ri()) ** 2
-Chi2  =  &gt;   ----------------
-        /__    sigma_i ** 2
-        i=1
-
-where:
-    Ri are the values of the measured relaxation data set.
-    Ri() are the values of the back calculated relaxation data set.
-    sigma_i are the values of the error set.
-
-
-The chi-sqared gradient
-~~~~~~~~~~~~~~~~~~~~~~~
-               _n_
- dChi2         \   /  Ri - Ri()      dRi()  \ 
--------  =  -2  &gt;  | ----------  .  ------- |
-dthetaj        /__ \ sigma_i**2     dthetaj /
-               i=1
-
-where:
-    Ri are the values of the measured relaxation data set.
-    Ri() are the values of the back calculated relaxation data set.
-    sigma_i are the values of the error set.
-
-
-The chi-sqared Hessian
-~~~~~~~~~~~~~~~~~~~~~~
-                     _n_
-     d2chi2          \       1      /  dRi()     dRi()                         d2Ri()     \ 
----------------  = 2  &gt;  ---------- | ------- . -------  -  (Ri - Ri()) . --------------- |
-dthetaj.dthetak      /__ sigma_i**2 \ dthetaj   dthetak                   dthetaj.dthetak /
-                     i=1
-
-where:
-    Ri are the values of the measured relaxation data set.
-    Ri() are the values of the back calculated relaxation data set.
-    sigma_i are the values of the error set.
-
+                  gH   sigma_noe()
+   NOE()  =  1 +  -- . -----------
+                  gN      R1()
 </pre>
+  <h1 class="heading">The relaxation gradients</h1>
+    <p>Data structure:  data.dri Dimension:  2D, (parameters, relaxation 
+    data) Type:  numpy array, float64 Dependencies:  data.ri_prime, 
+    data.dri_prime Required by:  data.dchi2, data.d2chi2</p>
+    <p>The equations are:</p>
+<pre class="literalblock">
+    dR1()       dR1'()
+   -------  =  -------
+   dthetaj     dthetaj
+
+
+    dR2()       dR2'()
+   -------  =  -------
+   dthetaj     dthetaj
+
+
+    dNOE()     gH      1      /        dsigma_noe()                    dR1()  \ 
+   -------  =  -- . ------- . | R1() . ------------  -  sigma_noe() . ------- |
+   dthetaj     gN   R1()**2   \          dthetaj                      dthetaj /
+</pre>
+  <h1 class="heading">The relaxation Hessians</h1>
+    <p>Data structure:  data.d2ri Dimension:  3D, (parameters, parameters, 
+    relaxation data) Type:  numpy array, float64 Dependencies:  
+    data.ri_prime, data.dri_prime, data.d2ri_prime Required by:  
+    data.d2chi2</p>
+    <p>The equations are:</p>
+<pre class="literalblock">
+        d2R1()             d2R1'()
+   ---------------  =  ---------------
+   dthetai.dthetaj     dthetai.dthetaj
+
+
+        d2R2()             d2R2'()
+   ---------------  =  ---------------
+   dthetai.dthetaj     dthetai.dthetaj
+
+
+       d2NOE()         gH      1      /               /      dR1()     dR1()                  d2R1()     \ 
+   ---------------  =  -- . ------- . | sigma_noe() . | 2 . ------- . -------  -  R1() . --------------- |
+   dthetai.dthetaj     gN   R1()**3   \               \     dthetai   dthetaj            dthetai.dthetaj /
+
+                / dsigma_noe()    dR1()       dR1()    dsigma_noe()             d2sigma_noe()  \ \ 
+       - R1() . | ------------ . -------  +  ------- . ------------  -  R1() . --------------- | |
+                \   dthetai      dthetaj     dthetai     dthetaj               dthetai.dthetaj / /
+</pre>
+  <h1 class="heading">The chi-sqared equation</h1>
+    <p>The equation is:</p>
+<pre class="literalblock">
+           _n_
+           \    (Ri - Ri()) ** 2
+   chi2  =  &gt;   ----------------
+           /__    sigma_i ** 2
+           i=1
+</pre>
+    <p>where:</p>
+    <ul>
+      <li>
+        Ri are the values of the measured relaxation data set.
+      </li>
+      <li>
+        Ri() are the values of the back calculated relaxation data set.
+      </li>
+      <li>
+        sigma_i are the values of the error set.
+      </li>
+    </ul>
+  <h1 class="heading">The chi-sqared gradient</h1>
+    <p>The equation is:</p>
+<pre class="literalblock">
+                  _n_
+    dchi2         \   /  Ri - Ri()      dRi()  \ 
+   -------  =  -2  &gt;  | ----------  .  ------- |
+   dthetaj        /__ \ sigma_i**2     dthetaj /
+                  i=1
+</pre>
+    <p>where:</p>
+    <ul>
+      <li>
+        Ri are the values of the measured relaxation data set.
+      </li>
+      <li>
+        Ri() are the values of the back calculated relaxation data set.
+      </li>
+      <li>
+        sigma_i are the values of the error set.
+      </li>
+    </ul>
+  <h1 class="heading">The chi-sqared Hessian</h1>
+    <p>The equation is:</p>
+<pre class="literalblock">
+                        _n_
+        d2chi2          \       1      /  dRi()     dRi()                         d2Ri()     \ 
+   ---------------  = 2  &gt;  ---------- | ------- . -------  -  (Ri - Ri()) . --------------- |
+   dthetaj.dthetak      /__ sigma_i**2 \ dthetaj   dthetak                   dthetaj.dthetak /
+                        i=1
+</pre>
+    <p>where:</p>
+    <ul>
+      <li>
+        Ri are the values of the measured relaxation data set.
+      </li>
+      <li>
+        Ri() are the values of the back calculated relaxation data set.
+      </li>
+      <li>
+        sigma_i are the values of the error set.
+      </li>
+    </ul>
   <dl class="fields">
   </dl>
 </td></tr></table>
@@ -975,7 +961,7 @@ where:
 <table border="0" cellpadding="0" cellspacing="0" width="100%%">
   <tr>
     <td align="left" class="footer">
-    Generated by Epydoc 3.0.1 on Thu Oct  9 00:17:35 2008
+    Generated by Epydoc 3.0.1 on Sat Nov 29 19:13:31 2008
     </td>
     <td align="right" class="footer">
       <a target="mainFrame" href="http://epydoc.sourceforge.net"
