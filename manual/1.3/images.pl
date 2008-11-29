@@ -205,6 +205,14 @@ $cached_env_img{$key} = q|<IMG
  ALT="$\displaystyle \frac{\partial^2 J(\omega)}{\partial S^2_s \cdot \partial \tau_s}...
 ...u_s \tau_i)^2}{\left((\tau_s + \tau_i)^2 + (\omega \tau_s \tau_i)^2 \right)^2}.$">|; 
 
+$key = q/%latex2htmlidmarker32859displaystylerenewedcommand{theequation}{theparentequatio8&={S^2,tau_f,S^2_f,tau_s,R_{ex}},m9&={R_{ex}}.{align};MSF=1.6;LFS=11;TAGS=R;AAT/;
+$cached_env_img{$key} = q|<IMG
+ WIDTH="4" HEIGHT="31" ALIGN="MIDDLE" BORDER="0"
+ SRC="|."$dir".q|img102.png"
+ ALT="% latex2html id marker 32859
+$\displaystyle \renewedcommand{theequation}{\thepa...
+...\ m8 &amp;= \{S^2, \tau_f, S^2_f, \tau_s, R_{ex}\},\ m9 &amp;= \{R_{ex}\}.\end{align}$">|; 
+
 $key = q/tau_f;MSF=1.6;LFS=11;AAT/;
 $cached_env_img{$key} = q|<IMG
  WIDTH="21" HEIGHT="31" ALIGN="MIDDLE" BORDER="0"
@@ -844,14 +852,6 @@ $cached_env_img{$key} = q|<IMG
  WIDTH="436" HEIGHT="625" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img205.png"
  ALT="\includegraphics[width=0.8\textwidth, bb=0 0 461 697]{images/model_free/new_protocol.eps.gz}">|; 
-
-$key = q/%latex2htmlidmarker32843displaystylerenewedcommand{theequation}{theparentequatio,tau_f,S^2_f,tau_s,R_{ex}},tm9&={tau_m,R_{ex}}.{align};MSF=1.6;LFS=11;TAGS=R;AAT/;
-$cached_env_img{$key} = q|<IMG
- WIDTH="5" HEIGHT="31" ALIGN="MIDDLE" BORDER="0"
- SRC="|."$dir".q|img105.png"
- ALT="% latex2html id marker 32843
-$\displaystyle \renewedcommand{theequation}{\thepa...
-..., S^2, \tau_f, S^2_f, \tau_s, R_{ex}\},\ tm9 &amp;= \{\tau_m, R_{ex}\}.\end{align}$">|; 
 
 $key = q/lVertprVert;MSF=1.6;LFS=11;AAT/;
 $cached_env_img{$key} = q|<IMG
@@ -2747,6 +2747,14 @@ $cached_env_img{$key} = q|<IMG
  SRC="|."$dir".q|img208.png"
  ALT="$ \widehat\mathfrak{U}$">|; 
 
+$key = q/%latex2htmlidmarker32872displaystylerenewedcommand{theequation}{theparentequatio,tau_f,S^2_f,tau_s,R_{ex}},tm9&={tau_m,R_{ex}}.{align};MSF=1.6;LFS=11;TAGS=R;AAT/;
+$cached_env_img{$key} = q|<IMG
+ WIDTH="5" HEIGHT="31" ALIGN="MIDDLE" BORDER="0"
+ SRC="|."$dir".q|img105.png"
+ ALT="% latex2html id marker 32872
+$\displaystyle \renewedcommand{theequation}{\thepa...
+..., S^2, \tau_f, S^2_f, \tau_s, R_{ex}\},\ tm9 &amp;= \{\tau_m, R_{ex}\}.\end{align}$">|; 
+
 $key = q/{subequations}{align}frac{partialc_{-2}}{partialtau_m}&=0,frac{partialc_{-1}}{pac{partialc_{2}}{partialtau_m}&=0.{align}{subequations};MSF=1.6;LFS=11;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
  WIDTH="556" HEIGHT="239" ALIGN="BOTTOM" BORDER="0"
@@ -3039,14 +3047,6 @@ $cached_env_img{$key} = q|<IMG
  WIDTH="33" HEIGHT="31" ALIGN="MIDDLE" BORDER="0"
  SRC="|."$dir".q|img34.png"
  ALT="$ \sigma_{sat}$">|; 
-
-$key = q/%latex2htmlidmarker32830displaystylerenewedcommand{theequation}{theparentequatio8&={S^2,tau_f,S^2_f,tau_s,R_{ex}},m9&={R_{ex}}.{align};MSF=1.6;LFS=11;TAGS=R;AAT/;
-$cached_env_img{$key} = q|<IMG
- WIDTH="4" HEIGHT="31" ALIGN="MIDDLE" BORDER="0"
- SRC="|."$dir".q|img102.png"
- ALT="% latex2html id marker 32830
-$\displaystyle \renewedcommand{theequation}{\thepa...
-...\ m8 &amp;= \{S^2, \tau_f, S^2_f, \tau_s, R_{ex}\},\ m9 &amp;= \{R_{ex}\}.\end{align}$">|; 
 
 $key = q/displaystylefrac{partiale}{partial{mathfrak{D}{_r}=frac{1}{{mathfrak{R}{^3}bigg[{mathfrak{D}{_rleft(delta_z^4+2delta_x^2delta_y^2right)bigg].;MSF=1.6;LFS=11;AAT/;
 $cached_env_img{$key} = q|<IMG
