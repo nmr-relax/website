@@ -54,12 +54,28 @@ $key = q/model:_m4/;
 $ref_files{$key} = "$dir".q|node77.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/table14/;
+$ref_files{$key} = "$dir".q|node246.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/eq:_maths:_J_w__model-free_generic/;
 $ref_files{$key} = "$dir".q|node122.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/table49/;
+$ref_files{$key} = "$dir".q|node367.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/table22/;
+$ref_files{$key} = "$dir".q|node332.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/table33/;
+$ref_files{$key} = "$dir".q|node365.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/fig:_core_design/;
-$ref_files{$key} = "$dir".q|node189.html|; 
+$ref_files{$key} = "$dir".q|node192.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_Ri_:_Rex_SPMquot_/;
@@ -74,6 +90,10 @@ $key = q/eq:_Ri_:_d2R1_dmfj.dCSA/;
 $ref_files{$key} = "$dir".q|node120.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/table5/;
+$ref_files{$key} = "$dir".q|node241.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/eq:_Ri_:_dsigmaNOE_dmf/;
 $ref_files{$key} = "$dir".q|node119.html|; 
 $noresave{$key} = "$nosave";
@@ -84,6 +104,14 @@ $noresave{$key} = "$nosave";
 
 $key = q/model:_tm1/;
 $ref_files{$key} = "$dir".q|node77.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/table27/;
+$ref_files{$key} = "$dir".q|node363.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/table10/;
+$ref_files{$key} = "$dir".q|node246.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_J_terms:_JR2c_/;
@@ -110,20 +138,44 @@ $key = q/eq:_Ri_:_d2R2_dmfj.dCSA/;
 $ref_files{$key} = "$dir".q|node120.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/table25/;
+$ref_files{$key} = "$dir".q|node363.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/table39/;
+$ref_files{$key} = "$dir".q|node366.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/table19/;
+$ref_files{$key} = "$dir".q|node263.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/eq:_Ri_:_Rex_/;
 $ref_files{$key} = "$dir".q|node117.html|; 
 $noresave{$key} = "$nosave";
 
-$key = q/eq:_R1/;
-$ref_files{$key} = "$dir".q|node74.html|; 
+$key = q/table1/;
+$ref_files{$key} = "$dir".q|node232.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_Diso_lim/;
 $ref_files{$key} = "$dir".q|node76.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/eq:_R1/;
+$ref_files{$key} = "$dir".q|node74.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/table35/;
+$ref_files{$key} = "$dir".q|node365.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/eq:_J_terms:_JR1c/;
 $ref_files{$key} = "$dir".q|node117.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/table11/;
+$ref_files{$key} = "$dir".q|node246.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_Ri_:_d2R2_dRex.dr/;
@@ -146,6 +198,18 @@ $key = q/eq:_R/;
 $ref_files{$key} = "$dir".q|node131.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/table30/;
+$ref_files{$key} = "$dir".q|node364.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/table17/;
+$ref_files{$key} = "$dir".q|node263.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/table20/;
+$ref_files{$key} = "$dir".q|node304.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/eq:_Ri_:_d2R2_dmfj.dr/;
 $ref_files{$key} = "$dir".q|node120.html|; 
 $noresave{$key} = "$nosave";
@@ -156,6 +220,10 @@ $noresave{$key} = "$nosave";
 
 $key = q/eq:_ellipsoid_c1/;
 $ref_files{$key} = "$dir".q|node76.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/table46/;
+$ref_files{$key} = "$dir".q|node366.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_Ri_:_d2R2_dCSA2/;
@@ -186,6 +254,10 @@ $key = q/eq:_Ri_:_R2/;
 $ref_files{$key} = "$dir".q|node118.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/table36/;
+$ref_files{$key} = "$dir".q|node365.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/eq:_spaceset_gradient/;
 $ref_files{$key} = "$dir".q|node105.html|; 
 $noresave{$key} = "$nosave";
@@ -194,16 +266,32 @@ $key = q/eq:_Ri_:_d2sigmaNOE_dRex.dr/;
 $ref_files{$key} = "$dir".q|node120.html|; 
 $noresave{$key} = "$nosave";
 
-$key = q/eq:_Ri_:_d2R1_dmfj.dRex/;
-$ref_files{$key} = "$dir".q|node120.html|; 
+$key = q/table29/;
+$ref_files{$key} = "$dir".q|node364.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/table44/;
+$ref_files{$key} = "$dir".q|node366.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/model:_m7/;
 $ref_files{$key} = "$dir".q|node77.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/eq:_Ri_:_d2R1_dmfj.dRex/;
+$ref_files{$key} = "$dir".q|node120.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/eq:_Ri_:_d_SPMquot_/;
 $ref_files{$key} = "$dir".q|node117.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/table31/;
+$ref_files{$key} = "$dir".q|node364.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/table13/;
+$ref_files{$key} = "$dir".q|node246.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/model:_tm4/;
@@ -216,6 +304,10 @@ $noresave{$key} = "$nosave";
 
 $key = q/eq:_ellipsoid_c2/;
 $ref_files{$key} = "$dir".q|node76.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/table8/;
+$ref_files{$key} = "$dir".q|node241.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_J_terms:_JR1c_/;
@@ -238,20 +330,32 @@ $key = q/eq:_Ri_:_dR2_dCSA/;
 $ref_files{$key} = "$dir".q|node119.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/table42/;
+$ref_files{$key} = "$dir".q|node366.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/table50/;
+$ref_files{$key} = "$dir".q|node367.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/eq:_Da_lim/;
 $ref_files{$key} = "$dir".q|node76.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/table7/;
+$ref_files{$key} = "$dir".q|node241.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/model:_tm3/;
 $ref_files{$key} = "$dir".q|node77.html|; 
 $noresave{$key} = "$nosave";
 
-$key = q/eq:_Ri_:_d2R1_dCSA.dr/;
-$ref_files{$key} = "$dir".q|node120.html|; 
-$noresave{$key} = "$nosave";
-
 $key = q/eq:_J_terms:_JR2d/;
 $ref_files{$key} = "$dir".q|node117.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/eq:_Ri_:_d2R1_dCSA.dr/;
+$ref_files{$key} = "$dir".q|node120.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_Ri_:_d2R2_dCSA.dr/;
@@ -276,6 +380,18 @@ $noresave{$key} = "$nosave";
 
 $key = q/eq:_maths:_chi-squared/;
 $ref_files{$key} = "$dir".q|node109.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/table2/;
+$ref_files{$key} = "$dir".q|node232.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/table23/;
+$ref_files{$key} = "$dir".q|node340.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/table37/;
+$ref_files{$key} = "$dir".q|node366.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_quadratic_model/;
@@ -306,6 +422,10 @@ $key = q/eq:_J_w__model-free_generic/;
 $ref_files{$key} = "$dir".q|node75.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/table26/;
+$ref_files{$key} = "$dir".q|node363.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/eq:_Ri_:_d2R1_dr2/;
 $ref_files{$key} = "$dir".q|node120.html|; 
 $noresave{$key} = "$nosave";
@@ -318,12 +438,24 @@ $key = q/commit_log_format/;
 $ref_files{$key} = "$dir".q|node177.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/table15/;
+$ref_files{$key} = "$dir".q|node246.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/eq:_Ri_:_d2sigmaNOE_dmfj.dr/;
 $ref_files{$key} = "$dir".q|node120.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_Augmented_Lagrangian/;
 $ref_files{$key} = "$dir".q|node78.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/table34/;
+$ref_files{$key} = "$dir".q|node365.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/table40/;
+$ref_files{$key} = "$dir".q|node366.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_Diso_ellipsoid_def/;
@@ -346,6 +478,10 @@ $key = q/eq:_Ri_:_dR1_dr/;
 $ref_files{$key} = "$dir".q|node119.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/table21/;
+$ref_files{$key} = "$dir".q|node304.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/fig:_gradient_construction/;
 $ref_files{$key} = "$dir".q|node105.html|; 
 $noresave{$key} = "$nosave";
@@ -360,6 +496,10 @@ $noresave{$key} = "$nosave";
 
 $key = q/eq:_spheroid_tau-1/;
 $ref_files{$key} = "$dir".q|node76.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/table48/;
+$ref_files{$key} = "$dir".q|node367.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_ellipsoid_d/;
@@ -390,12 +530,12 @@ $key = q/eq:_trust_region/;
 $ref_files{$key} = "$dir".q|node78.html|; 
 $noresave{$key} = "$nosave";
 
-$key = q/eq:_ellipsoid_tau-2/;
-$ref_files{$key} = "$dir".q|node76.html|; 
-$noresave{$key} = "$nosave";
-
 $key = q/eq:_J_terms:_JsigmaNOEd_/;
 $ref_files{$key} = "$dir".q|node117.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/eq:_ellipsoid_tau-2/;
+$ref_files{$key} = "$dir".q|node76.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_Ri_trans:_R2/;
@@ -414,64 +554,68 @@ $key = q/eq:_Ri_:_d2R2_dmfj.dRex/;
 $ref_files{$key} = "$dir".q|node120.html|; 
 $noresave{$key} = "$nosave";
 
-$key = q/model:_tm2/;
-$ref_files{$key} = "$dir".q|node77.html|; 
-$noresave{$key} = "$nosave";
-
 $key = q/eq:_J_terms:_JR1d/;
 $ref_files{$key} = "$dir".q|node117.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/model:_tm2/;
+$ref_files{$key} = "$dir".q|node77.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/fig:_Hessian_kite/;
 $ref_files{$key} = "$dir".q|node106.html|; 
 $noresave{$key} = "$nosave";
 
-$key = q/eq:_spherical_correlation_function/;
-$ref_files{$key} = "$dir".q|node146.html|; 
+$key = q/table16/;
+$ref_files{$key} = "$dir".q|node246.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/fig:_NOE_plot/;
 $ref_files{$key} = "$dir".q|node61.html|; 
 $noresave{$key} = "$nosave";
 
-$key = q/eq:_Ri_:_d2sigmaNOE_dr2/;
-$ref_files{$key} = "$dir".q|node120.html|; 
+$key = q/eq:_spherical_correlation_function/;
+$ref_files{$key} = "$dir".q|node146.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_dipolar_constant/;
 $ref_files{$key} = "$dir".q|node74.html|; 
 $noresave{$key} = "$nosave";
 
-$key = q/model:_tm7/;
-$ref_files{$key} = "$dir".q|node77.html|; 
+$key = q/eq:_Ri_:_d2sigmaNOE_dr2/;
+$ref_files{$key} = "$dir".q|node120.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_J_terms:_JsigmaNOEd/;
 $ref_files{$key} = "$dir".q|node117.html|; 
 $noresave{$key} = "$nosave";
 
-$key = q/eq:_Ri_:_d2R1_dmfj.dr/;
-$ref_files{$key} = "$dir".q|node120.html|; 
-$noresave{$key} = "$nosave";
-
-$key = q/eq:_ellipsoid_c-1/;
-$ref_files{$key} = "$dir".q|node76.html|; 
-$noresave{$key} = "$nosave";
-
-$key = q/eq:_Ri_:_d_/;
-$ref_files{$key} = "$dir".q|node117.html|; 
+$key = q/model:_tm7/;
+$ref_files{$key} = "$dir".q|node77.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_J_terms:_JR1d_SPMquot_/;
 $ref_files{$key} = "$dir".q|node117.html|; 
 $noresave{$key} = "$nosave";
 
-$key = q/eq:_ellipsoid_e/;
+$key = q/eq:_Ri_:_d_/;
+$ref_files{$key} = "$dir".q|node117.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/eq:_ellipsoid_c-1/;
 $ref_files{$key} = "$dir".q|node76.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/eq:_Ri_:_d2R1_dmfj.dr/;
+$ref_files{$key} = "$dir".q|node120.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_J_terms:_JR2d_SPMquot_/;
 $ref_files{$key} = "$dir".q|node117.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/eq:_ellipsoid_e/;
+$ref_files{$key} = "$dir".q|node76.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_J_terms:_JR1c_SPMquot_/;
@@ -486,32 +630,40 @@ $key = q/eq:_Ri_:_d2sigmaNOE_dmfj.dRex/;
 $ref_files{$key} = "$dir".q|node120.html|; 
 $noresave{$key} = "$nosave";
 
-$key = q/eq:_chi-squared/;
-$ref_files{$key} = "$dir".q|node72.html|; 
-$noresave{$key} = "$nosave";
-
 $key = q/eq:_Ri_:_c_/;
 $ref_files{$key} = "$dir".q|node117.html|; 
 $noresave{$key} = "$nosave";
 
-$key = q/eq:_Ri_:_d2sigmaNOE_dCSA2/;
-$ref_files{$key} = "$dir".q|node120.html|; 
+$key = q/eq:_chi-squared/;
+$ref_files{$key} = "$dir".q|node72.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/model:_m0/;
 $ref_files{$key} = "$dir".q|node77.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/eq:_Ri_:_d2sigmaNOE_dCSA2/;
+$ref_files{$key} = "$dir".q|node120.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/eq:_Ri_:_dR2_dr/;
 $ref_files{$key} = "$dir".q|node119.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/eq:_J_w__model-free_ext_generic/;
+$ref_files{$key} = "$dir".q|node75.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/model:_m1/;
 $ref_files{$key} = "$dir".q|node77.html|; 
 $noresave{$key} = "$nosave";
 
-$key = q/eq:_J_w__model-free_ext_generic/;
-$ref_files{$key} = "$dir".q|node75.html|; 
+$key = q/table24/;
+$ref_files{$key} = "$dir".q|node353.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/table52/;
+$ref_files{$key} = "$dir".q|node367.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_Ri_trans:_R1/;
@@ -520,6 +672,10 @@ $noresave{$key} = "$nosave";
 
 $key = q/eq:_Ri_:_dR2_dmf/;
 $ref_files{$key} = "$dir".q|node119.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/table47/;
+$ref_files{$key} = "$dir".q|node366.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_Ri_:_sigmaNOE/;
@@ -534,6 +690,10 @@ $key = q/eq:_linear_constraint/;
 $ref_files{$key} = "$dir".q|node78.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/table28/;
+$ref_files{$key} = "$dir".q|node363.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/eq:_Ri_:_R1/;
 $ref_files{$key} = "$dir".q|node118.html|; 
 $noresave{$key} = "$nosave";
@@ -546,8 +706,16 @@ $key = q/eq:_chi2/;
 $ref_files{$key} = "$dir".q|node78.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/table38/;
+$ref_files{$key} = "$dir".q|node366.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/sphere_equation/;
 $ref_files{$key} = "$dir".q|node146.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/table12/;
+$ref_files{$key} = "$dir".q|node246.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_J_terms:_JR1d_/;
@@ -556,6 +724,10 @@ $noresave{$key} = "$nosave";
 
 $key = q/eq:_Ri_:_dR1_dCSA/;
 $ref_files{$key} = "$dir".q|node119.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/table4/;
+$ref_files{$key} = "$dir".q|node241.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_J_terms:_JR2d_/;
@@ -598,8 +770,20 @@ $key = q/model:_m6/;
 $ref_files{$key} = "$dir".q|node77.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/table3/;
+$ref_files{$key} = "$dir".q|node232.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/table32/;
+$ref_files{$key} = "$dir".q|node364.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/eq:_Ri_:_d2sigmaNOE_dCSA.dr/;
 $ref_files{$key} = "$dir".q|node120.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/table45/;
+$ref_files{$key} = "$dir".q|node366.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_Diso_spheroid_def/;
@@ -614,8 +798,16 @@ $key = q/eq:_Ri_:_dsigmaNOE_dCSA/;
 $ref_files{$key} = "$dir".q|node119.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/table6/;
+$ref_files{$key} = "$dir".q|node241.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/eq:_Ri_:_d2R2_dRex.dCSA/;
 $ref_files{$key} = "$dir".q|node120.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/table18/;
+$ref_files{$key} = "$dir".q|node263.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/model:_tm5/;
@@ -624,6 +816,10 @@ $noresave{$key} = "$nosave";
 
 $key = q/eq:_spheroid_correlation_function/;
 $ref_files{$key} = "$dir".q|node138.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/table43/;
+$ref_files{$key} = "$dir".q|node366.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_J_terms:_JR2c/;
@@ -642,8 +838,16 @@ $key = q/eq:_Ri_:_d2R1_dRex.dr/;
 $ref_files{$key} = "$dir".q|node120.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/table9/;
+$ref_files{$key} = "$dir".q|node246.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/model:_m3/;
 $ref_files{$key} = "$dir".q|node77.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/table51/;
+$ref_files{$key} = "$dir".q|node367.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_Ri_:_d2R2_dRex2/;
@@ -676,6 +880,10 @@ $noresave{$key} = "$nosave";
 
 $key = q/reporting_bugs/;
 $ref_files{$key} = "$dir".q|node49.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/table41/;
+$ref_files{$key} = "$dir".q|node366.html|; 
 $noresave{$key} = "$nosave";
 
 1;
