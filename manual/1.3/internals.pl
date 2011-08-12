@@ -130,10 +130,6 @@ $key = q/eq:_ellipsoid_c1/;
 $ref_files{$key} = "$dir".q|6_1_Theory.html|; 
 $noresave{$key} = "$nosave";
 
-$key = q/table53/;
-$ref_files{$key} = "$dir".q|10_2_list_functions.html|; 
-$noresave{$key} = "$nosave";
-
 $key = q/table46/;
 $ref_files{$key} = "$dir".q|10_2_list_functions.html|; 
 $noresave{$key} = "$nosave";

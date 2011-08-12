@@ -130,10 +130,6 @@ $key = q/eq:_ellipsoid_c1/;
 $external_labels{$key} = "$URL/" . q|6_1_Theory.html|; 
 $noresave{$key} = "$nosave";
 
-$key = q/table53/;
-$external_labels{$key} = "$URL/" . q|10_2_list_functions.html|; 
-$noresave{$key} = "$nosave";
-
 $key = q/table46/;
 $external_labels{$key} = "$URL/" . q|10_2_list_functions.html|; 
 $noresave{$key} = "$nosave";
@@ -1263,10 +1259,6 @@ $noresave{$key} = "$nosave";
 
 $key = q/eq:_ellipsoid_c1/;
 $external_latex_labels{$key} = q|6.12d|; 
-$noresave{$key} = "$nosave";
-
-$key = q/table53/;
-$external_latex_labels{$key} = q|10.53|; 
 $noresave{$key} = "$nosave";
 
 $key = q/table46/;
