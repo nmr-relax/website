@@ -1,4 +1,4 @@
-# LaTeX2HTML 2002-2-1 (1.71)
+# LaTeX2HTML 2008 (1.71)
 # Associate images original text with physical files.
 
 
@@ -41,7 +41,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{subequations}{align}frac{partial^2mathrm{R}_1(theta)}{partialDeltasigmacdotpartartialDeltasigmacdotpartialr}&=0.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="555" HEIGHT="160" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="556" HEIGHT="160" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img309.png"
  ALT="\begin{subequations}\begin{align}\frac{\partial^2 \mathrm{R}_1(\theta)}{\partial...
 ...eta)}{\partial \Delta\sigma \cdot \partial r} &amp;= 0.\end{align}\end{subequations}">|; 
@@ -61,7 +61,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/hbar;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="15" HEIGHT="17" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="15" HEIGHT="18" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img86.png"
  ALT="$ \hbar$">|; 
 
@@ -85,7 +85,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{subequations}{align}frac{partial^2mathrm{R}_1(theta)}{partialtheta_jcdotpartialscriptscriptstylemathrm{NOE}}}}'.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="556" HEIGHT="175" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="557" HEIGHT="175" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img304.png"
  ALT="\begin{subequations}\begin{align}\frac{\partial^2 \mathrm{R}_1(\theta)}{\partial...
 ... {J_d^{\sigma_{\scriptscriptstyle \mathrm{NOE}}}}'.\end{align}\end{subequations}">|; 
@@ -123,7 +123,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{subequations}{align}tau_{-2}&=(6mathfrak{D}_{iso}-2mathfrak{D}_amathfrak{R})^{-+2mathfrak{D}_amathfrak{R})^{-1},{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="555" HEIGHT="163" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="556" HEIGHT="163" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img417.png"
  ALT="\begin{subequations}\begin{align}\tau_{-2} &amp;= (6\mathfrak{D}_{iso} - 2\mathfrak{...
 ...frak{D}_{iso} + 2\mathfrak{D}_a\mathfrak{R})^{-1}, \end{align}\end{subequations}">|; 
@@ -179,7 +179,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{multline}frac{partial^2J(omega)}{partial{mathfrak{G}{_jcdotpartial{mathfrak{G}{tau_s}{(tau_s+tau_i)^2+(omegatau_stau_i)^2}Bigg)Bigg)Bigg).{multline};LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="651" HEIGHT="464" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="652" HEIGHT="464" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img340.png"
  ALT="\begin{multline}
 \frac{\partial^2 J(\omega)}{\partial \mathfrak{G}_j \cdot \par...
@@ -197,7 +197,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{subequations}{align}frac{partial^2tau_{-2}}{{partialmathfrak{D}_r}^2}&=72left(f+2mathfrak{D}_amathfrak{R})^{-2}.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="555" HEIGHT="332" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="556" HEIGHT="332" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img425.png"
  ALT="\begin{subequations}\begin{align}\frac{\partial^2 \tau_{-2}}{{\partial \mathfrak...
 ...frak{D}_{iso} + 2\mathfrak{D}_a\mathfrak{R})^{-2}. \end{align}\end{subequations}">|; 
@@ -277,7 +277,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{subequations}{align}frac{partial^2c_{-2}}{partialmathfrak{O}_icdotpartialtau_m}athfrak{O}_icdotpartialtau_m}&=0.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="555" HEIGHT="269" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="556" HEIGHT="269" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img401.png"
  ALT="\begin{subequations}\begin{align}\frac{\partial^2 c_{-2}}{\partial \mathfrak{O}_...
 ...artial \mathfrak{O}_i \cdot \partial \tau_m} &amp;= 0. \end{align}\end{subequations}">|; 
@@ -309,7 +309,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/l;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="11" HEIGHT="17" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="11" HEIGHT="18" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img186.png"
  ALT="$ l$">|; 
 
@@ -360,7 +360,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{subequations}{align}frac{partial^2c_{-2}}{partialmathfrak{D}_acdotpartialmathfrD}_acdotpartialmathfrak{D}_r}&=0.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="555" HEIGHT="269" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="556" HEIGHT="269" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img411.png"
  ALT="\begin{subequations}\begin{align}\frac{\partial^2 c_{-2}}{\partial \mathfrak{D}_...
 ...mathfrak{D}_a \cdot \partial \mathfrak{D}_r} &amp;= 0. \end{align}\end{subequations}">|; 
@@ -387,7 +387,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{multline}frac{partial^2J(omega)}{partial{mathfrak{G}{_jcdotpartial{mathfrak{O}{au_i)tau_e}{(tau_e+tau_i)^2+(omegatau_etau_i)^2}Bigg)Bigg).{multline};LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="681" HEIGHT="136" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="682" HEIGHT="136" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img325.png"
  ALT="\begin{multline}
 \frac{\partial^2 J(\omega)}{\partial \mathfrak{G}_j \cdot \par...
@@ -448,7 +448,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{subequations}{align}frac{partialwidehat{mathfrak{D}_y}}{partialalpha}&={pmatrixinalphacosbetacosgamma0{pmatrix}.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="556" HEIGHT="244" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="557" HEIGHT="244" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img462.png"
  ALT="\begin{subequations}\begin{align}\frac{\partial \widehat{\mathfrak{D}_y}}{\parti...
 ...lpha \cos \beta \cos \gamma \ 0 \ \end{pmatrix}. \end{align}\end{subequations}">|; 
@@ -517,14 +517,14 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{subequations}{align}frac{partialtau_{-1}}{partialmathfrak{D}_a}&=2(6mathfrak{D}ak{D}_{iso}+2mathfrak{D}_a)^{-2}.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="556" HEIGHT="162" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="557" HEIGHT="162" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img434.png"
  ALT="\begin{subequations}\begin{align}\frac{\partial \tau_{-1}}{\partial \mathfrak{D}...
 ...&amp;= -2(6\mathfrak{D}_{iso} + 2\mathfrak{D}_a)^{-2}. \end{align}\end{subequations}">|; 
 
 $key = q/{subequations}{align}frac{partialwidehat{mathfrak{D}_{scriptscriptstyleparallel}tasinphisinthetacosphi0{pmatrix}.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="556" HEIGHT="168" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="557" HEIGHT="168" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img474.png"
  ALT="\begin{subequations}\begin{align}\frac{\partial \widehat{\mathfrak{D}_{\scriptsc...
 ...hi \ \sin \theta \cos \phi \ 0 \ \end{pmatrix}. \end{align}\end{subequations}">|; 
@@ -556,7 +556,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{multline}frac{partialJ(omega)}{partial{mathfrak{G}{_j}=frac{2}{5}sum_{i=-k}^kBiau_i)tau_e}{(tau_e+tau_i)^2+(omegatau_etau_i)^2}Bigg)Bigg).{multline};LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="624" HEIGHT="136" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="625" HEIGHT="136" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img320.png"
  ALT="\begin{multline}
 \frac{\partial J(\omega)}{\partial \mathfrak{G}_j} = \frac{2}{...
@@ -573,7 +573,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/CSA;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="45" HEIGHT="17" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="45" HEIGHT="18" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img209.png"
  ALT="$ CSA$">|; 
 
@@ -585,7 +585,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{subequations}{align}frac{partialmathrm{R}_1(theta)}{partialDeltasigma}&=c'J_c^{}}(theta)}{partialDeltasigma}&=0.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="555" HEIGHT="157" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="556" HEIGHT="157" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img299.png"
  ALT="\begin{subequations}\begin{align}\frac{\partial \mathrm{R}_1(\theta)}{\partial \...
 ...\mathrm{NOE}}(\theta)}{\partial \Delta\sigma} &amp;= 0.\end{align}\end{subequations}">|; 
@@ -610,7 +610,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{subequations}{align}frac{partial^2mathrm{R}_1(theta)}{{partialr}^2}&=d''J_d^{ma_{scriptscriptstylemathrm{NOE}}}.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="556" HEIGHT="163" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="557" HEIGHT="163" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img310.png"
  ALT="\begin{subequations}\begin{align}\frac{\partial^2 \mathrm{R}_1(\theta)}{{\partia...
 ...d'' J_d^{\sigma_{\scriptscriptstyle \mathrm{NOE}}}.\end{align}\end{subequations}">|; 
@@ -647,7 +647,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/J;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="16" HEIGHT="17" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="16" HEIGHT="18" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img165.png"
  ALT="$ J$">|; 
 
@@ -703,7 +703,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{subequations}{align}frac{partial^2tau_{-1}}{{partialtau_m}^2}&=2{tau_m}^{-4}(6mak{D}_{iso}+2mathfrak{D}_a)^{-2}.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="555" HEIGHT="221" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="556" HEIGHT="221" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img435.png"
  ALT="\begin{subequations}\begin{align}\frac{\partial^2 \tau_{-1}}{{\partial \tau_m}^2...
 ...{-3} (6\mathfrak{D}_{iso} + 2\mathfrak{D}_a)^{-2}. \end{align}\end{subequations}">|; 
@@ -722,7 +722,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/L;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="17" HEIGHT="17" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="18" HEIGHT="17" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img160.png"
  ALT="$ L$">|; 
 
@@ -734,7 +734,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/displaystylefrac{partial^2J(omega)}{partial{mathfrak{O}{_jcdotpartialS^2_f}=-fratau_s+tau_i)tau_s}{(tau_s+tau_i)^2+(omegatau_stau_i)^2}Bigg).;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="617" HEIGHT="78" ALIGN="MIDDLE" BORDER="0"
+ WIDTH="618" HEIGHT="78" ALIGN="MIDDLE" BORDER="0"
  SRC="|."$dir".q|img348.png"
  ALT="$\displaystyle \frac{\partial^2 J(\omega)}{\partial \mathfrak{O}_j \cdot \partia...
 ...\tau_s + \tau_i)\tau_s}{(\tau_s + \tau_i)^2 + (\omega \tau_s \tau_i)^2} \Bigg).$">|; 
@@ -783,21 +783,21 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/displaystylenabla{mathfrak{L}{_A(theta,lambda^k;mu_k)=nablaf(theta)-sum_{iin{mat}left(lambda_i^k-frac{c_i(theta)}{mu_k}right)nablac_i(theta),;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="492" HEIGHT="70" ALIGN="MIDDLE" BORDER="0"
+ WIDTH="491" HEIGHT="70" ALIGN="MIDDLE" BORDER="0"
  SRC="|."$dir".q|img179.png"
  ALT="$\displaystyle \nabla \mathfrak{L}_A(\theta, \lambda^k; \mu_k) = \nabla f(\theta...
 ...i^k} \left( \lambda_i^k - \frac{c_i(\theta)}{\mu_k} \right) \nabla c_i(\theta),$">|; 
 
 $key = q/{subequations}{align}1slashtau_{-1}&=6mathfrak{D}_{iso}-2mathfrak{D}_a,1slashtaumathfrak{D}_{iso}+2mathfrak{D}_a.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="556" HEIGHT="107" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="557" HEIGHT="107" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img114.png"
  ALT="\begin{subequations}\begin{align}1/\tau_{-1} &amp;= 6\mathfrak{D}_{iso} - 2\mathfrak...
 .../\tau_{1} &amp;= 6\mathfrak{D}_{iso} + 2\mathfrak{D}_a.\end{align}\end{subequations}">|; 
 
 $key = q/displaystylenabla^2chi^2(theta)=2sum_{i=1}^nfrac{1}{sigma_i^2}left(nablamathrm{Rthrm{R}_i-mathrm{R}_i(theta))nabla^2mathrm{R}_i(theta)right).;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="522" HEIGHT="70" ALIGN="MIDDLE" BORDER="0"
+ WIDTH="522" HEIGHT="71" ALIGN="MIDDLE" BORDER="0"
  SRC="|."$dir".q|img267.png"
  ALT="$\displaystyle \nabla^2 \chi^2(\theta) = 2 \sum_{i=1}^n \frac{1}{\sigma_i^2} \le...
 ...T - (\mathrm{R}_i- \mathrm{R}_i(\theta)) \nabla^2 \mathrm{R}_i(\theta) \right).$">|; 
@@ -816,7 +816,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{subequations}{align}frac{partial^2widehat{mathfrak{D}_x}}{partialalpha^2}&={pmaosalphacosbetasingamma0{pmatrix}.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="556" HEIGHT="470" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="557" HEIGHT="470" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img466.png"
  ALT="\begin{subequations}\begin{align}\frac{\partial^2 \widehat{\mathfrak{D}_x}}{\par...
 ...lpha \cos \beta \sin \gamma \ 0 \ \end{pmatrix}. \end{align}\end{subequations}">|; 
@@ -835,7 +835,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{subequations}{align}delta_x&=widehat{XH}cdotwidehat{mathfrak{D}_x},delta_y&=widat{XH}cdotwidehat{mathfrak{D}_z}.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="556" HEIGHT="117" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="557" HEIGHT="117" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img374.png"
  ALT="\begin{subequations}\begin{align}\delta_x &amp;= \widehat{XH} \cdot \widehat{\mathfr...
 ..._z &amp;= \widehat{XH} \cdot \widehat{\mathfrak{D}_z}. \end{align}\end{subequations}">|; 
@@ -860,14 +860,14 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{subequations}{align}frac{partialmathrm{R}_1(theta)}{partialtheta_j}&=d{J_d^{matscriptscriptstylemathrm{NOE}}}}'.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="555" HEIGHT="173" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="556" HEIGHT="173" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img297.png"
  ALT="\begin{subequations}\begin{align}\frac{\partial \mathrm{R}_1(\theta)}{\partial \...
 ... {J_d^{\sigma_{\scriptscriptstyle \mathrm{NOE}}}}'.\end{align}\end{subequations}">|; 
 
 $key = q/displaystylefrac{partial^2J(omega)}{partial{mathfrak{O}{_jcdotpartialS^2}=frac{2tau_s+tau_i)tau_s}{(tau_s+tau_i)^2+(omegatau_stau_i)^2}Bigg).;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="521" HEIGHT="77" ALIGN="MIDDLE" BORDER="0"
+ WIDTH="522" HEIGHT="77" ALIGN="MIDDLE" BORDER="0"
  SRC="|."$dir".q|img347.png"
  ALT="$\displaystyle \frac{\partial^2 J(\omega)}{\partial \mathfrak{O}_j \cdot \partia...
 ...\tau_s + \tau_i)\tau_s}{(\tau_s + \tau_i)^2 + (\omega \tau_s \tau_i)^2} \Bigg).$">|; 
@@ -886,7 +886,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/theta;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="14" HEIGHT="17" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="14" HEIGHT="18" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img70.png"
  ALT="$ \theta$">|; 
 
@@ -899,7 +899,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{subequations}{align}frac{partial^2mathrm{R}_1(theta)}{partialrho_{ex}cdotpartia{partialrho_{ex}cdotpartialr}&=0.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="555" HEIGHT="171" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="556" HEIGHT="171" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img307.png"
  ALT="\begin{subequations}\begin{align}\frac{\partial^2 \mathrm{R}_1(\theta)}{\partial...
 ...\theta)}{\partial \rho_{ex} \cdot \partial r} &amp;= 0.\end{align}\end{subequations}">|; 
@@ -956,7 +956,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/ktoinfty;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="63" HEIGHT="17" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="63" HEIGHT="18" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img175.png"
  ALT="$ k \to \infty$">|; 
 
@@ -986,7 +986,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{subequations}{align}mathrm{R}_1(theta)&=dJ_d^{mathrm{R}_1}+cJ_c^{mathrm{R}_1},m_{scriptscriptstylemathrm{NOE}}}.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="556" HEIGHT="127" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="557" HEIGHT="127" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img296.png"
  ALT="\begin{subequations}\begin{align}\mathrm{R}_1(\theta) &amp; = d J_d^{\mathrm{R}_1} +...
 ...= d J_d^{\sigma_{\scriptscriptstyle \mathrm{NOE}}}.\end{align}\end{subequations}">|; 
@@ -1050,7 +1050,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{subequations}{align}frac{partialmathrm{R}_1(theta)}{partialrho_{ex}}&=0,frac{paOE}}(theta)}{partialrho_{ex}}&=0.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="556" HEIGHT="168" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="557" HEIGHT="168" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img298.png"
  ALT="\begin{subequations}\begin{align}\frac{\partial \mathrm{R}_1(\theta)}{\partial \...
 ...le \mathrm{NOE}}(\theta)}{\partial \rho_{ex}} &amp;= 0.\end{align}\end{subequations}">|; 
@@ -1113,7 +1113,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{subequations}{align}&mathfrak{D}_{iso}=tfrac{1}{3}(mathfrak{D}_{scriptscriptstyhfrak{D}_{scriptscriptstyleperp}.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="555" HEIGHT="80" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="556" HEIGHT="80" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img111.png"
  ALT="\begin{subequations}\begin{align}&amp; \mathfrak{D}_{iso} = \tfrac{1}{3} (\mathfrak{...
 ...parallel}- \mathfrak{D}_{\scriptscriptstyle \perp}.\end{align}\end{subequations}">|; 
@@ -1146,7 +1146,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/displaystyle=frac{1}{{mathfrak{R}{}bigg[(1+3{mathfrak{D}{_r)left(delta_x^4+2deltlta_z^2right)-2left(delta_z^4+2delta_x^2delta_y^2right)bigg].;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="592" HEIGHT="64" ALIGN="MIDDLE" BORDER="0"
+ WIDTH="593" HEIGHT="64" ALIGN="MIDDLE" BORDER="0"
  SRC="|."$dir".q|img377.png"
  ALT="$\displaystyle = \frac{1}{\mathfrak{R}} \bigg[ (1 + 3\mathfrak{D}_r) \left(\delt...
 ...^2\delta_z^2\right) - 2 \left(\delta_z^4 + 2\delta_x^2\delta_y^2\right) \bigg].$">|; 
@@ -1172,7 +1172,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{subequations}{align}frac{partialtau_{-1}}{partialtau_m}&={tau_m}^{-2}(6mathfrakak{D}_{iso}+2mathfrak{D}_a)^{-2}.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="555" HEIGHT="162" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="556" HEIGHT="162" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img433.png"
  ALT="\begin{subequations}\begin{align}\frac{\partial \tau_{-1}}{\partial \tau_m} &amp;= {...
 ...{-2} (6\mathfrak{D}_{iso} + 2\mathfrak{D}_a)^{-2}. \end{align}\end{subequations}">|; 
@@ -1186,14 +1186,14 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/displaystyle{J_c^{mathrm{R}_2}}''equivfrac{partial^2J_c^{mathrm{R}_2}}{partialth3frac{partial^2J(omega_X)}{partialtheta_jcdotpartialtheta_k}.;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="357" HEIGHT="65" ALIGN="MIDDLE" BORDER="0"
+ WIDTH="358" HEIGHT="65" ALIGN="MIDDLE" BORDER="0"
  SRC="|."$dir".q|img292.png"
  ALT="$\displaystyle {J_c^{\mathrm{R}_2}}'' \equiv \frac{\partial^2 J_c^{\mathrm{R}_2}...
 ...} + 3 \frac{\partial^2 J(\omega_X)}{\partial \theta_j \cdot \partial \theta_k}.$">|; 
 
 $key = q/{subequations}{align}frac{partialc_{-1}}{partialmathfrak{O}_i}&=3delta_z(3delta_aldelta_z}{partialmathfrak{O}_i}.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="556" HEIGHT="162" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="557" HEIGHT="162" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img430.png"
  ALT="\begin{subequations}\begin{align}\frac{\partial c_{-1}}{\partial \mathfrak{O}_i}...
 ...\frac{\partial \delta_z}{\partial \mathfrak{O}_i}. \end{align}\end{subequations}">|; 
@@ -1224,6 +1224,14 @@ $cached_env_img{$key} = q|<IMG
  ALT="$\displaystyle \frac{\partial J(\omega)}{\partial S^2} = \frac{2}{5} \sum_{i=-k}...
 ...\tau_e + \tau_i)\tau_e}{(\tau_e + \tau_i)^2 + (\omega \tau_e \tau_i)^2} \Bigg).$">|; 
 
+$key = q/%latex2htmlidmarker77417displaystylerenewedcommand{theequation}{theparentequatio,tau_f,S^2_f,tau_s,R_{ex}},tm9&={tau_m,R_{ex}}.{align};MSF=1.6;LFS=12;TAGS=R;AAT/;
+$cached_env_img{$key} = q|<IMG
+ WIDTH="5" HEIGHT="33" ALIGN="MIDDLE" BORDER="0"
+ SRC="|."$dir".q|img122.png"
+ ALT="% latex2html id marker 77417
+$\displaystyle \renewedcommand{theequation}{\thepa...
+..., S^2, \tau_f, S^2_f, \tau_s, R_{ex}\},\ tm9 &amp;= \{\tau_m, R_{ex}\}.\end{align}$">|; 
+
 $key = q/displaystylec''equivfrac{mathrm{d}^2c}{mathrm{d}Deltasigma^2}=frac{2omega_X^2}{3}.;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
  WIDTH="162" HEIGHT="64" ALIGN="MIDDLE" BORDER="0"
@@ -1250,18 +1258,10 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{subequations}{align}frac{partial^2widehat{mathfrak{D}_{scriptscriptstyleparalleacosphi-sinthetasinphi0{pmatrix}.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="555" HEIGHT="244" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="556" HEIGHT="244" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img477.png"
  ALT="\begin{subequations}\begin{align}\frac{\partial^2 \widehat{\mathfrak{D}_{\script...
 ...i \ -\sin \theta \sin \phi \ 0 \ \end{pmatrix}. \end{align}\end{subequations}">|; 
-
-$key = q/%latex2htmlidmarker77514displaystylerenewedcommand{theequation}{theparentequatio,tau_f,S^2_f,tau_s,R_{ex}},tm9&={tau_m,R_{ex}}.{align};MSF=1.6;LFS=12;TAGS=R;AAT/;
-$cached_env_img{$key} = q|<IMG
- WIDTH="5" HEIGHT="33" ALIGN="MIDDLE" BORDER="0"
- SRC="|."$dir".q|img122.png"
- ALT="% latex2html id marker 77514
-$\displaystyle \renewedcommand{theequation}{\thepa...
-..., S^2, \tau_f, S^2_f, \tau_s, R_{ex}\},\ tm9 &amp;= \{\tau_m, R_{ex}\}.\end{align}$">|; 
 
 $key = q/mathfrak{D}_{scriptscriptstyleperp};MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
@@ -1277,7 +1277,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/k=0;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="50" HEIGHT="17" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="50" HEIGHT="18" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img442.png"
  ALT="$ k = 0$">|; 
 
@@ -1320,7 +1320,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{subequations}{gather}0<mathfrak{D}_{iso}<infty,-tfrac{3}{2}mathfrak{D}_{iso}<mathfrak{D}_a<3mathfrak{D}_{iso}.{gather}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="556" HEIGHT="80" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="557" HEIGHT="80" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img112.png"
  ALT="\begin{subequations}\begin{gather}0 &lt; \mathfrak{D}_{iso} &lt; \infty, \ -\tfrac{3}...
 ...{D}_{iso} &lt; \mathfrak{D}_a &lt; 3\mathfrak{D}_{iso}. \end{gather}\end{subequations}">|; 
@@ -1372,7 +1372,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{subequations}{align}nablamathrm{R}_1(theta)&=nablamathrm{R}_1'(theta),nablamathheta)nablamathrm{R}_1(theta)Big).{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="556" HEIGHT="154" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="557" HEIGHT="154" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img268.png"
  ALT="\begin{subequations}\begin{align}\nabla \mathrm{R}_1(\theta) &amp; = \nabla \mathrm{...
 ...rm{NOE}}(\theta) \nabla \mathrm{R}_1(\theta) \Big).\end{align}\end{subequations}">|; 
@@ -1398,7 +1398,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/displaystylefrac{partial^2J(omega)}{partialS^2cdotpartialtau_s}=-frac{2}{5}sum_{stau_i)^2}{left((tau_s+tau_i)^2+(omegatau_stau_i)^2right)^2}.;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="393" HEIGHT="77" ALIGN="MIDDLE" BORDER="0"
+ WIDTH="394" HEIGHT="77" ALIGN="MIDDLE" BORDER="0"
  SRC="|."$dir".q|img353.png"
  ALT="$\displaystyle \frac{\partial^2 J(\omega)}{\partial S^2 \cdot \partial \tau_s} =...
 ...u_s \tau_i)^2}{\left((\tau_s + \tau_i)^2 + (\omega \tau_s \tau_i)^2 \right)^2}.$">|; 
@@ -1443,7 +1443,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{subequations}{align}frac{partialc_{-2}}{partialmathfrak{D}_a}&=0,frac{partialc_lc_{2}}{partialmathfrak{D}_a}&=0.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="555" HEIGHT="259" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="556" HEIGHT="259" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img385.png"
  ALT="\begin{subequations}\begin{align}\frac{\partial c_{-2}}{\partial \mathfrak{D}_a}...
 ...rac{\partial c_{2}}{\partial \mathfrak{D}_a} &amp;= 0. \end{align}\end{subequations}">|; 
@@ -1481,7 +1481,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{subequations}{align}frac{partial^2c_{-2}}{{partialmathfrak{D}_a}^2}&=0,frac{par2}}{{partialmathfrak{D}_a}^2}&=0.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="556" HEIGHT="275" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="557" HEIGHT="275" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img410.png"
  ALT="\begin{subequations}\begin{align}\frac{\partial^2 c_{-2}}{{\partial \mathfrak{D}...
 ...artial^2 c_{2}}{{\partial \mathfrak{D}_a}^2} &amp;= 0. \end{align}\end{subequations}">|; 
@@ -1586,7 +1586,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{subequations}{align}frac{partial^2c_{-1}}{partialmathfrak{O}_icdotpartialmathfricdotpartialmathfrak{O}_j}right).{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="555" HEIGHT="249" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="556" HEIGHT="249" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img431.png"
  ALT="\begin{subequations}\begin{align}\frac{\partial^2 c_{-1}}{\partial \mathfrak{O}_...
 ...hfrak{O}_i \cdot \partial \mathfrak{O}_j} \right). \end{align}\end{subequations}">|; 
@@ -1606,7 +1606,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{subequations}{align}frac{partial^2mathrm{R}_1(theta)}{partialtheta_jcdotpartialcriptscriptstylemathrm{NOE}}}}''.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="555" HEIGHT="175" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="556" HEIGHT="175" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img301.png"
  ALT="\begin{subequations}\begin{align}\frac{\partial^2 \mathrm{R}_1(\theta)}{\partial...
 ...{J_d^{\sigma_{\scriptscriptstyle \mathrm{NOE}}}}''.\end{align}\end{subequations}">|; 
@@ -1625,7 +1625,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{subequations}{align}1slashtau_{-2}&=6mathfrak{D}_{iso}-2mathfrak{D}_amathfrak{R_{iso}+2mathfrak{D}_amathfrak{R}.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="556" HEIGHT="163" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="557" HEIGHT="163" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img108.png"
  ALT="\begin{subequations}\begin{align}1/\tau_{-2} &amp;= 6 \mathfrak{D}_{iso} - 2\mathfra...
 ...6 \mathfrak{D}_{iso} + 2\mathfrak{D}_a\mathfrak{R}.\end{align}\end{subequations}">|; 
@@ -1639,7 +1639,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/displaystylechi^2(theta)=sum_{i=1}^nfrac{(mathrm{R}_i-mathrm{R}_i(theta))^2}{sigma_i^2},;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="220" HEIGHT="70" ALIGN="MIDDLE" BORDER="0"
+ WIDTH="220" HEIGHT="71" ALIGN="MIDDLE" BORDER="0"
  SRC="|."$dir".q|img66.png"
  ALT="$\displaystyle \chi^2(\theta) = \sum_{i=1}^n \frac{(\mathrm{R}_i- \mathrm{R}_i(\theta))^2}{\sigma_i^2},$">|; 
 
@@ -1658,14 +1658,14 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{subequations}{align}frac{partial^2mathrm{R}_1(theta)}{partialtheta_jcdotpartialaltheta_jcdotpartialrho_{ex}}&=0.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="556" HEIGHT="175" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="557" HEIGHT="175" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img302.png"
  ALT="\begin{subequations}\begin{align}\frac{\partial^2 \mathrm{R}_1(\theta)}{\partial...
 ...}{\partial \theta_j \cdot \partial \rho_{ex}} &amp;= 0.\end{align}\end{subequations}">|; 
 
 $key = q/{subequations}{align}frac{partial^2c_{-2}}{partialmathfrak{O}_icdotpartialmathfrO}_icdotpartialmathfrak{D}_a}&=0.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="556" HEIGHT="269" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="557" HEIGHT="269" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img402.png"
  ALT="\begin{subequations}\begin{align}\frac{\partial^2 c_{-2}}{\partial \mathfrak{O}_...
 ...mathfrak{O}_i \cdot \partial \mathfrak{D}_a} &amp;= 0. \end{align}\end{subequations}">|; 
@@ -1707,13 +1707,13 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/m5;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="30" HEIGHT="17" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="31" HEIGHT="17" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img218.png"
  ALT="$ m5$">|; 
 
 $key = q/m0;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="29" HEIGHT="17" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="30" HEIGHT="17" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img213.png"
  ALT="$ m0$">|; 
 
@@ -1742,14 +1742,6 @@ $cached_env_img{$key} = q|<IMG
  SRC="|."$dir".q|img394.png"
  ALT="$\displaystyle + \delta_x^2 \left( \delta_z \frac{\partial^2 \delta_z}{\partial ...
 ...cdot \frac{\partial \delta_z}{\partial \mathfrak{O}_j} \right) \phantom{\Bigg)}$">|; 
-
-$key = q/%latex2htmlidmarker77501displaystylerenewedcommand{theequation}{theparentequatio8&={S^2,tau_f,S^2_f,tau_s,R_{ex}},m9&={R_{ex}}.{align};MSF=1.6;LFS=12;TAGS=R;AAT/;
-$cached_env_img{$key} = q|<IMG
- WIDTH="4" HEIGHT="33" ALIGN="MIDDLE" BORDER="0"
- SRC="|."$dir".q|img119.png"
- ALT="% latex2html id marker 77501
-$\displaystyle \renewedcommand{theequation}{\thepa...
-...\ m8 &amp;= \{S^2, \tau_f, S^2_f, \tau_s, R_{ex}\},\ m9 &amp;= \{R_{ex}\}.\end{align}$">|; 
 
 $key = q/displaystylefrac{partial^2J(omega)}{partial{mathfrak{O}{_jcdotpartialtau_f}=fracftau_i)^2}{left((tau_f+tau_i)^2+(omegatau_ftau_i)^2right)^2}.;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
@@ -1785,7 +1777,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{subequations}{align}frac{partialtau_{-2}}{partialmathfrak{D}_a}&=2mathfrak{R}(6+2mathfrak{D}_amathfrak{R})^{-2}.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="555" HEIGHT="259" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="556" HEIGHT="259" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img419.png"
  ALT="\begin{subequations}\begin{align}\frac{\partial \tau_{-2}}{\partial \mathfrak{D}...
 ...frak{D}_{iso} + 2\mathfrak{D}_a\mathfrak{R})^{-2}. \end{align}\end{subequations}">|; 
@@ -1816,7 +1808,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/displaystylechi^2=sum^l_{i=1}chi^2_i,;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="103" HEIGHT="77" ALIGN="MIDDLE" BORDER="0"
+ WIDTH="104" HEIGHT="77" ALIGN="MIDDLE" BORDER="0"
  SRC="|."$dir".q|img241.png"
  ALT="$\displaystyle \chi^2 = \sum^l_{i=1} \chi^2_i,$">|; 
 
@@ -1835,7 +1827,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{subequations}{align}frac{partial^2c_{-2}}{partialtau_mcdotpartialmathfrak{D}_r}au_mcdotpartialmathfrak{D}_r}&=0.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="555" HEIGHT="269" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="556" HEIGHT="269" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img409.png"
  ALT="\begin{subequations}\begin{align}\frac{\partial^2 c_{-2}}{\partial \tau_m \cdot ...
 ...artial \tau_m \cdot \partial \mathfrak{D}_r} &amp;= 0. \end{align}\end{subequations}">|; 
@@ -1854,7 +1846,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{subequations}{align}frac{partial^2widehat{mathfrak{D}_y}}{partialalpha^2}&={pmainalphacosbetasingamma0{pmatrix}.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="555" HEIGHT="470" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="556" HEIGHT="470" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img467.png"
  ALT="\begin{subequations}\begin{align}\frac{\partial^2 \widehat{\mathfrak{D}_y}}{\par...
 ...lpha \cos \beta \sin \gamma \ 0 \ \end{pmatrix}. \end{align}\end{subequations}">|; 
@@ -1867,7 +1859,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/displaystylenablachi^2(theta)=2sum_{i=1}^nfrac{(mathrm{R}_i-mathrm{R}_i(theta))^2}{sigma_i^2}nablamathrm{R}_i(theta).;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="307" HEIGHT="70" ALIGN="MIDDLE" BORDER="0"
+ WIDTH="307" HEIGHT="71" ALIGN="MIDDLE" BORDER="0"
  SRC="|."$dir".q|img266.png"
  ALT="$\displaystyle \nabla \chi^2(\theta) = 2 \sum_{i=1}^n \frac{(\mathrm{R}_i- \mathrm{R}_i(\theta))^2}{\sigma_i^2} \nabla \mathrm{R}_i(\theta).$">|; 
 
@@ -1885,7 +1877,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/tau_f;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="21" HEIGHT="33" ALIGN="MIDDLE" BORDER="0"
+ WIDTH="22" HEIGHT="33" ALIGN="MIDDLE" BORDER="0"
  SRC="|."$dir".q|img24.png"
  ALT="$ \tau _f$">|; 
 
@@ -1941,7 +1933,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{subequations}{align}frac{partial^2tau_{-2}}{partialmathfrak{D}_acdotpartialmath+2mathfrak{D}_amathfrak{R})^{-2}.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="684" HEIGHT="367" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="684" HEIGHT="368" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img424.png"
  ALT="\begin{subequations}\begin{align}\frac{\partial^2 \tau_{-2}}{\partial \mathfrak{...
 ...frak{D}_{iso} + 2\mathfrak{D}_a\mathfrak{R})^{-2}. \end{align}\end{subequations}">|; 
@@ -1955,7 +1947,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{subequations}{align}frac{partialtau_{-2}}{partialtau_m}&={tau_m}^{-2}(6mathfrak+2mathfrak{D}_amathfrak{R})^{-2}.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="556" HEIGHT="259" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="557" HEIGHT="259" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img418.png"
  ALT="\begin{subequations}\begin{align}\frac{\partial \tau_{-2}}{\partial \tau_m} &amp;= {...
 ...frak{D}_{iso} + 2\mathfrak{D}_a\mathfrak{R})^{-2}. \end{align}\end{subequations}">|; 
@@ -1975,14 +1967,14 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{subequations}{align}frac{partialwidehat{mathfrak{D}_x}}{partialalpha}&={pmatrixosalphacosbetacosgamma0{pmatrix}.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="556" HEIGHT="244" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="557" HEIGHT="244" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img460.png"
  ALT="\begin{subequations}\begin{align}\frac{\partial \widehat{\mathfrak{D}_x}}{\parti...
 ...lpha \cos \beta \cos \gamma \ 0 \ \end{pmatrix}. \end{align}\end{subequations}">|; 
 
 $key = q/displaystylefrac{partial^2J(omega)}{partialS^2cdotpartialtau_e}=-frac{2}{5}sum_{etau_i)^2}{left((tau_e+tau_i)^2+(omegatau_etau_i)^2right)^2}.;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="394" HEIGHT="77" ALIGN="MIDDLE" BORDER="0"
+ WIDTH="395" HEIGHT="77" ALIGN="MIDDLE" BORDER="0"
  SRC="|."$dir".q|img332.png"
  ALT="$\displaystyle \frac{\partial^2 J(\omega)}{\partial S^2 \cdot \partial \tau_e} =...
 ...u_e \tau_i)^2}{\left((\tau_e + \tau_i)^2 + (\omega \tau_e \tau_i)^2 \right)^2}.$">|; 
@@ -2013,7 +2005,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{subequations}{align}frac{partialc_{-2}}{partialtau_m}&=0,frac{partialc_{-1}}{pac{partialc_{2}}{partialtau_m}&=0.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="556" HEIGHT="259" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="557" HEIGHT="259" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img384.png"
  ALT="\begin{subequations}\begin{align}\frac{\partial c_{-2}}{\partial \tau_m} &amp;= 0, \...
 ...0, \ \frac{\partial c_{2}}{\partial \tau_m} &amp;= 0. \end{align}\end{subequations}">|; 
@@ -2040,7 +2032,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{subequations}{align}frac{partial^2tau_{-2}}{{partialmathfrak{D}_a}^2}&=8mathfra+2mathfrak{D}_amathfrak{R})^{-3}.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="555" HEIGHT="275" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="556" HEIGHT="275" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img423.png"
  ALT="\begin{subequations}\begin{align}\frac{\partial^2 \tau_{-2}}{{\partial \mathfrak...
 ...frak{D}_{iso} + 2\mathfrak{D}_a\mathfrak{R})^{-3}. \end{align}\end{subequations}">|; 
@@ -2072,13 +2064,13 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/S^2;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="24" HEIGHT="19" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="24" HEIGHT="20" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img19.png"
  ALT="$ S^2$">|; 
 
 $key = q/{subequations}{align}frac{partial^2c_{-2}}{partialmathfrak{O}_icdotpartialmathfrak{O}_icdotpartialmathfrak{D}_r},{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="555" HEIGHT="269" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="556" HEIGHT="269" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img403.png"
  ALT="\begin{subequations}\begin{align}\frac{\partial^2 c_{-2}}{\partial \mathfrak{O}_...
 ...ial \mathfrak{O}_i \cdot \partial \mathfrak{D}_r}, \end{align}\end{subequations}">|; 
@@ -2097,7 +2089,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/i;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="10" HEIGHT="16" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="10" HEIGHT="17" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img67.png"
  ALT="$ i$">|; 
 
@@ -2115,7 +2107,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/1e^{-12};MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="47" HEIGHT="19" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="47" HEIGHT="20" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img207.png"
  ALT="$ 1e^{-12}$">|; 
 
@@ -2133,7 +2125,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{subequations}{align}frac{partial^2c_{-2}}{{partialmathfrak{D}_r}^2}&=-frac{3}{4tial^2e}{partialmathfrak{D}_r^2},{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="556" HEIGHT="276" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="557" HEIGHT="276" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img412.png"
  ALT="\begin{subequations}\begin{align}\frac{\partial^2 c_{-2}}{{\partial \mathfrak{D}...
 ...4} \frac{\partial^2 e}{\partial \mathfrak{D}_r^2}, \end{align}\end{subequations}">|; 
@@ -2204,13 +2196,13 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/delta_x;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="20" HEIGHT="34" ALIGN="MIDDLE" BORDER="0"
+ WIDTH="21" HEIGHT="34" ALIGN="MIDDLE" BORDER="0"
  SRC="|."$dir".q|img485.png"
  ALT="$ \delta_x$">|; 
 
 $key = q/displaystylesigma_{NOE}=sqrt{frac{(sigma_{sat}cdotI_{ref})^2+(sigma_{ref}cdotI_{sat})^2}{I_{ref}}},;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="315" HEIGHT="79" ALIGN="MIDDLE" BORDER="0"
+ WIDTH="316" HEIGHT="79" ALIGN="MIDDLE" BORDER="0"
  SRC="|."$dir".q|img55.png"
  ALT="$\displaystyle \sigma_{NOE} = \sqrt{\frac{(\sigma_{sat} \cdot I_{ref})^2 + (\sigma_{ref} \cdot I_{sat})^2}{I_{ref}}},$">|; 
 
@@ -2222,7 +2214,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{subequations}{gather}0leqslanttau_mleqslant200.0e^{-9},mathfrak{D}_ageqslant0,0leqslantmathfrak{D}_rleqslant1,{gather}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="555" HEIGHT="107" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="556" HEIGHT="107" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img203.png"
  ALT="\begin{subequations}\begin{gather}0 \leqslant \tau_m \leqslant 200.0e^{-9}, \ \...
 ...ant 0, \ 0 \leqslant \mathfrak{D}_r \leqslant 1, \end{gather}\end{subequations}">|; 
@@ -2260,14 +2252,14 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{subequations}{align}frac{partialtau_{-2}}{partialmathfrak{D}_r}&=6frac{mathfrak+2mathfrak{D}_amathfrak{R})^{-2}.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="556" HEIGHT="259" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="557" HEIGHT="259" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img420.png"
  ALT="\begin{subequations}\begin{align}\frac{\partial \tau_{-2}}{\partial \mathfrak{D}...
 ...frak{D}_{iso} + 2\mathfrak{D}_a\mathfrak{R})^{-2}. \end{align}\end{subequations}">|; 
 
 $key = q/1e^{-8};MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="41" HEIGHT="19" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="41" HEIGHT="20" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img208.png"
  ALT="$ 1e^{-8}$">|; 
 
@@ -2279,7 +2271,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{subequations}{align}frac{partial^2tau_{-1}}{partialtau_mcdotpartialmathfrak{D}_ak{D}_{iso}+2mathfrak{D}_a)^{-3}.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="556" HEIGHT="168" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="557" HEIGHT="168" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img436.png"
  ALT="\begin{subequations}\begin{align}\frac{\partial^2 \tau_{-1}}{\partial \tau_m \cd...
 ...{-2} (6\mathfrak{D}_{iso} + 2\mathfrak{D}_a)^{-3}. \end{align}\end{subequations}">|; 
@@ -2298,13 +2290,13 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/Deltasigma;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="32" HEIGHT="17" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="32" HEIGHT="18" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img14.png"
  ALT="$ \Delta \sigma $">|; 
 
 $key = q/sim;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="20" HEIGHT="17" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="20" HEIGHT="15" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img478.png"
  ALT="$ \sim$">|; 
 
@@ -2323,7 +2315,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/lambda;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="15" HEIGHT="17" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="15" HEIGHT="18" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img167.png"
  ALT="$ \lambda$">|; 
 
@@ -2342,7 +2334,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/m9;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="30" HEIGHT="17" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="31" HEIGHT="17" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img214.png"
  ALT="$ m9$">|; 
 
@@ -2372,7 +2364,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{subequations}{align}frac{partialc_{-2}}{partialmathfrak{D}_r}&=-frac{3}{4}frac{{partiale}{partialmathfrak{D}_r},{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="556" HEIGHT="259" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="557" HEIGHT="259" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img386.png"
  ALT="\begin{subequations}\begin{align}\frac{\partial c_{-2}}{\partial \mathfrak{D}_r}...
 ...{3}{4} \frac{\partial e}{\partial \mathfrak{D}_r}, \end{align}\end{subequations}">|; 
@@ -2385,7 +2377,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{multline}J(omega)=frac{2}{5}sum_{i=-k}^kc_icdottau_iBigg(frac{S^2}{1+(omegatau_u_s+tau_i)tau_s}{(tau_s+tau_i)^2+(omegatau_stau_i)^2}Bigg).{multline};LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="536" HEIGHT="136" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="537" HEIGHT="136" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img90.png"
  ALT="\begin{multline}
 J(\omega) = \frac{2}{5} \sum_{i=-k}^k c_i \cdot \tau_i \Bigg(
@@ -2442,7 +2434,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{multline}frac{partial^2J(omega)}{partial{mathfrak{G}{_jcdotpartialS^2}=frac{2}{au_i)tau_s}{(tau_s+tau_i)^2+(omegatau_stau_i)^2}Bigg)Bigg).{multline};LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="573" HEIGHT="136" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="574" HEIGHT="136" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img342.png"
  ALT="\begin{multline}
 \frac{\partial^2 J(\omega)}{\partial \mathfrak{G}_j \cdot \par...
@@ -2505,7 +2497,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{multline}frac{partial^2J(omega)}{partial{mathfrak{G}{_jcdotpartialS^2_f}=-frac{au_i)tau_s}{(tau_s+tau_i)^2+(omegatau_stau_i)^2}Bigg)Bigg).{multline};LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="697" HEIGHT="136" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="698" HEIGHT="136" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img343.png"
  ALT="\begin{multline}
 \frac{\partial^2 J(\omega)}{\partial \mathfrak{G}_j \cdot \par...
@@ -2528,14 +2520,14 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{subequations}{align}frac{partialwidehat{mathfrak{D}_z}}{partialalpha}&={pmatrixingammasinbetacosgamma0{pmatrix}.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="556" HEIGHT="244" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="557" HEIGHT="244" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img464.png"
  ALT="\begin{subequations}\begin{align}\frac{\partial \widehat{\mathfrak{D}_z}}{\parti...
 ...a \ \sin \beta \cos \gamma \ 0 \ \end{pmatrix}. \end{align}\end{subequations}">|; 
 
 $key = q/m1;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="29" HEIGHT="17" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="30" HEIGHT="17" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img217.png"
  ALT="$ m1$">|; 
 
@@ -2547,7 +2539,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{subequations}{align}0&<mathfrak{D}_{iso}<infty,0&lemathfrak{D}_a<frac{mathfrak{ak{D}_{iso},0&lemathfrak{D}_rle1.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="555" HEIGHT="134" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="556" HEIGHT="134" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img99.png"
  ALT="\begin{subequations}\begin{align}0 &amp; &lt; \mathfrak{D}_{iso} &lt; \infty,\ 0 &amp; \le \m...
 ...\mathfrak{D}_{iso},\ 0 &amp; \le \mathfrak{D}_r \le 1.\end{align}\end{subequations}">|; 
@@ -2566,7 +2558,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/k;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="15" HEIGHT="17" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="15" HEIGHT="18" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img96.png"
  ALT="$ k$">|; 
 
@@ -2590,9 +2582,17 @@ $cached_env_img{$key} = q|<IMG
  SRC="|."$dir".q|img482.png"
  ALT="$ \pi$">|; 
 
+$key = q/%latex2htmlidmarker77404displaystylerenewedcommand{theequation}{theparentequatio8&={S^2,tau_f,S^2_f,tau_s,R_{ex}},m9&={R_{ex}}.{align};MSF=1.6;LFS=12;TAGS=R;AAT/;
+$cached_env_img{$key} = q|<IMG
+ WIDTH="4" HEIGHT="33" ALIGN="MIDDLE" BORDER="0"
+ SRC="|."$dir".q|img119.png"
+ ALT="% latex2html id marker 77404
+$\displaystyle \renewedcommand{theequation}{\thepa...
+...\ m8 &amp;= \{S^2, \tau_f, S^2_f, \tau_s, R_{ex}\},\ m9 &amp;= \{R_{ex}\}.\end{align}$">|; 
+
 $key = q/{subequations}{align}tau_{-1}&=(6mathfrak{D}_{iso}-2mathfrak{D}_a)^{-1},tau_{0}&ak{D}_{iso}+2mathfrak{D}_a)^{-1}.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="556" HEIGHT="107" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="557" HEIGHT="107" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img432.png"
  ALT="\begin{subequations}\begin{align}\tau_{-1} &amp;= (6\mathfrak{D}_{iso} - 2\mathfrak{...
 ...} &amp;= (6\mathfrak{D}_{iso} + 2\mathfrak{D}_a)^{-1}. \end{align}\end{subequations}">|; 
@@ -2605,7 +2605,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{multline}frac{partial^2J(omega)}{partial{mathfrak{G}{_jcdotpartialS^2}=frac{2}{au_i)tau_e}{(tau_e+tau_i)^2+(omegatau_etau_i)^2}Bigg)Bigg).{multline};LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="573" HEIGHT="136" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="574" HEIGHT="136" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img326.png"
  ALT="\begin{multline}
 \frac{\partial^2 J(\omega)}{\partial \mathfrak{G}_j \cdot \par...
@@ -2616,14 +2616,14 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{subequations}{align}frac{partial^2c_{-2}}{{partialtau_m}^2}&=0,frac{partial^2c_ial^2c_{2}}{{partialtau_m}^2}&=0.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="555" HEIGHT="275" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="556" HEIGHT="275" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img407.png"
  ALT="\begin{subequations}\begin{align}\frac{\partial^2 c_{-2}}{{\partial \tau_m}^2} &amp;...
 ...\frac{\partial^2 c_{2}}{{\partial \tau_m}^2} &amp;= 0. \end{align}\end{subequations}">|; 
 
 $key = q/lambda^k;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="24" HEIGHT="19" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="24" HEIGHT="20" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img172.png"
  ALT="$ \lambda^k$">|; 
 
@@ -2697,7 +2697,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{subequations}{align}frac{partial^2mathrm{R}_1(theta)}{partialtheta_jcdotpartialtheta_jcdotpartialDeltasigma}&=0.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="555" HEIGHT="175" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="556" HEIGHT="175" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img303.png"
  ALT="\begin{subequations}\begin{align}\frac{\partial^2 \mathrm{R}_1(\theta)}{\partial...
 ...partial \theta_j \cdot \partial \Delta\sigma} &amp;= 0.\end{align}\end{subequations}">|; 
@@ -2746,7 +2746,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{subequations}{align}frac{partial^2mathrm{R}_1(theta)}{{partialrho_{ex}}^2}&=0,f(theta)}{{partialrho_{ex}}^2}&=0.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="555" HEIGHT="174" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="556" HEIGHT="174" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img305.png"
  ALT="\begin{subequations}\begin{align}\frac{\partial^2 \mathrm{R}_1(\theta)}{{\partia...
 ...mathrm{NOE}}(\theta)}{{\partial \rho_{ex}}^2} &amp;= 0.\end{align}\end{subequations}">|; 
@@ -2765,7 +2765,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{subequations}{align}c_{-2}&=tfrac{1}{4}(d-e),c_{-1}&=3delta_y^2delta_z^2,c_{0}&elta_y^2,c_{2}&=tfrac{1}{4}(d+e),{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="555" HEIGHT="167" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="556" HEIGHT="167" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img101.png"
  ALT="\begin{subequations}\begin{align}c_{-2} &amp;= \tfrac{1}{4}(d - e),\ c_{-1} &amp;= 3\de...
 ...elta_x^2\delta_y^2,\ c_{2} &amp;= \tfrac{1}{4}(d + e),\end{align}\end{subequations}">|; 
@@ -2788,7 +2788,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{subequations}{align}frac{partial^2tau_{-2}}{partialtau_mcdotpartialmathfrak{D}_+2mathfrak{D}_amathfrak{R})^{-3}.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="556" HEIGHT="269" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="557" HEIGHT="269" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img422.png"
  ALT="\begin{subequations}\begin{align}\frac{\partial^2 \tau_{-2}}{\partial \tau_m \cd...
 ...frak{D}_{iso} + 2\mathfrak{D}_a\mathfrak{R})^{-3}. \end{align}\end{subequations}">|; 
@@ -2801,7 +2801,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{subequations}{align}frac{partial^2c_{-2}}{partialtau_mcdotpartialmathfrak{D}_a}au_mcdotpartialmathfrak{D}_a}&=0.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="556" HEIGHT="269" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="557" HEIGHT="269" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img408.png"
  ALT="\begin{subequations}\begin{align}\frac{\partial^2 c_{-2}}{\partial \tau_m \cdot ...
 ...artial \tau_m \cdot \partial \mathfrak{D}_a} &amp;= 0. \end{align}\end{subequations}">|; 
@@ -2845,7 +2845,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{subequations}{align}frac{partialmathrm{R}_1(theta)}{partialr}&=d'J_d^{mathrm{R}_{scriptscriptstylemathrm{NOE}}}.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="556" HEIGHT="157" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="557" HEIGHT="157" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img300.png"
  ALT="\begin{subequations}\begin{align}\frac{\partial \mathrm{R}_1(\theta)}{\partial r...
 ... d' J_d^{\sigma_{\scriptscriptstyle \mathrm{NOE}}}.\end{align}\end{subequations}">|; 
@@ -2865,7 +2865,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{subequations}{align}widehat{mathfrak{D}_x}&={pmatrix}-sinalphasingamma+cosalphaasinbetasingammacosbeta{pmatrix}.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="555" HEIGHT="244" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="556" HEIGHT="244" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img455.png"
  ALT="\begin{subequations}\begin{align}\widehat{\mathfrak{D}_x} &amp;= \begin{pmatrix}-\si...
 ... \beta \sin \gamma \ \cos \beta \ \end{pmatrix}. \end{align}\end{subequations}">|; 
@@ -2884,13 +2884,13 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/m4;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="30" HEIGHT="17" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="31" HEIGHT="17" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img188.png"
  ALT="$ m4$">|; 
 
 $key = q/{subequations}{align}frac{partial^2c_{-2}}{partialmathfrak{O}_icdotpartialmathfrak{O}_icdotpartialmathfrak{O}_j},{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="556" HEIGHT="896" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="557" HEIGHT="896" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img388.png"
  ALT="\begin{subequations}\begin{align}\frac{\partial^2 c_{-2}}{\partial \mathfrak{O}_...
 ...ial \mathfrak{O}_i \cdot \partial \mathfrak{O}_j}, \end{align}\end{subequations}">|; 
@@ -2916,7 +2916,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{subequations}{align}frac{partial^2tau_{-1}}{{partialmathfrak{D}_a}^2}&=8(6mathfak{D}_{iso}+2mathfrak{D}_a)^{-3}.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="555" HEIGHT="172" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="556" HEIGHT="172" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img437.png"
  ALT="\begin{subequations}\begin{align}\frac{\partial^2 \tau_{-1}}{{\partial \mathfrak...
 ...&amp;= 8 (6\mathfrak{D}_{iso} + 2\mathfrak{D}_a)^{-3}. \end{align}\end{subequations}">|; 
@@ -2941,7 +2941,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{subequations}{align}c_{-1}&=tfrac{1}{4}(3delta_z^2-1)^2,c_{0}&=3delta_z^2(1-del_{1}&=tfrac{3}{4}(delta_z^2-1)^2.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="555" HEIGHT="107" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="556" HEIGHT="107" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img113.png"
  ALT="\begin{subequations}\begin{align}c_{-1} &amp;= \tfrac{1}{4}(3\delta_z^2 - 1)^2,\ c_...
 ...ta_z^2),\ c_{1} &amp;= \tfrac{3}{4}(\delta_z^2 - 1)^2.\end{align}\end{subequations}">|; 
@@ -2954,7 +2954,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{subequations}{align}frac{partial^2mathrm{R}_1(theta)}{{partialDeltasigma}^2}&=cheta)}{{partialDeltasigma}^2}&=0.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="556" HEIGHT="163" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="557" HEIGHT="163" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img308.png"
  ALT="\begin{subequations}\begin{align}\frac{\partial^2 \mathrm{R}_1(\theta)}{{\partia...
 ...hrm{NOE}}(\theta)}{{\partial \Delta\sigma}^2} &amp;= 0.\end{align}\end{subequations}">|; 
@@ -2995,7 +2995,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/b;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="13" HEIGHT="17" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="13" HEIGHT="18" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img194.png"
  ALT="$ b$">|; 
 
@@ -3013,7 +3013,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{subequations}{align}frac{partialc_{-2}}{partialmathfrak{O}_i}&=3left(delta_x^3f{partiale}{partialmathfrak{O}_i},{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="555" HEIGHT="278" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="556" HEIGHT="278" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img379.png"
  ALT="\begin{subequations}\begin{align}\frac{\partial c_{-2}}{\partial \mathfrak{O}_i}...
 ...ght) + \frac{\partial e}{\partial \mathfrak{O}_i}, \end{align}\end{subequations}">|; 
@@ -3057,7 +3057,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{multline}frac{partialJ(omega)}{partial{mathfrak{G}{_j}=frac{2}{5}sum_{i=-k}^kBiau_i)tau_s}{(tau_s+tau_i)^2+(omegatau_stau_i)^2}Bigg)Bigg).{multline};LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="573" HEIGHT="279" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="574" HEIGHT="279" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img334.png"
  ALT="\begin{multline}
 \frac{\partial J(\omega)}{\partial \mathfrak{G}_j} = \frac{2}{...
@@ -3107,7 +3107,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/hattheta;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="13" HEIGHT="22" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="13" HEIGHT="23" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img71.png"
  ALT="$ \hat\theta$">|; 
 
@@ -3144,7 +3144,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{subequations}{align}frac{partial^2widehat{mathfrak{D}_z}}{partialalpha^2}&={pmasgamma-sinbetasingamma0{pmatrix}.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="556" HEIGHT="470" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="557" HEIGHT="470" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img468.png"
  ALT="\begin{subequations}\begin{align}\frac{\partial^2 \widehat{\mathfrak{D}_z}}{\par...
 ... \ -\sin \beta \sin \gamma \ 0 \ \end{pmatrix}. \end{align}\end{subequations}">|; 
@@ -3157,7 +3157,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{subequations}{align}frac{partial^2mathrm{R}_1(theta)}{partialrho_{ex}cdotpartiaho_{ex}cdotpartialDeltasigma}&=0.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="556" HEIGHT="171" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="557" HEIGHT="171" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img306.png"
  ALT="\begin{subequations}\begin{align}\frac{\partial^2 \mathrm{R}_1(\theta)}{\partial...
 ...artial \rho_{ex} \cdot \partial \Delta\sigma} &amp;= 0.\end{align}\end{subequations}">|; 
@@ -3176,7 +3176,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{multline}{J_d^{mathrm{R}_2}}''equivfrac{partial^2J_d^{mathrm{R}_2}}{partialthetial^2J(omega_H+omega_X)}{partialtheta_jcdotpartialtheta_k}.{multline};LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="536" HEIGHT="113" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="538" HEIGHT="113" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img289.png"
  ALT="\begin{multline}
 {J_d^{\mathrm{R}_2}}'' \equiv \frac{\partial^2 J_d^{\mathrm{R}...
@@ -3192,7 +3192,7 @@ $cached_env_img{$key} = q|<IMG
 
 $key = q/{subequations}{gather}0leqslantS^2leqslant1,0leqslantS^2_fleqslant1,0leqslantS^2,-300e^{-6}leqslantCSAleqslant0.{gather}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="555" HEIGHT="390" ALIGN="BOTTOM" BORDER="0"
+ WIDTH="556" HEIGHT="390" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img199.png"
  ALT="\begin{subequations}\begin{gather}0 \leqslant S^2 \leqslant 1, \ 0 \leqslant S^...
 ...e^{-10}, \ -300e^{-6} \leqslant CSA \leqslant 0. \end{gather}\end{subequations}">|; 

@@ -1,4 +1,4 @@
-# LaTeX2HTML 2002-2-1 (1.71)
+# LaTeX2HTML 2008 (1.71)
 # Associate labels original text with physical files.
 
 
@@ -12,6 +12,10 @@ $noresave{$key} = "$nosave";
 
 $key = q/eq:_Da_spheroid_def/;
 $external_labels{$key} = "$URL/" . q|6_1_Theory.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/table59/;
+$external_labels{$key} = "$URL/" . q|10_2_list_functions.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/cite_FletcherReeves64/;
@@ -154,6 +158,10 @@ $key = q/svn_repository/;
 $external_labels{$key} = "$URL/" . q|9_1_Version_control_using_S.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/table63/;
+$external_labels{$key} = "$URL/" . q|10_2_list_functions.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/table36/;
 $external_labels{$key} = "$URL/" . q|10_2_list_functions.html|; 
 $noresave{$key} = "$nosave";
@@ -291,6 +299,10 @@ $external_labels{$key} = "$URL/" . q|Bibliography.html|;
 $noresave{$key} = "$nosave";
 
 $key = q/table15/;
+$external_labels{$key} = "$URL/" . q|10_2_list_functions.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/table58/;
 $external_labels{$key} = "$URL/" . q|10_2_list_functions.html|; 
 $noresave{$key} = "$nosave";
 
@@ -462,6 +474,10 @@ $key = q/eq:_J_terms:_JR1d_/;
 $external_labels{$key} = "$URL/" . q|8_8_values_gradients_Hessia.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/table62/;
+$external_labels{$key} = "$URL/" . q|10_2_list_functions.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/eq:_J_terms:_JR2d_/;
 $external_labels{$key} = "$URL/" . q|8_8_values_gradients_Hessia.html|; 
 $noresave{$key} = "$nosave";
@@ -502,20 +518,20 @@ $key = q/eq:_CSA_constant/;
 $external_labels{$key} = "$URL/" . q|6_1_Theory.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/eq:_Ri_:_dsigmaNOE_dCSA/;
+$external_labels{$key} = "$URL/" . q|8_8_values_gradients_Hessia.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/table6/;
 $external_labels{$key} = "$URL/" . q|10_2_list_functions.html|; 
 $noresave{$key} = "$nosave";
 
-$key = q/eq:_Ri_:_dsigmaNOE_dCSA/;
+$key = q/eq:_Ri_:_d2R2_dRex.dCSA/;
 $external_labels{$key} = "$URL/" . q|8_8_values_gradients_Hessia.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/cite_Chen04/;
 $external_labels{$key} = "$URL/" . q|Bibliography.html|; 
-$noresave{$key} = "$nosave";
-
-$key = q/eq:_Ri_:_d2R2_dRex.dCSA/;
-$external_labels{$key} = "$URL/" . q|8_8_values_gradients_Hessia.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/table43/;
@@ -550,16 +566,16 @@ $key = q/becoming_a_committer/;
 $external_labels{$key} = "$URL/" . q|9_4_Committers.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/cite_MoreThuente94/;
+$external_labels{$key} = "$URL/" . q|Bibliography.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/eq:_Ri_:_d2R1_dRex2/;
 $external_labels{$key} = "$URL/" . q|8_8_values_gradients_Hessia.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_Ri_:_d2R2_dr2/;
 $external_labels{$key} = "$URL/" . q|8_8_values_gradients_Hessia.html|; 
-$noresave{$key} = "$nosave";
-
-$key = q/cite_MoreThuente94/;
-$external_labels{$key} = "$URL/" . q|Bibliography.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/model:_tm8/;
@@ -572,6 +588,10 @@ $noresave{$key} = "$nosave";
 
 $key = q/cite_GMW81/;
 $external_labels{$key} = "$URL/" . q|Bibliography.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/table61/;
+$external_labels{$key} = "$URL/" . q|10_2_list_functions.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/table49/;
@@ -614,12 +634,12 @@ $key = q/eq:_Ri_:_d2R1_dmfj.dmfk/;
 $external_labels{$key} = "$URL/" . q|8_8_values_gradients_Hessia.html|; 
 $noresave{$key} = "$nosave";
 
-$key = q/table39/;
-$external_labels{$key} = "$URL/" . q|10_2_list_functions.html|; 
-$noresave{$key} = "$nosave";
-
 $key = q/cite_LipariSzabo82b/;
 $external_labels{$key} = "$URL/" . q|Bibliography.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/table39/;
+$external_labels{$key} = "$URL/" . q|10_2_list_functions.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/table19/;
@@ -662,12 +682,12 @@ $key = q/table20/;
 $external_labels{$key} = "$URL/" . q|10_2_list_functions.html|; 
 $noresave{$key} = "$nosave";
 
-$key = q/eq:_Ri_:_dR1_dRex/;
-$external_labels{$key} = "$URL/" . q|8_8_values_gradients_Hessia.html|; 
-$noresave{$key} = "$nosave";
-
 $key = q/cite_NocedalWright99/;
 $external_labels{$key} = "$URL/" . q|Bibliography.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/eq:_Ri_:_dR1_dRex/;
+$external_labels{$key} = "$URL/" . q|8_8_values_gradients_Hessia.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/cite_Fletcher70/;
@@ -722,6 +742,10 @@ $key = q/eq:_ellipsoid_correlation_function/;
 $external_labels{$key} = "$URL/" . q|8_10_Ellipsoidal_diffusion_.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/table57/;
+$external_labels{$key} = "$URL/" . q|10_2_list_functions.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/eq:_J_terms:_JR1c_/;
 $external_labels{$key} = "$URL/" . q|8_8_values_gradients_Hessia.html|; 
 $noresave{$key} = "$nosave";
@@ -774,6 +798,10 @@ $key = q/eq:_Augmented_Lagrangian/;
 $external_labels{$key} = "$URL/" . q|6_1_Theory.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/table60/;
+$external_labels{$key} = "$URL/" . q|10_2_list_functions.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/eq:_spheroid_c1/;
 $external_labels{$key} = "$URL/" . q|6_1_Theory.html|; 
 $noresave{$key} = "$nosave";
@@ -802,12 +830,12 @@ $key = q/eq:_Ri_:_d2R2_dmfj.dmfk/;
 $external_labels{$key} = "$URL/" . q|8_8_values_gradients_Hessia.html|; 
 $noresave{$key} = "$nosave";
 
-$key = q/eq:_J_terms:_JsigmaNOEd_/;
-$external_labels{$key} = "$URL/" . q|8_8_values_gradients_Hessia.html|; 
-$noresave{$key} = "$nosave";
-
 $key = q/cite_LipariSzabo82a/;
 $external_labels{$key} = "$URL/" . q|Bibliography.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/eq:_J_terms:_JsigmaNOEd_/;
+$external_labels{$key} = "$URL/" . q|8_8_values_gradients_Hessia.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_Dr_ellipsoid_def/;
@@ -870,16 +898,16 @@ $key = q/eq:_chi-squared/;
 $external_labels{$key} = "$URL/" . q|6_1_Theory.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/cite_Marquardt63/;
+$external_labels{$key} = "$URL/" . q|Bibliography.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/model:_m0/;
 $external_labels{$key} = "$URL/" . q|6_1_Theory.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_Ri_:_d2sigmaNOE_dCSA2/;
 $external_labels{$key} = "$URL/" . q|8_8_values_gradients_Hessia.html|; 
-$noresave{$key} = "$nosave";
-
-$key = q/cite_Marquardt63/;
-$external_labels{$key} = "$URL/" . q|Bibliography.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_Ri_:_dR2_dr/;
@@ -934,6 +962,10 @@ $key = q/table12/;
 $external_labels{$key} = "$URL/" . q|10_2_list_functions.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/table56/;
+$external_labels{$key} = "$URL/" . q|10_2_list_functions.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/eq:_Ri_:_dR1_dCSA/;
 $external_labels{$key} = "$URL/" . q|8_8_values_gradients_Hessia.html|; 
 $noresave{$key} = "$nosave";
@@ -974,12 +1006,12 @@ $key = q/table45/;
 $external_labels{$key} = "$URL/" . q|10_2_list_functions.html|; 
 $noresave{$key} = "$nosave";
 
-$key = q/eq:_Diso_spheroid_def/;
-$external_labels{$key} = "$URL/" . q|6_1_Theory.html|; 
-$noresave{$key} = "$nosave";
-
 $key = q/cite_Levenberg44/;
 $external_labels{$key} = "$URL/" . q|Bibliography.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/eq:_Diso_spheroid_def/;
+$external_labels{$key} = "$URL/" . q|6_1_Theory.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/table18/;
@@ -994,20 +1026,24 @@ $key = q/eq:_spheroid_correlation_function/;
 $external_labels{$key} = "$URL/" . q|8_11_Spheroidal_diffusion_t.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/table55/;
+$external_labels{$key} = "$URL/" . q|10_2_list_functions.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/eq:_J_terms:_JR2c/;
 $external_labels{$key} = "$URL/" . q|8_8_values_gradients_Hessia.html|; 
 $noresave{$key} = "$nosave";
 
-$key = q/eq:_Ri_:_dR2_dRex/;
-$external_labels{$key} = "$URL/" . q|8_8_values_gradients_Hessia.html|; 
+$key = q/table9/;
+$external_labels{$key} = "$URL/" . q|10_2_list_functions.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_Ri_:_d2R1_dRex.dr/;
 $external_labels{$key} = "$URL/" . q|8_8_values_gradients_Hessia.html|; 
 $noresave{$key} = "$nosave";
 
-$key = q/table9/;
-$external_labels{$key} = "$URL/" . q|10_2_list_functions.html|; 
+$key = q/eq:_Ri_:_dR2_dRex/;
+$external_labels{$key} = "$URL/" . q|8_8_values_gradients_Hessia.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/model:_m3/;
@@ -1022,12 +1058,12 @@ $key = q/eq:_sphere_tau0/;
 $external_labels{$key} = "$URL/" . q|6_1_Theory.html|; 
 $noresave{$key} = "$nosave";
 
-$key = q/eq:_Ri_trans:_d2R2/;
-$external_labels{$key} = "$URL/" . q|8_7_values_gradients_Hessia.html|; 
-$noresave{$key} = "$nosave";
-
 $key = q/fig:_Mandel_et_al./;
 $external_labels{$key} = "$URL/" . q|6_5_methodology_Mandel_et_a.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/eq:_Ri_trans:_d2R2/;
+$external_labels{$key} = "$URL/" . q|8_7_values_gradients_Hessia.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/model:_m8/;
@@ -1045,7 +1081,7 @@ $noresave{$key} = "$nosave";
 1;
 
 
-# LaTeX2HTML 2002-2-1 (1.71)
+# LaTeX2HTML 2008 (1.71)
 # labels from external_latex_labels array.
 
 
@@ -1073,6 +1109,10 @@ $key = q/becoming_a_committer/;
 $external_latex_labels{$key} = q|9.4.1|; 
 $noresave{$key} = "$nosave";
 
+$key = q/table59/;
+$external_latex_labels{$key} = q|10.59|; 
+$noresave{$key} = "$nosave";
+
 $key = q/eq:_Ri_:_d2R1_dRex2/;
 $external_latex_labels{$key} = q|8.54a|; 
 $noresave{$key} = "$nosave";
@@ -1091,6 +1131,10 @@ $noresave{$key} = "$nosave";
 
 $key = q/eq:_spaceset_Hessian/;
 $external_latex_labels{$key} = q|8.14|; 
+$noresave{$key} = "$nosave";
+
+$key = q/table61/;
+$external_latex_labels{$key} = q|10.61|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_linear_model/;
@@ -1169,12 +1213,12 @@ $key = q/eq:_spheroid_c-1/;
 $external_latex_labels{$key} = q|6.19a|; 
 $noresave{$key} = "$nosave";
 
-$key = q/eq:_Ri_:_d2R1_dmfj.dmfk/;
-$external_latex_labels{$key} = q|8.50a|; 
-$noresave{$key} = "$nosave";
-
 $key = q/eq:_spheroid_tau0/;
 $external_latex_labels{$key} = q|6.20b|; 
+$noresave{$key} = "$nosave";
+
+$key = q/eq:_Ri_:_d2R1_dmfj.dmfk/;
+$external_latex_labels{$key} = q|8.50a|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_ellipsoid_tau2/;
@@ -1309,6 +1353,10 @@ $key = q/table36/;
 $external_latex_labels{$key} = q|10.36|; 
 $noresave{$key} = "$nosave";
 
+$key = q/table63/;
+$external_latex_labels{$key} = q|10.63|; 
+$noresave{$key} = "$nosave";
+
 $key = q/eq:_spaceset_gradient/;
 $external_latex_labels{$key} = q|8.11|; 
 $noresave{$key} = "$nosave";
@@ -1359,6 +1407,10 @@ $noresave{$key} = "$nosave";
 
 $key = q/table8/;
 $external_latex_labels{$key} = q|10.8|; 
+$noresave{$key} = "$nosave";
+
+$key = q/table57/;
+$external_latex_labels{$key} = q|10.57|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_J_terms:_JR1c_/;
@@ -1497,12 +1549,20 @@ $key = q/table15/;
 $external_latex_labels{$key} = q|10.15|; 
 $noresave{$key} = "$nosave";
 
+$key = q/table58/;
+$external_latex_labels{$key} = q|10.58|; 
+$noresave{$key} = "$nosave";
+
 $key = q/eq:_Ri_:_d2sigmaNOE_dmfj.dr/;
 $external_latex_labels{$key} = q|8.53c|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_Augmented_Lagrangian/;
 $external_latex_labels{$key} = q|6.32|; 
+$noresave{$key} = "$nosave";
+
+$key = q/table60/;
+$external_latex_labels{$key} = q|10.60|; 
 $noresave{$key} = "$nosave";
 
 $key = q/table34/;
@@ -1533,20 +1593,20 @@ $key = q/eq:_Ri_:_dR1_dr/;
 $external_latex_labels{$key} = q|8.49a|; 
 $noresave{$key} = "$nosave";
 
-$key = q/table21/;
-$external_latex_labels{$key} = q|10.21|; 
-$noresave{$key} = "$nosave";
-
 $key = q/fig:_gradient_construction/;
 $external_latex_labels{$key} = q|8.1|; 
 $noresave{$key} = "$nosave";
 
-$key = q/eq:_ellipsoid_tau1/;
-$external_latex_labels{$key} = q|6.16d|; 
+$key = q/table21/;
+$external_latex_labels{$key} = q|10.21|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_Ri_:_dR1_dmf/;
 $external_latex_labels{$key} = q|8.46a|; 
+$noresave{$key} = "$nosave";
+
+$key = q/eq:_ellipsoid_tau1/;
+$external_latex_labels{$key} = q|6.16d|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_spheroid_tau-1/;
@@ -1761,12 +1821,12 @@ $key = q/eq:_Ri_:_R1/;
 $external_latex_labels{$key} = q|8.45a|; 
 $noresave{$key} = "$nosave";
 
-$key = q/eq:_sigma_NOE/;
-$external_latex_labels{$key} = q|6.3c|; 
-$noresave{$key} = "$nosave";
-
 $key = q/eq:_chi2/;
 $external_latex_labels{$key} = q|6.25|; 
+$noresave{$key} = "$nosave";
+
+$key = q/eq:_sigma_NOE/;
+$external_latex_labels{$key} = q|6.3c|; 
 $noresave{$key} = "$nosave";
 
 $key = q/table38/;
@@ -1783,6 +1843,14 @@ $noresave{$key} = "$nosave";
 
 $key = q/eq:_J_terms:_JR1d_/;
 $external_latex_labels{$key} = q|8.31|; 
+$noresave{$key} = "$nosave";
+
+$key = q/table56/;
+$external_latex_labels{$key} = q|10.56|; 
+$noresave{$key} = "$nosave";
+
+$key = q/table62/;
+$external_latex_labels{$key} = q|10.62|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_Ri_:_dR1_dCSA/;
@@ -1897,6 +1965,10 @@ $key = q/eq:_ellipsoid_c0/;
 $external_latex_labels{$key} = q|6.12c|; 
 $noresave{$key} = "$nosave";
 
+$key = q/table55/;
+$external_latex_labels{$key} = q|10.55|; 
+$noresave{$key} = "$nosave";
+
 $key = q/eq:_Ri_:_dR2_dRex/;
 $external_latex_labels{$key} = q|8.47b|; 
 $noresave{$key} = "$nosave";
@@ -1941,12 +2013,12 @@ $key = q/eq:_NOE/;
 $external_latex_labels{$key} = q|6.6|; 
 $noresave{$key} = "$nosave";
 
-$key = q/eq:_ellipsoid_tau0/;
-$external_latex_labels{$key} = q|6.16c|; 
-$noresave{$key} = "$nosave";
-
 $key = q/reporting_bugs/;
 $external_latex_labels{$key} = q|3.3|; 
+$noresave{$key} = "$nosave";
+
+$key = q/eq:_ellipsoid_tau0/;
+$external_latex_labels{$key} = q|6.16c|; 
 $noresave{$key} = "$nosave";
 
 $key = q/table41/;

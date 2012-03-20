@@ -1,4 +1,4 @@
-# LaTeX2HTML 2002-2-1 (1.71)
+# LaTeX2HTML 2008 (1.71)
 # Associate internals original text with physical files.
 
 
@@ -12,6 +12,10 @@ $noresave{$key} = "$nosave";
 
 $key = q/eq:_Da_spheroid_def/;
 $ref_files{$key} = "$dir".q|6_1_Theory.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/table59/;
+$ref_files{$key} = "$dir".q|10_2_list_functions.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/cite_FletcherReeves64/;
@@ -154,6 +158,10 @@ $key = q/svn_repository/;
 $ref_files{$key} = "$dir".q|9_1_Version_control_using_S.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/table63/;
+$ref_files{$key} = "$dir".q|10_2_list_functions.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/table36/;
 $ref_files{$key} = "$dir".q|10_2_list_functions.html|; 
 $noresave{$key} = "$nosave";
@@ -291,6 +299,10 @@ $ref_files{$key} = "$dir".q|Bibliography.html|;
 $noresave{$key} = "$nosave";
 
 $key = q/table15/;
+$ref_files{$key} = "$dir".q|10_2_list_functions.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/table58/;
 $ref_files{$key} = "$dir".q|10_2_list_functions.html|; 
 $noresave{$key} = "$nosave";
 
@@ -462,6 +474,10 @@ $key = q/eq:_J_terms:_JR1d_/;
 $ref_files{$key} = "$dir".q|8_8_values_gradients_Hessia.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/table62/;
+$ref_files{$key} = "$dir".q|10_2_list_functions.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/eq:_J_terms:_JR2d_/;
 $ref_files{$key} = "$dir".q|8_8_values_gradients_Hessia.html|; 
 $noresave{$key} = "$nosave";
@@ -502,20 +518,20 @@ $key = q/eq:_CSA_constant/;
 $ref_files{$key} = "$dir".q|6_1_Theory.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/eq:_Ri_:_dsigmaNOE_dCSA/;
+$ref_files{$key} = "$dir".q|8_8_values_gradients_Hessia.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/table6/;
 $ref_files{$key} = "$dir".q|10_2_list_functions.html|; 
 $noresave{$key} = "$nosave";
 
-$key = q/eq:_Ri_:_dsigmaNOE_dCSA/;
+$key = q/eq:_Ri_:_d2R2_dRex.dCSA/;
 $ref_files{$key} = "$dir".q|8_8_values_gradients_Hessia.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/cite_Chen04/;
 $ref_files{$key} = "$dir".q|Bibliography.html|; 
-$noresave{$key} = "$nosave";
-
-$key = q/eq:_Ri_:_d2R2_dRex.dCSA/;
-$ref_files{$key} = "$dir".q|8_8_values_gradients_Hessia.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/table43/;
@@ -550,16 +566,16 @@ $key = q/becoming_a_committer/;
 $ref_files{$key} = "$dir".q|9_4_Committers.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/cite_MoreThuente94/;
+$ref_files{$key} = "$dir".q|Bibliography.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/eq:_Ri_:_d2R1_dRex2/;
 $ref_files{$key} = "$dir".q|8_8_values_gradients_Hessia.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_Ri_:_d2R2_dr2/;
 $ref_files{$key} = "$dir".q|8_8_values_gradients_Hessia.html|; 
-$noresave{$key} = "$nosave";
-
-$key = q/cite_MoreThuente94/;
-$ref_files{$key} = "$dir".q|Bibliography.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/model:_tm8/;
@@ -572,6 +588,10 @@ $noresave{$key} = "$nosave";
 
 $key = q/cite_GMW81/;
 $ref_files{$key} = "$dir".q|Bibliography.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/table61/;
+$ref_files{$key} = "$dir".q|10_2_list_functions.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/table49/;
@@ -614,12 +634,12 @@ $key = q/eq:_Ri_:_d2R1_dmfj.dmfk/;
 $ref_files{$key} = "$dir".q|8_8_values_gradients_Hessia.html|; 
 $noresave{$key} = "$nosave";
 
-$key = q/table39/;
-$ref_files{$key} = "$dir".q|10_2_list_functions.html|; 
-$noresave{$key} = "$nosave";
-
 $key = q/cite_LipariSzabo82b/;
 $ref_files{$key} = "$dir".q|Bibliography.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/table39/;
+$ref_files{$key} = "$dir".q|10_2_list_functions.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/table19/;
@@ -662,12 +682,12 @@ $key = q/table20/;
 $ref_files{$key} = "$dir".q|10_2_list_functions.html|; 
 $noresave{$key} = "$nosave";
 
-$key = q/eq:_Ri_:_dR1_dRex/;
-$ref_files{$key} = "$dir".q|8_8_values_gradients_Hessia.html|; 
-$noresave{$key} = "$nosave";
-
 $key = q/cite_NocedalWright99/;
 $ref_files{$key} = "$dir".q|Bibliography.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/eq:_Ri_:_dR1_dRex/;
+$ref_files{$key} = "$dir".q|8_8_values_gradients_Hessia.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/cite_Fletcher70/;
@@ -722,6 +742,10 @@ $key = q/eq:_ellipsoid_correlation_function/;
 $ref_files{$key} = "$dir".q|8_10_Ellipsoidal_diffusion_.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/table57/;
+$ref_files{$key} = "$dir".q|10_2_list_functions.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/eq:_J_terms:_JR1c_/;
 $ref_files{$key} = "$dir".q|8_8_values_gradients_Hessia.html|; 
 $noresave{$key} = "$nosave";
@@ -774,6 +798,10 @@ $key = q/eq:_Augmented_Lagrangian/;
 $ref_files{$key} = "$dir".q|6_1_Theory.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/table60/;
+$ref_files{$key} = "$dir".q|10_2_list_functions.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/eq:_spheroid_c1/;
 $ref_files{$key} = "$dir".q|6_1_Theory.html|; 
 $noresave{$key} = "$nosave";
@@ -802,12 +830,12 @@ $key = q/eq:_Ri_:_d2R2_dmfj.dmfk/;
 $ref_files{$key} = "$dir".q|8_8_values_gradients_Hessia.html|; 
 $noresave{$key} = "$nosave";
 
-$key = q/eq:_J_terms:_JsigmaNOEd_/;
-$ref_files{$key} = "$dir".q|8_8_values_gradients_Hessia.html|; 
-$noresave{$key} = "$nosave";
-
 $key = q/cite_LipariSzabo82a/;
 $ref_files{$key} = "$dir".q|Bibliography.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/eq:_J_terms:_JsigmaNOEd_/;
+$ref_files{$key} = "$dir".q|8_8_values_gradients_Hessia.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_Dr_ellipsoid_def/;
@@ -870,16 +898,16 @@ $key = q/eq:_chi-squared/;
 $ref_files{$key} = "$dir".q|6_1_Theory.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/cite_Marquardt63/;
+$ref_files{$key} = "$dir".q|Bibliography.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/model:_m0/;
 $ref_files{$key} = "$dir".q|6_1_Theory.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_Ri_:_d2sigmaNOE_dCSA2/;
 $ref_files{$key} = "$dir".q|8_8_values_gradients_Hessia.html|; 
-$noresave{$key} = "$nosave";
-
-$key = q/cite_Marquardt63/;
-$ref_files{$key} = "$dir".q|Bibliography.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_Ri_:_dR2_dr/;
@@ -934,6 +962,10 @@ $key = q/table12/;
 $ref_files{$key} = "$dir".q|10_2_list_functions.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/table56/;
+$ref_files{$key} = "$dir".q|10_2_list_functions.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/eq:_Ri_:_dR1_dCSA/;
 $ref_files{$key} = "$dir".q|8_8_values_gradients_Hessia.html|; 
 $noresave{$key} = "$nosave";
@@ -974,12 +1006,12 @@ $key = q/table45/;
 $ref_files{$key} = "$dir".q|10_2_list_functions.html|; 
 $noresave{$key} = "$nosave";
 
-$key = q/eq:_Diso_spheroid_def/;
-$ref_files{$key} = "$dir".q|6_1_Theory.html|; 
-$noresave{$key} = "$nosave";
-
 $key = q/cite_Levenberg44/;
 $ref_files{$key} = "$dir".q|Bibliography.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/eq:_Diso_spheroid_def/;
+$ref_files{$key} = "$dir".q|6_1_Theory.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/table18/;
@@ -994,20 +1026,24 @@ $key = q/eq:_spheroid_correlation_function/;
 $ref_files{$key} = "$dir".q|8_11_Spheroidal_diffusion_t.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/table55/;
+$ref_files{$key} = "$dir".q|10_2_list_functions.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/eq:_J_terms:_JR2c/;
 $ref_files{$key} = "$dir".q|8_8_values_gradients_Hessia.html|; 
 $noresave{$key} = "$nosave";
 
-$key = q/eq:_Ri_:_dR2_dRex/;
-$ref_files{$key} = "$dir".q|8_8_values_gradients_Hessia.html|; 
+$key = q/table9/;
+$ref_files{$key} = "$dir".q|10_2_list_functions.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_Ri_:_d2R1_dRex.dr/;
 $ref_files{$key} = "$dir".q|8_8_values_gradients_Hessia.html|; 
 $noresave{$key} = "$nosave";
 
-$key = q/table9/;
-$ref_files{$key} = "$dir".q|10_2_list_functions.html|; 
+$key = q/eq:_Ri_:_dR2_dRex/;
+$ref_files{$key} = "$dir".q|8_8_values_gradients_Hessia.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/model:_m3/;
@@ -1022,12 +1058,12 @@ $key = q/eq:_sphere_tau0/;
 $ref_files{$key} = "$dir".q|6_1_Theory.html|; 
 $noresave{$key} = "$nosave";
 
-$key = q/eq:_Ri_trans:_d2R2/;
-$ref_files{$key} = "$dir".q|8_7_values_gradients_Hessia.html|; 
-$noresave{$key} = "$nosave";
-
 $key = q/fig:_Mandel_et_al./;
 $ref_files{$key} = "$dir".q|6_5_methodology_Mandel_et_a.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/eq:_Ri_trans:_d2R2/;
+$ref_files{$key} = "$dir".q|8_7_values_gradients_Hessia.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/model:_m8/;
