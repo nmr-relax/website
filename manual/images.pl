@@ -1820,6 +1820,17 @@ $cached_env_img{$key} = q|<IMG
  ALT="$\displaystyle \frac{\partial \delta_z}{\partial \mathfrak{O}_i} = \widehat{XH} ...
 ...widehat{\mathfrak{D}_{\scriptscriptstyle \parallel}}}{\partial \mathfrak{O}_i}.$">|; 
 
+$key = q/{table*}scriptsize{center{{{tabularx{{textwidth}{llX}[-5pt]topruleValue&Param&Destbeofequallength.bottomrule[-5pt]tabularx{center{scriptsize{{table*};LFS=12;AAT/;
+$cached_env_img{$key} = q|<IMG
+ WIDTH="556" HEIGHT="248" BORDER="0"
+ SRC="|."$dir".q|img419.png"
+ ALT="\begin{table*}\begin{scriptsize}
+\begin{center}\begin{tabularx}{\textwidth}{ll...
+...\\\\
+\bottomrule
+\ [-5pt]
+\end{tabularx}\end{center}\end{scriptsize}\end{table*}">|; 
+
 $key = q/displaystylec_{0}=1.;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
  WIDTH="60" HEIGHT="33" ALIGN="MIDDLE" BORDER="0"
@@ -2123,6 +2134,17 @@ $cached_env_img{$key} = q|<IMG
  WIDTH="183" HEIGHT="76" ALIGN="MIDDLE" BORDER="0"
  SRC="|."$dir".q|img279.png"
  ALT="$\displaystyle C_\mathrm{O}(\tau) = \frac{1}{5} \sum^2_{i=-2} c_i e^{-\frac{\tau}{\tau_i}}.$">|; 
+
+$key = q/{table*}scriptsize{center{{{tabularx{{textwidth}{llX}[-5pt]topruleDatatype&Strinesat'red'.bottomrule[-5pt]tabularx{center{scriptsize{{table*};MSF=1.6;LFS=12;AAT/;
+$cached_env_img{$key} = q|<IMG
+ WIDTH="556" HEIGHT="920" BORDER="0"
+ SRC="|."$dir".q|img418.png"
+ ALT="\begin{table*}\begin{scriptsize}
+\begin{center}\begin{tabularx}{\textwidth}{ll...
+...\\\\
+\bottomrule
+\ [-5pt]
+\end{tabularx}\end{center}\end{scriptsize}\end{table*}">|; 
 
 $key = q/{multline}frac{partial^2J(omega)}{partial{mathfrak{G}{_jcdotpartialS^2_f}=-frac{au_i)tau_s}{(tau_s+tau_i)^2+(omegatau_stau_i)^2}Bigg)Bigg).{multline};LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
