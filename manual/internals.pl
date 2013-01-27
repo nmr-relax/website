@@ -158,6 +158,10 @@ $key = q/uf:_align_tensor.set_domain/;
 $ref_files{$key} = "$dir".q|align_tensor_set_domain.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/uf:_pcs.structural_noise/;
+$ref_files{$key} = "$dir".q|pcs_structural_noise.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/uf:_residue.create/;
 $ref_files{$key} = "$dir".q|residue_create.html|; 
 $noresave{$key} = "$nosave";
@@ -286,6 +290,10 @@ $key = q/uf:_relax_data.read/;
 $ref_files{$key} = "$dir".q|relax_data_read.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/uf:_interatomic.copy/;
+$ref_files{$key} = "$dir".q|interatomic_copy.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/model:_tm4/;
 $ref_files{$key} = "$dir".q|model_free_models.html|; 
 $noresave{$key} = "$nosave";
@@ -388,6 +396,10 @@ $noresave{$key} = "$nosave";
 
 $key = q/sect:_GUI_-_data_pipe/;
 $ref_files{$key} = "$dir".q|GUI_mode_setting_up_data_pipe.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/uf:_pcs.copy/;
+$ref_files{$key} = "$dir".q|pcs_copy.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_spectrum.read_intensities/;
@@ -506,12 +518,12 @@ $key = q/eq:_Ri_:_d2sigmaNOE_dmfj.dr/;
 $ref_files{$key} = "$dir".q|Ri_prime_theta_Hessians.html|; 
 $noresave{$key} = "$nosave";
 
-$key = q/uf:_relax_data.temp_calibration/;
-$ref_files{$key} = "$dir".q|relax_data_temp_calibration.html|; 
-$noresave{$key} = "$nosave";
-
 $key = q/uf:_minimise/;
 $ref_files{$key} = "$dir".q|minimise.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/uf:_relax_data.temp_calibration/;
+$ref_files{$key} = "$dir".q|relax_data_temp_calibration.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_pymol.command/;
@@ -906,6 +918,10 @@ $key = q/figure:_spin_viewer_end/;
 $ref_files{$key} = "$dir".q|GUI_mode_spins_from_structural_data.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/uf:_interatomic.create/;
+$ref_files{$key} = "$dir".q|interatomic_create.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/uf:_pipe.create/;
 $ref_files{$key} = "$dir".q|pipe_create.html|; 
 $noresave{$key} = "$nosave";
@@ -1198,6 +1214,10 @@ $key = q/table:_consistency_testing_default_values/;
 $ref_files{$key} = "$dir".q|value_set.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/uf:_pcs.set_errors/;
+$ref_files{$key} = "$dir".q|pcs_set_errors.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/uf:_align_tensor.fix/;
 $ref_files{$key} = "$dir".q|align_tensor_fix.html|; 
 $noresave{$key} = "$nosave";
@@ -1346,6 +1366,10 @@ $key = q/uf:_dasha.create/;
 $ref_files{$key} = "$dir".q|dasha_create.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/uf:_rdc.set_errors/;
+$ref_files{$key} = "$dir".q|rdc_set_errors.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/uf:_sequence.write/;
 $ref_files{$key} = "$dir".q|sequence_write.html|; 
 $noresave{$key} = "$nosave";
@@ -1380,6 +1404,10 @@ $noresave{$key} = "$nosave";
 
 $key = q/ch:_model-free/;
 $ref_files{$key} = "$dir".q|Model_free_analysis.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/uf:_rdc.copy/;
+$ref_files{$key} = "$dir".q|rdc_copy.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_ellipsoid_tau1/;
@@ -1636,6 +1664,10 @@ $noresave{$key} = "$nosave";
 
 $key = q/eq:_chi2/;
 $ref_files{$key} = "$dir".q|Model_free_optimisation_theory.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/uf:_pipe.change_type/;
+$ref_files{$key} = "$dir".q|pipe_change_type.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_Ri_:_dR1_dCSA/;
