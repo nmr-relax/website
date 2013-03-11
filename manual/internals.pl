@@ -430,6 +430,10 @@ $key = q/eq:_Ri_:_d2R2_dCSA.dr/;
 $ref_files{$key} = "$dir".q|Ri_prime_theta_Hessians.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/uf:_structure.add_model/;
+$ref_files{$key} = "$dir".q|structure_add_model.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/eq:_Da_ellipsoid_def/;
 $ref_files{$key} = "$dir".q|Brownian_rotational_diffusion.html|; 
 $noresave{$key} = "$nosave";
@@ -506,12 +510,12 @@ $key = q/model:_tm9/;
 $ref_files{$key} = "$dir".q|model_free_models.html|; 
 $noresave{$key} = "$nosave";
 
-$key = q/table:_Molmol_colours/;
-$ref_files{$key} = "$dir".q|molmol_macro_apply.html|; 
-$noresave{$key} = "$nosave";
-
 $key = q/table:_mf_data_type_patterns/;
 $ref_files{$key} = "$dir".q|dx_map.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/table:_Molmol_colours/;
+$ref_files{$key} = "$dir".q|molmol_macro_apply.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_Ri_:_d2sigmaNOE_dmfj.dr/;
@@ -1218,6 +1222,10 @@ $key = q/uf:_pcs.set_errors/;
 $ref_files{$key} = "$dir".q|pcs_set_errors.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/uf:_structure.rmsd/;
+$ref_files{$key} = "$dir".q|structure_rmsd.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/uf:_align_tensor.fix/;
 $ref_files{$key} = "$dir".q|align_tensor_fix.html|; 
 $noresave{$key} = "$nosave";
@@ -1848,6 +1856,10 @@ $noresave{$key} = "$nosave";
 
 $key = q/uf:_residue.display/;
 $ref_files{$key} = "$dir".q|residue_display.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/uf:_structure.web_of_motion/;
+$ref_files{$key} = "$dir".q|structure_web_of_motion.html|; 
 $noresave{$key} = "$nosave";
 
 1;
