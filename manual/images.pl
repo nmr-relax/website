@@ -8,17 +8,11 @@ $cached_env_img{$key} = q|<IMG
  SRC="|."$dir".q|img115.png"
  ALT="$ \infty$">|; 
 
-$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.3slashgraphicsslashoxygen_iconsslash128x128slashactionsslashdocument-edit};MSF=1.6;LFS=12;AAT/;
+$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.4slashgraphicsslashrelax_iconsslash128x128slashalign_tensor};LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
  WIDTH="27" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img451.png"
- ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.3/graphics/oxygen_icons/128x128/actions/document-edit}">|; 
-
-$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.3slashgraphicsslashrelax_iconsslash128x128slashpipe_hybrid};LFS=12;AAT/;
-$cached_env_img{$key} = q|<IMG
- WIDTH="27" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img457.png"
- ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.3/graphics/relax_icons/128x128/pipe_hybrid}">|; 
+ SRC="|."$dir".q|img407.png"
+ ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.4/graphics/relax_icons/128x128/align_tensor}">|; 
 
 $key = q/{subequations}{align}m0&={},m1&={S^2},m2&={S^2,tau_e},m3&={S^2,R_{ex}},m4&={S^2,S^2_f,tau_s,R_{ex}},m9&={R_{ex}}.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
@@ -26,6 +20,24 @@ $cached_env_img{$key} = q|<IMG
  SRC="|."$dir".q|img83.png"
  ALT="\begin{subequations}\begin{align}m0 &amp;= \{\},\ m1 &amp;= \{S^2\},\ m2 &amp;= \{S^2, \ta...
 ...tau_f, S^2_f, \tau_s, R_{ex}\},\ m9 &amp;= \{R_{ex}\}.\end{align}\end{subequations}">|; 
+
+$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.4slashgraphicsslashoxygen_iconsslash128x128slashactionsslashdocument-preview};MSF=1.6;LFS=12;AAT/;
+$cached_env_img{$key} = q|<IMG
+ WIDTH="28" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
+ SRC="|."$dir".q|img410.png"
+ ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.4/graphics/oxygen_icons/128x128/actions/document-preview}">|; 
+
+$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.4slashgraphicsslashoxygen_iconsslash128x128slashactionsslashedit-select};MSF=1.6;LFS=12;AAT/;
+$cached_env_img{$key} = q|<IMG
+ WIDTH="27" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
+ SRC="|."$dir".q|img413.png"
+ ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.4/graphics/oxygen_icons/128x128/actions/edit-select}">|; 
+
+$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.4slashgraphicsslashrelax_iconsslash128x128slashrelax_fit};LFS=12;AAT/;
+$cached_env_img{$key} = q|<IMG
+ WIDTH="27" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
+ SRC="|."$dir".q|img461.png"
+ ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.4/graphics/relax_icons/128x128/relax_fit}">|; 
 
 $key = q/displaystylep_k=-nabla^2f_k^{-1}nablaf_k.;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
@@ -84,29 +96,23 @@ $cached_env_img{$key} = q|<IMG
  SRC="|."$dir".q|img332.png"
  ALT="$\displaystyle {\frac{{1}}{{\mathfrak{R}^3}}}$">|; 
 
-$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.3slashgraphicsslashrelax_iconsslash128x128slashdiff_tensor};LFS=12;AAT/;
-$cached_env_img{$key} = q|<IMG
- WIDTH="28" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img428.png"
- ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.3/graphics/relax_icons/128x128/diff_tensor}">|; 
-
 $key = q/mathfrak{G}={mathfrak{D}_{iso},mathfrak{D}_a,mathfrak{D}_r};MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
  WIDTH="161" HEIGHT="37" ALIGN="MIDDLE" BORDER="0"
  SRC="|."$dir".q|img159.png"
  ALT="$ \mathfrak{G}= \{\mathfrak{D}_{iso}, \mathfrak{D}_a, \mathfrak{D}_r\}$">|; 
 
-$key = q/displaystyledelta_{x}^{2};MSF=1.6;LFS=12;AAT/;
-$cached_env_img{$key} = q|<IMG
- WIDTH="21" HEIGHT="40" ALIGN="MIDDLE" BORDER="0"
- SRC="|."$dir".q|img317.png"
- ALT="$\displaystyle \delta_{x}^{2}$">|; 
-
 $key = q/displaystyle{J_c^{mathrm{R}_1}}'equivfrac{partialJ_c^{mathrm{R}_1}}{partialtheta_j}=frac{partialJ(omega_X)}{partialtheta_j}.;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
  WIDTH="204" HEIGHT="65" ALIGN="MIDDLE" BORDER="0"
  SRC="|."$dir".q|img201.png"
  ALT="$\displaystyle {J_c^{\mathrm{R}_1}}' \equiv \frac{\partial J_c^{\mathrm{R}_1}}{\partial \theta_j} = \frac{\partial J(\omega_X)}{\partial \theta_j}.$">|; 
+
+$key = q/displaystyledelta_{x}^{2};MSF=1.6;LFS=12;AAT/;
+$cached_env_img{$key} = q|<IMG
+ WIDTH="21" HEIGHT="40" ALIGN="MIDDLE" BORDER="0"
+ SRC="|."$dir".q|img317.png"
+ ALT="$\displaystyle \delta_{x}^{2}$">|; 
 
 $key = q/{subequations}{align}tau_{-2}&=(6mathfrak{D}_{iso}-2mathfrak{D}_amathfrak{R})^{-+2mathfrak{D}_amathfrak{R})^{-1},{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
@@ -115,17 +121,23 @@ $cached_env_img{$key} = q|<IMG
  ALT="\begin{subequations}\begin{align}\tau_{-2} &amp;= (6\mathfrak{D}_{iso} - 2\mathfrak{...
 ...frak{D}_{iso} + 2\mathfrak{D}_a\mathfrak{R})^{-1}, \end{align}\end{subequations}">|; 
 
+$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.4slashgraphicsslashoxygen_iconsslash128x128slashactionsslashdocument-edit};MSF=1.6;LFS=12;AAT/;
+$cached_env_img{$key} = q|<IMG
+ WIDTH="27" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
+ SRC="|."$dir".q|img451.png"
+ ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.4/graphics/oxygen_icons/128x128/actions/document-edit}">|; 
+
+$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.4slashgraphicsslashrelax_iconsslash128x128slashmodelfree4};LFS=12;AAT/;
+$cached_env_img{$key} = q|<IMG
+ WIDTH="28" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
+ SRC="|."$dir".q|img454.png"
+ ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.4/graphics/relax_icons/128x128/modelfree4}">|; 
+
 $key = q/displaystyle{mathfrak{R}{=sqrt{1+3{mathfrak{D}{_r^2}.;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
  WIDTH="134" HEIGHT="45" ALIGN="MIDDLE" BORDER="0"
  SRC="|."$dir".q|img73.png"
  ALT="$\displaystyle \mathfrak{R} = \sqrt{1 + 3\mathfrak{D}_r^2}.$">|; 
-
-$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.3slashgraphicsslhoxygen_iconsslash128x128slashactionsslashsystem-switch-user};MSF=1.6;LFS=12;AAT/;
-$cached_env_img{$key} = q|<IMG
- WIDTH="27" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img427.png"
- ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.3/graphics/oxygen_icons/128x128/actions/system-switch-user}">|; 
 
 $key = q/displaystylenablachi^2=sum_{i=1}^lnablachi^2_i,;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
@@ -139,11 +151,23 @@ $cached_env_img{$key} = q|<IMG
  SRC="|."$dir".q|img191.png"
  ALT="$\displaystyle c = \frac{\left(\omega_X \cdot \Delta\sigma \right)^2}{3}.$">|; 
 
+$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.4slashgraphicsslashrelax_iconsslash128x128slashgrid_search};LFS=12;AAT/;
+$cached_env_img{$key} = q|<IMG
+ WIDTH="28" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
+ SRC="|."$dir".q|img436.png"
+ ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.4/graphics/relax_icons/128x128/grid_search}">|; 
+
 $key = q/displaystyle{mathfrak{S}{={mathfrak{D}{cupleft(bigcup_{i=1}^l{mathfrak{F}{_iright),;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
  WIDTH="163" HEIGHT="77" ALIGN="MIDDLE" BORDER="0"
  SRC="|."$dir".q|img163.png"
  ALT="$\displaystyle \mathfrak{S}= \mathfrak{D}\cup \left( \bigcup_{i=1}^l \mathfrak{F}_i \right),$">|; 
+
+$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.4slashgraphicsslashrelax_iconsslash128x128slashminimise};LFS=12;AAT/;
+$cached_env_img{$key} = q|<IMG
+ WIDTH="27" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
+ SRC="|."$dir".q|img421.png"
+ ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.4/graphics/relax_icons/128x128/minimise}">|; 
 
 $key = q/omega;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
@@ -162,12 +186,6 @@ $cached_env_img{$key} = q|<IMG
 \Bigg)
 \Bigg).
 \end{multline}">|; 
-
-$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.3slashgraphicsslashoxygen_iconsslash128x128slashactionsslashdocumentation};MSF=1.6;LFS=12;AAT/;
-$cached_env_img{$key} = q|<IMG
- WIDTH="27" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img415.png"
- ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.3/graphics/oxygen_icons/128x128/actions/documentation}">|; 
 
 $key = q/{subequations}{align}frac{partial^2tau_{-2}}{{partialmathfrak{D}_r}^2}&=72left(f+2mathfrak{D}_amathfrak{R})^{-2}.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
@@ -195,41 +213,23 @@ $cached_env_img{$key} = q|<IMG
  ALT="$\displaystyle d' \equiv \frac{\mathrm{d} d}{\mathrm{d} r} = - \frac{3}{2} \left...
 ...mma_{\scriptscriptstyle H}\gamma_{\scriptscriptstyle X}\hbar \right)^2}{&lt;r^7&gt;}.$">|; 
 
-$key = q/mathfrak{G}_i;MSF=1.6;LFS=12;AAT/;
-$cached_env_img{$key} = q|<IMG
- WIDTH="24" HEIGHT="34" ALIGN="MIDDLE" BORDER="0"
- SRC="|."$dir".q|img233.png"
- ALT="$ \mathfrak{G}_i$">|; 
-
 $key = q/mathfrak{D}_a;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
  WIDTH="29" HEIGHT="34" ALIGN="MIDDLE" BORDER="0"
  SRC="|."$dir".q|img20.png"
  ALT="$ \mathfrak{D}_a$">|; 
 
+$key = q/mathfrak{G}_i;MSF=1.6;LFS=12;AAT/;
+$cached_env_img{$key} = q|<IMG
+ WIDTH="24" HEIGHT="34" ALIGN="MIDDLE" BORDER="0"
+ SRC="|."$dir".q|img233.png"
+ ALT="$ \mathfrak{G}_i$">|; 
+
 $key = q/chi^{2}_{};MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
  WIDTH="23" HEIGHT="38" ALIGN="MIDDLE" BORDER="0"
  SRC="|."$dir".q|img1.png"
  ALT="$ \chi^{2}_{}$">|; 
-
-$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.3slashgraphicsslashoxygen_iconsslash128x128slashactionsslashlist-add};MSF=1.6;LFS=12;AAT/;
-$cached_env_img{$key} = q|<IMG
- WIDTH="28" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img408.png"
- ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.3/graphics/oxygen_icons/128x128/actions/list-add}">|; 
-
-$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.3slashgraphicssl_iconsslash128x128slashcategoriesslashapplications-education};MSF=1.6;LFS=12;AAT/;
-$cached_env_img{$key} = q|<IMG
- WIDTH="28" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img412.png"
- ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.3/graphics/oxygen_icons/128x128/categories/applications-education}">|; 
-
-$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.3slashgraphicsslashrelax_iconsslash128x128slashgrid_search};LFS=12;AAT/;
-$cached_env_img{$key} = q|<IMG
- WIDTH="28" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img436.png"
- ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.3/graphics/relax_icons/128x128/grid_search}">|; 
 
 $key = q/displaystyleJ_d^{mathrm{R}_1}=J(omega_H-omega_X)+3J(omega_X)+6J(omega_H+omega_X).;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
@@ -261,18 +261,6 @@ $cached_env_img{$key} = q|<IMG
  WIDTH="105" HEIGHT="64" ALIGN="MIDDLE" BORDER="0"
  SRC="|."$dir".q|img245.png"
  ALT="$\displaystyle \frac{\partial^2 J(\omega)}{(\partial S^2)^2} = 0.$">|; 
-
-$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.3slashgraphicsslashrelax_iconsslash128x128slashpipe_bundle};LFS=12;AAT/;
-$cached_env_img{$key} = q|<IMG
- WIDTH="28" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img456.png"
- ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.3/graphics/relax_icons/128x128/pipe_bundle}">|; 
-
-$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.3slashgraphicsslashoxygen_iconsslash128x128slashactionsslashchronometer};MSF=1.6;LFS=12;AAT/;
-$cached_env_img{$key} = q|<IMG
- WIDTH="28" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img462.png"
- ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.3/graphics/oxygen_icons/128x128/actions/chronometer}">|; 
 
 $key = q/tau^{{-1}}_{};MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
@@ -306,11 +294,23 @@ $cached_env_img{$key} = q|<IMG
  ALT="$\displaystyle \left(\vphantom{ \frac{\partial \delta_y}{\partial \mathfrak{O}_i...
 ...mathfrak{O}_i} \cdot \frac{\partial \delta_y}{\partial \mathfrak{O}_j} }\right.$">|; 
 
-$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.3slashgraphicsslashrelax_iconsslash128x128slashspin_grey};LFS=12;AAT/;
+$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.4slashgraphicsslashrelax_iconsslash128x128slashjw_mapping};LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
  WIDTH="28" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img426.png"
- ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.3/graphics/relax_icons/128x128/spin_grey}">|; 
+ SRC="|."$dir".q|img442.png"
+ ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.4/graphics/relax_icons/128x128/jw_mapping}">|; 
+
+$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.4slashgraphicsslashoxygen_iconsslash128x128slashactionsslashchronometer};MSF=1.6;LFS=12;AAT/;
+$cached_env_img{$key} = q|<IMG
+ WIDTH="28" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
+ SRC="|."$dir".q|img462.png"
+ ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.4/graphics/oxygen_icons/128x128/actions/chronometer}">|; 
+
+$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.4slashgraphicsslashoxygen_iconsslash128x128slashactionsslashdialog-close};MSF=1.6;LFS=12;AAT/;
+$cached_env_img{$key} = q|<IMG
+ WIDTH="27" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
+ SRC="|."$dir".q|img463.png"
+ ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.4/graphics/oxygen_icons/128x128/actions/dialog-close}">|; 
 
 $key = q/displaystyle{frac{{partial^2e}}{{partial{mathfrak{O}{_icdotpartial{mathfrak{D}{_r}}};MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
@@ -381,12 +381,6 @@ $cached_env_img{$key} = q|<IMG
 \Bigg).
 \end{multline}">|; 
 
-$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.3slashgraphicsslashrelax_iconsslash128x128slashalign_tensor};LFS=12;AAT/;
-$cached_env_img{$key} = q|<IMG
- WIDTH="27" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img407.png"
- ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.3/graphics/relax_icons/128x128/align_tensor}">|; 
-
 $key = q/{subequations}{align}frac{partial^2tau_{-2}}{{partialtau_m}^2}&=2{tau_m}^{-4}(6m+2mathfrak{D}_amathfrak{R})^{-2}.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
  WIDTH="601" HEIGHT="398" ALIGN="BOTTOM" BORDER="0"
@@ -412,23 +406,17 @@ $cached_env_img{$key} = q|<IMG
  SRC="|."$dir".q|img374.png"
  ALT="$\displaystyle \frac{\partial c_{0}}{\partial \tau_m} = 0.$">|; 
 
-$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.3slashgraphicsslashrelax_iconsslash128x128slashn_state_model};LFS=12;AAT/;
+$key = q/displaystyledelta_{y}^{2};MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="28" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img452.png"
- ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.3/graphics/relax_icons/128x128/n_state_model}">|; 
+ WIDTH="20" HEIGHT="40" ALIGN="MIDDLE" BORDER="0"
+ SRC="|."$dir".q|img299.png"
+ ALT="$\displaystyle \delta_{y}^{2}$">|; 
 
 $key = q/displaystylepmatrix{-1<row_mark>pmatrix{cdotpmatrix{{mathfrak{D}{_a<row_mark>pmatrix{geqslantpmatrix{0<row_mark>pmatrix{.;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
  WIDTH="161" HEIGHT="41" ALIGN="MIDDLE" BORDER="0"
  SRC="|."$dir".q|img131.png"
  ALT="$\displaystyle \begin{pmatrix}-1 \  \end{pmatrix} \cdot \begin{pmatrix}\mathfrak{D}_a \  \end{pmatrix} \geqslant \begin{pmatrix}0 \  \end{pmatrix}.$">|; 
-
-$key = q/displaystyledelta_{y}^{2};MSF=1.6;LFS=12;AAT/;
-$cached_env_img{$key} = q|<IMG
- WIDTH="20" HEIGHT="40" ALIGN="MIDDLE" BORDER="0"
- SRC="|."$dir".q|img299.png"
- ALT="$\displaystyle \delta_{y}^{2}$">|; 
 
 $key = q/{subequations}{align}frac{partialwidehat{mathfrak{D}_y}}{partialalpha}&={pmatrixinalphacosbetacosgamma0{pmatrix}.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
@@ -443,18 +431,18 @@ $cached_env_img{$key} = q|<IMG
  SRC="|."$dir".q|img81.png"
  ALT="$ \tau_{0}^{}$">|; 
 
-$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.3slashgraphicsslashoxygen_iconsslash128x128slashactionsslashlist-remove};MSF=1.6;LFS=12;AAT/;
-$cached_env_img{$key} = q|<IMG
- WIDTH="27" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img409.png"
- ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.3/graphics/oxygen_icons/128x128/actions/list-remove}">|; 
-
 $key = q/displaystylefrac{partial^2J(omega)}{partial{mathfrak{O}{_jcdotpartial{mathfrak{Otau_e+tau_i)tau_e}{(tau_e+tau_i)^2+(omegatau_etau_i)^2}Bigg).;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
  WIDTH="572" HEIGHT="78" ALIGN="MIDDLE" BORDER="0"
  SRC="|."$dir".q|img242.png"
  ALT="$\displaystyle \frac{\partial^2 J(\omega)}{\partial \mathfrak{O}_j \cdot \partia...
 ...\tau_e + \tau_i)\tau_e}{(\tau_e + \tau_i)^2 + (\omega \tau_e \tau_i)^2} \Bigg).$">|; 
+
+$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.4slashgraphicsslashrelax_iconsslash128x128slashdiscrepancy_curve};LFS=12;AAT/;
+$cached_env_img{$key} = q|<IMG
+ WIDTH="28" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
+ SRC="|."$dir".q|img444.png"
+ ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.4/graphics/relax_icons/128x128/discrepancy_curve}">|; 
 
 $key = q/displaystyleR_{ex}=rho_{ex}(2piomega_H)^2.;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
@@ -468,11 +456,11 @@ $cached_env_img{$key} = q|<IMG
  SRC="|."$dir".q|img228.png"
  ALT="$\displaystyle C_\mathrm{O}(\tau) = \frac{1}{5} \sum_{i=-k}^k c_i \cdot e^{-\tau/\tau_i},$">|; 
 
-$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.3slashgraphicsslashrelax_iconsslash128x128slashminimise};LFS=12;AAT/;
+$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.4slashgraphicsslashoxygen_iconsslash128x128slashactionsslashlist-remove};MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
  WIDTH="27" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img421.png"
- ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.3/graphics/relax_icons/128x128/minimise}">|; 
+ SRC="|."$dir".q|img409.png"
+ ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.4/graphics/oxygen_icons/128x128/actions/list-remove}">|; 
 
 $key = q/includegraphics[width=0.8textwidth,bb=00461697]{imagesslashmodel_freeslashnew_protocol};LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
@@ -513,11 +501,17 @@ $cached_env_img{$key} = q|<IMG
  ALT="\begin{subequations}\begin{align}\frac{\partial \widehat{\mathfrak{D}_{\scriptsc...
 ...hi \ \sin \theta \cos \phi \ 0 \ \end{pmatrix}. \end{align}\end{subequations}">|; 
 
-$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.3slashgraphicsslashoxygen_iconsslash128x128slashactionsslashdialog-close};MSF=1.6;LFS=12;AAT/;
+$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.4slashgraphicsslashoxygen_iconsslash128x128slashactionsslashlist-add};MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="27" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img463.png"
- ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.3/graphics/oxygen_icons/128x128/actions/dialog-close}">|; 
+ WIDTH="28" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
+ SRC="|."$dir".q|img408.png"
+ ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.4/graphics/oxygen_icons/128x128/actions/list-add}">|; 
+
+$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.4slashgraphicsslashrelax_iconsslash128x128slashconsistency_testing};LFS=12;AAT/;
+$cached_env_img{$key} = q|<IMG
+ WIDTH="28" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
+ SRC="|."$dir".q|img422.png"
+ ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.4/graphics/relax_icons/128x128/consistency_testing}">|; 
 
 $key = q/mu_{k}^{};MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
@@ -605,6 +599,12 @@ $cached_env_img{$key} = q|<IMG
  SRC="|."$dir".q|img281.png"
  ALT="$\displaystyle {\frac{{\partial e}}{{\partial \mathfrak{O}_i}}}$">|; 
 
+$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.4slashgraphicsslashoxygen_iconsslash128x128slashactionsslashroll-relax-blue};MSF=1.6;LFS=12;AAT/;
+$cached_env_img{$key} = q|<IMG
+ WIDTH="28" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
+ SRC="|."$dir".q|img448.png"
+ ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.4/graphics/oxygen_icons/128x128/actions/roll-relax-blue}">|; 
+
 $key = q/{multline}frac{partial^2J(omega)}{partial{mathfrak{G}{_jcdotpartialtau_f}=frac{2^2}{left((tau_f+tau_i)^2+(omegatau_ftau_i)^2right)^2}Bigg).{multline};LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
  WIDTH="565" HEIGHT="136" ALIGN="BOTTOM" BORDER="0"
@@ -627,6 +627,12 @@ $cached_env_img{$key} = q|<IMG
  WIDTH="21" HEIGHT="34" ALIGN="MIDDLE" BORDER="0"
  SRC="|."$dir".q|img402.png"
  ALT="$ \delta_{z}^{}$">|; 
+
+$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.4slashgraphicsslashoxygen_iconsslash128x128slashactionsslasharchive-extract};MSF=1.6;LFS=12;AAT/;
+$cached_env_img{$key} = q|<IMG
+ WIDTH="27" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
+ SRC="|."$dir".q|img425.png"
+ ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.4/graphics/oxygen_icons/128x128/actions/archive-extract}">|; 
 
 $key = q/gamma_{{scriptscriptstyleX}}^{};MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
@@ -692,11 +698,11 @@ $cached_env_img{$key} = q|<IMG
  SRC="|."$dir".q|img429.png"
  ALT="$ \le$">|; 
 
-$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.3slashgraphicsslashrelax_iconsslash128x128slashopendx};LFS=12;AAT/;
+$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.4slashgraphicsslashrelax_iconsslash128x128slashpipe_bundle};LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="27" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img435.png"
- ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.3/graphics/relax_icons/128x128/opendx}">|; 
+ WIDTH="28" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
+ SRC="|."$dir".q|img456.png"
+ ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.4/graphics/relax_icons/128x128/pipe_bundle}">|; 
 
 $key = q/widehat{mathfrak};MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
@@ -735,12 +741,6 @@ $cached_env_img{$key} = q|<IMG
  ALT="$\displaystyle \nabla \mathfrak{L}_A(\theta, \lambda^k; \mu_k) = \nabla f(\theta...
 ...i^k} \left( \lambda_i^k - \frac{c_i(\theta)}{\mu_k} \right) \nabla c_i(\theta),$">|; 
 
-$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.3slashgraphicsslashoxygen_iconsslash128x128slashstatusslashweather-clear};MSF=1.6;LFS=12;AAT/;
-$cached_env_img{$key} = q|<IMG
- WIDTH="28" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img460.png"
- ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.3/graphics/oxygen_icons/128x128/status/weather-clear}">|; 
-
 $key = q/{subequations}{align}1slashtau_{-1}&=6mathfrak{D}_{iso}-2mathfrak{D}_a,1slashtaumathfrak{D}_{iso}+2mathfrak{D}_a.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
  WIDTH="364" HEIGHT="107" ALIGN="BOTTOM" BORDER="0"
@@ -766,6 +766,12 @@ $cached_env_img{$key} = q|<IMG
  WIDTH="26" HEIGHT="33" ALIGN="MIDDLE" BORDER="0"
  SRC="|."$dir".q|img4.png"
  ALT="$ \tau_{m}^{}$">|; 
+
+$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.4slashgraphicsslashrelax_iconsslash128x128slashnoe};LFS=12;AAT/;
+$cached_env_img{$key} = q|<IMG
+ WIDTH="27" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
+ SRC="|."$dir".q|img453.png"
+ ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.4/graphics/relax_icons/128x128/noe}">|; 
 
 $key = q/delta_{x}^{};MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
@@ -906,12 +912,6 @@ $cached_env_img{$key} = q|<IMG
  SRC="|."$dir".q|img326.png"
  ALT="$\displaystyle \Bigg($">|; 
 
-$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.3slashgraphicsslashoxygen_iconsslash128x128slashappsslashutilities-terminal};MSF=1.6;LFS=12;AAT/;
-$cached_env_img{$key} = q|<IMG
- WIDTH="28" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img418.png"
- ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.3/graphics/oxygen_icons/128x128/apps/utilities-terminal}">|; 
-
 $key = q/displaystyletau_{0}=tau_m.;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
  WIDTH="72" HEIGHT="33" ALIGN="MIDDLE" BORDER="0"
@@ -936,6 +936,12 @@ $cached_env_img{$key} = q|<IMG
  SRC="|."$dir".q|img212.png"
  ALT="\begin{subequations}\begin{align}\mathrm{R}_1(\theta) &amp; = d J_d^{\mathrm{R}_1} +...
 ...= d J_d^{\sigma_{\scriptscriptstyle \mathrm{NOE}}}.\end{align}\end{subequations}">|; 
+
+$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.4slashgraphicsslashrelax_iconsslash128x128slashdipole_pair};LFS=12;AAT/;
+$cached_env_img{$key} = q|<IMG
+ WIDTH="27" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
+ SRC="|."$dir".q|img433.png"
+ ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.4/graphics/relax_icons/128x128/dipole_pair}">|; 
 
 $key = q/mathfrak{O}_j;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
@@ -1006,6 +1012,12 @@ $cached_env_img{$key} = q|<IMG
  SRC="|."$dir".q|img176.png"
  ALT="$\displaystyle \lVert \nabla \chi^2_i \rVert = \dim \mathfrak{D}.$">|; 
 
+$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.4slashgraphicsslashoxygen_iconsslash128x128slashactionsslashdialog-cancel};MSF=1.6;LFS=12;AAT/;
+$cached_env_img{$key} = q|<IMG
+ WIDTH="27" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
+ SRC="|."$dir".q|img449.png"
+ ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.4/graphics/oxygen_icons/128x128/actions/dialog-cancel}">|; 
+
 $key = q/{subequations}{align}mathrm{R}_1(theta)&=mathrm{R}_1'(theta),mathrm{R}_2(theta)&OE}}(theta)}{mathrm{R}_1(theta)}.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
  WIDTH="385" HEIGHT="131" ALIGN="BOTTOM" BORDER="0"
@@ -1019,6 +1031,12 @@ $cached_env_img{$key} = q|<IMG
  SRC="|."$dir".q|img398.png"
  ALT="$\displaystyle \widehat{\mathfrak{D}_{\scriptscriptstyle \parallel}} = \begin{pm...
 ...n \theta \cos \phi \  \sin \theta \sin \phi \  \cos \theta \  \end{pmatrix}.$">|; 
+
+$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.4slashgraphicsslashoxygen_iconsslash128x128slashactionsslashdocument-save};MSF=1.6;LFS=12;AAT/;
+$cached_env_img{$key} = q|<IMG
+ WIDTH="27" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
+ SRC="|."$dir".q|img419.png"
+ ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.4/graphics/oxygen_icons/128x128/actions/document-save}">|; 
 
 $key = q/{subequations}{align}&mathfrak{D}_{iso}=tfrac{1}{3}(mathfrak{D}_{scriptscriptstyhfrak{D}_{scriptscriptstyleperp}.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
@@ -1072,11 +1090,11 @@ $cached_env_img{$key} = q|<IMG
  SRC="|."$dir".q|img297.png"
  ALT="$\displaystyle {\frac{{\partial^2 e}}{{\partial \mathfrak{O}_i \cdot \partial \mathfrak{O}_j}}}$">|; 
 
-$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.3slashgraphicssloxygen_iconsslash128x128slashactionsslashlist-add-relax-blue};MSF=1.6;LFS=12;AAT/;
+$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.4slashgraphicsslashrelax_iconsslash128x128slashdiff_tensor};LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
  WIDTH="28" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img424.png"
- ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.3/graphics/oxygen_icons/128x128/actions/list-add-relax-blue}">|; 
+ SRC="|."$dir".q|img428.png"
+ ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.4/graphics/relax_icons/128x128/diff_tensor}">|; 
 
 $key = q/displaystyleNOE=frac{I_{sat}}{I_{ref}},;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
@@ -1096,6 +1114,18 @@ $cached_env_img{$key} = q|<IMG
  SRC="|."$dir".q|img363.png"
  ALT="\begin{subequations}\begin{align}\frac{\partial \tau_{-1}}{\partial \tau_m} &amp;= {...
 ...{-2} (6\mathfrak{D}_{iso} + 2\mathfrak{D}_a)^{-2}. \end{align}\end{subequations}">|; 
+
+$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.4slashgraphicsslashrelax_iconsslash128x128slashfid};LFS=12;AAT/;
+$cached_env_img{$key} = q|<IMG
+ WIDTH="27" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
+ SRC="|."$dir".q|img459.png"
+ ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.4/graphics/relax_icons/128x128/fid}">|; 
+
+$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.4slashgraphicsslashrelax_iconsslash128x128slashmodel-free};LFS=12;AAT/;
+$cached_env_img{$key} = q|<IMG
+ WIDTH="27" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
+ SRC="|."$dir".q|img443.png"
+ ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.4/graphics/relax_icons/128x128/model-free}">|; 
 
 $key = q/displaystyle{J_c^{mathrm{R}_2}}''equivfrac{partial^2J_c^{mathrm{R}_2}}{partialth3frac{partial^2J(omega_X)}{partialtheta_jcdotpartialtheta_k}.;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
@@ -1144,18 +1174,6 @@ $cached_env_img{$key} = q|<IMG
  ALT="$\displaystyle \left.\vphantom{ \frac{\partial \delta_y}{\partial \mathfrak{O}_i...
 ...mathfrak{O}_i} \cdot \frac{\partial \delta_y}{\partial \mathfrak{O}_j} }\right)$">|; 
 
-$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.3slashgraphicsslashrelax_iconsslash128x128slashbruker};LFS=12;AAT/;
-$cached_env_img{$key} = q|<IMG
- WIDTH="28" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img420.png"
- ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.3/graphics/relax_icons/128x128/bruker}">|; 
-
-$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.3slashgraphicsslashoxygen_iconsslash128x128slashactionsslashhelp-about};MSF=1.6;LFS=12;AAT/;
-$cached_env_img{$key} = q|<IMG
- WIDTH="28" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img470.png"
- ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.3/graphics/oxygen_icons/128x128/actions/help-about}">|; 
-
 $key = q/{subequations}{align}frac{partial^2widehat{mathfrak{D}_{scriptscriptstyleparalleacosphi-sinthetasinphi0{pmatrix}.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
  WIDTH="428" HEIGHT="244" ALIGN="BOTTOM" BORDER="0"
@@ -1188,6 +1206,12 @@ $cached_env_img{$key} = q|<IMG
  ALT="$\displaystyle \frac{\partial^2 J(\omega)}{{\partial \tau_f}^2} = -\frac{4}{5} (...
 ...i)^4 \tau_f^3} {\left((\tau_f + \tau_i)^2 + (\omega \tau_f \tau_i)^2 \right)^3}$">|; 
 
+$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.4slashgraphicsslashrelax_iconsslash128x128slashvalue};LFS=12;AAT/;
+$cached_env_img{$key} = q|<IMG
+ WIDTH="27" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
+ SRC="|."$dir".q|img471.png"
+ ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.4/graphics/relax_icons/128x128/value}">|; 
+
 $key = q/{subequations}{gather}0<mathfrak{D}_{iso}<infty,-tfrac{3}{2}mathfrak{D}_{iso}<mathfrak{D}_a<3mathfrak{D}_{iso}.{gather}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
  WIDTH="367" HEIGHT="80" ALIGN="BOTTOM" BORDER="0"
@@ -1195,11 +1219,11 @@ $cached_env_img{$key} = q|<IMG
  ALT="\begin{subequations}\begin{gather}0 &lt; \mathfrak{D}_{iso} &lt; \infty, \ -\tfrac{3}...
 ...{D}_{iso} &lt; \mathfrak{D}_a &lt; 3\mathfrak{D}_{iso}. \end{gather}\end{subequations}">|; 
 
-$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.3slashgraphicsslashoxygen_iconsslash128x128slashactionsslashedit-delete};MSF=1.6;LFS=12;AAT/;
+$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.4slashgraphicsslashoxygen_iconsslash128x128slashactionsslashdialog-ok};MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="27" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img437.png"
- ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.3/graphics/oxygen_icons/128x128/actions/edit-delete}">|; 
+ WIDTH="28" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
+ SRC="|."$dir".q|img450.png"
+ ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.4/graphics/oxygen_icons/128x128/actions/dialog-ok}">|; 
 
 $key = q/displaystyleleft.vphantom{delta_zfrac{partial^2delta_z}{partial{mathfrak{O}{_icdO}{_i}cdotfrac{partialdelta_z}{partial{mathfrak{O}{_j}}right);MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
@@ -1207,12 +1231,6 @@ $cached_env_img{$key} = q|<IMG
  SRC="|."$dir".q|img305.png"
  ALT="$\displaystyle \left.\vphantom{ \delta_z \frac{\partial^2 \delta_z}{\partial \ma...
 ...mathfrak{O}_i} \cdot \frac{\partial \delta_z}{\partial \mathfrak{O}_j} }\right)$">|; 
-
-$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.3slashgraphicsslashrelax_iconsslash128x128slashmolecule};LFS=12;AAT/;
-$cached_env_img{$key} = q|<IMG
- WIDTH="27" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img445.png"
- ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.3/graphics/relax_icons/128x128/molecule}">|; 
 
 $key = q/displaystyle{J_c^{mathrm{R}_2}}'equivfrac{partialJ_c^{mathrm{R}_2}}{partialtheta0)}{partialtheta_j}+3frac{partialJ(omega_X)}{partialtheta_j}.;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
@@ -1235,12 +1253,6 @@ $cached_env_img{$key} = q|<IMG
  ALT="$\displaystyle \nabla = \begin{pmatrix}\frac{\partial}{\partial \theta_1} \  \f...
 ...l \theta_2} \  \vdots \  \frac{\partial}{\partial \theta_n} \  \end{pmatrix}$">|; 
 
-$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.3slashgraphicsslashoxygen_iconsslash128x128slashactionsslashdocument-open};MSF=1.6;LFS=12;AAT/;
-$cached_env_img{$key} = q|<IMG
- WIDTH="28" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img416.png"
- ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.3/graphics/oxygen_icons/128x128/actions/document-open}">|; 
-
 $key = q/rVert_{F}^{};MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
  WIDTH="26" HEIGHT="37" ALIGN="MIDDLE" BORDER="0"
@@ -1254,29 +1266,29 @@ $cached_env_img{$key} = q|<IMG
  ALT="$\displaystyle \left(\vphantom{ \delta_x \frac{\partial^2 \delta_x}{\partial \ma...
 ...mathfrak{O}_i} \cdot \frac{\partial \delta_x}{\partial \mathfrak{O}_j} }\right.$">|; 
 
+$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.4slashgraphicsslashrelax_iconsslash128x128slashn_state_model};LFS=12;AAT/;
+$cached_env_img{$key} = q|<IMG
+ WIDTH="28" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
+ SRC="|."$dir".q|img452.png"
+ ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.4/graphics/relax_icons/128x128/n_state_model}">|; 
+
 $key = q/mathfrak{F}_i;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
  WIDTH="22" HEIGHT="34" ALIGN="MIDDLE" BORDER="0"
  SRC="|."$dir".q|img84.png"
  ALT="$ \mathfrak{F}_i$">|; 
 
+$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.4slashgraphicsslashrelax_iconsslash128x128slashfrq};LFS=12;AAT/;
+$cached_env_img{$key} = q|<IMG
+ WIDTH="27" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
+ SRC="|."$dir".q|img423.png"
+ ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.4/graphics/relax_icons/128x128/frq}">|; 
+
 $key = q/Psi;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
  WIDTH="18" HEIGHT="17" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img109.png"
  ALT="$ \Psi$">|; 
-
-$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.3slashgraphicsslashrelax_iconsslash128x128slashfid};LFS=12;AAT/;
-$cached_env_img{$key} = q|<IMG
- WIDTH="27" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img459.png"
- ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.3/graphics/relax_icons/128x128/fid}">|; 
-
-$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.3slashgraphicsslashrelax_iconsslash128x128slashvalue};LFS=12;AAT/;
-$cached_env_img{$key} = q|<IMG
- WIDTH="27" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img471.png"
- ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.3/graphics/relax_icons/128x128/value}">|; 
 
 $key = q/{subequations}{align}nablamathrm{R}_1(theta)&=nablamathrm{R}_1'(theta),nablamathheta)nablamathrm{R}_1(theta)Big).{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
@@ -1323,12 +1335,6 @@ $cached_env_img{$key} = q|<IMG
  ALT="$\displaystyle \frac{\partial^2 J(\omega)}{\partial S^2 \cdot \partial \tau_s} =...
 ...u_s \tau_i)^2}{\left((\tau_s + \tau_i)^2 + (\omega \tau_s \tau_i)^2 \right)^2}.$">|; 
 
-$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.3slashgraphicsslashrelax_iconsslash128x128slashmodel-free};LFS=12;AAT/;
-$cached_env_img{$key} = q|<IMG
- WIDTH="27" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img443.png"
- ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.3/graphics/relax_icons/128x128/model-free}">|; 
-
 $key = q/displaystyle{J_c^{mathrm{R}_1}}''equivfrac{partial^2J_c^{mathrm{R}_1}}{partialth=frac{partial^2J(omega_X)}{partialtheta_jcdotpartialtheta_k}.;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
  WIDTH="235" HEIGHT="65" ALIGN="MIDDLE" BORDER="0"
@@ -1341,6 +1347,12 @@ $cached_env_img{$key} = q|<IMG
  WIDTH="90" HEIGHT="37" ALIGN="MIDDLE" BORDER="0"
  SRC="|."$dir".q|img371.png"
  ALT="$\displaystyle \mathfrak{D}= \{ \tau_m \}.$">|; 
+
+$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.4slashgraphicsslashrelax_iconsslash128x128slashrelax};LFS=12;AAT/;
+$cached_env_img{$key} = q|<IMG
+ WIDTH="27" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
+ SRC="|."$dir".q|img465.png"
+ ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.4/graphics/relax_icons/128x128/relax}">|; 
 
 $key = q/displaystylewidehat{mathfrak{U}{=hatthetainleft{{mathfrak{S}{:min_{hatthetain{ma}hattheta=argminleft{chi^2(theta):thetain{mathfrak{S}{right}.;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
@@ -1361,6 +1373,12 @@ $cached_env_img{$key} = q|<IMG
  WIDTH="42" HEIGHT="60" ALIGN="MIDDLE" BORDER="0"
  SRC="|."$dir".q|img322.png"
  ALT="$\displaystyle {\frac{{\partial \delta_x}}{{\partial \mathfrak{O}_j}}}$">|; 
+
+$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.4slashgraphicsslashrelax_iconsslash128x128slashpipe};LFS=12;AAT/;
+$cached_env_img{$key} = q|<IMG
+ WIDTH="27" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
+ SRC="|."$dir".q|img455.png"
+ ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.4/graphics/relax_icons/128x128/pipe}">|; 
 
 $key = q/displaystyleJ(omega)=frac{2}{5}sum_{i=-k}^kc_icdottau_iBigg(frac{S^2}{1+(omegatatau_s+tau_i)tau_s}{(tau_s+tau_i)^2+(omegatau_stau_i)^2}Bigg).;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
@@ -1425,12 +1443,6 @@ $cached_env_img{$key} = q|<IMG
  ALT="$\displaystyle \left(\vphantom{ \delta_y \frac{\partial^2 \delta_y}{\partial \ma...
 ...mathfrak{O}_i} \cdot \frac{\partial \delta_y}{\partial \mathfrak{O}_j} }\right.$">|; 
 
-$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.3slashgraphicsslashoxygen_iconsslash128x128slashstatusslashobject-locked};MSF=1.6;LFS=12;AAT/;
-$cached_env_img{$key} = q|<IMG
- WIDTH="27" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img411.png"
- ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.3/graphics/oxygen_icons/128x128/status/object-locked}">|; 
-
 $key = q/displaystyle{mathfrak{T}{_i={mathfrak{D}{_icup{mathfrak{F}{_i.;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
  WIDTH="112" HEIGHT="34" ALIGN="MIDDLE" BORDER="0"
@@ -1462,6 +1474,12 @@ $cached_env_img{$key} = q|<IMG
  SRC="|."$dir".q|img270.png"
  ALT="$\displaystyle \frac{\partial^2 J(\omega)}{\partial S^2_f \cdot \partial \tau_s}...
 ...u_s \tau_i)^2}{\left((\tau_s + \tau_i)^2 + (\omega \tau_s \tau_i)^2 \right)^2}.$">|; 
+
+$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.4slashgraphicsslashrelax_iconsslash128x128slashstructure};LFS=12;AAT/;
+$cached_env_img{$key} = q|<IMG
+ WIDTH="27" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
+ SRC="|."$dir".q|img469.png"
+ ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.4/graphics/relax_icons/128x128/structure}">|; 
 
 $key = q/mathfrak{F};MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
@@ -1495,12 +1513,6 @@ $cached_env_img{$key} = q|<IMG
  WIDTH="23" HEIGHT="43" ALIGN="MIDDLE" BORDER="0"
  SRC="|."$dir".q|img180.png"
  ALT="$ \mathfrak{F}_l^j$">|; 
-
-$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.3slashgraphicsslashrelax_iconsslash128x128slashdipole_pair};LFS=12;AAT/;
-$cached_env_img{$key} = q|<IMG
- WIDTH="27" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img433.png"
- ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.3/graphics/relax_icons/128x128/dipole_pair}">|; 
 
 $key = q/{subequations}{align}1slashtau_{-2}&=6mathfrak{D}_{iso}-2mathfrak{D}_amathfrak{R_{iso}+2mathfrak{D}_amathfrak{R}.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
@@ -1541,12 +1553,6 @@ $cached_env_img{$key} = q|<IMG
  SRC="|."$dir".q|img243.png"
  ALT="$\displaystyle \frac{\partial^2 J(\omega)}{\partial \mathfrak{O}_j \cdot \partia...
 ...\tau_e + \tau_i)\tau_e}{(\tau_e + \tau_i)^2 + (\omega \tau_e \tau_i)^2} \Bigg).$">|; 
-
-$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.3slashgraphicsslashrelax_iconsslash128x128slashdiscrepancy_curve};LFS=12;AAT/;
-$cached_env_img{$key} = q|<IMG
- WIDTH="28" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img444.png"
- ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.3/graphics/relax_icons/128x128/discrepancy_curve}">|; 
 
 $key = q/displaystyle{frac{{1}}{{{mathfrak{R}{^5}}};MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
@@ -1617,12 +1623,6 @@ $cached_env_img{$key} = q|<IMG
  ALT="\begin{subequations}\begin{align}\frac{\partial^2 c_{2}}{\partial \mathfrak{O}_i...
 ...ial \mathfrak{O}_i \cdot \partial \mathfrak{O}_j}, \end{align}\end{subequations}">|; 
 
-$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.3slashgraphicsslashrelax_iconsslash128x128slashgrace_icon};LFS=12;AAT/;
-$cached_env_img{$key} = q|<IMG
- WIDTH="27" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img439.png"
- ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.3/graphics/relax_icons/128x128/grace_icon}">|; 
-
 $key = q/displaystyled;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
  WIDTH="13" HEIGHT="34" ALIGN="MIDDLE" BORDER="0"
@@ -1660,6 +1660,12 @@ $cached_env_img{$key} = q|<IMG
  WIDTH="20" HEIGHT="34" ALIGN="MIDDLE" BORDER="0"
  SRC="|."$dir".q|img301.png"
  ALT="$\displaystyle \delta_{z}^{}$">|; 
+
+$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.4slashgraphicsslashrelax_iconsslash128x128slashopendx};LFS=12;AAT/;
+$cached_env_img{$key} = q|<IMG
+ WIDTH="27" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
+ SRC="|."$dir".q|img435.png"
+ ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.4/graphics/relax_icons/128x128/opendx}">|; 
 
 $key = q/chi^{2}_{i};MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
@@ -1744,12 +1750,6 @@ $cached_env_img{$key} = q|<IMG
  ALT="\begin{subequations}\begin{align}\frac{\partial^2 c_{-2}}{\partial \tau_m \cdot ...
 ...artial \tau_m \cdot \partial \mathfrak{D}_r} &amp;= 0. \end{align}\end{subequations}">|; 
 
-$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.3slashgraphicsslashrelax_iconsslash128x128slashjw_mapping};LFS=12;AAT/;
-$cached_env_img{$key} = q|<IMG
- WIDTH="28" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img442.png"
- ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.3/graphics/relax_icons/128x128/jw_mapping}">|; 
-
 $key = q/displaystylehattheta=argmin_thetaf(theta),;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
  WIDTH="143" HEIGHT="45" ALIGN="MIDDLE" BORDER="0"
@@ -1769,6 +1769,12 @@ $cached_env_img{$key} = q|<IMG
  ALT="\begin{subequations}\begin{align}\frac{\partial^2 \widehat{\mathfrak{D}_y}}{\par...
 ...lpha \cos \beta \sin \gamma \ 0 \ \end{pmatrix}. \end{align}\end{subequations}">|; 
 
+$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.4slashgraphicsslashrelax_iconsslash128x128slashmolecule};LFS=12;AAT/;
+$cached_env_img{$key} = q|<IMG
+ WIDTH="27" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
+ SRC="|."$dir".q|img445.png"
+ ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.4/graphics/relax_icons/128x128/molecule}">|; 
+
 $key = q/alpha;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
  WIDTH="17" HEIGHT="17" ALIGN="BOTTOM" BORDER="0"
@@ -1780,12 +1786,6 @@ $cached_env_img{$key} = q|<IMG
  WIDTH="307" HEIGHT="71" ALIGN="MIDDLE" BORDER="0"
  SRC="|."$dir".q|img184.png"
  ALT="$\displaystyle \nabla \chi^2(\theta) = 2 \sum_{i=1}^n \frac{(\mathrm{R}_i- \mathrm{R}_i(\theta))^2}{\sigma_i^2} \nabla \mathrm{R}_i(\theta).$">|; 
-
-$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.3slashgraphicsslashoxygen_iconsslash128x128slashactionsslashdialog-cancel};MSF=1.6;LFS=12;AAT/;
-$cached_env_img{$key} = q|<IMG
- WIDTH="27" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img449.png"
- ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.3/graphics/oxygen_icons/128x128/actions/dialog-cancel}">|; 
 
 $key = q/mathfrak{O}_i;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
@@ -1825,12 +1825,6 @@ $cached_env_img{$key} = q|<IMG
  SRC="|."$dir".q|img348.png"
  ALT="\begin{subequations}\begin{align}\frac{\partial \tau_{-2}}{\partial \tau_m} &amp;= {...
 ...frak{D}_{iso} + 2\mathfrak{D}_a\mathfrak{R})^{-2}. \end{align}\end{subequations}">|; 
-
-$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.3slashgraphicsslashrelax_iconsslash128x128slashpipe};LFS=12;AAT/;
-$cached_env_img{$key} = q|<IMG
- WIDTH="27" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img455.png"
- ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.3/graphics/relax_icons/128x128/pipe}">|; 
 
 $key = q/{subequations}{align}frac{partialwidehat{mathfrak{D}_x}}{partialalpha}&={pmatrixosalphacosbetacosgamma0{pmatrix}.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
@@ -1910,11 +1904,23 @@ $cached_env_img{$key} = q|<IMG
  ALT="\begin{subequations}\begin{align}\frac{\partial^2 \tau_{-2}}{{\partial \mathfrak...
 ...frak{D}_{iso} + 2\mathfrak{D}_a\mathfrak{R})^{-3}. \end{align}\end{subequations}">|; 
 
+$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.4slashgraphicsslashrelax_iconsslash128x128slashgrace_icon};LFS=12;AAT/;
+$cached_env_img{$key} = q|<IMG
+ WIDTH="27" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
+ SRC="|."$dir".q|img439.png"
+ ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.4/graphics/relax_icons/128x128/grace_icon}">|; 
+
 $key = q/theta_{k}^{};MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
  WIDTH="21" HEIGHT="34" ALIGN="MIDDLE" BORDER="0"
  SRC="|."$dir".q|img11.png"
  ALT="$ \theta_{k}^{}$">|; 
+
+$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.4slashgraphicsslashrelax_iconsslash128x128slashbmrb};LFS=12;AAT/;
+$cached_env_img{$key} = q|<IMG
+ WIDTH="28" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
+ SRC="|."$dir".q|img414.png"
+ ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.4/graphics/relax_icons/128x128/bmrb}">|; 
 
 $key = q/displaystylefrac{partiale}{partial{mathfrak{D}{_r}=frac{1}{{mathfrak{R}{^3}bigg[{mathfrak{D}{_rleft(delta_z^4+2delta_x^2delta_y^2right)bigg].;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
@@ -1948,18 +1954,18 @@ $cached_env_img{$key} = q|<IMG
  SRC="|."$dir".q|img96.png"
  ALT="$ \theta_{2}^{}$">|; 
 
-$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.3slashgraphicsslashrelax_iconsslash128x128slashnuclear_symbol};LFS=12;AAT/;
-$cached_env_img{$key} = q|<IMG
- WIDTH="28" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img468.png"
- ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.3/graphics/relax_icons/128x128/nuclear_symbol}">|; 
-
 $key = q/{subequations}{multline}frac{partial^2c_{-1}}{partialmathfrak{O}_icdotpartialmat}{partialmathfrak{O}_j}right),{multline}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
  WIDTH="537" HEIGHT="180" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img293.png"
  ALT="\begin{subequations}\begin{multline}\frac{\partial^2 c_{-1}}{\partial \mathfrak{...
 ...ial \delta_y}{\partial \mathfrak{O}_j} \right), \end{multline}\end{subequations}">|; 
+
+$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.4slashgraphicsslashrelax_iconsslash128x128slashpipe_hybrid};LFS=12;AAT/;
+$cached_env_img{$key} = q|<IMG
+ WIDTH="27" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
+ SRC="|."$dir".q|img457.png"
+ ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.4/graphics/relax_icons/128x128/pipe_hybrid}">|; 
 
 $key = q/displaystylec=frac{(omega_HDeltasigma)^2}{3},;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
@@ -1980,12 +1986,6 @@ $cached_env_img{$key} = q|<IMG
  ALT="\begin{subequations}\begin{align}\frac{\partial^2 c_{-2}}{{\partial \mathfrak{D}...
 ...4} \frac{\partial^2 e}{\partial \mathfrak{D}_r^2}, \end{align}\end{subequations}">|; 
 
-$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.3slashgraphicsslashrelax_iconsslash128x128slashfrq};LFS=12;AAT/;
-$cached_env_img{$key} = q|<IMG
- WIDTH="27" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img423.png"
- ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.3/graphics/relax_icons/128x128/frq}">|; 
-
 $key = q/displaystylemathfrak{D}{_r)Bigg(delta_x^2left(delta_xfrac{partial^2delta_x}{partc{partialdelta_x}{partial{mathfrak{O}{_j}right)phantom{Bigg)};MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
  WIDTH="336" HEIGHT="75" ALIGN="MIDDLE" BORDER="0"
@@ -1993,17 +1993,23 @@ $cached_env_img{$key} = q|<IMG
  ALT="$\displaystyle \mathfrak{D}_r) \Bigg( \delta_x^2 \left( \delta_x \frac{\partial^...
 ...cdot \frac{\partial \delta_x}{\partial \mathfrak{O}_j} \right) \phantom{\Bigg)}$">|; 
 
+$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.4slashgraphicsslashoxygen_iconsslash128x128slashstatusslashweather-clear};MSF=1.6;LFS=12;AAT/;
+$cached_env_img{$key} = q|<IMG
+ WIDTH="28" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
+ SRC="|."$dir".q|img460.png"
+ ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.4/graphics/oxygen_icons/128x128/status/weather-clear}">|; 
+
+$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.4slashgraphicsslhoxygen_iconsslash128x128slashactionsslashsystem-switch-user};MSF=1.6;LFS=12;AAT/;
+$cached_env_img{$key} = q|<IMG
+ WIDTH="27" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
+ SRC="|."$dir".q|img427.png"
+ ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.4/graphics/oxygen_icons/128x128/actions/system-switch-user}">|; 
+
 $key = q/mathfrak{D}_r;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
  WIDTH="27" HEIGHT="34" ALIGN="MIDDLE" BORDER="0"
  SRC="|."$dir".q|img21.png"
  ALT="$ \mathfrak{D}_r$">|; 
-
-$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.3slashgraphicsslashrelax_iconsslash128x128slashsequence};LFS=12;AAT/;
-$cached_env_img{$key} = q|<IMG
- WIDTH="27" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img467.png"
- ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.3/graphics/relax_icons/128x128/sequence}">|; 
 
 $key = q/displaystyleI(t)=I_{infty}-I_0e^{-mathrm{R}_1cdott}.;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
@@ -2058,12 +2064,6 @@ $cached_env_img{$key} = q|<IMG
  WIDTH="28" HEIGHT="34" ALIGN="MIDDLE" BORDER="0"
  SRC="|."$dir".q|img23.png"
  ALT="$ \mathfrak{D}_y$">|; 
-
-$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.3slashgraphicsslashrelax_iconsslash128x128slashspin};LFS=12;AAT/;
-$cached_env_img{$key} = q|<IMG
- WIDTH="28" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img466.png"
- ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.3/graphics/relax_icons/128x128/spin}">|; 
 
 $key = q/displaystylepmatrix{1<col_mark>0<col_mark>0<col_mark>0<col_mark>0<col_mark>0<colark>2e^{-10}<row_mark>300e^{-6}<row_mark>0<row_mark>pmatrix{.;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
@@ -2162,24 +2162,6 @@ $cached_env_img{$key} = q|<IMG
  ALT="\begin{subequations}\begin{align}\frac{\partial \tau_{-2}}{\partial \mathfrak{D}...
 ...frak{D}_{iso} + 2\mathfrak{D}_a\mathfrak{R})^{-2}. \end{align}\end{subequations}">|; 
 
-$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.3slashgraphicsslashrelax_iconsslash128x128slashframe_order};LFS=12;AAT/;
-$cached_env_img{$key} = q|<IMG
- WIDTH="28" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img438.png"
- ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.3/graphics/relax_icons/128x128/frame_order}">|; 
-
-$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.3slashgraphicsslashrelax_iconsslash128x128slashstructure};LFS=12;AAT/;
-$cached_env_img{$key} = q|<IMG
- WIDTH="27" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img469.png"
- ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.3/graphics/relax_icons/128x128/structure}">|; 
-
-$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.3slashgraphicsslashoxygen_iconsslash128x128slashactionsslashdocument-preview};MSF=1.6;LFS=12;AAT/;
-$cached_env_img{$key} = q|<IMG
- WIDTH="28" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img410.png"
- ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.3/graphics/oxygen_icons/128x128/actions/document-preview}">|; 
-
 $key = q/{subequations}{align}frac{partial^2tau_{-1}}{partialtau_mcdotpartialmathfrak{D}_ak{D}_{iso}+2mathfrak{D}_a)^{-3}.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
  WIDTH="472" HEIGHT="168" ALIGN="BOTTOM" BORDER="0"
@@ -2200,6 +2182,12 @@ $cached_env_img{$key} = q|<IMG
  SRC="|."$dir".q|img149.png"
  ALT="$ \langle$">|; 
 
+$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.4slashgraphicsslashrelax_iconsslash128x128slashsequence};LFS=12;AAT/;
+$cached_env_img{$key} = q|<IMG
+ WIDTH="27" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
+ SRC="|."$dir".q|img467.png"
+ ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.4/graphics/relax_icons/128x128/sequence}">|; 
+
 $key = q/displaystyle{frac{{partialdelta_x}}{{partial{mathfrak{O}{_i}}};MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
  WIDTH="40" HEIGHT="60" ALIGN="MIDDLE" BORDER="0"
@@ -2211,12 +2199,6 @@ $cached_env_img{$key} = q|<IMG
  WIDTH="19" HEIGHT="15" ALIGN="BOTTOM" BORDER="0"
  SRC="|."$dir".q|img405.png"
  ALT="$ \sim$">|; 
-
-$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.3slashgraphicsslashrelax_iconsslash128x128slashbmrb};LFS=12;AAT/;
-$cached_env_img{$key} = q|<IMG
- WIDTH="28" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img414.png"
- ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.3/graphics/relax_icons/128x128/bmrb}">|; 
 
 $key = q/sigma_{{sat}}^{};MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
@@ -2236,6 +2218,12 @@ $cached_env_img{$key} = q|<IMG
  WIDTH="26" HEIGHT="34" ALIGN="MIDDLE" BORDER="0"
  SRC="|."$dir".q|img25.png"
  ALT="$ \mathfrak{D}_{\scriptscriptstyle \parallel }$">|; 
+
+$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.4slashgraphicsslashoxygen_iconsslash128x128slashactionsslashdocumentation};MSF=1.6;LFS=12;AAT/;
+$cached_env_img{$key} = q|<IMG
+ WIDTH="27" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
+ SRC="|."$dir".q|img415.png"
+ ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.4/graphics/oxygen_icons/128x128/actions/documentation}">|; 
 
 $key = q/lambda;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
@@ -2260,12 +2248,6 @@ $cached_env_img{$key} = q|<IMG
  WIDTH="12" HEIGHT="37" ALIGN="MIDDLE" BORDER="0"
  SRC="|."$dir".q|img150.png"
  ALT="$ \rangle$">|; 
-
-$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.3slashgraphicsslashrelax_iconsslash128x128slashrelax_fit};LFS=12;AAT/;
-$cached_env_img{$key} = q|<IMG
- WIDTH="27" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img461.png"
- ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.3/graphics/relax_icons/128x128/relax_fit}">|; 
 
 $key = q/{subequations}{align}frac{partialc_{-2}}{partialmathfrak{D}_r}&=-frac{3}{4}frac{{partiale}{partialmathfrak{D}_r},{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
@@ -2330,11 +2312,11 @@ $cached_env_img{$key} = q|<IMG
  SRC="|."$dir".q|img85.png"
  ALT="$ \mathfrak{T}_i$">|; 
 
-$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.3slashgraphicsslashoxygen_iconsslash128x128slashactionsslashdialog-ok};MSF=1.6;LFS=12;AAT/;
+$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.4slashgraphicssl_iconsslash128x128slashcategoriesslashapplications-education};MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
  WIDTH="28" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img450.png"
- ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.3/graphics/oxygen_icons/128x128/actions/dialog-ok}">|; 
+ SRC="|."$dir".q|img412.png"
+ ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.4/graphics/oxygen_icons/128x128/categories/applications-education}">|; 
 
 $key = q/displaystyle=frac{1}{{mathfrak{R}{}bigg[(1+3{mathfrak{D}{_r)left(delta_x^4+2deltlta_z^2right)-2left(delta_z^4+2delta_x^2delta_y^2right)bigg],;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
@@ -2363,29 +2345,11 @@ $cached_env_img{$key} = q|<IMG
  ALT="$\displaystyle {J_d^{\sigma_{\scriptscriptstyle \mathrm{NOE}}}}'' \equiv \frac{\...
 ...{\partial^2 J(\omega_H - \omega_X)}{\partial \theta_j \cdot \partial \theta_k}.$">|; 
 
-$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.3slashgraphicsslashoxygen_iconsslash128x128slashactionsslashdocument-save};MSF=1.6;LFS=12;AAT/;
-$cached_env_img{$key} = q|<IMG
- WIDTH="27" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img419.png"
- ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.3/graphics/oxygen_icons/128x128/actions/document-save}">|; 
-
 $key = q/displaystyleC_mathrm{O}(tau)=frac{1}{5}sum^2_{i=-2}c_ie^{-frac{tau}{tau_i}}.;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
  WIDTH="184" HEIGHT="76" ALIGN="MIDDLE" BORDER="0"
  SRC="|."$dir".q|img274.png"
  ALT="$\displaystyle C_\mathrm{O}(\tau) = \frac{1}{5} \sum^2_{i=-2} c_i e^{-\frac{\tau}{\tau_i}}.$">|; 
-
-$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.3slashgraphicsslashoxygen_iconsslash128x128slashactionsslashroll-relax-blue};MSF=1.6;LFS=12;AAT/;
-$cached_env_img{$key} = q|<IMG
- WIDTH="28" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img448.png"
- ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.3/graphics/oxygen_icons/128x128/actions/roll-relax-blue}">|; 
-
-$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.3slashgraphicsslashoxygen_iconsslash128x128slashactionsslashedit-select};MSF=1.6;LFS=12;AAT/;
-$cached_env_img{$key} = q|<IMG
- WIDTH="27" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img413.png"
- ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.3/graphics/oxygen_icons/128x128/actions/edit-select}">|; 
 
 $key = q/{table*}scriptsize{center{{{tabularx{{textwidth}{llX}[-5pt]topruleDatatype&Strinesat'red'.bottomrule[-5pt]tabularx{center{scriptsize{{table*};MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
@@ -2441,6 +2405,12 @@ $cached_env_img{$key} = q|<IMG
  ALT="\begin{subequations}\begin{align}\frac{\partial \widehat{\mathfrak{D}_z}}{\parti...
 ...a \ \sin \beta \cos \gamma \ 0 \ \end{pmatrix}. \end{align}\end{subequations}">|; 
 
+$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.4slashgraphicsslashrelax_iconsslash128x128slashspin_grey};LFS=12;AAT/;
+$cached_env_img{$key} = q|<IMG
+ WIDTH="28" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
+ SRC="|."$dir".q|img426.png"
+ ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.4/graphics/relax_icons/128x128/spin_grey}">|; 
+
 $key = q/{subequations}{align}0&<mathfrak{D}_{iso}<infty,0&lemathfrak{D}_a<frac{mathfrak{ak{D}_{iso},0&lemathfrak{D}_rle1.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
  WIDTH="386" HEIGHT="134" ALIGN="BOTTOM" BORDER="0"
@@ -2473,6 +2443,12 @@ $cached_env_img{$key} = q|<IMG
  SRC="|."$dir".q|img264.png"
  ALT="$\displaystyle \frac{\partial^2 J(\omega)}{\partial \mathfrak{O}_j \cdot \partia...
 ...u_s \tau_i)^2}{\left((\tau_s + \tau_i)^2 + (\omega \tau_s \tau_i)^2 \right)^2}.$">|; 
+
+$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.4slashgraphicsslashrelax_iconsslash128x128slashspin};LFS=12;AAT/;
+$cached_env_img{$key} = q|<IMG
+ WIDTH="28" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
+ SRC="|."$dir".q|img466.png"
+ ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.4/graphics/relax_icons/128x128/spin}">|; 
 
 $key = q/{subequations}{align}tau_{-1}&=(6mathfrak{D}_{iso}-2mathfrak{D}_a)^{-1},tau_{0}&ak{D}_{iso}+2mathfrak{D}_a)^{-1}.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
@@ -2574,17 +2550,23 @@ $cached_env_img{$key} = q|<IMG
  ALT="\begin{subequations}\begin{align}\frac{\partial^2 \mathrm{R}_1(\theta)}{\partial...
 ...partial \theta_j \cdot \partial \Delta\sigma} &amp;= 0.\end{align}\end{subequations}">|; 
 
+$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.4slashgraphicsslashoxygen_iconsslash128x128slashactionsslashedit-rename};MSF=1.6;LFS=12;AAT/;
+$cached_env_img{$key} = q|<IMG
+ WIDTH="28" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
+ SRC="|."$dir".q|img434.png"
+ ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.4/graphics/oxygen_icons/128x128/actions/edit-rename}">|; 
+
 $key = q/geqslant;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
  WIDTH="20" HEIGHT="33" ALIGN="MIDDLE" BORDER="0"
  SRC="|."$dir".q|img120.png"
  ALT="$ \geqslant$">|; 
 
-$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.3slashgraphicsslashoxygen_iconsslash128x128slashactionsslashedit-rename};MSF=1.6;LFS=12;AAT/;
+$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.4slashgraphicsslashrelax_iconsslash128x128slashframe_order};LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
  WIDTH="28" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img434.png"
- ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.3/graphics/oxygen_icons/128x128/actions/edit-rename}">|; 
+ SRC="|."$dir".q|img438.png"
+ ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.4/graphics/relax_icons/128x128/frame_order}">|; 
 
 $key = q/tau_{m}^{{-1}};MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
@@ -2629,12 +2611,6 @@ $cached_env_img{$key} = q|<IMG
  SRC="|."$dir".q|img276.png"
  ALT="$\displaystyle \mathfrak{G}= \{\mathfrak{D}_{iso}, \mathfrak{D}_a, \mathfrak{D}_r\},$">|; 
 
-$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.3slashgraphicsslashrelax_iconsslash128x128slashnoe};LFS=12;AAT/;
-$cached_env_img{$key} = q|<IMG
- WIDTH="27" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img453.png"
- ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.3/graphics/relax_icons/128x128/noe}">|; 
-
 $key = q/{subequations}{align}c_{-2}&=tfrac{1}{4}(d-e),c_{-1}&=3delta_y^2delta_z^2,c_{0}&elta_y^2,c_{2}&=tfrac{1}{4}(d+e),{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
  WIDTH="339" HEIGHT="167" ALIGN="BOTTOM" BORDER="0"
@@ -2658,6 +2634,12 @@ $cached_env_img{$key} = q|<IMG
  SRC="|."$dir".q|img352.png"
  ALT="\begin{subequations}\begin{align}\frac{\partial^2 \tau_{-2}}{\partial \tau_m \cd...
 ...frak{D}_{iso} + 2\mathfrak{D}_a\mathfrak{R})^{-3}. \end{align}\end{subequations}">|; 
+
+$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.4slashgraphicsslen_iconsslash128x128slashmimetypesslashapplication-x-desktop};MSF=1.6;LFS=12;AAT/;
+$cached_env_img{$key} = q|<IMG
+ WIDTH="27" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
+ SRC="|."$dir".q|img417.png"
+ ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.4/graphics/oxygen_icons/128x128/mimetypes/application-x-desktop}">|; 
 
 $key = q/mathfrak{I};MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
@@ -2691,23 +2673,17 @@ $cached_env_img{$key} = q|<IMG
  ALT="$\displaystyle \begin{pmatrix}1 &amp; 0 &amp; 0 \  -1 &amp; 0 &amp; 0 \  0 &amp; 1 &amp; 0 \  0 &amp; 0 &amp;...
 ...eqslant \begin{pmatrix}0 \  -200.0e^{-9} \  0 \  0 \  -1 \  \end{pmatrix}.$">|; 
 
-$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.3slashgraphicsslashrelax_iconsslash128x128slashconsistency_testing};LFS=12;AAT/;
-$cached_env_img{$key} = q|<IMG
- WIDTH="28" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img422.png"
- ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.3/graphics/relax_icons/128x128/consistency_testing}">|; 
-
 $key = q/displaystyleC(tau)=frac{1}{5}sum_{i=-k}^kc_icdote^{-tauslashtau_i},;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
  WIDTH="199" HEIGHT="77" ALIGN="MIDDLE" BORDER="0"
  SRC="|."$dir".q|img61.png"
  ALT="$\displaystyle C(\tau) = \frac{1}{5} \sum_{i=-k}^k c_i \cdot e^{-\tau/\tau_i},$">|; 
 
-$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.3slashgraphicsslashrelax_iconsslash128x128slashresidue};LFS=12;AAT/;
+$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.4slashgraphicsslashrelax_iconsslash128x128slashbruker};LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
  WIDTH="28" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img464.png"
- ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.3/graphics/relax_icons/128x128/residue}">|; 
+ SRC="|."$dir".q|img420.png"
+ ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.4/graphics/relax_icons/128x128/bruker}">|; 
 
 $key = q/{subequations}{align}frac{partialmathrm{R}_1(theta)}{partialr}&=d'J_d^{mathrm{R}_{scriptscriptstylemathrm{NOE}}}.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
@@ -2788,6 +2764,12 @@ $cached_env_img{$key} = q|<IMG
  ALT="\begin{subequations}\begin{align}\frac{\partial^2 \tau_{-1}}{{\partial \mathfrak...
 ...&amp;= 8 (6\mathfrak{D}_{iso} + 2\mathfrak{D}_a)^{-3}. \end{align}\end{subequations}">|; 
 
+$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.4slashgraphicsslashrelax_iconsslash128x128slashmolmol};LFS=12;AAT/;
+$cached_env_img{$key} = q|<IMG
+ WIDTH="28" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
+ SRC="|."$dir".q|img446.png"
+ ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.4/graphics/relax_icons/128x128/molmol}">|; 
+
 $key = q/displaystyledim{mathfrak{D}{=1,qquaddim{mathfrak{D}{=4,qquaddim{mathfrak{D}{=6,;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
  WIDTH="356" HEIGHT="34" ALIGN="MIDDLE" BORDER="0"
@@ -2808,11 +2790,11 @@ $cached_env_img{$key} = q|<IMG
  ALT="\begin{subequations}\begin{align}\frac{\partial^2 \mathrm{R}_1(\theta)}{{\partia...
 ...hrm{NOE}}(\theta)}{{\partial \Delta\sigma}^2} &amp;= 0.\end{align}\end{subequations}">|; 
 
-$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.3slashgraphicsslashrelax_iconsslash128x128slashmolmol};LFS=12;AAT/;
+$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.4slashgraphicsslashrelax_iconsslash128x128slashnuclear_symbol};LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
  WIDTH="28" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img446.png"
- ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.3/graphics/relax_icons/128x128/molmol}">|; 
+ SRC="|."$dir".q|img468.png"
+ ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.4/graphics/relax_icons/128x128/nuclear_symbol}">|; 
 
 $key = q/rho_{{ex}}^{};MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
@@ -2826,17 +2808,11 @@ $cached_env_img{$key} = q|<IMG
  SRC="|."$dir".q|img440.png"
  ALT="$ \omega_{X}^{}$">|; 
 
-$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.3slashgraphicsslen_iconsslash128x128slashmimetypesslashapplication-x-desktop};MSF=1.6;LFS=12;AAT/;
-$cached_env_img{$key} = q|<IMG
- WIDTH="27" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img417.png"
- ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.3/graphics/oxygen_icons/128x128/mimetypes/application-x-desktop}">|; 
-
-$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.3slashgraphicsslashrelax_iconsslash128x128slashpymol_icon};LFS=12;AAT/;
+$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.4slashgraphicsslashoxygen_iconsslash128x128slashactionsslashhelp-about};MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
  WIDTH="28" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img458.png"
- ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.3/graphics/relax_icons/128x128/pymol_icon}">|; 
+ SRC="|."$dir".q|img470.png"
+ ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.4/graphics/oxygen_icons/128x128/actions/help-about}">|; 
 
 $key = q/includegraphics[width=0.8textwidth,bb=00436539]{imagesslashmodel_freeslashmandel95};LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
@@ -2866,18 +2842,6 @@ $cached_env_img{$key} = q|<IMG
  SRC="|."$dir".q|img30.png"
  ALT="$ \mathfrak{D}_{iso}$">|; 
 
-$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.3slashgraphicsslashrelax_iconsslash128x128slashmodelfree4};LFS=12;AAT/;
-$cached_env_img{$key} = q|<IMG
- WIDTH="28" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img454.png"
- ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.3/graphics/relax_icons/128x128/modelfree4}">|; 
-
-$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.3slashgraphicsslashoxygen_iconsslash128x128slashactionsslasharchive-extract};MSF=1.6;LFS=12;AAT/;
-$cached_env_img{$key} = q|<IMG
- WIDTH="27" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img425.png"
- ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.3/graphics/oxygen_icons/128x128/actions/archive-extract}">|; 
-
 $key = q/widehat{{mathfrak{D}_x}};MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
  WIDTH="29" HEIGHT="47" ALIGN="MIDDLE" BORDER="0"
@@ -2890,11 +2854,11 @@ $cached_env_img{$key} = q|<IMG
  SRC="|."$dir".q|img138.png"
  ALT="$ \mu_{i}^{}$">|; 
 
-$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.3slashgraphicsslashrelax_iconsslash128x128slashrelax};LFS=12;AAT/;
+$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.4slashgraphicsslashoxygen_iconsslash128x128slashappsslashutilities-terminal};MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
- WIDTH="27" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
- SRC="|."$dir".q|img465.png"
- ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.3/graphics/relax_icons/128x128/relax}">|; 
+ WIDTH="28" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
+ SRC="|."$dir".q|img418.png"
+ ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.4/graphics/oxygen_icons/128x128/apps/utilities-terminal}">|; 
 
 $key = q/includegraphics[width=0.8textwidth,bb=00437523]{imagesslashmodel_freeslashinit_diff_est};LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
@@ -2946,6 +2910,18 @@ $cached_env_img{$key} = q|<IMG
  SRC="|."$dir".q|img43.png"
  ALT="$ \hat{\theta}$">|; 
 
+$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.4slashgraphicsslashoxygen_iconsslash128x128slashactionsslashdocument-open};MSF=1.6;LFS=12;AAT/;
+$cached_env_img{$key} = q|<IMG
+ WIDTH="28" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
+ SRC="|."$dir".q|img416.png"
+ ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.4/graphics/oxygen_icons/128x128/actions/document-open}">|; 
+
+$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.4slashgraphicsslashrelax_iconsslash128x128slashresidue};LFS=12;AAT/;
+$cached_env_img{$key} = q|<IMG
+ WIDTH="28" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
+ SRC="|."$dir".q|img464.png"
+ ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.4/graphics/relax_icons/128x128/residue}">|; 
+
 $key = q/{multline}frac{partialJ(omega)}{partial{mathfrak{G}{_j}=frac{2}{5}sum_{i=-k}^kBiau_i)tau_s}{(tau_s+tau_i)^2+(omegatau_stau_i)^2}Bigg)Bigg).{multline};LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
  WIDTH="574" HEIGHT="279" ALIGN="BOTTOM" BORDER="0"
@@ -2968,6 +2944,12 @@ $cached_env_img{$key} = q|<IMG
  WIDTH="184" HEIGHT="76" ALIGN="MIDDLE" BORDER="0"
  SRC="|."$dir".q|img356.png"
  ALT="$\displaystyle C_\mathrm{O}(\tau) = \frac{1}{5} \sum^1_{i=-1} c_i e^{-\frac{\tau}{\tau_i}}.$">|; 
+
+$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.4slashgraphicssloxygen_iconsslash128x128slashactionsslashlist-add-relax-blue};MSF=1.6;LFS=12;AAT/;
+$cached_env_img{$key} = q|<IMG
+ WIDTH="28" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
+ SRC="|."$dir".q|img424.png"
+ ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.4/graphics/oxygen_icons/128x128/actions/list-add-relax-blue}">|; 
 
 $key = q/displaystylemin_theta{mathfrak{L}{_A(theta,lambda^k;mu_k)stackrel{mathrm{def}}{=theta)+sum_{iin{mathfrak{I}{}Psi(c_i(theta),lambda_i^k;mu_k),;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
@@ -3008,6 +2990,12 @@ $cached_env_img{$key} = q|<IMG
  ALT="\begin{subequations}\begin{align}\frac{\partial^2 \widehat{\mathfrak{D}_z}}{\par...
 ... \ -\sin \beta \sin \gamma \ 0 \ \end{pmatrix}. \end{align}\end{subequations}">|; 
 
+$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.4slashgraphicsslashoxygen_iconsslash128x128slashstatusslashobject-locked};MSF=1.6;LFS=12;AAT/;
+$cached_env_img{$key} = q|<IMG
+ WIDTH="27" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
+ SRC="|."$dir".q|img411.png"
+ ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.4/graphics/oxygen_icons/128x128/status/object-locked}">|; 
+
 $key = q/{subequations}{align}frac{partial^2mathrm{R}_1(theta)}{partialrho_{ex}cdotpartiaho_{ex}cdotpartialDeltasigma}&=0.{align}{subequations};MSF=1.6;LFS=12;TAGS=R;AAT/;
 $cached_env_img{$key} = q|<IMG
  WIDTH="340" HEIGHT="171" ALIGN="BOTTOM" BORDER="0"
@@ -3027,6 +3015,12 @@ $cached_env_img{$key} = q|<IMG
  SRC="|."$dir".q|img32.png"
  ALT="$ \epsilon_{i}^{}$">|; 
 
+$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.4slashgraphicsslashoxygen_iconsslash128x128slashactionsslashedit-delete};MSF=1.6;LFS=12;AAT/;
+$cached_env_img{$key} = q|<IMG
+ WIDTH="27" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
+ SRC="|."$dir".q|img437.png"
+ ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.4/graphics/oxygen_icons/128x128/actions/edit-delete}">|; 
+
 $key = q/{multline}{J_d^{mathrm{R}_2}}''equivfrac{partial^2J_d^{mathrm{R}_2}}{partialthetial^2J(omega_H+omega_X)}{partialtheta_jcdotpartialtheta_k}.{multline};LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG
  WIDTH="538" HEIGHT="113" ALIGN="BOTTOM" BORDER="0"
@@ -3035,6 +3029,12 @@ $cached_env_img{$key} = q|<IMG
 {J_d^{\mathrm{R}_2}}'' \equiv \frac{\partial^2 J_d^{\mathrm{R}...
 ...omega_H + \omega_X)}{\partial \theta_j \cdot \partial \theta_k}.
 \end{multline}">|; 
+
+$key = q/includegraphics[bb=001818]{slashdataslashrelaxslashtagsslash2.2.4slashgraphicsslashrelax_iconsslash128x128slashpymol_icon};LFS=12;AAT/;
+$cached_env_img{$key} = q|<IMG
+ WIDTH="28" HEIGHT="27" ALIGN="BOTTOM" BORDER="0"
+ SRC="|."$dir".q|img458.png"
+ ALT="\includegraphics[bb=0 0 18 18]{/data/relax/tags/2.2.4/graphics/relax_icons/128x128/pymol_icon}">|; 
 
 $key = q/displaystylePsi(c_i(theta),lambda^k;mu_k)=cases{-lambda^kc_i(theta)+frac{1}{2mu_mu_k}{2}(lambda^k)^2<col_mark><text_mark>rm{otherwise}.cases{;MSF=1.6;LFS=12;AAT/;
 $cached_env_img{$key} = q|<IMG

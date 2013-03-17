@@ -566,6 +566,10 @@ $key = q/fig:_gradient_construction/;
 $ref_files{$key} = "$dir".q|Construction_gradient.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/uf:_structure.create_rotor_pdb/;
+$ref_files{$key} = "$dir".q|structure_create_rotor_pdb.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/eq:_Ri_:_dR1_dmf/;
 $ref_files{$key} = "$dir".q|Ri_prime_theta_gradients.html|; 
 $noresave{$key} = "$nosave";
