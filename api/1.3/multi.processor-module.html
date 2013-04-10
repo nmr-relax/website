@@ -1,0 +1,538 @@
+<?xml version="1.0" encoding="ascii"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+          "DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <title>multi.processor</title>
+  <link rel="stylesheet" href="epydoc.css" type="text/css" />
+  <script type="text/javascript" src="epydoc.js"></script>
+</head>
+
+<body bgcolor="white" text="black" link="blue" vlink="#204080"
+      alink="#204080">
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Project homepage -->
+      <th class="navbar" align="right" width="100%">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr><th class="navbar" align="center"
+            ><a class="navbar" target="_top" href="http://nmr-relax.com">relax</a></th>
+          </tr></table></th>
+  </tr>
+</table>
+<table width="100%" cellpadding="0" cellspacing="0">
+  <tr valign="top">
+    <td width="100%">
+      <span class="breadcrumbs">
+        <a href="multi-module.html">Package&nbsp;multi</a> ::
+        Module&nbsp;processor
+      </span>
+    </td>
+    <td>
+      <table cellpadding="0" cellspacing="0">
+        <!-- hide/show private -->
+        <tr><td align="right"><span class="options">[<a href="javascript:void(0);" class="privatelink"
+    onclick="toggle_private();">hide&nbsp;private</a>]</span></td></tr>
+        <tr><td align="right"><span class="options"
+            >[<a href="frames.html" target="_top">frames</a
+            >]&nbsp;|&nbsp;<a href="multi.processor-module.html"
+            target="_top">no&nbsp;frames</a>]</span></td></tr>
+      </table>
+    </td>
+  </tr>
+</table>
+<!-- ==================== MODULE DESCRIPTION ==================== -->
+<h1 class="epydoc">Module processor</h1><p class="nomargin-top"><span class="codelink"><a href="multi.processor-pysrc.html">source&nbsp;code</a></span></p>
+<p>The processor class is the central class in the multi python 
+  multiprocessor framework.</p>
+  <h1 class="heading">Overview</h1>
+    <p>The framework has two main responsibilities:</p>
+    <ol start="1">
+      <li>
+        Process management - if needed the processor can create the slave 
+        processes it manages if they haven't been created by the operating 
+        system. It is also responsible for reporting exceptions and 
+        shutting down the multiprocessor in the face of errors.
+      </li>
+      <li>
+        Scheduling commands on the slave processors via an interprocess 
+        communication fabric (MPI, PVM, threads etc) and processing 
+        returned text and result commands.
+      </li>
+    </ol>
+  <h1 class="heading">Using the processor framework</h1>
+    <p>Users of the processor framework will typically use the following 
+    methodology:</p>
+    <ol start="1">
+      <li>
+        At application startup determine the name of the required processor
+        implementation and the number of slave processors requested.
+      </li>
+      <li>
+        Create an Application_callback object.  For example: relax_instance
+        = Relax() callbacks = Application_callback(master=relax_instance)
+      </li>
+      <li>
+        Dynamically load a processor implementation using the name of the 
+        processor and the number of required slave processors.  For 
+        example: processor = 
+        Processor.load_multiprocessor(relax_instance.multiprocessor_type, 
+        callbacks, processor_size=relax_instance.n_processors)
+      </li>
+      <li>
+        Call run on the processor instance returned above and handle all 
+        Exceptions.  For example: processor.run()
+      </li>
+      <li>
+        After calling run, the processor will call back to 
+        Application_callback.init_master from which you should call you 
+        main program (Application_callback defaults to self.master.run()).
+      </li>
+      <li>
+        Once in the main program you should call processor.add_to_queue 
+        with a series of multi.Slave_command objects you wish to be run 
+        across the slave processor pool and then call processor.run_queue 
+        to actually execute the commands remotely while blocking. 
+        &gt;&gt;&gt; example here...
+      </li>
+      <li>
+        Processor.Slave_commands will then run remotely on the slaves and 
+        any thrown exceptions and processor.result_commands queued to 
+        processor.return_object will be returned to the master processor 
+        and handled or executed. The slave processors also provide 
+        facilities for capturing the STDERR and STDOUT streams and 
+        returning their contents as strings for display on the master's 
+        STDOUT and STDERR streams (***more**?).
+      </li>
+    </ol>
+  <h1 class="heading">Extending the processor framework with a new interprocess communication fabric</h1>
+    <p>The processor class acts as a base class that defines all the 
+    commands that a processor implementing a new inter processor 
+    communication fabric needs. All that is required is to implement a 
+    subclass of processor providing the required methods (of course as 
+    python provides dynamic typing and polymorphism 'duck typing' you can 
+    always implement a class with the same set of method and it will also 
+    work). Currently processor classes are loaded from the processor module
+    and are modules with names of the form:</p>
+<pre class="py-doctest">
+<span class="py-prompt">&gt;&gt;&gt; </span>multi.&lt;type&gt;_processor.&lt;Type&gt;_processor</pre>
+    <p>where &lt;Type&gt; is the name of the processor with the correct 
+    capitalisation e.g.</p>
+<pre class="py-doctest">
+<span class="py-prompt">&gt;&gt;&gt; </span>processor_name = <span class="py-string">'mpi4py'</span>
+<span class="py-prompt">&gt;&gt;&gt; </span>callback = My_application-callback()
+<span class="py-prompt">&gt;&gt;&gt; </span>proccesor_size = 6
+<span class="py-prompt">&gt;&gt;&gt; </span>processor.load_multiprocessor(processor_name, callback, processor_size)</pre>
+    <p>will load multi.mpi4py_processor.Mpi4py_Processor.</p>
+  <h1 class="heading">TODO</h1>
+    <p>The following are yet to be implemented:</p>
+    <ol start="1">
+      <li>
+        There is no ability of the processor to request command line 
+        arguments.
+      </li>
+      <li>
+        The processor can't currently be loaded from somewhere other than 
+        the multi directory.
+      </li>
+    </ol>
+
+<!-- ==================== CLASSES ==================== -->
+<a name="section-Classes"></a>
+<table class="summary" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Classes</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-Classes"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="multi.processor.Application_callback-class.html" class="summary-name">Application_callback</a><br />
+      Call backs provided to the host application by the multi processor 
+        framework.
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="multi.processor.Capturing_exception-class.html" class="summary-name">Capturing_exception</a><br />
+      A wrapper exception for an exception captured on a slave processor.
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="multi.processor.Memo-class.html" class="summary-name">Memo</a><br />
+      A memo of objects and data.
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="multi.processor.Processor-class.html" class="summary-name">Processor</a><br />
+      The central class of the multi processor framework.
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="multi.processor.Processor_box-class.html" class="summary-name">Processor_box</a><br />
+      A storage class for the Processor instance and its attributes.
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="multi.processor.Result-class.html" class="summary-name">Result</a><br />
+      A basic result object returned from a slave processor via 
+        return_object.
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="multi.processor.Result_command-class.html" class="summary-name">Result_command</a><br />
+      A general result command - designed to be subclassed by users.
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="multi.processor.Null_result_command-class.html" class="summary-name">Null_result_command</a><br />
+      An empty result command.
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="multi.processor.Result_exception-class.html" class="summary-name">Result_exception</a><br />
+      Return and raise an exception from the salve processor.
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="multi.processor.Result_string-class.html" class="summary-name">Result_string</a><br />
+      A simple result from a slave containing a result.
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="multi.processor.Slave_command-class.html" class="summary-name">Slave_command</a><br />
+      A command to executed remotely on the slave processor - designed to
+        be subclassed by users.
+    </td>
+  </tr>
+</table>
+<!-- ==================== FUNCTIONS ==================== -->
+<a name="section-Functions"></a>
+<table class="summary" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Functions</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-Functions"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">list of class module instances or None</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="multi.processor-module.html#import_module" class="summary-sig-name">import_module</a>(<span class="summary-sig-arg">module_path</span>,
+        <span class="summary-sig-arg">verbose</span>=<span class="summary-sig-default">False</span>)</span><br />
+      Import the python module named by module_path.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="multi.processor-pysrc.html#import_module">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">multi.processor.Processor instance</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="multi.processor-module.html#load_multiprocessor" class="summary-sig-name">load_multiprocessor</a>(<span class="summary-sig-arg">processor_name</span>,
+        <span class="summary-sig-arg">callback</span>,
+        <span class="summary-sig-arg">processor_size</span>)</span><br />
+      Load a multi processor given its name.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="multi.processor-pysrc.html#load_multiprocessor">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="multi.processor-module.html#raise_unimplemented" class="summary-sig-name">raise_unimplemented</a>(<span class="summary-sig-arg">method</span>)</span><br />
+      Standard function for raising NotImplementedError for unimplemented 
+      abstract methods.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="multi.processor-pysrc.html#raise_unimplemented">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+</table>
+<!-- ==================== VARIABLES ==================== -->
+<a name="section-Variables"></a>
+<table class="summary" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Variables</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-Variables"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="__package__"></a><span class="summary-name">__package__</span> = <code title="'multi'"><code class="variable-quote">'</code><code class="variable-string">multi</code><code class="variable-quote">'</code></code>
+    </td>
+  </tr>
+</table>
+<p class="indent-wrapped-lines"><b>Imports:</b>
+  <span title="time">time</span>,
+  <span title="datetime">datetime</span>,
+  <span title="math">math</span>,
+  <span title="sys">sys</span>,
+  <span title="os">os</span>,
+  <span title="traceback">traceback</span>,
+  <span title="textwrap">textwrap</span>,
+  <a href="multi.processor_io.PrependStringIO-class.html" title="multi.processor_io.PrependStringIO">PrependStringIO</a>,
+  <a href="multi.processor_io.IO_filter-class.html" title="multi.processor_io.IO_filter">IO_filter</a>,
+  <a href="relax_errors.RelaxError-class.html" title="relax_errors.RelaxError">RelaxError</a>
+</p><br />
+<!-- ==================== FUNCTION DETAILS ==================== -->
+<a name="section-FunctionDetails"></a>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Function Details</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-FunctionDetails"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+</table>
+<a name="import_module"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">import_module</span>(<span class="sig-arg">module_path</span>,
+        <span class="sig-arg">verbose</span>=<span class="sig-default">False</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="multi.processor-pysrc.html#import_module">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Import the python module named by module_path.</p>
+  <dl class="fields">
+    <dt>Parameters:</dt>
+    <dd><ul class="nomargin-top">
+        <li><strong class="pname"><code>module_path</code></strong> (str) - A module path in python dot separated format.  Note: this 
+          currently doesn't support relative module paths as defined by 
+          pep328 and python 2.5.</li>
+        <li><strong class="pname"><code>verbose</code></strong> (bool) - Whether to report successes and failures for debugging.</li>
+    </ul></dd>
+    <dt>Returns: list of class module instances or None</dt>
+        <dd>The module path as a list of module instances or None if the 
+          module path cannot be found in the python path.</dd>
+  </dl>
+</td></tr></table>
+</div>
+<a name="load_multiprocessor"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">load_multiprocessor</span>(<span class="sig-arg">processor_name</span>,
+        <span class="sig-arg">callback</span>,
+        <span class="sig-arg">processor_size</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="multi.processor-pysrc.html#load_multiprocessor">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Load a multi processor given its name.</p>
+  <p>Dynamically load a multi processor, the current algorithm is to search
+  in module multi for a module called 
+  &lt;processor_name&gt;.&lt;Processor_name&gt; (note capitalisation).</p>
+  <dl class="fields">
+    <dt>Parameters:</dt>
+    <dd><ul class="nomargin-top">
+        <li><strong class="pname"><code>processor_name</code></strong> (str) - Name of the processor module/class to load.</li>
+    </ul></dd>
+    <dt>Returns: multi.processor.Processor instance</dt>
+        <dd>A loaded processor object or None to indicate failure.</dd>
+  </dl>
+<div class="fields">      <strong>To Do:</strong>
+      <ul class="nomargin-top">
+        <li>
+        This algorithm needs to be improved to allow users to load processors 
+    without altering the relax source code.
+        </li>
+        <li>
+        Remove non-essential parameters.
+        </li>
+      </ul>
+</div></td></tr></table>
+</div>
+<a name="raise_unimplemented"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">raise_unimplemented</span>(<span class="sig-arg">method</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="multi.processor-pysrc.html#raise_unimplemented">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Standard function for raising NotImplementedError for unimplemented 
+  abstract methods.</p>
+  <dl class="fields">
+    <dt>Parameters:</dt>
+    <dd><ul class="nomargin-top">
+        <li><strong class="pname"><code>method</code></strong> (class method) - The method which should be abstract.</li>
+    </ul></dd>
+    <dt>Raises:</dt>
+    <dd><ul class="nomargin-top">
+        <li><code><strong class='fraise'>NotImplementedError</strong></code> - A not implemented exception with the method name as a parameter.</li>
+    </ul></dd>
+  </dl>
+</td></tr></table>
+</div>
+<br />
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Project homepage -->
+      <th class="navbar" align="right" width="100%">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr><th class="navbar" align="center"
+            ><a class="navbar" target="_top" href="http://nmr-relax.com">relax</a></th>
+          </tr></table></th>
+  </tr>
+</table>
+<table border="0" cellpadding="0" cellspacing="0" width="100%%">
+  <tr>
+    <td align="left" class="footer">
+    Generated by Epydoc 3.0.1 on Mon Nov 14 21:28:50 2011
+    </td>
+    <td align="right" class="footer">
+      <a target="mainFrame" href="http://epydoc.sourceforge.net"
+        >http://epydoc.sourceforge.net</a>
+    </td>
+  </tr>
+</table>
+
+<script type="text/javascript">
+  <!--
+  // Private objects are initially displayed (because if
+  // javascript is turned off then we want them to be
+  // visible); but by default, we want to hide them.  So hide
+  // them unless we have a cookie that says to show them.
+  checkCookie();
+  // -->
+</script>
+</body>
+</html>
