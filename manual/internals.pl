@@ -1342,6 +1342,10 @@ $key = q/table:_min_sub-algor_-_line_search/;
 $ref_files{$key} = "$dir".q|minimise.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/uf:_chemical_shift.read/;
+$ref_files{$key} = "$dir".q|chemical_shift_read.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/verb:_noe.500.out/;
 $ref_files{$key} = "$dir".q|Script_mode_spins_from_sequence_file.html|; 
 $noresave{$key} = "$nosave";
