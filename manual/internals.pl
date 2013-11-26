@@ -767,7 +767,7 @@ $ref_files{$key} = "$dir".q|frame_order_ref_domain.html|;
 $noresave{$key} = "$nosave";
 
 $key = q/sect:_multi-processor/;
-$ref_files{$key} = "$dir".q|Introduction_multi_processor.html|; 
+$ref_files{$key} = "$dir".q|multi_processor_framework.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_residue.number/;

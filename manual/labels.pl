@@ -767,7 +767,7 @@ $external_labels{$key} = "$URL/" . q|frame_order_ref_domain.html|;
 $noresave{$key} = "$nosave";
 
 $key = q/sect:_multi-processor/;
-$external_labels{$key} = "$URL/" . q|Introduction_multi_processor.html|; 
+$external_labels{$key} = "$URL/" . q|multi_processor_framework.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_residue.number/;
@@ -2686,7 +2686,7 @@ $external_latex_labels{$key} = q|13.2.48|;
 $noresave{$key} = "$nosave";
 
 $key = q/sect:_multi-processor/;
-$external_latex_labels{$key} = q|1.3.1|; 
+$external_latex_labels{$key} = q|1.3|; 
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_residue.number/;
