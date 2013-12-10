@@ -74,6 +74,10 @@ $key = q/uf:_structure.read_pdb/;
 $ref_files{$key} = "$dir".q|structure_read_pdb.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/uf:_spectrum.read_spins/;
+$ref_files{$key} = "$dir".q|spectrum_read_spins.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/uf:_relax_disp.spin_lock_offset/;
 $ref_files{$key} = "$dir".q|relax_disp_spin_lock_offset.html|; 
 $noresave{$key} = "$nosave";
@@ -122,12 +126,12 @@ $key = q/uf:_spin.create_pseudo/;
 $ref_files{$key} = "$dir".q|spin_create_pseudo.html|; 
 $noresave{$key} = "$nosave";
 
-$key = q/uf:_j_coupling.copy/;
-$ref_files{$key} = "$dir".q|j_coupling_copy.html|; 
-$noresave{$key} = "$nosave";
-
 $key = q/eq:_Ri_:_d2R2_dRex.dr/;
 $ref_files{$key} = "$dir".q|Ri_prime_theta_Hessians.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/uf:_j_coupling.copy/;
+$ref_files{$key} = "$dir".q|j_coupling_copy.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/table:_NMRPipe_-c/;
@@ -526,6 +530,10 @@ $key = q/uf:_structure.delete/;
 $ref_files{$key} = "$dir".q|structure_delete.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/sect:_dispersion:_NS_R1rho_3-site_model/;
+$ref_files{$key} = "$dir".q|NS_3_site_R1_model.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/uf:_value.set/;
 $ref_files{$key} = "$dir".q|value_set.html|; 
 $noresave{$key} = "$nosave";
@@ -836,6 +844,10 @@ $noresave{$key} = "$nosave";
 
 $key = q/uf:_spin.name/;
 $ref_files{$key} = "$dir".q|spin_name.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/eq:_deltaA/;
+$ref_files{$key} = "$dir".q|TP02_2_site_exchange_R1_model.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_rdc.copy/;
@@ -1174,6 +1186,10 @@ $key = q/eq:_R/;
 $ref_files{$key} = "$dir".q|weights_ellipsoid.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/uf:_structure.read_gaussian/;
+$ref_files{$key} = "$dir".q|structure_read_gaussian.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/table:_min_-_line_search/;
 $ref_files{$key} = "$dir".q|minimise.html|; 
 $noresave{$key} = "$nosave";
@@ -1192,6 +1208,10 @@ $noresave{$key} = "$nosave";
 
 $key = q/uf:_spin.create/;
 $ref_files{$key} = "$dir".q|spin_create.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/sect:_dispersion:_NS_MMQ_3-site_model/;
+$ref_files{$key} = "$dir".q|NS_MMQ_3_site_model.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_align_tensor.delete/;
@@ -1346,6 +1366,10 @@ $key = q/uf:_paramag.centre/;
 $ref_files{$key} = "$dir".q|paramag_centre.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/sect:_dispersion:_NS_MMQ_2-site_model/;
+$ref_files{$key} = "$dir".q|NS_MMQ_2_site_model.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/eq:_quadratic_model/;
 $ref_files{$key} = "$dir".q|Hessian.html|; 
 $noresave{$key} = "$nosave";
@@ -1360,6 +1384,10 @@ $noresave{$key} = "$nosave";
 
 $key = q/eq:_Ri_:_d2R1_dr2/;
 $ref_files{$key} = "$dir".q|Ri_prime_theta_Hessians.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/sect:_dispersion:_NS_R1rho_3-site_linear_model/;
+$ref_files{$key} = "$dir".q|NS_3_site_linear_R1_model.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/table:_mf_data_type_patterns/;
@@ -1408,10 +1436,6 @@ $noresave{$key} = "$nosave";
 
 $key = q/eq:_Ri_:_c/;
 $ref_files{$key} = "$dir".q|Components_Ri_prime_theta_equations.html|; 
-$noresave{$key} = "$nosave";
-
-$key = q/sect:_dispersion:_MMQ_2-site_model/;
-$ref_files{$key} = "$dir".q|MMQ_2_site_model.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/model:_m5/;
@@ -1602,6 +1626,10 @@ $key = q/uf:_pipe.create/;
 $ref_files{$key} = "$dir".q|pipe_create.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/eq:_deltaB/;
+$ref_files{$key} = "$dir".q|TP02_2_site_exchange_R1_model.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/uf:_grid_search/;
 $ref_files{$key} = "$dir".q|grid_search.html|; 
 $noresave{$key} = "$nosave";
@@ -1672,6 +1700,10 @@ $noresave{$key} = "$nosave";
 
 $key = q/eq:_Ri_:_d2sigmaNOE_dRex.dCSA/;
 $ref_files{$key} = "$dir".q|Ri_prime_theta_Hessians.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/sect:_dispersion:_MMQ_CR72_model/;
+$ref_files{$key} = "$dir".q|MMQ_CR72_model.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_bmrb.software/;
@@ -2010,40 +2042,44 @@ $key = q/eq:_ellipsoid_c-1/;
 $ref_files{$key} = "$dir".q|Brownian_rotational_diffusion.html|; 
 $noresave{$key} = "$nosave";
 
-$key = q/eq:_J_terms:_JR2d_SPMquot_/;
-$ref_files{$key} = "$dir".q|Components_Ri_prime_theta_equations.html|; 
+$key = q/uf:_rdc.back_calc/;
+$ref_files{$key} = "$dir".q|rdc_back_calc.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_ellipsoid_e/;
 $ref_files{$key} = "$dir".q|Brownian_rotational_diffusion.html|; 
 $noresave{$key} = "$nosave";
 
-$key = q/uf:_rdc.back_calc/;
-$ref_files{$key} = "$dir".q|rdc_back_calc.html|; 
-$noresave{$key} = "$nosave";
-
-$key = q/eq:_J_terms:_JR1c_SPMquot_/;
+$key = q/eq:_J_terms:_JR2d_SPMquot_/;
 $ref_files{$key} = "$dir".q|Components_Ri_prime_theta_equations.html|; 
 $noresave{$key} = "$nosave";
 
-$key = q/eq:_Luz-Meiboom/;
-$ref_files{$key} = "$dir".q|LM63_2_site_fast_exchange_CPMG_model.html|; 
+$key = q/sect:_dispersion:_NS_MMQ_3-site_linear_model/;
+$ref_files{$key} = "$dir".q|NS_MMQ_3_site_linear_model.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/figure:_spin_viewer_wizard_start/;
 $ref_files{$key} = "$dir".q|GUI_mode_spins_from_structural_data.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/eq:_Luz-Meiboom/;
+$ref_files{$key} = "$dir".q|LM63_2_site_fast_exchange_CPMG_model.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/eq:_J_terms:_JR1c_SPMquot_/;
+$ref_files{$key} = "$dir".q|Components_Ri_prime_theta_equations.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/ch:_values__gradients__and_Hessians/;
 $ref_files{$key} = "$dir".q|Optimisation_relaxation_data_values_gradients_Hessians.html|; 
 $noresave{$key} = "$nosave";
 
-$key = q/sect:_dispersion:_CR72_model/;
-$ref_files{$key} = "$dir".q|reduced_CR72_2_site_CPMG_model.html|; 
-$noresave{$key} = "$nosave";
-
 $key = q/uf:_sequence.attach_protons/;
 $ref_files{$key} = "$dir".q|sequence_attach_protons.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/sect:_dispersion:_CR72_model/;
+$ref_files{$key} = "$dir".q|reduced_CR72_2_site_CPMG_model.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_Ri_:_c_/;
@@ -2068,10 +2104,6 @@ $noresave{$key} = "$nosave";
 
 $key = q/sect:_dispersion:_analytic_MMQ_CPMG_models/;
 $ref_files{$key} = "$dir".q|analytic_MMQ_CPMG_models.html|; 
-$noresave{$key} = "$nosave";
-
-$key = q/sect:_dispersion:_MQ_CR72_model/;
-$ref_files{$key} = "$dir".q|MQ_CR72_model.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_J_w__model-free_ext_generic/;

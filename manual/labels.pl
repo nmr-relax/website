@@ -74,6 +74,10 @@ $key = q/uf:_structure.read_pdb/;
 $external_labels{$key} = "$URL/" . q|structure_read_pdb.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/uf:_spectrum.read_spins/;
+$external_labels{$key} = "$URL/" . q|spectrum_read_spins.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/uf:_relax_disp.spin_lock_offset/;
 $external_labels{$key} = "$URL/" . q|relax_disp_spin_lock_offset.html|; 
 $noresave{$key} = "$nosave";
@@ -122,12 +126,12 @@ $key = q/uf:_spin.create_pseudo/;
 $external_labels{$key} = "$URL/" . q|spin_create_pseudo.html|; 
 $noresave{$key} = "$nosave";
 
-$key = q/uf:_j_coupling.copy/;
-$external_labels{$key} = "$URL/" . q|j_coupling_copy.html|; 
-$noresave{$key} = "$nosave";
-
 $key = q/eq:_Ri_:_d2R2_dRex.dr/;
 $external_labels{$key} = "$URL/" . q|Ri_prime_theta_Hessians.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/uf:_j_coupling.copy/;
+$external_labels{$key} = "$URL/" . q|j_coupling_copy.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/table:_NMRPipe_-c/;
@@ -526,6 +530,10 @@ $key = q/uf:_structure.delete/;
 $external_labels{$key} = "$URL/" . q|structure_delete.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/sect:_dispersion:_NS_R1rho_3-site_model/;
+$external_labels{$key} = "$URL/" . q|NS_3_site_R1_model.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/uf:_value.set/;
 $external_labels{$key} = "$URL/" . q|value_set.html|; 
 $noresave{$key} = "$nosave";
@@ -836,6 +844,10 @@ $noresave{$key} = "$nosave";
 
 $key = q/uf:_spin.name/;
 $external_labels{$key} = "$URL/" . q|spin_name.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/eq:_deltaA/;
+$external_labels{$key} = "$URL/" . q|TP02_2_site_exchange_R1_model.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_rdc.copy/;
@@ -1174,6 +1186,10 @@ $key = q/eq:_R/;
 $external_labels{$key} = "$URL/" . q|weights_ellipsoid.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/uf:_structure.read_gaussian/;
+$external_labels{$key} = "$URL/" . q|structure_read_gaussian.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/table:_min_-_line_search/;
 $external_labels{$key} = "$URL/" . q|minimise.html|; 
 $noresave{$key} = "$nosave";
@@ -1192,6 +1208,10 @@ $noresave{$key} = "$nosave";
 
 $key = q/uf:_spin.create/;
 $external_labels{$key} = "$URL/" . q|spin_create.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/sect:_dispersion:_NS_MMQ_3-site_model/;
+$external_labels{$key} = "$URL/" . q|NS_MMQ_3_site_model.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_align_tensor.delete/;
@@ -1346,6 +1366,10 @@ $key = q/uf:_paramag.centre/;
 $external_labels{$key} = "$URL/" . q|paramag_centre.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/sect:_dispersion:_NS_MMQ_2-site_model/;
+$external_labels{$key} = "$URL/" . q|NS_MMQ_2_site_model.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/eq:_quadratic_model/;
 $external_labels{$key} = "$URL/" . q|Hessian.html|; 
 $noresave{$key} = "$nosave";
@@ -1360,6 +1384,10 @@ $noresave{$key} = "$nosave";
 
 $key = q/eq:_Ri_:_d2R1_dr2/;
 $external_labels{$key} = "$URL/" . q|Ri_prime_theta_Hessians.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/sect:_dispersion:_NS_R1rho_3-site_linear_model/;
+$external_labels{$key} = "$URL/" . q|NS_3_site_linear_R1_model.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/table:_mf_data_type_patterns/;
@@ -1408,10 +1436,6 @@ $noresave{$key} = "$nosave";
 
 $key = q/eq:_Ri_:_c/;
 $external_labels{$key} = "$URL/" . q|Components_Ri_prime_theta_equations.html|; 
-$noresave{$key} = "$nosave";
-
-$key = q/sect:_dispersion:_MMQ_2-site_model/;
-$external_labels{$key} = "$URL/" . q|MMQ_2_site_model.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/model:_m5/;
@@ -1602,6 +1626,10 @@ $key = q/uf:_pipe.create/;
 $external_labels{$key} = "$URL/" . q|pipe_create.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/eq:_deltaB/;
+$external_labels{$key} = "$URL/" . q|TP02_2_site_exchange_R1_model.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/uf:_grid_search/;
 $external_labels{$key} = "$URL/" . q|grid_search.html|; 
 $noresave{$key} = "$nosave";
@@ -1672,6 +1700,10 @@ $noresave{$key} = "$nosave";
 
 $key = q/eq:_Ri_:_d2sigmaNOE_dRex.dCSA/;
 $external_labels{$key} = "$URL/" . q|Ri_prime_theta_Hessians.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/sect:_dispersion:_MMQ_CR72_model/;
+$external_labels{$key} = "$URL/" . q|MMQ_CR72_model.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_bmrb.software/;
@@ -2010,40 +2042,44 @@ $key = q/eq:_ellipsoid_c-1/;
 $external_labels{$key} = "$URL/" . q|Brownian_rotational_diffusion.html|; 
 $noresave{$key} = "$nosave";
 
-$key = q/eq:_J_terms:_JR2d_SPMquot_/;
-$external_labels{$key} = "$URL/" . q|Components_Ri_prime_theta_equations.html|; 
+$key = q/uf:_rdc.back_calc/;
+$external_labels{$key} = "$URL/" . q|rdc_back_calc.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_ellipsoid_e/;
 $external_labels{$key} = "$URL/" . q|Brownian_rotational_diffusion.html|; 
 $noresave{$key} = "$nosave";
 
-$key = q/uf:_rdc.back_calc/;
-$external_labels{$key} = "$URL/" . q|rdc_back_calc.html|; 
-$noresave{$key} = "$nosave";
-
-$key = q/eq:_J_terms:_JR1c_SPMquot_/;
+$key = q/eq:_J_terms:_JR2d_SPMquot_/;
 $external_labels{$key} = "$URL/" . q|Components_Ri_prime_theta_equations.html|; 
 $noresave{$key} = "$nosave";
 
-$key = q/eq:_Luz-Meiboom/;
-$external_labels{$key} = "$URL/" . q|LM63_2_site_fast_exchange_CPMG_model.html|; 
+$key = q/sect:_dispersion:_NS_MMQ_3-site_linear_model/;
+$external_labels{$key} = "$URL/" . q|NS_MMQ_3_site_linear_model.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/figure:_spin_viewer_wizard_start/;
 $external_labels{$key} = "$URL/" . q|GUI_mode_spins_from_structural_data.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/eq:_Luz-Meiboom/;
+$external_labels{$key} = "$URL/" . q|LM63_2_site_fast_exchange_CPMG_model.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/eq:_J_terms:_JR1c_SPMquot_/;
+$external_labels{$key} = "$URL/" . q|Components_Ri_prime_theta_equations.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/ch:_values__gradients__and_Hessians/;
 $external_labels{$key} = "$URL/" . q|Optimisation_relaxation_data_values_gradients_Hessians.html|; 
 $noresave{$key} = "$nosave";
 
-$key = q/sect:_dispersion:_CR72_model/;
-$external_labels{$key} = "$URL/" . q|reduced_CR72_2_site_CPMG_model.html|; 
-$noresave{$key} = "$nosave";
-
 $key = q/uf:_sequence.attach_protons/;
 $external_labels{$key} = "$URL/" . q|sequence_attach_protons.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/sect:_dispersion:_CR72_model/;
+$external_labels{$key} = "$URL/" . q|reduced_CR72_2_site_CPMG_model.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_Ri_:_c_/;
@@ -2068,10 +2104,6 @@ $noresave{$key} = "$nosave";
 
 $key = q/sect:_dispersion:_analytic_MMQ_CPMG_models/;
 $external_labels{$key} = "$URL/" . q|analytic_MMQ_CPMG_models.html|; 
-$noresave{$key} = "$nosave";
-
-$key = q/sect:_dispersion:_MQ_CR72_model/;
-$external_labels{$key} = "$URL/" . q|MQ_CR72_model.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_J_w__model-free_ext_generic/;
@@ -2242,7 +2274,7 @@ $external_latex_labels{$key} = q|10.2|;
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_spin.isotope/;
-$external_latex_labels{$key} = q|14.2.210|; 
+$external_latex_labels{$key} = q|14.2.211|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_spaceset_Hessian/;
@@ -2294,7 +2326,11 @@ $external_latex_labels{$key} = q|14.2.75|;
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_structure.read_pdb/;
-$external_latex_labels{$key} = q|14.2.226|; 
+$external_latex_labels{$key} = q|14.2.228|; 
+$noresave{$key} = "$nosave";
+
+$key = q/uf:_spectrum.read_spins/;
+$external_latex_labels{$key} = q|14.2.203|; 
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_relax_disp.spin_lock_offset/;
@@ -2342,15 +2378,15 @@ $external_latex_labels{$key} = q|5.3.4|;
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_spin.create_pseudo/;
-$external_latex_labels{$key} = q|14.2.206|; 
-$noresave{$key} = "$nosave";
-
-$key = q/uf:_j_coupling.copy/;
-$external_latex_labels{$key} = q|14.2.58|; 
+$external_latex_labels{$key} = q|14.2.207|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_Ri_:_d2R2_dRex.dr/;
 $external_latex_labels{$key} = q|13.54b|; 
+$noresave{$key} = "$nosave";
+
+$key = q/uf:_j_coupling.copy/;
+$external_latex_labels{$key} = q|14.2.58|; 
 $noresave{$key} = "$nosave";
 
 $key = q/table:_NMRPipe_-c/;
@@ -2366,7 +2402,7 @@ $external_latex_labels{$key} = q|14.6|;
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_structure.add_atom/;
-$external_latex_labels{$key} = q|14.2.215|; 
+$external_latex_labels{$key} = q|14.2.216|; 
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_j_coupling.delete/;
@@ -2410,7 +2446,7 @@ $external_latex_labels{$key} = q|14.2.9|;
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_state.load/;
-$external_latex_labels{$key} = q|14.2.213|; 
+$external_latex_labels{$key} = q|14.2.214|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_Ri_:_d_SPMquot_/;
@@ -2418,7 +2454,7 @@ $external_latex_labels{$key} = q|13.21|;
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_chi2_dispersion/;
-$external_latex_labels{$key} = q|10.56|; 
+$external_latex_labels{$key} = q|10.76|; 
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_residue.name/;
@@ -2458,7 +2494,7 @@ $external_latex_labels{$key} = q|7.11e|;
 $noresave{$key} = "$nosave";
 
 $key = q/sect:_dispersion:_TAP03_model/;
-$external_latex_labels{$key} = q|10.5.5|; 
+$external_latex_labels{$key} = q|10.7.5|; 
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_grace.write/;
@@ -2562,7 +2598,7 @@ $external_latex_labels{$key} = q|14.2.143|;
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_spin.copy/;
-$external_latex_labels{$key} = q|14.2.204|; 
+$external_latex_labels{$key} = q|14.2.205|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_Ri_:_dR1_dr/;
@@ -2570,7 +2606,7 @@ $external_latex_labels{$key} = q|13.47a|;
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_structure.create_rotor_pdb/;
-$external_latex_labels{$key} = q|14.2.219|; 
+$external_latex_labels{$key} = q|14.2.220|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_Ri_:_dR1_dmf/;
@@ -2590,7 +2626,7 @@ $external_latex_labels{$key} = q|12.5.2|;
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_structure.superimpose/;
-$external_latex_labels{$key} = q|14.2.230|; 
+$external_latex_labels{$key} = q|14.2.232|; 
 $noresave{$key} = "$nosave";
 
 $key = q/sect:_new_model-free_protocol/;
@@ -2634,11 +2670,11 @@ $external_latex_labels{$key} = q|9.2.1|;
 $noresave{$key} = "$nosave";
 
 $key = q/sect:_dispersion:_MP05_model/;
-$external_latex_labels{$key} = q|10.5.6|; 
+$external_latex_labels{$key} = q|10.7.6|; 
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_structure.connect_atom/;
-$external_latex_labels{$key} = q|14.2.217|; 
+$external_latex_labels{$key} = q|14.2.218|; 
 $noresave{$key} = "$nosave";
 
 $key = q/sect:_dispersion:_LM63_3-site_model/;
@@ -2746,11 +2782,15 @@ $external_latex_labels{$key} = q|14.14|;
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_structure.delete/;
-$external_latex_labels{$key} = q|14.2.221|; 
+$external_latex_labels{$key} = q|14.2.222|; 
+$noresave{$key} = "$nosave";
+
+$key = q/sect:_dispersion:_NS_R1rho_3-site_model/;
+$external_latex_labels{$key} = q|10.8.2|; 
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_value.set/;
-$external_latex_labels{$key} = q|14.2.238|; 
+$external_latex_labels{$key} = q|14.2.240|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_disp_phiexB/;
@@ -2762,7 +2802,7 @@ $external_latex_labels{$key} = q|14.26|;
 $noresave{$key} = "$nosave";
 
 $key = q/sect:_dispersion:_DPL94_model/;
-$external_latex_labels{$key} = q|10.5.3|; 
+$external_latex_labels{$key} = q|10.7.3|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_Ri_trans:_dNOE/;
@@ -2790,7 +2830,7 @@ $external_latex_labels{$key} = q|14.2.71|;
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_structure.read_xyz/;
-$external_latex_labels{$key} = q|14.2.227|; 
+$external_latex_labels{$key} = q|14.2.229|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_ellipsoid_c0/;
@@ -2822,7 +2862,7 @@ $external_latex_labels{$key} = q|7.18b|;
 $noresave{$key} = "$nosave";
 
 $key = q/sect:_dispersion:_numeric_MMQ_CPMG_models/;
-$external_latex_labels{$key} = q|10.8|; 
+$external_latex_labels{$key} = q|10.6|; 
 $noresave{$key} = "$nosave";
 
 $key = q/sect:_scripting/;
@@ -2842,7 +2882,7 @@ $external_latex_labels{$key} = q|7.21.2|;
 $noresave{$key} = "$nosave";
 
 $key = q/sect:_dispersion:_M61_model/;
-$external_latex_labels{$key} = q|10.5.1|; 
+$external_latex_labels{$key} = q|10.7.1|; 
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_select.interatom/;
@@ -2866,7 +2906,7 @@ $external_latex_labels{$key} = q|13.44c|;
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_state.save/;
-$external_latex_labels{$key} = q|14.2.214|; 
+$external_latex_labels{$key} = q|14.2.215|; 
 $noresave{$key} = "$nosave";
 
 $key = q/sect:_temperature_control_and_calibration/;
@@ -2890,7 +2930,7 @@ $external_latex_labels{$key} = q|13.48a|;
 $noresave{$key} = "$nosave";
 
 $key = q/sect:_dispersion:_TP02_model/;
-$external_latex_labels{$key} = q|10.5.4|; 
+$external_latex_labels{$key} = q|10.7.4|; 
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_script/;
@@ -2994,7 +3034,7 @@ $external_latex_labels{$key} = q|13.32|;
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_spin.delete/;
-$external_latex_labels{$key} = q|14.2.207|; 
+$external_latex_labels{$key} = q|14.2.208|; 
 $noresave{$key} = "$nosave";
 
 $key = q/sect:_constraint_algorithms/;
@@ -3058,7 +3098,11 @@ $external_latex_labels{$key} = q|7.18c|;
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_spin.name/;
-$external_latex_labels{$key} = q|14.2.211|; 
+$external_latex_labels{$key} = q|14.2.212|; 
+$noresave{$key} = "$nosave";
+
+$key = q/eq:_deltaA/;
+$external_latex_labels{$key} = q|10.63a|; 
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_rdc.copy/;
@@ -3166,11 +3210,11 @@ $external_latex_labels{$key} = q|13.49c|;
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_structure.create_vector_dist/;
-$external_latex_labels{$key} = q|14.2.220|; 
+$external_latex_labels{$key} = q|14.2.221|; 
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_spin.display/;
-$external_latex_labels{$key} = q|14.2.208|; 
+$external_latex_labels{$key} = q|14.2.209|; 
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_bmrb.software_select/;
@@ -3194,11 +3238,11 @@ $external_latex_labels{$key} = q|14.2.114|;
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_structure.translate/;
-$external_latex_labels{$key} = q|14.2.231|; 
+$external_latex_labels{$key} = q|14.2.233|; 
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_structure.rotate/;
-$external_latex_labels{$key} = q|14.2.229|; 
+$external_latex_labels{$key} = q|14.2.231|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_Ri_:_dR1_dCSA/;
@@ -3206,7 +3250,7 @@ $external_latex_labels{$key} = q|13.46a|;
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_spin.number/;
-$external_latex_labels{$key} = q|14.2.212|; 
+$external_latex_labels{$key} = q|14.2.213|; 
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_residue.delete/;
@@ -3234,7 +3278,7 @@ $external_latex_labels{$key} = q|13.45c|;
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_structure.get_pos/;
-$external_latex_labels{$key} = q|14.2.224|; 
+$external_latex_labels{$key} = q|14.2.225|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_Diso_spheroid_def/;
@@ -3246,7 +3290,7 @@ $external_latex_labels{$key} = q|14.2.136|;
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_structure.displacement/;
-$external_latex_labels{$key} = q|14.2.222|; 
+$external_latex_labels{$key} = q|14.2.223|; 
 $noresave{$key} = "$nosave";
 
 $key = q/fig:_GUI_screenshot_-_start/;
@@ -3262,7 +3306,7 @@ $external_latex_labels{$key} = q|10.4.1|;
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_structure.load_spins/;
-$external_latex_labels{$key} = q|14.2.225|; 
+$external_latex_labels{$key} = q|14.2.226|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_Ri_:_d2R1_dRex.dr/;
@@ -3342,7 +3386,7 @@ $external_latex_labels{$key} = q|14.2.4|;
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_structure.write_pdb/;
-$external_latex_labels{$key} = q|14.2.233|; 
+$external_latex_labels{$key} = q|14.2.235|; 
 $noresave{$key} = "$nosave";
 
 $key = q/sect:_dispersion:_numeric_CPMG_models/;
@@ -3393,6 +3437,10 @@ $key = q/eq:_R/;
 $external_latex_labels{$key} = q|13.112|; 
 $noresave{$key} = "$nosave";
 
+$key = q/uf:_structure.read_gaussian/;
+$external_latex_labels{$key} = q|14.2.227|; 
+$noresave{$key} = "$nosave";
+
 $key = q/table:_min_-_line_search/;
 $external_latex_labels{$key} = q|14.11|; 
 $noresave{$key} = "$nosave";
@@ -3406,11 +3454,15 @@ $external_latex_labels{$key} = q|10.10|;
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_value.copy/;
-$external_latex_labels{$key} = q|14.2.235|; 
+$external_latex_labels{$key} = q|14.2.237|; 
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_spin.create/;
-$external_latex_labels{$key} = q|14.2.205|; 
+$external_latex_labels{$key} = q|14.2.206|; 
+$noresave{$key} = "$nosave";
+
+$key = q/sect:_dispersion:_NS_MMQ_3-site_model/;
+$external_latex_labels{$key} = q|10.6.3|; 
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_align_tensor.delete/;
@@ -3482,7 +3534,7 @@ $external_latex_labels{$key} = q|13.48c|;
 $noresave{$key} = "$nosave";
 
 $key = q/sect:_dispersion:_M61_skew_model/;
-$external_latex_labels{$key} = q|10.5.2|; 
+$external_latex_labels{$key} = q|10.7.2|; 
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_calc/;
@@ -3498,7 +3550,11 @@ $external_latex_labels{$key} = q|2.2.1|;
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_value.write/;
-$external_latex_labels{$key} = q|14.2.239|; 
+$external_latex_labels{$key} = q|14.2.241|; 
+$noresave{$key} = "$nosave";
+
+$key = q/uf:_spectrum.read_intensities/;
+$external_latex_labels{$key} = q|14.2.202|; 
 $noresave{$key} = "$nosave";
 
 $key = q/sect:_GUI_-_data_pipe/;
@@ -3507,10 +3563,6 @@ $noresave{$key} = "$nosave";
 
 $key = q/uf:_pcs.copy/;
 $external_latex_labels{$key} = q|14.2.104|; 
-$noresave{$key} = "$nosave";
-
-$key = q/uf:_spectrum.read_intensities/;
-$external_latex_labels{$key} = q|14.2.202|; 
 $noresave{$key} = "$nosave";
 
 $key = q/model:_tm3/;
@@ -3522,7 +3574,7 @@ $external_latex_labels{$key} = q|13.56a|;
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_structure.add_model/;
-$external_latex_labels{$key} = q|14.2.216|; 
+$external_latex_labels{$key} = q|14.2.217|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_Ri_:_d2R2_dCSA.dr/;
@@ -3565,6 +3617,10 @@ $key = q/uf:_paramag.centre/;
 $external_latex_labels{$key} = q|14.2.101|; 
 $noresave{$key} = "$nosave";
 
+$key = q/sect:_dispersion:_NS_MMQ_2-site_model/;
+$external_latex_labels{$key} = q|10.6.1|; 
+$noresave{$key} = "$nosave";
+
 $key = q/eq:_quadratic_model/;
 $external_latex_labels{$key} = q|12.5|; 
 $noresave{$key} = "$nosave";
@@ -3579,6 +3635,10 @@ $noresave{$key} = "$nosave";
 
 $key = q/eq:_Ri_:_d2R1_dr2/;
 $external_latex_labels{$key} = q|13.57a|; 
+$noresave{$key} = "$nosave";
+
+$key = q/sect:_dispersion:_NS_R1rho_3-site_linear_model/;
+$external_latex_labels{$key} = q|10.8.3|; 
 $noresave{$key} = "$nosave";
 
 $key = q/table:_mf_data_type_patterns/;
@@ -3629,10 +3689,6 @@ $key = q/eq:_Ri_:_c/;
 $external_latex_labels{$key} = q|13.22|; 
 $noresave{$key} = "$nosave";
 
-$key = q/sect:_dispersion:_MMQ_2-site_model/;
-$external_latex_labels{$key} = q|10.8.1|; 
-$noresave{$key} = "$nosave";
-
 $key = q/model:_m5/;
 $external_latex_labels{$key} = q|7.21.5|; 
 $noresave{$key} = "$nosave";
@@ -3662,7 +3718,7 @@ $external_latex_labels{$key} = q|14.2.155|;
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_value.display/;
-$external_latex_labels{$key} = q|14.2.236|; 
+$external_latex_labels{$key} = q|14.2.238|; 
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_relax_disp.plot_disp_curves/;
@@ -3722,7 +3778,7 @@ $external_latex_labels{$key} = q|14.2.180|;
 $noresave{$key} = "$nosave";
 
 $key = q/sect:_dispersion:_analytic_R1rho_models/;
-$external_latex_labels{$key} = q|10.5|; 
+$external_latex_labels{$key} = q|10.7|; 
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_angles.diff_frame/;
@@ -3821,6 +3877,10 @@ $key = q/uf:_pipe.create/;
 $external_latex_labels{$key} = q|14.2.116|; 
 $noresave{$key} = "$nosave";
 
+$key = q/eq:_deltaB/;
+$external_latex_labels{$key} = q|10.63b|; 
+$noresave{$key} = "$nosave";
+
 $key = q/uf:_grid_search/;
 $external_latex_labels{$key} = q|14.2.52|; 
 $noresave{$key} = "$nosave";
@@ -3866,7 +3926,7 @@ $external_latex_labels{$key} = q|10.4.5|;
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_vmd.view/;
-$external_latex_labels{$key} = q|14.2.240|; 
+$external_latex_labels{$key} = q|14.2.242|; 
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_align_tensor.svd/;
@@ -3893,6 +3953,10 @@ $key = q/eq:_Ri_:_d2sigmaNOE_dRex.dCSA/;
 $external_latex_labels{$key} = q|13.53c|; 
 $noresave{$key} = "$nosave";
 
+$key = q/sect:_dispersion:_MMQ_CR72_model/;
+$external_latex_labels{$key} = q|10.5.1|; 
+$noresave{$key} = "$nosave";
+
 $key = q/uf:_bmrb.software/;
 $external_latex_labels{$key} = q|14.2.18|; 
 $noresave{$key} = "$nosave";
@@ -3906,7 +3970,7 @@ $external_latex_labels{$key} = q|14.2.131|;
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_spectrum.replicated/;
-$external_latex_labels{$key} = q|14.2.203|; 
+$external_latex_labels{$key} = q|14.2.204|; 
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_spectrum.baseplane_rmsd/;
@@ -3918,7 +3982,7 @@ $external_latex_labels{$key} = q|13.31|;
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_spin.element/;
-$external_latex_labels{$key} = q|14.2.209|; 
+$external_latex_labels{$key} = q|14.2.210|; 
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_rdc.display/;
@@ -3946,7 +4010,7 @@ $external_latex_labels{$key} = q|10.13.4|;
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_structure.find_pivot/;
-$external_latex_labels{$key} = q|14.2.223|; 
+$external_latex_labels{$key} = q|14.2.224|; 
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_monte_carlo.off/;
@@ -3958,7 +4022,7 @@ $external_latex_labels{$key} = q|10.11|;
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_value.read/;
-$external_latex_labels{$key} = q|14.2.237|; 
+$external_latex_labels{$key} = q|14.2.239|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_Ri_:_dR1_dRex/;
@@ -4018,7 +4082,7 @@ $external_latex_labels{$key} = q|14.2.100|;
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_structure.rmsd/;
-$external_latex_labels{$key} = q|14.2.228|; 
+$external_latex_labels{$key} = q|14.2.230|; 
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_align_tensor.fix/;
@@ -4030,7 +4094,7 @@ $external_latex_labels{$key} = q|14.2.194|;
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_structure.create_diff_tensor_pdb/;
-$external_latex_labels{$key} = q|14.2.218|; 
+$external_latex_labels{$key} = q|14.2.219|; 
 $noresave{$key} = "$nosave";
 
 $key = q/fig:_screenshot:_prompt_window/;
@@ -4118,7 +4182,7 @@ $external_latex_labels{$key} = q|10.13.2|;
 $noresave{$key} = "$nosave";
 
 $key = q/sect:_dispersion:_NS_R1rho_2-site_model/;
-$external_latex_labels{$key} = q|10.6.1|; 
+$external_latex_labels{$key} = q|10.8.1|; 
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_rdc.set_errors/;
@@ -4130,7 +4194,7 @@ $external_latex_labels{$key} = q|14.2.195|;
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_sys_info/;
-$external_latex_labels{$key} = q|14.2.234|; 
+$external_latex_labels{$key} = q|14.2.236|; 
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_model_free.create_model/;
@@ -4225,40 +4289,44 @@ $key = q/eq:_ellipsoid_c-1/;
 $external_latex_labels{$key} = q|7.11b|; 
 $noresave{$key} = "$nosave";
 
-$key = q/eq:_J_terms:_JR2d_SPMquot_/;
-$external_latex_labels{$key} = q|13.36|; 
+$key = q/uf:_rdc.back_calc/;
+$external_latex_labels{$key} = q|14.2.132|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_ellipsoid_e/;
 $external_latex_labels{$key} = q|7.13|; 
 $noresave{$key} = "$nosave";
 
-$key = q/uf:_rdc.back_calc/;
-$external_latex_labels{$key} = q|14.2.132|; 
+$key = q/sect:_dispersion:_NS_MMQ_3-site_linear_model/;
+$external_latex_labels{$key} = q|10.6.2|; 
 $noresave{$key} = "$nosave";
 
-$key = q/eq:_J_terms:_JR1c_SPMquot_/;
-$external_latex_labels{$key} = q|13.33|; 
-$noresave{$key} = "$nosave";
-
-$key = q/eq:_Luz-Meiboom/;
-$external_latex_labels{$key} = q|10.8|; 
+$key = q/eq:_J_terms:_JR2d_SPMquot_/;
+$external_latex_labels{$key} = q|13.36|; 
 $noresave{$key} = "$nosave";
 
 $key = q/figure:_spin_viewer_wizard_start/;
 $external_latex_labels{$key} = q|4.5.2|; 
 $noresave{$key} = "$nosave";
 
+$key = q/eq:_Luz-Meiboom/;
+$external_latex_labels{$key} = q|10.8|; 
+$noresave{$key} = "$nosave";
+
+$key = q/eq:_J_terms:_JR1c_SPMquot_/;
+$external_latex_labels{$key} = q|13.33|; 
+$noresave{$key} = "$nosave";
+
 $key = q/ch:_values__gradients__and_Hessians/;
 $external_latex_labels{$key} = q|13|; 
 $noresave{$key} = "$nosave";
 
-$key = q/sect:_dispersion:_CR72_model/;
-$external_latex_labels{$key} = q|10.3.4|; 
-$noresave{$key} = "$nosave";
-
 $key = q/uf:_sequence.attach_protons/;
 $external_latex_labels{$key} = q|14.2.191|; 
+$noresave{$key} = "$nosave";
+
+$key = q/sect:_dispersion:_CR72_model/;
+$external_latex_labels{$key} = q|10.3.4|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_Ri_:_c_/;
@@ -4282,11 +4350,7 @@ $external_latex_labels{$key} = q|14.24|;
 $noresave{$key} = "$nosave";
 
 $key = q/sect:_dispersion:_analytic_MMQ_CPMG_models/;
-$external_latex_labels{$key} = q|10.7|; 
-$noresave{$key} = "$nosave";
-
-$key = q/sect:_dispersion:_MQ_CR72_model/;
-$external_latex_labels{$key} = q|10.7.1|; 
+$external_latex_labels{$key} = q|10.5|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_J_w__model-free_ext_generic/;
@@ -4422,7 +4486,7 @@ $external_latex_labels{$key} = q|7.5|;
 $noresave{$key} = "$nosave";
 
 $key = q/sect:_dispersion:_numeric_R1rho_models/;
-$external_latex_labels{$key} = q|10.6|; 
+$external_latex_labels{$key} = q|10.8|; 
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_residue.display/;
@@ -4430,7 +4494,7 @@ $external_latex_labels{$key} = q|14.2.178|;
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_structure.web_of_motion/;
-$external_latex_labels{$key} = q|14.2.232|; 
+$external_latex_labels{$key} = q|14.2.234|; 
 $noresave{$key} = "$nosave";
 
 1;
