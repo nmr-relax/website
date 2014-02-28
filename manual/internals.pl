@@ -626,6 +626,10 @@ $key = q/model:_m2/;
 $ref_files{$key} = "$dir".q|model_free_models.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/sect:_Dispersion_curve_insignificance/;
+$ref_files{$key} = "$dir".q|Dispersion_curve_insignificance.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/sect:_dispersion:_M61_model/;
 $ref_files{$key} = "$dir".q|M61_2_site_fast_exchange_R1_model.html|; 
 $noresave{$key} = "$nosave";
@@ -778,6 +782,10 @@ $key = q/eq:_J_terms:_JR1c_/;
 $ref_files{$key} = "$dir".q|Components_Ri_prime_theta_equations.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/sect:_Relaxation_dispersion_using_OpenMPI/;
+$ref_files{$key} = "$dir".q|Relaxation_dispersion_on_computer_cluster_using_OpenMPI.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/uf:_spin.delete/;
 $ref_files{$key} = "$dir".q|spin_delete.html|; 
 $noresave{$key} = "$nosave";
@@ -896,6 +904,10 @@ $noresave{$key} = "$nosave";
 
 $key = q/eq:_J_terms:_JsigmaNOEd_/;
 $ref_files{$key} = "$dir".q|Components_Ri_prime_theta_equations.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/sect:_Dispersion_parameter_grid_search/;
+$ref_files{$key} = "$dir".q|Dispersion_parameter_grid_search.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/eq:_Dr_ellipsoid_def/;
@@ -1018,12 +1030,12 @@ $key = q/uf:_pymol.tensor_pdb/;
 $ref_files{$key} = "$dir".q|pymol_tensor_pdb.html|; 
 $noresave{$key} = "$nosave";
 
-$key = q/uf:_spectrometer.frequency/;
-$ref_files{$key} = "$dir".q|spectrometer_frequency.html|; 
-$noresave{$key} = "$nosave";
-
 $key = q/eq:_Ri_:_dsigmaNOE_dRex/;
 $ref_files{$key} = "$dir".q|Ri_prime_theta_gradients.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/uf:_spectrometer.frequency/;
+$ref_files{$key} = "$dir".q|spectrometer_frequency.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_structure.get_pos/;
@@ -1068,6 +1080,10 @@ $noresave{$key} = "$nosave";
 
 $key = q/ch:_relax-disp/;
 $ref_files{$key} = "$dir".q|Relaxation_dispersion.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/sect:_relaxation_dispersion_model_elimination/;
+$ref_files{$key} = "$dir".q|Relaxation_dispersion_model_elimination.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/fig:_Mandel_et_al./;
@@ -1302,16 +1318,16 @@ $key = q/uf:_value.write/;
 $ref_files{$key} = "$dir".q|value_write.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/uf:_spectrum.read_intensities/;
+$ref_files{$key} = "$dir".q|spectrum_read_intensities.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/sect:_GUI_-_data_pipe/;
 $ref_files{$key} = "$dir".q|GUI_mode_setting_up_data_pipe.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/uf:_pcs.copy/;
 $ref_files{$key} = "$dir".q|pcs_copy.html|; 
-$noresave{$key} = "$nosave";
-
-$key = q/uf:_spectrum.read_intensities/;
-$ref_files{$key} = "$dir".q|spectrum_read_intensities.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/model:_tm3/;
@@ -2050,12 +2066,12 @@ $key = q/eq:_ellipsoid_e/;
 $ref_files{$key} = "$dir".q|Brownian_rotational_diffusion.html|; 
 $noresave{$key} = "$nosave";
 
-$key = q/eq:_J_terms:_JR2d_SPMquot_/;
-$ref_files{$key} = "$dir".q|Components_Ri_prime_theta_equations.html|; 
-$noresave{$key} = "$nosave";
-
 $key = q/sect:_dispersion:_NS_MMQ_3-site_linear_model/;
 $ref_files{$key} = "$dir".q|NS_MMQ_3_site_linear_model.html|; 
+$noresave{$key} = "$nosave";
+
+$key = q/eq:_J_terms:_JR2d_SPMquot_/;
+$ref_files{$key} = "$dir".q|Components_Ri_prime_theta_equations.html|; 
 $noresave{$key} = "$nosave";
 
 $key = q/figure:_spin_viewer_wizard_start/;
