@@ -5,7 +5,6 @@
 # The list of redirects to build.  The first element is the old page, the second is the new page.
 redirects = [
         ['manual/d_Auvergne_protocol_GUI_mode_relaxation_interaction.html', 'manual/d_Auvergne_protocol_GUI_mode_relaxation_interactions.html'],
-        ['api/fdl.html', 'fdl.html'],
 ]
 
 # Loop over all redirects, automatically creating the webpage.
