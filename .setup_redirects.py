@@ -4,7 +4,13 @@
 
 # The list of redirects to build.  The first element is the old page, the second is the new page.
 redirects = [
+        ['linux_devel.html', ''],
+        ['manual/Citations.html', 'manual/Preface_citing_relax.html'],
+        ['manual/Consistency_testing_script_mode_relaxation_data_lo.html', 'manual/Consistency_testing_script_mode_relaxation_data_loading.html'],
+        ['manual/d_Auvergne_protocol_GUI_mode_relaxation_interactio.html', 'manual/d_Auvergne_protocol_GUI_mode_relaxation_interactions.html'],
         ['manual/d_Auvergne_protocol_GUI_mode_relaxation_interaction.html', 'manual/d_Auvergne_protocol_GUI_mode_relaxation_interactions.html'],
+        ['manual/relax.html', 'manual/index.html'],
+        ['osx_devel.html', ''],
 ]
 
 # Loop over all redirects, automatically creating the webpage.
