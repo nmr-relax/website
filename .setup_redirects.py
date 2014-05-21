@@ -11,6 +11,7 @@ redirects = [
         ['manual/d_Auvergne_protocol_GUI_mode_relaxation_interaction.html', 'manual/d_Auvergne_protocol_GUI_mode_relaxation_interactions.html'],
         ['manual/relax.html', 'manual/index.html'],
         ['osx_devel.html', ''],
+        ['scripts/code_validator', 'manual/Coding_conventions.html'],
 ]
 
 # Loop over all redirects, automatically creating the webpage.
