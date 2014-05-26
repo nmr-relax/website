@@ -4,6 +4,7 @@
 
 # The list of redirects to build.  The first element is the old page, the second is the new page.
 redirects = [
+        ['api/3.1/lib.dispersion.B14-module.html', 'api/3.2/lib.dispersion.B14-module.html'],
         ['linux_devel.html', ''],
         ['manual/Citations.html', 'manual/Preface_citing_relax.html'],
         ['manual/Consistency_testing_script_mode_relaxation_data_lo.html', 'manual/Consistency_testing_script_mode_relaxation_data_loading.html'],
