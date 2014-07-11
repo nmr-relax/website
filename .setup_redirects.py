@@ -2,17 +2,28 @@
 
 # This Python script is for setting up all of the meta refresh redirects required for the relax website.
 
+# Some base URLs.
+url = 'http://www.nmr-relax.com'
+url_wiki = 'http://wiki.nmr-relax.com/'
+
 # The list of redirects to build.  The first element is the old page, the second is the new page.
 redirects = [
-        ['api/3.1/lib.dispersion.B14-module.html', 'api/3.2/lib.dispersion.B14-module.html'],
-        ['linux_devel.html', ''],
-        ['manual/Citations.html', 'manual/Preface_citing_relax.html'],
-        ['manual/Consistency_testing_script_mode_relaxation_data_lo.html', 'manual/Consistency_testing_script_mode_relaxation_data_loading.html'],
-        ['manual/d_Auvergne_protocol_GUI_mode_relaxation_interactio.html', 'manual/d_Auvergne_protocol_GUI_mode_relaxation_interactions.html'],
-        ['manual/d_Auvergne_protocol_GUI_mode_relaxation_interaction.html', 'manual/d_Auvergne_protocol_GUI_mode_relaxation_interactions.html'],
-        ['manual/relax.html', 'manual/index.html'],
-        ['osx_devel.html', ''],
-        ['scripts/code_validator', 'manual/Coding_conventions.html'],
+    ['api/3.1/lib.dispersion.B14-module.html', '%s/api/3.2/lib.dispersion.b14-module.html'%url],
+    ['linux_devel.html', '%s/'%url],
+    ['manual/Citations.html', '%s/manual/Preface_citing_relax.html'%url],
+    ['manual/Consistency_testing_script_mode_relaxation_data_lo.html', '%s/manual/Consistency_testing_script_mode_relaxation_data_loading.html'%url],
+    ['manual/d_Auvergne_protocol_GUI_mode_relaxation_interactio.html', '%s/manual/d_Auvergne_protocol_GUI_mode_relaxation_interactions.html'%url],
+    ['manual/d_Auvergne_protocol_GUI_mode_relaxation_interaction.html', '%s/manual/d_Auvergne_protocol_GUI_mode_relaxation_interactions.html'%url],
+    ['manual/relax.html', '%s/manual/index.html'%url],
+    ['osx_devel.html', '%s/'%url],
+    ['scripts/code_validator', '%s/manual/Coding_conventions.html'%url],
+    ['wiki/index.html', '%s/'%url_wiki],
+]
+
+# User function renamings.
+redirects += [
+    ['manual/relax_disp_cpmg_frq.html', '%s/manual/relax_disp_cpmg_setup.html'%url],
+    ['manual/relax_disp_set_grid_r20_from_min_r2eff.html', '%s/manual/relax_disp_r20_from_min_r2eff.html'%url],
 ]
 
 # Loop over all redirects, automatically creating the webpage.
@@ -24,6 +35,6 @@ for old, new in redirects:
     file.write("<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">\n")
     file.write("<HTML>\n")
     file.write("<HEAD>\n")
-    file.write("    <meta http-equiv=\"refresh\" content=\"0; url=http://www.nmr-relax.com/%s\">\n" % new)
+    file.write("    <meta http-equiv=\"refresh\" content=\"0; url=%s\">\n" % new)
     file.write("</HEAD>\n")
     file.write("</HTML>\n")
