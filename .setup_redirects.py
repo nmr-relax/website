@@ -6,8 +6,9 @@
 url = 'http://www.nmr-relax.com'
 url_wiki = 'http://wiki.nmr-relax.com/'
 
-# The list of redirects to build.  The first element is the old page, the second is the new page.
+# The list of redirects to build.  The first element is the old page which will be turned into a redirect, the second is the new page the redirect points to.
 redirects = [
+    ['api/2.1/toc-test_suite.unit_tests._maths_fns.Test_rotation_matrix-module.html', '%s/api/2.1/toc-test_suite.unit_tests._maths_fns.test_rotation_matrix-module.html'%url],
     ['api/3.1/lib.dispersion.B14-module.html', '%s/api/3.2/lib.dispersion.b14-module.html'%url],
     ['linux_devel.html', '%s/'%url],
     ['manual/Citations.html', '%s/manual/Preface_citing_relax.html'%url],
