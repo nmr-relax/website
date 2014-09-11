@@ -17,6 +17,7 @@ redirects = [
     ['manual/d_Auvergne_protocol_GUI_mode_relaxation_interaction.html', '%s/manual/d_Auvergne_protocol_GUI_mode_relaxation_interactions.html'%url],
     ['manual/relax.html', '%s/manual/index.html'%url],
     ['manual/calc.html', '%s/manual/minimise_calculate.html'%url],
+    ['manual/frq_set.html', '%s/manual/spectrometer_frequency.html'%url],
     ['manual/grid_search.html', '%s/manual/minimise_grid_search.html'%url],
     ['manual/minimise.html', '%s/manual/minimise_execute.html'%url],
     ['osx_devel.html', '%s/'%url],
