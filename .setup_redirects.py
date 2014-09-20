@@ -32,6 +32,7 @@ redirects += [
     ['manual/frame_order_cone_pdb.html', '%s/manual/frame_order_pdb_model.html'%url],
     ['manual/frq_set.html', '%s/manual/spectrometer_frequency.html'%url],
     ['manual/grid_search.html', '%s/manual/minimise_grid_search.html'%url],
+    ['manual/init_data.html', '%s/manual/reset.html'%url],
     ['manual/interatomic_copy.html', '%s/manual/interatom_copy.html'%url],
     ['manual/interatomic_create.html', '%s/manual/interatom_define.html'%url],
     ['manual/minimise.html', '%s/manual/minimise_execute.html'%url],
