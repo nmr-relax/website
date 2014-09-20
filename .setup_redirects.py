@@ -42,6 +42,7 @@ redirects += [
     ['manual/noe_error.html', '%s/manual/spectrum_error_analysis.html'%url],
     ['manual/noe_read.html', '%s/manual/spectrum_read_intensities.html'%url],
     ['manual/pcs_centre.html', '%s/manual/paramag_centre.html'%url],
+    ['manual/pdb.html', '%s/manual/structure_read_pdb.html'%url],
     ['manual/pdc_read.html', '%s/manual/bruker_read.html'%url],
     ['manual/pipe_list.html', '%s/manual/pipe_display.html'%url],
     ['manual/pymol_cmd.html', '%s/manual/pymol_command.html'%url],
