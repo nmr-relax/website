@@ -29,6 +29,7 @@ redirects += [
     ['manual/dipole_pair_set_dist.html', '%s/manual/interatom_set_dist.html'%url],
     ['manual/dipole_pair_unit_vectors.html', '%s/manual/interatom_unit_vectors.html'%url],
     ['manual/exp_info_software_select.html', '%s/manual/bmrb_software_select.html'%url],
+    ['manual/frame_order_cone_pdb.html', '%s/manual/frame_order_pdb_model.html'%url],
     ['manual/frq_set.html', '%s/manual/spectrometer_frequency.html'%url],
     ['manual/grid_search.html', '%s/manual/minimise_grid_search.html'%url],
     ['manual/interatomic_copy.html', '%s/manual/interatom_copy.html'%url],
