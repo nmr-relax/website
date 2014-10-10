@@ -6,22 +6,33 @@
 url = 'http://www.nmr-relax.com'
 url_wiki = 'http://wiki.nmr-relax.com/'
 
-# The list of redirects to build.  The first element is the old page which will be turned into a redirect, the second is the new page the redirect points to.
-redirects = [
-    ['api/2.1/toc-test_suite.unit_tests._maths_fns.Test_rotation_matrix-module.html', '%s/api/2.1/toc-test_suite.unit_tests._maths_fns.test_rotation_matrix-module.html'%url],
-    ['api/3.1/lib.dispersion.B14-module.html', '%s/api/3.2/lib.dispersion.b14-module.html'%url],
+# Initialise the list of redirects to build.  The first element is the old page which will be turned into a redirect, the second is the new page the redirect points to.
+redirects = []
+
+# The main page redirects.
+redirects += [
     ['linux_devel.html', '%s/'%url],
+    ['osx_devel.html', '%s/'%url],
+    ['scripts/code_validator', '%s/manual/Coding_conventions.html'%url],
+    ['wiki/index.html', '%s/'%url_wiki]
+]
+
+# The API documentation redirects.
+redirects += [
+    ['api/2.1/toc-test_suite.unit_tests._maths_fns.Test_rotation_matrix-module.html', '%s/api/2.1/toc-test_suite.unit_tests._maths_fns.test_rotation_matrix-module.html'%url],
+    ['api/3.1/lib.dispersion.B14-module.html', '%s/api/3.2/lib.dispersion.b14-module.html'%url]
+]
+
+# The HTML manual redirects.
+redirects += [
     ['manual/Citations.html', '%s/manual/Preface_citing_relax.html'%url],
     ['manual/Consistency_testing_script_mode_relaxation_data_lo.html', '%s/manual/Consistency_testing_script_mode_relaxation_data_loading.html'%url],
     ['manual/d_Auvergne_protocol_GUI_mode_relaxation_interactio.html', '%s/manual/d_Auvergne_protocol_GUI_mode_relaxation_interactions.html'%url],
     ['manual/d_Auvergne_protocol_GUI_mode_relaxation_interaction.html', '%s/manual/d_Auvergne_protocol_GUI_mode_relaxation_interactions.html'%url],
     ['manual/relax.html', '%s/manual/index.html'%url],
-    ['osx_devel.html', '%s/'%url],
-    ['scripts/code_validator', '%s/manual/Coding_conventions.html'%url],
-    ['wiki/index.html', '%s/'%url_wiki],
 ]
 
-# User function renamings.
+# HTML manual user function renamings.
 redirects += [
     ['manual/calc.html', '%s/manual/minimise_calculate.html'%url],
     ['manual/dipole_pair_define.html', '%s/manual/interatom_define.html'%url],
