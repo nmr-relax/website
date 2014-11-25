@@ -25,6 +25,7 @@ redirects += [
 
 # The HTML manual redirects.
 redirects += [
+    ['manual/Alphabetical_listing_user_functions.html', '%s/manual/Alphabetical_listing_of_user_functions.html'%url],
     ['manual/Becoming_committer.html', '%s/manual/Becoming_a_committer.html'%url],
     ['manual/Calculating_NOE.html', '%s/manual/Calculating_the_NOE.html'%url],
     ['manual/Citations.html', '%s/manual/Preface_citing_relax.html'%url],
@@ -32,8 +33,10 @@ redirects += [
     ['manual/d_Auvergne_protocol_GUI_mode_loading_data.html', '%s/manual/d_Auvergne_protocol_GUI_mode_loading_the_data.html'%url],
     ['manual/d_Auvergne_protocol_GUI_mode_relaxation_interactio.html', '%s/manual/d_Auvergne_protocol_GUI_mode_relaxation_interactions.html'%url],
     ['manual/d_Auvergne_protocol_GUI_mode_relaxation_interaction.html', '%s/manual/d_Auvergne_protocol_GUI_mode_relaxation_interactions.html'%url],
+    ['manual/d_Auvergne_protocol_GUI_mode_setting_up_spin.html', '%s/manual/d_Auvergne_protocol_GUI_mode_setting_up_the_spin_systems.html'%url],
     ['manual/diffusion_seeded_paradigm.html', '%s/manual/The_diffusion_seeded_paradigm.html'%url],
     ['manual/do_dispersion_features_yet_be_implemented.html', '%s/manual/To_do_dispersion_features_yet_to_be_implemented.html'%url],
+    ['manual/DPL94_2_site_fast_exchange_R1_model.html', '%s/manual/The_DPL94_2_site_fast_exchange_R1_rho_model.html'%url],
     ['manual/full_B14_2_site_CPMG_model.html', '%s/manual/The_full_B14_2_site_CPMG_model.html'%url],
     ['manual/full_CR72_2_site_CPMG_model.html', '%s/manual/The_full_CR72_2_site_CPMG_model.html'%url],
     ['manual/full_NS_2_site_star_CPMG_model.html', '%s/manual/The_full_NS_2_site_star_CPMG_model.html'%url],
@@ -41,6 +44,7 @@ redirects += [
     ['manual/IT99_2_site_CPMG_model.html', '%s/manual/The_IT99_2_site_CPMG_model.html'%url],
     ['manual/J_w_mapping_script_mode_sample_script.html', '%s/manual/J_w_mapping_script_mode_the_sample_script.html'%url],
     ['manual/LM63_2_site_fast_exchange_CPMG_model.html', '%s/manual/The_LM63_2_site_fast_exchange_CPMG_model.html'%url],
+    ['manual/LM63_3_site_fast_exchange_CPMG_model.html', '%s/manual/The_LM63_3_site_fast_exchange_CPMG_model.html'%url],
     ['manual/M61_2_site_fast_exchange_R1_model.html', '%s/manual/The_M61_2_site_fast_exchange_R1_rho_model.html'%url],
     ['manual/methodology_Mandel_et_al_1995.html', '%s/manual/The_methodology_of_Mandel_et_al_1995.html'%url],
     ['manual/MMQ_CR72_model.html', '%s/manual/The_MMQ_CR72_model.html'%url],
@@ -48,8 +52,10 @@ redirects += [
     ['manual/MP05_2_site_exchange_R1_model.html', '%s/manual/The_MP05_2_site_exchange_R1_rho_model.html'%url],
     ['manual/node149.html', '%s/manual/Coding_conventions.html'%url],
     ['manual/NS_2_site_R1_model.html', '%s/manual/The_NS_2_site_R1_rho_model.html'%url],
+    ['manual/NS_3_site_linear_R1_model.html', '%s/manual/The_NS_MMQ_3_site_linear_model.html'%url],
     ['manual/NS_MMQ_3_site_model.html', '%s/manual/The_NS_MMQ_3_site_model.html'%url],
     ['manual/prompt.html', '%s/manual/The_prompt.html'%url],
+    ['manual/reduced_B14_2_site_CPMG_model.html', '%s/manual/The_reduced_B14_2_site_CPMG_model.html'%url],
     ['manual/reduced_CR72_2_site_CPMG_model.html', '%s/manual/The_reduced_NS_2_site_star_CPMG_model.html'%url],
     ['manual/reduced_NS_2_site_3D_CPMG_model.html', '%s/manual/The_reduced_NS_2_site_3D_CPMG_model.html'%url],
     ['manual/reduced_NS_2_site_star_CPMG_model.html', '%s/manual/The_reduced_NS_2_site_star_CPMG_model.html'%url],
