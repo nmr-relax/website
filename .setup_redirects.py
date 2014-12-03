@@ -57,6 +57,7 @@ redirects += [
     ['manual/MP05_2_site_exchange_R1_model.html', '%s/manual/The_MP05_2_site_exchange_R1_rho_model.html'%url],
     ['manual/new_protocol_in_GUI.html', '%s/manual/The_new_protocol_in_the_GUI.html'%url],
     ['manual/node149.html', '%s/manual/Coding_conventions.html'%url],
+    ['manual/NS_2_site_expanded_CPMG_model.html', '%s/manual/The_NS_2_site_expanded_CPMG_model.html'%url],
     ['manual/NS_2_site_R1_model.html', '%s/manual/The_NS_2_site_R1_rho_model.html'%url],
     ['manual/NS_3_site_linear_R1_model.html', '%s/manual/The_NS_MMQ_3_site_linear_model.html'%url],
     ['manual/NS_3_site_R1_model.html', '%s/manual/The_NS_3_site_R1_rho_model.html'%url],
