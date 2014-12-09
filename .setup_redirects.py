@@ -80,6 +80,7 @@ redirects += [
     ['manual/TP02_2_site_exchange_R1_model.html', '%s/manual/The_TP02_2_site_exchange_R1_rho_model.html'%url],
     ['manual/TSMFK01_2_site_CPMG_model.html', '%s/manual/The_TSMFK01_2_site_CPMG_model.html'%url],
     ['manual/Tutorial_adding_relaxation_dispersion_models.html', '%s/manual/Tutorial_for_adding_relaxation_dispersion_models.html'%url],
+    ['manual/Usage_multi_processor.html', '%s/manual/Usage_of_the_multi_processor.html'%url],
 ]
 
 # HTML manual user function renamings.
