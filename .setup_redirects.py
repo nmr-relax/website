@@ -54,6 +54,7 @@ redirects += [
     ['manual/methodology_Mandel_et_al_1995.html', '%s/manual/The_methodology_of_Mandel_et_al_1995.html'%url],
     ['manual/MMQ_CR72_model.html', '%s/manual/The_MMQ_CR72_model.html'%url],
     ['manual/model_free_models.html', '%s/manual/The_model_free_models.html'%url],
+    ['manual/multi_processor_framework.html', '%s/manual/The_multi_processor_framework.html'%url],
     ['manual/MP05_2_site_exchange_R1_model.html', '%s/manual/The_MP05_2_site_exchange_R1_rho_model.html'%url],
     ['manual/new_protocol_in_GUI.html', '%s/manual/The_new_protocol_in_the_GUI.html'%url],
     ['manual/node149.html', '%s/manual/Coding_conventions.html'%url],
