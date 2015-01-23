@@ -51,6 +51,7 @@ redirects += [
     ['manual/LM63_2_site_fast_exchange_CPMG_model.html', '%s/manual/The_LM63_2_site_fast_exchange_CPMG_model.html'%url],
     ['manual/LM63_3_site_fast_exchange_CPMG_model.html', '%s/manual/The_LM63_3_site_fast_exchange_CPMG_model.html'%url],
     ['manual/M61_2_site_fast_exchange_R1_model.html', '%s/manual/The_M61_2_site_fast_exchange_R1_rho_model.html'%url],
+    ['manual/M61_skew_2_site_fast_exchange_R1_model.html', '%s/manual/The_M61_skew_2_site_fast_exchange_R1_rho_model.html'%url],
     ['manual/methodology_Mandel_et_al_1995.html', '%s/manual/The_methodology_of_Mandel_et_al_1995.html'%url],
     ['manual/MMQ_CR72_model.html', '%s/manual/The_MMQ_CR72_model.html'%url],
     ['manual/model_free_models.html', '%s/manual/The_model_free_models.html'%url],
