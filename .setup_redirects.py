@@ -122,6 +122,7 @@ redirects += [
     ['manual/relax_fit_mean_and_error.html', '%s/manual/spectrum_error_analysis.html'%url],
     ['manual/relax_fit_read.html', '%s/manual/spectrum_read_intensities.html'%url],
     ['manual/structure_vectors.html', '%s/manual/interatom_unit_vectors.html'%url],
+    ['manual/structure_align.html', '%s/manual/structure_superimpose.html'%url],
     ['manual/temperature.html', '%s/manual/spectrometer_temperature.html'%url]
 ]
 
