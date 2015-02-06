@@ -68,15 +68,24 @@ class Rehead:
                 if not search(".html$", file):
                     continue
         
-                # Skip blacklisted files.
-                if file in BLACKLIST:
-                    continue
-
                 # Full path to the file.
                 full_path = root + sep + file
 
+                # Printout.
+                print(full_path)
+
+                # Skip blacklisted files.
+                if file in BLACKLIST:
+                    print("   Blacklisted.")
+                    continue
+
                 # Extract the title.
                 title = self.extract_title(full_path)
+
+                # No title, so don't modify the file.
+                if title == None:
+                    print("   Skipping.")
+                    continue
 
                 # Process the head tag.
                 self.change_head(full_path, title=title)
@@ -137,6 +146,10 @@ class Rehead:
         analytics = False
         self.short_head = False
         for line in self.file_lines:
+            # Special Epydoc pages with captialised HEAD tags - skip these!
+            if search("<HEAD>", line):
+                return
+
             # In the head tag.
             if search("<head>", line):
                 in_head = True
