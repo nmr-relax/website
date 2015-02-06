@@ -148,7 +148,7 @@ class Rehead:
                     pre_modified = True
 
                 # Google analytics insertion.
-                if index == 4 and line[:-1] == "  <!--Google analytics JS-->":
+                if index in [2, 4] and line[:-1] == "  <!--Google analytics JS-->":
                     analytics = True
 
                 # Short headers.
