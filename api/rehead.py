@@ -128,6 +128,7 @@ class Rehead:
         in_head = False
         index = 0
         pre_modified = False
+        analytics = False
         for line in self.file_lines:
             # In the head tag.
             if search("<head>", line):
@@ -139,8 +140,12 @@ class Rehead:
                 if index == 2 and line[:-1] == "":
                     pre_modified = True
 
+                # Google analytics insertion.
+                if index == 4 and line[:-1] == "  <!--Google analytics JS-->":
+                    analytics = True
+
                 # Check the line, skipping the title tag.
-                if not pre_modified and EXPECTED[index] != None and EXPECTED[index] != line[:-1]:
+                if not pre_modified and not analytics and EXPECTED[index] != None and EXPECTED[index] != line[:-1]:
                     print("%s: Unexpected head tag encountered, quitting." % file_name)
                     print("    Encountered line:  \"%s\"" % line[:-1])
                     print("    Expected line:  \"%s\"" % EXPECTED[index])
