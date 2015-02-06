@@ -146,6 +146,10 @@ class Rehead:
         analytics = False
         self.short_head = False
         for line in self.file_lines:
+            # The base index.html file.
+            if search("<title>The relax API documentation</title>", line):
+                return
+
             # Special Epydoc pages with captialised HEAD tags - skip these!
             if search("<HEAD>", line):
                 return
@@ -166,6 +170,10 @@ class Rehead:
 
                 # Short headers.
                 if index == 2 and line[:-1] == "</head>":
+                    self.short_head = True
+                elif index == 3 and line[:-1] == "  <!--Mobile device support-->":
+                    self.short_head = True
+                elif index == 2 and line[:-1] == "  <!--Google analytics JS-->":
                     self.short_head = True
 
                 # Check the line, skipping the title tag.
