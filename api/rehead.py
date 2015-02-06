@@ -13,17 +13,17 @@ import sys
 
 # Blacklisted files to not change.
 BLACKLIST = [
-    'frames.html',
-    'index.html',
     'redirect.html'
 ]
 
 # The contents for the HEAD tag, excluding the title tag.
-HEAD_CONTENTS = [
+HEAD_CONTENTS_CSS = [
     "",
     "  <!--Epydoc setup-->",
     "  <link rel=\"stylesheet\" href=\"epydoc.css\" type=\"text/css\" />",
     "  <script type=\"text/javascript\" src=\"epydoc.js\"></script>",
+]
+HEAD_CONTENTS_SHORT = [
     "",
     "  <!--Mobile device support-->",
     "  <meta name=viewport content=\"width=device-width, initial-scale=1\">",
@@ -44,6 +44,7 @@ HEAD_CONTENTS = [
     "",
     "  </script>",
 ]
+HEAD_CONTENTS = HEAD_CONTENTS_CSS + HEAD_CONTENTS_SHORT
 
 # The expected head tag contents.
 EXPECTED = [
@@ -101,8 +102,13 @@ class Rehead:
                 file.write(title)
                 file.write("\n")
 
+                # The 
+                contents = HEAD_CONTENTS
+                if self.short_head:
+                    contents = HEAD_CONTENTS_SHORT
+
                 # Add the rest of the head contents.
-                for line in HEAD_CONTENTS:
+                for line in contents:
                     file.write("%s\n" % line)
 
                 # Go to the end of the head tag.
@@ -129,6 +135,7 @@ class Rehead:
         index = 0
         pre_modified = False
         analytics = False
+        self.short_head = False
         for line in self.file_lines:
             # In the head tag.
             if search("<head>", line):
@@ -144,8 +151,12 @@ class Rehead:
                 if index == 4 and line[:-1] == "  <!--Google analytics JS-->":
                     analytics = True
 
+                # Short headers.
+                if index == 2 and line[:-1] == "</head>":
+                    self.short_head = True
+
                 # Check the line, skipping the title tag.
-                if not pre_modified and not analytics and EXPECTED[index] != None and EXPECTED[index] != line[:-1]:
+                if not pre_modified and not analytics and not self.short_head and EXPECTED[index] != None and EXPECTED[index] != line[:-1]:
                     print("%s: Unexpected head tag encountered, quitting." % file_name)
                     print("    Encountered line:  \"%s\"" % line[:-1])
                     print("    Expected line:  \"%s\"" % EXPECTED[index])
