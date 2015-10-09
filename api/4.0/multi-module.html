@@ -1,0 +1,591 @@
+<?xml version="1.0" encoding="ascii"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+          "DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <title>multi</title>
+  <link rel="stylesheet" href="epydoc.css" type="text/css" />
+  <script type="text/javascript" src="epydoc.js"></script>
+  <!--Google analytics JS-->
+  <script type="text/javascript">
+
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-30096326-1']);
+    _gaq.push(['_setDomainName', 'nmr-relax.com']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+
+  </script>
+</head>
+
+<body bgcolor="white" text="black" link="blue" vlink="#204080"
+      alink="#204080">
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Project homepage -->
+      <th class="navbar" align="right" width="100%">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr><th class="navbar" align="center"
+            ><a class="navbar" target="_top" href="http://www.nmr-relax.com">relax</a></th>
+          </tr></table></th>
+  </tr>
+</table>
+<table width="100%" cellpadding="0" cellspacing="0">
+  <tr valign="top">
+    <td width="100%">
+      <span class="breadcrumbs">
+        Package&nbsp;multi
+      </span>
+    </td>
+    <td>
+      <table cellpadding="0" cellspacing="0">
+        <!-- hide/show private -->
+        <tr><td align="right"><span class="options">[<a href="javascript:void(0);" class="privatelink"
+    onclick="toggle_private();">hide&nbsp;private</a>]</span></td></tr>
+        <tr><td align="right"><span class="options"
+            >[<a href="frames.html" target="_top">frames</a
+            >]&nbsp;|&nbsp;<a href="multi-module.html"
+            target="_top">no&nbsp;frames</a>]</span></td></tr>
+      </table>
+    </td>
+  </tr>
+</table>
+<!-- ==================== PACKAGE DESCRIPTION ==================== -->
+<h1 class="epydoc">Package multi</h1><p class="nomargin-top"><span class="codelink"><a href="multi-pysrc.html">source&nbsp;code</a></span></p>
+<p>The multi-processor package.</p>
+  <h1 class="heading">1 Introduction</h1>
+    <p>This package is an abstraction of specific multi-processor 
+    implementations or fabrics such as MPI via mpi4py.  It is designed to 
+    be extended for use on other fabrics such as grid computing via SSH 
+    tunnelling, threading, etc.  It also has a uni-processor mode as the 
+    default fabric.</p>
+  <h1 class="heading">2 API</h1>
+    <p>The public API is available via the __init__ module.  It consists of
+    a number of functions and classes.  Using this basic interface, code 
+    can be parallelised and executed via an MPI implementation, or default 
+    back to a single CPU when needed.  The choice of processor fabric is up
+    to the calling program (via multi.load_multiprocessor).</p>
+    <h2 class="heading">2.1 Program initialisation</h2>
+      <p>The function multi.load_multiprocessor() is the interface for how 
+      a program can load and set up a specific processor fabric.  This 
+      function returns the set up processor, which itself provides a run() 
+      method which is used to execute your application.</p>
+    <h2 class="heading">2.2 Access to the processor instance</h2>
+      <p>The multi.Processor_box class is a special singleton object which 
+      provides access to the processor object.  This is required for a 
+      number of actions:</p>
+      <ul>
+        <li>
+          Queuing of slave commands and memos via 
+          Processor_box().processor.add_to_queue().
+        </li>
+        <li>
+          Returning results (as a Results_command) from the slave processor
+          to the master via Processor_box().processor.return_object().
+        </li>
+        <li>
+          Determining the number of processes via 
+          Processor_box().processor.processor_size().
+        </li>
+        <li>
+          Waiting for completion of the queued slave processors via 
+          Processor_box().processor.run_queue().
+        </li>
+      </ul>
+    <h2 class="heading">2.3 Slaves</h2>
+      <p>Slave processors are created via the multi.Slave_command class.  
+      This is special base class which must be subclassed.  The run() 
+      function should be overridden, this provides the code to execute on 
+      the slave processors.</p>
+    <h2 class="heading">2.4 Results handling</h2>
+      <p>The multi.Result_command class is a special base class which must 
+      be subclassed.  The run() function should be overridden, this 
+      provides the code for the master to process the results from the 
+      slaves.</p>
+      <p>In addition, the multi.Memo should also be used.  This is a 
+      special base class which must be subclassed.  This is a data store 
+      used by the Results_command to help process the results from the 
+      slave on the master processor.</p>
+  <h1 class="heading">3 Parallelisation</h1>
+    <p>The following are the steps required to parallelise a calculation 
+    via the multi-processor package API.  It is assumed that the 
+    multi.load_multiprocessor() function has been set up at the highest 
+    level so that the entire program will be executed by the returned 
+    processor's run() method.</p>
+    <h2 class="heading">3.1 Subclassing command and memo objects</h2>
+      <p>The first step is that the Slave_command, Result_command, and Memo
+      classes need to be subclassed.  The Slave_command.run() method must 
+      be provided and is used for running the calculations on the slave 
+      processors.  The Result_command is used to unpack the results from 
+      the slave.  It is initialised by the Slave_command itself with the 
+      results from the calculation as arguments of __init__().  Its run() 
+      method processes the results on the master processor.  The Memo 
+      object holds data other than the calculation results required by the 
+      Result_command.run() method to process the results.</p>
+    <h2 class="heading">3.2 Initialisation and queuing</h2>
+      <p>The second step is to initialise the Slave_command and Memo and 
+      add these to the processor queue.  But first access to the processor 
+      is required.  The singleton multi.Processor_box should be imported, 
+      and the processor accessed with code such as:</p>
+<pre class="literalblock">
+   # Initialise the Processor box singleton.
+   processor_box = Processor_box() 
+</pre>
+      <p>The slave command is then initialised and all required data by the
+      slave for the calculation (via its run() method) is stored within the
+      class instance.  The memo is also initialised with its data required 
+      for the result command for processing on the master of the results 
+      from the slave.  These are then queued on the processor:</p>
+<pre class="literalblock">
+   # Queue the slave command and memo.
+   processor_box.processor.add_to_queue(command, memo)
+</pre>
+    <h2 class="heading">3.3 Calculation</h2>
+      <p>To execute the calculations, the final part of the calculation 
+      code on the master must feature a call to:</p>
+<pre class="literalblock">
+   processor_box.processor.run_queue().
+</pre>
+  <h1 class="heading">4 Example</h1>
+    <p>See the script 'test_implementation.py' for a basic example of a 
+    reference, and full, implementation of the multi-processor package.</p>
+  <h1 class="heading">5 Issues</h1>
+    <p>For multi-core systems and Linux 2.6, the following might be 
+    required to prevent the master processor from taking 100% of one CPU 
+    core while waiting for the slaves:</p>
+    <p># echo &quot;1&quot; &gt; /proc/sys/kernel/sched_compat_yield</p>
+    <p>This appears to be an OpenMPI problem with late 2.6 Linux 
+    kernels.</p>
+
+<!-- ==================== SUBMODULES ==================== -->
+<a name="section-Submodules"></a>
+<table class="summary" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Submodules</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-Submodules"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+  <tr><td class="summary">
+  <ul class="nomargin">
+    <li> <strong class="uidlink"><a href="multi.memo-module.html">multi.memo</a></strong>: <em class="summary">The module containing the Memo classes.</em>    </li>
+    <li> <strong class="uidlink"><a href="multi.misc-module.html">multi.misc</a></strong>: <em class="summary">The non-public module for storing the API functions and classes of 
+        the multi-processor package.</em>    </li>
+    <li> <strong class="uidlink"><a href="multi.mpi4py_processor-module.html">multi.mpi4py_processor</a></strong>: <em class="summary">The MPI processor fabric via the mpi4py Python implementation.</em>    </li>
+    <li> <strong class="uidlink"><a href="multi.multi_processor_base-module.html">multi.multi_processor_base</a></strong>: <em class="summary">Module containing a Processor base class to be used by any 
+        multi-processor fabric.</em>    </li>
+    <li> <strong class="uidlink"><a href="multi.processor-module.html">multi.processor</a></strong>: <em class="summary">The processor class is the central class in the multi python 
+        multiprocessor framework.</em>    </li>
+    <li> <strong class="uidlink"><a href="multi.processor_io-module.html">multi.processor_io</a></strong>: <em class="summary">Module containing classes for IO stream capture on slave 
+        processors.</em>    </li>
+    <li> <strong class="uidlink"><a href="multi.result_commands-module.html">multi.result_commands</a></strong>: <em class="summary">Module containing command objects sent from the slaves back to the 
+        master.</em>    </li>
+    <li> <strong class="uidlink"><a href="multi.result_queue-module.html">multi.result_queue</a></strong>: <em class="summary">Module containing the results queue objects.</em>    </li>
+    <li> <strong class="uidlink"><a href="multi.slave_commands-module.html">multi.slave_commands</a></strong>: <em class="summary">Module containing command objects sent from the master to the 
+        slaves.</em>    </li>
+    <li> <strong class="uidlink"><a href="multi.uni_processor-module.html">multi.uni_processor</a></strong>: <em class="summary">The uni-processor fabric for running on a single CPU.</em>    </li>
+  </ul></td></tr>
+</table>
+
+<br />
+<!-- ==================== CLASSES ==================== -->
+<a name="section-Classes"></a>
+<table class="summary" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Classes</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-Classes"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+<tr class="private">
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="multi.Application_callback-class.html" class="summary-name" onclick="show_private();">Application_callback</a><br />
+      Call backs provided to the host application by the multi processor 
+        framework.
+    </td>
+  </tr>
+<tr class="private">
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="multi.Processor_box-class.html" class="summary-name" onclick="show_private();">Processor_box</a><br />
+      A storage class for the Processor instance and its attributes.
+    </td>
+  </tr>
+</table>
+<!-- ==================== FUNCTIONS ==================== -->
+<a name="section-Functions"></a>
+<table class="summary" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Functions</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-Functions"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+<tr class="private">
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">multi.processor.Processor instance</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="multi-module.html#load_multiprocessor" class="summary-sig-name" onclick="show_private();">load_multiprocessor</a>(<span class="summary-sig-arg">processor_name</span>,
+        <span class="summary-sig-arg">callback</span>,
+        <span class="summary-sig-arg">processor_size</span>,
+        <span class="summary-sig-arg">verbosity</span>=<span class="summary-sig-default">1</span>)</span><br />
+      Load a multi processor given its name.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="multi-pysrc.html#load_multiprocessor">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr class="private">
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">anything</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="multi-module.html#fetch_data" class="summary-sig-name" onclick="show_private();">fetch_data</a>(<span class="summary-sig-arg">name</span>=<span class="summary-sig-default">None</span>)</span><br />
+      API function for obtaining data from the Processor instance's data 
+      store.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="multi-pysrc.html#fetch_data">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr class="private">
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">class instance</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="multi-module.html#fetch_data_store" class="summary-sig-name" onclick="show_private();">fetch_data_store</a>()</span><br />
+      API function for obtaining the data store object from the Processor 
+      instance.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="multi-pysrc.html#fetch_data_store">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr class="private">
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="multi-module.html#send_data_to_slaves" class="summary-sig-name" onclick="show_private();">send_data_to_slaves</a>(<span class="summary-sig-arg">name</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">value</span>=<span class="summary-sig-default">None</span>)</span><br />
+      API function for sending data from the master to all slaves 
+      processors.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="multi-pysrc.html#send_data_to_slaves">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+</table>
+<!-- ==================== VARIABLES ==================== -->
+<a name="section-Variables"></a>
+<table class="summary" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Variables</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-Variables"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+<tr class="private">
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="_verbosity"></a><span class="summary-name">_verbosity</span> = <code title="None">None</code>
+    </td>
+  </tr>
+<tr class="private">
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="__package__"></a><span class="summary-name">__package__</span> = <code title="'multi'"><code class="variable-quote">'</code><code class="variable-string">multi</code><code class="variable-quote">'</code></code>
+    </td>
+  </tr>
+</table>
+<p class="indent-wrapped-lines"><b>Imports:</b>
+  <span title="sys">_sys</span>,
+  <span title="traceback">_traceback</span>,
+  <a href="multi.memo.Memo-class.html" title="multi.memo.Memo">Memo</a>,
+  <a href="multi.misc-module.html#import_module" title="multi.misc.import_module">_import_module</a>,
+  <a href="multi.misc.Verbosity-class.html" title="multi.misc.Verbosity">_Verbosity</a>,
+  <a href="multi.result_commands.Result_command-class.html" title="multi.result_commands.Result_command">Result_command</a>,
+  <a href="multi.slave_commands.Slave_command-class.html" title="multi.slave_commands.Slave_command">Slave_command</a>
+</p><br />
+<!-- ==================== FUNCTION DETAILS ==================== -->
+<a name="section-FunctionDetails"></a>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Function Details</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-FunctionDetails"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+</table>
+<a name="load_multiprocessor"></a>
+<div class="private">
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">load_multiprocessor</span>(<span class="sig-arg">processor_name</span>,
+        <span class="sig-arg">callback</span>,
+        <span class="sig-arg">processor_size</span>,
+        <span class="sig-arg">verbosity</span>=<span class="sig-default">1</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="multi-pysrc.html#load_multiprocessor">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Load a multi processor given its name.</p>
+  <p>Dynamically load a multi processor, the current algorithm is to search
+  in module multi for a module called 
+  &lt;processor_name&gt;.&lt;Processor_name&gt; (note capitalisation).</p>
+  <dl class="fields">
+    <dt>Parameters:</dt>
+    <dd><ul class="nomargin-top">
+        <li><strong class="pname"><code>processor_name</code></strong> (str) - Name of the processor module/class to load.</li>
+        <li><strong class="pname"><code>verbosity</code></strong> (int) - The verbosity level at initialisation.  This can be changed 
+          during program execution.  A value of 0 suppresses all output.  A
+          value of 1 causes the basic multi-processor information to be 
+          printed.  A value of 2 will switch on a number of debugging 
+          printouts.  Values greater than 2 currently do nothing, though 
+          this might change in the future.</li>
+    </ul></dd>
+    <dt>Returns: multi.processor.Processor instance</dt>
+        <dd>A loaded processor object or None to indicate failure.</dd>
+  </dl>
+<div class="fields">      <strong>To Do:</strong>
+      <ul class="nomargin-top">
+        <li>
+        This algorithm needs to be improved to allow users to load processors 
+    without altering the relax source code.
+        </li>
+        <li>
+        Remove non-essential parameters.
+        </li>
+      </ul>
+</div></td></tr></table>
+</div>
+<a name="fetch_data"></a>
+<div class="private">
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">fetch_data</span>(<span class="sig-arg">name</span>=<span class="sig-default">None</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="multi-pysrc.html#fetch_data">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>API function for obtaining data from the Processor instance's data 
+  store.</p>
+  <p>This is for fetching data from the data store of the Processor 
+  instance.  If run on the master, then the master's data store will be 
+  accessed.  If run on the slave, then the slave's data store will be 
+  accessed.</p>
+  <dl class="fields">
+    <dt>Parameters:</dt>
+    <dd><ul class="nomargin-top">
+        <li><strong class="pname"><code>name</code></strong> (str) - The name of the data structure to fetch.</li>
+    </ul></dd>
+    <dt>Returns: anything</dt>
+        <dd>The value of the associated data structure.</dd>
+  </dl>
+<div class="fields">      <p><strong>Attention:</strong>
+        No inter-processor communications are performed.
+      </p>
+</div></td></tr></table>
+</div>
+<a name="fetch_data_store"></a>
+<div class="private">
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">fetch_data_store</span>()</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="multi-pysrc.html#fetch_data_store">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>API function for obtaining the data store object from the Processor 
+  instance.</p>
+  <p>If run on the master, then the master's data store will be returned.  
+  If run on the slave, then the slave's data store will be returned.</p>
+  <dl class="fields">
+    <dt>Returns: class instance</dt>
+        <dd>The data store of the processor (of the same rank as the calling 
+          code).</dd>
+  </dl>
+<div class="fields">      <p><strong>Attention:</strong>
+        No inter-processor communications are performed.
+      </p>
+</div></td></tr></table>
+</div>
+<a name="send_data_to_slaves"></a>
+<div class="private">
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">send_data_to_slaves</span>(<span class="sig-arg">name</span>=<span class="sig-default">None</span>,
+        <span class="sig-arg">value</span>=<span class="sig-default">None</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="multi-pysrc.html#send_data_to_slaves">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>API function for sending data from the master to all slaves 
+  processors.</p>
+  <dl class="fields">
+    <dt>Parameters:</dt>
+    <dd><ul class="nomargin-top">
+        <li><strong class="pname"><code>name</code></strong> (str) - The name of the data structure to store.</li>
+        <li><strong class="pname"><code>value</code></strong> (anything) - The data structure.</li>
+    </ul></dd>
+  </dl>
+<div class="fields">      <p><strong>Attention:</strong>
+        Inter-processor communications are performed.
+      </p>
+</div></td></tr></table>
+</div>
+<br />
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Project homepage -->
+      <th class="navbar" align="right" width="100%">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr><th class="navbar" align="center"
+            ><a class="navbar" target="_top" href="http://www.nmr-relax.com">relax</a></th>
+          </tr></table></th>
+  </tr>
+</table>
+<table border="0" cellpadding="0" cellspacing="0" width="100%%">
+  <tr>
+    <td align="left" class="footer">
+    Generated by Epydoc 3.0.1 on Fri Oct  9 17:29:57 2015
+    </td>
+    <td align="right" class="footer">
+      <a target="mainFrame" href="http://epydoc.sourceforge.net"
+        >http://epydoc.sourceforge.net</a>
+    </td>
+  </tr>
+</table>
+
+<script type="text/javascript">
+  <!--
+  // Private objects are initially displayed (because if
+  // javascript is turned off then we want them to be
+  // visible); but by default, we want to hide them.  So hide
+  // them unless we have a cookie that says to show them.
+  checkCookie();
+  // -->
+</script>
+</body>
+</html>
