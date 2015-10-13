@@ -1,0 +1,295 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.1//EN">
+
+<!--Converted with LaTeX2HTML 2008 (1.71)
+original version by:  Nikos Drakos, CBLU, University of Leeds
+* revised and updated by:  Marcus Hennecke, Ross Moore, Herb Swan
+* with significant contributions from:
+  Jens Lippmann, Marek Rouchal, Martin Wilck and others -->
+<HTML>
+<HEAD>
+<TITLE>The N-state model analysis scripts</TITLE>
+<META NAME="description" CONTENT="The N-state model analysis scripts">
+<META NAME="keywords" CONTENT="relax">
+<META NAME="resource-type" CONTENT="document">
+<META NAME="distribution" CONTENT="global">
+
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=utf-8">
+
+  <!--Google analytics JS-->
+  <script type="text/javascript">
+  
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-30096326-1']);
+    _gaq.push(['_setDomainName', 'nmr-relax.com']);
+    _gaq.push(['_trackPageview']);
+  
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  
+  </script>
+
+<LINK REL="STYLESHEET" HREF="relax.css">
+
+<LINK REL="next" HREF="The_frame_order_analysis_scripts.html">
+<LINK REL="previous" HREF="Introduction.html">
+<LINK REL="up" HREF="Data_analysis.html">
+<LINK REL="next" HREF="The_frame_order_analysis_scripts.html">
+</HEAD>
+
+<BODY >
+
+<DIV CLASS="navigation"><!--Navigation Panel-->
+<A NAME="tex2html9803"
+  HREF="The_frame_order_analysis_scripts.html">
+<IMG WIDTH="48" HEIGHT="48" TITLE="Next" ALIGN="BOTTOM" BORDER="0" ALT="next" SRC="next.png"></A> 
+<A NAME="tex2html9797"
+  HREF="Data_analysis.html">
+<IMG WIDTH="48" HEIGHT="48" TITLE="Up" ALIGN="BOTTOM" BORDER="0" ALT="up" SRC="up.png"></A> 
+<A NAME="tex2html9791"
+  HREF="Introduction.html">
+<IMG WIDTH="48" HEIGHT="48" TITLE="Previous" ALIGN="BOTTOM" BORDER="0" ALT="previous" SRC="prev.png"></A> 
+<A NAME="tex2html9799"
+  HREF="Contents.html">
+<IMG WIDTH="48" HEIGHT="48" TITLE="Contents" ALIGN="BOTTOM" BORDER="0" ALT="contents" SRC="contents.png"></A> 
+<A NAME="tex2html9801"
+  HREF="Index.html">
+<IMG WIDTH="48" HEIGHT="48" TITLE="Index" ALIGN="BOTTOM" BORDER="0" ALT="index" SRC="index.png"></A> <A NAME="tex2html1"
+  HREF="http://download.gna.org/relax/manual/relax.pdf"><IMG
+ ALIGN="BOTTOM" BORDER="0" SRC="http://www.nmr-relax.com/images/pdf_icon_nav.png"
+ ALT="pdf_icon_nav.png"></A><A NAME="tex2html2"
+  HREF="http://www.nmr-relax.com"><IMG
+ ALIGN="BOTTOM" BORDER="0" SRC="http://www.nmr-relax.com/images/relax_logo_nav.png"
+ ALT="relax_logo_nav.png"></A>
+<BR>
+<B> Next:</B> <A NAME="tex2html9804"
+  HREF="The_frame_order_analysis_scripts.html">The frame order analysis</A>
+<B> Up:</B> <A NAME="tex2html9798"
+  HREF="Data_analysis.html">Data analysis</A>
+<B> Previous:</B> <A NAME="tex2html9792"
+  HREF="Introduction.html">Introduction</A>
+ &nbsp; <B>  <A NAME="tex2html9800"
+  HREF="Contents.html">Contents</A></B> 
+ &nbsp; <B>  <A NAME="tex2html9802"
+  HREF="Index.html">Index</A></B> 
+<BR>
+<BR></DIV>
+<!--End of Navigation Panel-->
+
+<H2><A NAME="SECTION05852000000000000000"></A>
+<A NAME="sect:_N-state_model_analysis_scripts"></A>
+<BR>
+The N-state model analysis scripts
+</H2>
+
+<P>
+For determining the alignment tensor and paramagnetic Ln<SPAN CLASS="MATH"><SUP>3+</SUP></SPAN> position from the RDC and PCS data, the N-state model or ensemble analysis should be used.
+The script is:
+
+<P>
+<PRE>
+# Python imports.
+from numpy import array
+
+# relax imports.
+from lib.physical_constants import NH_BOND_LENGTH_RDC
+
+
+# Create a data pipe for all the data.
+pipe.create('CaM N-dom', 'N-state')
+
+# Load the CaM structure.
+structure.read_pdb('2BE6_core_II_III.pdb', dir='../../../../structures/2BE6_superimpose/Ndom_II_III', set_mol_name=['CaM_A', 'IQ_A', 'Metals_A', 'CaM_B', 'IQ_B', 'Metals_B', 'CaM_C', 'IQ_C', 'Metals_C'])
+
+# Load the spins.
+structure.load_spins('@N', from_mols=['CaM_A', 'CaM_B', 'CaM_C'], mol_name_target='CaM', ave_pos=False)
+structure.load_spins('@H', from_mols=['CaM_A', 'CaM_B', 'CaM_C'], mol_name_target='CaM', ave_pos=False)
+
+# Select only the superimposed spins (skipping mobile residues :2-4,42,56-57,76-80, identified from model-free order parameters).
+select.spin(':17-41,43-55,58-67', change_all=True)
+select.display()
+
+# Define the magnetic dipole-dipole relaxation interaction.
+interatom.define(spin_id1='@N', spin_id2='@H', direct_bond=True)
+interatom.set_dist(spin_id1='@N', spin_id2='@H', ave_dist=NH_BOND_LENGTH_RDC)
+interatom.unit_vectors(ave=False)
+
+# Set the nuclear isotope and element.
+spin.isotope(isotope='15N', spin_id='@N')
+spin.isotope(isotope='1H', spin_id='@H')
+
+# The alignment data.
+align_data = [
+    ['dy', 'RDC_DY_111011_spinID.txt', 'PCS_DY_200911.txt', 900.00423401],
+    ['tb', 'RDC_TB_111011_spinID.txt', 'PCS_TB_200911.txt', 900.00423381],
+    ['tm', 'RDC_TM_111011_spinID.txt', 'PCS_TM_200911.txt', 900.00423431],
+    ['er', 'RDC_ER_111011_spinID.txt', 'PCS_ER_200911.txt', 899.90423151],
+    ['yb', 'RDC_YB_110112_spinID.txt', 'PCS_YB_211111.txt', 899.90423111],
+    ['ho', 'RDC_HO_300512_spinID.txt', 'PCS_HO_300412.txt', 899.80423481]
+]
+
+# Loop over the alignments.
+for i in range(len(align_data)):
+    # Alias the data.
+    TAG = align_data[i][0]
+    RDC_FILE = align_data[i][1]
+    PCS_FILE = align_data[i][2]
+    FRQ = align_data[i][3]
+
+    # RDCs.
+    rdc.read(align_id=TAG, file=RDC_FILE, dir='../..', data_type='D', spin_id1_col=1, spin_id2_col=2, data_col=3, error_col=4)
+
+    # PCSs.
+    pcs.read(align_id=TAG, file=PCS_FILE, dir='../..', res_num_col=1, data_col=2, error_col=4, spin_id='@N')
+    pcs.read(align_id=TAG, file=PCS_FILE, dir='../..', res_num_col=1, data_col=3, error_col=4, spin_id='@H')
+
+    # The temperature.
+    spectrometer.temperature(id=TAG, temp=303.0)
+
+    # The frequency.
+    spectrometer.frequency(id=TAG, frq=FRQ, units='MHz')
+
+# The paramagnetic centre (average Ca2+ position).
+ave = array([7.608, 5.402, 16.725]) + array([7.295, 4.684, 16.168]) + array([7.338, 5.275, 16.086])
+ave = ave / 3
+paramag.centre(pos=ave)
+
+# Set up the model.
+n_state_model.select_model('fixed')
+
+# Tensor optimisation.
+print("\n\n# Tensor optimisation.\n\n")
+minimise.grid_search(inc=5)
+minimise.execute('newton', constraints=False)
+state.save('tensor_only_fit', force=True)
+
+# Optimisation of everything.
+paramag.centre(fix=False)
+minimise.execute('bfgs', constraints=False)
+
+# PCS structural noise.
+print("\n\n# Tensor optimisation with PCS structural noise.\n\n")
+pcs.structural_noise(rmsd=0.3, sim_num=10000, file='structural_noise.agr', force=True)
+
+# Optimisation of everything.
+paramag.centre(fix=False)
+minimise.execute('bfgs', constraints=False)
+
+# Monte Carlo simulations.
+monte_carlo.setup(number=500)
+monte_carlo.create_data()
+monte_carlo.initial_values()
+minimise.execute('bfgs', constraints=False)
+monte_carlo.error_analysis()
+
+# Show the tensors.
+align_tensor.display()
+
+# Q-factors.
+rdc.calc_q_factors()
+pcs.calc_q_factors()
+
+# Correlation plots.
+rdc.corr_plot(file="rdc_corr.agr", force=True)
+pcs.corr_plot(file="pcs_corr.agr", force=True)
+
+# Save the program state.
+state.save('tensor_fit', force=True)
+</PRE>
+
+<P>
+The calculation of the additional PCS error due to structural noise is very important for the subsequent frame order analysis.
+A plot of such a calculation is shown in Figure&nbsp;<A HREF="#fig:_CaM-IQ_ABC_X-ray_structural_noise">12.4</A>
+
+<P>
+
+<DIV ALIGN="CENTER"><A NAME="fig:_CaM-IQ_ABC_X-ray_structural_noise"></A><A NAME="22985"></A>
+<TABLE>
+<CAPTION ALIGN="BOTTOM"><STRONG>Figure 12.4:</STRONG>
+
+    Structural noise simulation using the 2BE6 CaM-IQ X-ray ABC ensemble as an example.
+    The simulated structural error, with the atom position uncertainty set to 0.3&nbsp;Å, is an extra contribution to the measured PCS error.
+    The PCS structural error is compared to the distance from the paramagnetic centre to illustrate the relationship between the two.
+    The atomic positions were randomised 10,000 times with the lanthanide position assumed fixed, the PCS value back-calculated using a pre-fit alignment tensor, and the PCS standard deviations calculated.
+  </CAPTION>
+<TR><TD>
+<DIV CLASS="centerline" ID="par128006" ALIGN="CENTER">
+    <IMG
+ WIDTH="556" HEIGHT="394" ALIGN="BOTTOM" BORDER="0"
+ SRC="img445.png"
+ ALT="\includegraphics[width=\textwidth]{images/cam_iq_abc_whole_structural_noise}">
+  </DIV></TD></TR>
+</TABLE>
+</DIV>
+
+<P>
+Statistics for the tensors, including the matrix or inter-tensor angles, the singular value decomposition (SVD) values and condition number, and a printout of the tensors for copying directly in the frame order analysis script, are obtained via the script:
+
+<P>
+<PRE>
+# Script for determining the tensor angles and SVD values of the CaM-IQ tensors.
+
+# Load the state.
+state.load('tensor_fit')
+
+# Loop over the alignment tensors, producing a string of relax user function commands.
+print("\nTensor strings for relax input:")
+string = ""
+for A in cdp.align_tensors:
+    string += "align_tensor.init(tensor='%s', params=(%s, %s, %s, %s, %s), param_types=2)\n" % (A.name, A.Axx, A.Ayy, A.Axy, A.Axz, A.Ayz)
+    string += "align_tensor.init(tensor='%s', params=(%s, %s, %s, %s, %s), param_types=2, errors=True)\n" % (A.name, A.Axx_err, A.Ayy_err, A.Axy_err, A.Axz_err, A.Ayz_err)
+print(string)
+
+# The matrix angles.
+align_tensor.matrix_angles(basis_set=0)
+align_tensor.matrix_angles(basis_set=1)
+
+# The SVD analysis.
+align_tensor.svd(basis_set=0)
+align_tensor.svd(basis_set=1)
+</PRE>
+
+<P>
+
+<DIV CLASS="navigation"><HR>
+<!--Navigation Panel-->
+<A NAME="tex2html9803"
+  HREF="The_frame_order_analysis_scripts.html">
+<IMG WIDTH="48" HEIGHT="48" TITLE="Next" ALIGN="BOTTOM" BORDER="0" ALT="next" SRC="next.png"></A> 
+<A NAME="tex2html9797"
+  HREF="Data_analysis.html">
+<IMG WIDTH="48" HEIGHT="48" TITLE="Up" ALIGN="BOTTOM" BORDER="0" ALT="up" SRC="up.png"></A> 
+<A NAME="tex2html9791"
+  HREF="Introduction.html">
+<IMG WIDTH="48" HEIGHT="48" TITLE="Previous" ALIGN="BOTTOM" BORDER="0" ALT="previous" SRC="prev.png"></A> 
+<A NAME="tex2html9799"
+  HREF="Contents.html">
+<IMG WIDTH="48" HEIGHT="48" TITLE="Contents" ALIGN="BOTTOM" BORDER="0" ALT="contents" SRC="contents.png"></A> 
+<A NAME="tex2html9801"
+  HREF="Index.html">
+<IMG WIDTH="48" HEIGHT="48" TITLE="Index" ALIGN="BOTTOM" BORDER="0" ALT="index" SRC="index.png"></A> <A NAME="tex2html1"
+  HREF="http://download.gna.org/relax/manual/relax.pdf"><IMG
+ ALIGN="BOTTOM" BORDER="0" SRC="http://www.nmr-relax.com/images/pdf_icon_nav.png"
+ ALT="pdf_icon_nav.png"></A><A NAME="tex2html2"
+  HREF="http://www.nmr-relax.com"><IMG
+ ALIGN="BOTTOM" BORDER="0" SRC="http://www.nmr-relax.com/images/relax_logo_nav.png"
+ ALT="relax_logo_nav.png"></A>
+<BR>
+<B> Next:</B> <A NAME="tex2html9804"
+  HREF="The_frame_order_analysis_scripts.html">The frame order analysis</A>
+<B> Up:</B> <A NAME="tex2html9798"
+  HREF="Data_analysis.html">Data analysis</A>
+<B> Previous:</B> <A NAME="tex2html9792"
+  HREF="Introduction.html">Introduction</A>
+ &nbsp; <B>  <A NAME="tex2html9800"
+  HREF="Contents.html">Contents</A></B> 
+ &nbsp; <B>  <A NAME="tex2html9802"
+  HREF="Index.html">Index</A></B> </DIV>
+<!--End of Navigation Panel-->
+<ADDRESS>
+The <a href="http://www.nmr-relax.com">relax</a> <a href="http://www.nmr-relax.com/manual/">user manual</a> (<a href="http://download.gna.org/relax/manual/relax.pdf">PDF</a>), created 2015-10-13.
+</ADDRESS>
+</BODY>
+</HTML>
