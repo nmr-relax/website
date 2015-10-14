@@ -20,7 +20,8 @@ redirects += [
 # The API documentation redirects.
 redirects += [
     ['api/2.1/toc-test_suite.unit_tests._maths_fns.Test_rotation_matrix-module.html', '%s/api/2.1/toc-test_suite.unit_tests._maths_fns.test_rotation_matrix-module.html'%url],
-    ['api/3.1/lib.dispersion.B14-module.html', '%s/api/3.2/lib.dispersion.b14-module.html'%url]
+    ['api/3.1/lib.dispersion.B14-module.html', '%s/api/3.2/lib.dispersion.b14-module.html'%url],
+    ['api/3.3/lib.software.grace-module.html', '%s/api/3.3/lib.plotting.grace-module.html'%url]
 ]
 
 # The HTML manual redirects.
@@ -127,6 +128,13 @@ redirects += [
     ['manual/structure_vectors.html', '%s/manual/interatom_unit_vectors.html'%url],
     ['manual/structure_align.html', '%s/manual/structure_superimpose.html'%url],
     ['manual/temperature.html', '%s/manual/spectrometer_temperature.html'%url]
+]
+
+# HTML manual user function link mistakes.
+redirects += [
+    ['manual/dx.map.html', '%s/manual/dx_map.html'%url],
+    ['manual/minimise.calculate.html', '%s/manual/minimise_calculate.html'%url],
+    ['manual/structure.align.html', '%s/manual/structure_align.html'%url]
 ]
 
 # Loop over all redirects, automatically creating the webpage.
