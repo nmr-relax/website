@@ -21,7 +21,8 @@ redirects += [
 redirects += [
     ['api/2.1/toc-test_suite.unit_tests._maths_fns.Test_rotation_matrix-module.html', '%s/api/2.1/toc-test_suite.unit_tests._maths_fns.test_rotation_matrix-module.html'%url],
     ['api/3.1/lib.dispersion.B14-module.html', '%s/api/3.2/lib.dispersion.b14-module.html'%url],
-    ['api/3.3/lib.software.grace-module.html', '%s/api/3.3/lib.plotting.grace-module.html'%url]
+    ['api/3.3/lib.software.grace-module.html', '%s/api/3.3/lib.plotting.grace-module.html'%url],
+    ['api/bmrblib-module.html', '%s/api/4.0/bmrblib-module.html'%url]
 ]
 
 # The HTML manual redirects.
