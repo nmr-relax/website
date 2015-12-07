@@ -135,7 +135,11 @@ redirects += [
 redirects += [
     ['manual/dx.map.html', '%s/manual/dx_map.html'%url],
     ['manual/minimise.calculate.html', '%s/manual/minimise_calculate.html'%url],
-    ['manual/structure.align.html', '%s/manual/structure_align.html'%url]
+    ['manual/rdc.copy.html', '%s/manual/rdc_copy.html'%url],
+    ['manual/structure_aic.html', '%s/manual/statistics_aic.html'%url],
+    ['manual/structure.align.html', '%s/manual/structure_align.html'%url],
+    ['manual/structure_model.html', '%s/manual/statistics_model.html'%url],
+    ['manual/structure.web_of_motion.html', '%s/manual/structure_web_of_motion.html'%url]
 ]
 
 # Loop over all redirects, automatically creating the webpage.
