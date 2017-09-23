@@ -1,0 +1,579 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r18734 &#45; in /trunk: generic_fns/ generic_fns/structure/ specific_fns/	specific_fns/model_free/ -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Sun, 10 Mar 2013 14:48:54 +0100 -->
+<!--X-Message-Id: E1UEgcQ&#45;0001HS&#45;NV@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r18734 - in /trunk: generic_fns/ generic_fns/structure/ specific_fns/	specific_fns/model_free/ -- March 10, 2013 - 14:48</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r18734 - in /trunk: generic_fns/ generic_fns/structure/ specific_fns/	specific_fns/model_free/</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00152" class="tabs">Index by Date</a> | <a href="threads.html#00152" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00151.html">Date Prev</a>] [<a href="msg00153.html">Date Next</a>] [<a href="msg00151.html">Thread Prev</a>] [<a href="msg00153.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Sun, 10 Mar 2013 13:48:54 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00152.html">E1UEgcQ-0001HS-NV@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on March 10, 2013 - 14:48:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Sun Mar 10 14:48:54 2013
+New Revision: 18734
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=18734&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=18734&amp;view=rev</a>
+Log:
+Redesign of the generic_fns.mol_res_spin.generate_spin_id() function.
+
+The function now tries to generate a unique ID based on the spin information 
+in the specified data
+pipe.  This is to attempt to fix a bug uncovered by the 
+Structure.test_read_xyz_internal2 system
+test.  Defaulting in all cases to the spin name rather than spin number will 
+often fail for a small
+organic molecule, as the name in XYZ files is the atomic symbol and hence 
+will almost never be
+unique.
+
+
+Modified:
+    trunk/generic_fns/angles.py
+    trunk/generic_fns/mol_res_spin.py
+    trunk/generic_fns/structure/scientific.py
+    trunk/specific_fns/model_free/results.py
+    trunk/specific_fns/relax_fit.py
+
+Modified: trunk/generic_fns/angles.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/generic_fns/angles.py?rev=18734&amp;r1=18733&amp;r2=18734&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/generic_fns/angles.py?rev=18734&amp;r1=18733&amp;r2=18734&amp;view=diff</a>
+==============================================================================
+--- trunk/generic_fns/angles.py (original)
++++ trunk/generic_fns/angles.py Sun Mar 10 14:48:54 2013
+@@ -77,7 +77,7 @@
+         # Test if the vector exists.
+         if not hasattr(spin, 'xh_vect'):
+             # Get the spin id string.
+-            spin_id = generate_spin_id(mol_name, res_num, res_name, 
+spin.num, spin.name)
++            spin_id = generate_spin_id(mol_name=mol_name, res_num=res_num, 
+res_name=res_name, spin_num=spin.num, spin_name=spin.name)
+ 
+             # Throw a warning.
+             warn(RelaxWarning(&quot;No angles could be calculated for the spin &quot; 
++ repr(spin_id) + &quot;.&quot;))
+
+Modified: trunk/generic_fns/mol_res_spin.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/generic_fns/mol_res_spin.py?rev=18734&amp;r1=18733&amp;r2=18734&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/generic_fns/mol_res_spin.py?rev=18734&amp;r1=18733&amp;r2=18734&amp;view=diff</a>
+==============================================================================
+--- trunk/generic_fns/mol_res_spin.py (original)
++++ trunk/generic_fns/mol_res_spin.py Sun Mar 10 14:48:54 2013
+@@ -1026,7 +1026,7 @@
+     status.spin_lock.acquire(sys._getframe().f_code.co_name)
+     try:
+         # Create the molecule if it does not exist.
+-        mol_cont = return_molecule(generate_spin_id(mol_name=mol_name), 
+pipe=pipe)
++        mol_cont = return_molecule(generate_spin_id(pipe_name=pipe, 
+mol_name=mol_name), pipe=pipe)
+         if mol_cont == None:
+             mol_cont = create_molecule(mol_name=mol_name, pipe=pipe)
+ 
+@@ -1226,7 +1226,7 @@
+ 
+         # The spin index and id.
+         spin_index = len(res_cont.spin) - 1
+-        spin_id = generate_spin_id(mol_name=mol_name, res_num=res_num, 
+res_name=res_name, spin_num=spin_num, spin_name=spin_name)
++        spin_id = generate_spin_id(pipe_cont=dp, mol_name=mol_name, 
+res_num=res_num, res_name=res_name, spin_num=spin_num, spin_name=spin_name)
+ 
+         # Update the private metadata.
+         if len(res_cont.spin) == 2:
+@@ -1596,43 +1596,99 @@
+     return mol.res[0].num
+ 
+ 
+-def generate_spin_id(mol_name=None, res_num=None, res_name=None, 
+spin_num=None, spin_name=None):
++def generate_spin_id(pipe_cont=None, pipe_name=None, mol_name=None, 
+res_num=None, res_name=None, spin_num=None, spin_name=None):
+     &quot;&quot;&quot;Generate the spin selection string.
+ 
+-    @param mol_name:    The molecule name.
++    @keyword pipe_cont: The data pipe object.
++    @type pipe_cont:    PipeContainer instance
++    @keyword pipe_name: The data pipe name.
++    @type pipe_name:    str
++    @keyword mol_name:  The molecule name.
+     @type mol_name:     str or None
+-    @param res_num:     The residue number.
++    @keyword res_num:   The residue number.
+     @type res_num:      int or None
+-    @param res_name:    The residue name.
++    @keyword res_name:  The residue name.
+     @type res_name:     str or None
+-    @param spin_num:    The spin number.
++    @keyword spin_num:  The spin number.
+     @type spin_num:     int or None
+-    @param spin_name:   The spin name.
++    @keyword spin_name: The spin name.
+     @type spin_name:    str or None
+     @return:            The spin identification string.
+     @rtype:             str
+     &quot;&quot;&quot;
+ 
++    # The data pipe.
++    if pipe_cont == None:
++        pipe_cont = pipes.get_pipe(pipe_name)
++
+     # Init.
+     id = &quot;&quot;
+ 
+-    # Molecule name.
++    # Molecule name and container.
+     if mol_name != None:
+         id = id + &quot;#&quot; + mol_name
+ 
+     # Residue data.
++    res_num_id = ''
++    res_name_id = ''
+     if res_num != None:
+-        id = id + &quot;:&quot; + str(res_num)
++        res_num_id = id + &quot;:&quot; + str(res_num)
++        res_num_exists = res_num_id in pipe_cont.mol._spin_id_lookup
++    if res_name != None:
++        res_name_id = id + &quot;:&quot; + res_name
++        res_name_exists = res_name_id in pipe_cont.mol._spin_id_lookup
++
++    # Select between the name and number, defaulting to the residue number 
+if needed.
++    if res_name != None and res_num != None:
++        if res_num_exists and res_name_exists:
++            id = res_num_id
++        elif not res_num_exists or not res_name_exists:
++            id = res_num_id
++        elif res_num_exists:
++            id = res_num_id
++        elif res_name_exists:
++            id = res_name_id
++        elif res_num != None:
++            id = res_num_id
++        elif res_name != None:
++            id = res_name_id
++    elif res_num != None:
++        id = res_num_id
+     elif res_name != None:
+-        id = id + &quot;:&quot; + res_name
++        id = res_name_id
+ 
+     # Spin data.
++    spin_num_id = ''
++    spin_name_id = ''
++    spin_num_exists = False
++    spin_name_exists = False
++    if spin_num != None:
++        spin_num_id = id + &quot;@&quot; + str(spin_num)
++        spin_num_exists = spin_num_id in pipe_cont.mol._spin_id_lookup
+     if spin_name != None:
+-        id = id + &quot;@&quot; + spin_name
++        spin_name_id = id + &quot;@&quot; + spin_name
++        spin_name_exists = spin_name_id in pipe_cont.mol._spin_id_lookup
++
++    # Select between the name and number, defaulting to the spin name if 
+needed.
++    if spin_name != None and spin_num != None:
++        if spin_num_exists and spin_name_exists:
++            id = spin_name_id
++        elif not spin_num_exists or not spin_name_exists:
++            id = spin_name_id
++        elif spin_name_exists:
++            id = spin_name_id
++        elif spin_num_exists:
++            id = spin_num_id
++        elif spin_name != None:
++            id = spin_name_id
++        elif spin_num != None:
++            id = spin_num_id
++    elif spin_name != None:
++        id = spin_name_id
+     elif spin_num != None:
+-        id = id + &quot;@&quot; + str(spin_num)
+-
+-    # Return the spin id string.
++        id = spin_num_id
++
++    # Return the full spin ID string.
+     return id
+ 
+ 
+@@ -2041,7 +2097,7 @@
+         # Alias.
+         mol = dp.mol[i]
+ 
+-        # Update the residue metadata.
++        # Update the molecule metadata.
+         mol._mol_index = i
+ 
+         # Loop over the residues.
+@@ -2130,7 +2186,7 @@
+ 
+         # Generate the spin id.
+         if return_id:
+-            mol_id = generate_spin_id(mol.name)
++            mol_id = generate_spin_id(pipe_cont=dp, mol_name=mol.name)
+ 
+         # Yield the molecule data container.
+         if return_id:
+@@ -2202,7 +2258,7 @@
+         # Rename the matching residues.
+         for res, mol_name in residue_loop(res_id, full_info=True):
+             if res.name and not force:
+-                warn(RelaxWarning(&quot;The residue '%s' is already named.  Set 
+the force flag to rename.&quot; % generate_spin_id(mol_name, res.num, res.name)))
++                warn(RelaxWarning(&quot;The residue '%s' is already named.  Set 
+the force flag to rename.&quot; % generate_spin_id(mol_name=mol_name, 
+res_num=res.num, res_name=res.name)))
+             else:
+                 res.name = name
+ 
+@@ -2288,7 +2344,7 @@
+         # Rename the residue.
+         for res, mol_name in residue_loop(res_id, full_info=True):
+             if res.num and not force:
+-                warn(RelaxWarning(&quot;The residue '%s' is already numbered.  
+Set the force flag to renumber.&quot; % generate_spin_id(mol_name, res.num, 
+res.name)))
++                warn(RelaxWarning(&quot;The residue '%s' is already numbered.  
+Set the force flag to renumber.&quot; % generate_spin_id(mol_name=mol_name, 
+res_num=res.num, res_name=res.name)))
+             else:
+                 res.num = number
+ 
+@@ -2526,7 +2582,7 @@
+ 
+             # Generate the spin id.
+             if return_id:
+-                res_id = generate_spin_id(mol.name, res.num, res.name)
++                res_id = generate_spin_id(pipe_cont=dp, mol_name=mol.name, 
+res_num=res.num, res_name=res.name)
+ 
+             # Yield the residue data container.
+             if full_info and return_id:
+@@ -2756,7 +2812,7 @@
+                 spin_num = spin_num + 1
+ 
+                 # Generate as store the spin ID.
+-                spin_ids.append(generate_spin_id(mol_name=mol.name, 
+res_num=res.num, res_name=res.name, spin_num=spin.num, spin_name=spin.name))
++                spin_ids.append(generate_spin_id(pipe_cont=dp, 
+mol_name=mol.name, res_num=res.num, res_name=res.name, spin_num=spin.num, 
+spin_name=spin.name))
+ 
+     # No unique identifier.
+     if not multi and spin_num &gt; 1:
+@@ -2803,7 +2859,7 @@
+             # Return the spin and the spin_id string.
+             if return_spin_id:
+                 # The spin identification string.
+-                spin_id = generate_spin_id(mol_name, res_num, res_name, 
+spin.num, spin.name)
++                spin_id = generate_spin_id(pipe_name=pipe, 
+mol_name=mol_name, res_num=res_num, res_name=res_name, spin_num=spin.num, 
+spin_name=spin.name)
+ 
+                 # Return both objects.
+                 return spin, spin_id
+@@ -3212,34 +3268,58 @@
+     spin_count = len(res.spin)
+ 
+     # The spin ID.
+-    spin_ids.append(generate_spin_id(mol_name=mol.name, res_num=res.num, 
+res_name=res.name, spin_num=spin.num, spin_name=spin.name))
++    spin_ids.append(generate_spin_id(pipe_cont=dp, mol_name=mol.name, 
+res_num=res.num, res_name=res.name, spin_num=spin.num, spin_name=spin.name))
++    spin_ids.append(generate_spin_id(pipe_cont=dp, mol_name=mol.name, 
+res_num=res.num, res_name=res.name, spin_name=spin.name))
++    spin_ids.append(generate_spin_id(pipe_cont=dp, mol_name=mol.name, 
+res_num=res.num, res_name=res.name, spin_num=spin.num))
+ 
+     # The spin IDs without spin info.
+     if spin_count == 1:
+-        spin_ids.append(generate_spin_id(mol_name=mol.name, res_num=res.num, 
+res_name=res.name))
++        spin_ids.append(generate_spin_id(pipe_cont=dp, mol_name=mol.name, 
+res_num=res.num, res_name=res.name))
++        spin_ids.append(generate_spin_id(pipe_cont=dp, mol_name=mol.name, 
+res_name=res.name))
++        spin_ids.append(generate_spin_id(pipe_cont=dp, mol_name=mol.name, 
+res_num=res.num))
+ 
+     # The spin IDs without residue info.
+     if res_count == 1:
+-        spin_ids.append(generate_spin_id(mol_name=mol.name, 
+spin_num=spin.num, spin_name=spin.name))
++        spin_ids.append(generate_spin_id(pipe_cont=dp, mol_name=mol.name, 
+spin_num=spin.num, spin_name=spin.name))
++        spin_ids.append(generate_spin_id(pipe_cont=dp, mol_name=mol.name, 
+spin_name=spin.name))
++        spin_ids.append(generate_spin_id(pipe_cont=dp, mol_name=mol.name, 
+spin_num=spin.num))
+ 
+     # The spin IDs without molecule info.
+     if mol_count == 1:
+-        spin_ids.append(generate_spin_id(res_num=res.num, res_name=res.name, 
+spin_num=spin.num, spin_name=spin.name))
++        spin_ids.append(generate_spin_id(pipe_cont=dp, res_num=res.num, 
+res_name=res.name, spin_num=spin.num, spin_name=spin.name))
++        spin_ids.append(generate_spin_id(pipe_cont=dp, res_name=res.name, 
+spin_num=spin.num, spin_name=spin.name))
++        spin_ids.append(generate_spin_id(pipe_cont=dp, res_num=res.num, 
+spin_num=spin.num, spin_name=spin.name))
++        spin_ids.append(generate_spin_id(pipe_cont=dp, res_num=res.num, 
+res_name=res.name, spin_name=spin.name))
++        spin_ids.append(generate_spin_id(pipe_cont=dp, res_num=res.num, 
+res_name=res.name, spin_num=spin.num))
++        spin_ids.append(generate_spin_id(pipe_cont=dp, res_name=res.name, 
+spin_name=spin.name))
++        spin_ids.append(generate_spin_id(pipe_cont=dp, res_num=res.num, 
+spin_name=spin.name))
++        spin_ids.append(generate_spin_id(pipe_cont=dp, res_name=res.name, 
+spin_num=spin.num))
++        spin_ids.append(generate_spin_id(pipe_cont=dp, res_num=res.num, 
+spin_num=spin.num))
+ 
+     # The spin IDs without spin or residue info.
+     if spin_count == 1 and res_count == 1:
+-        spin_ids.append(generate_spin_id(mol_name=mol.name))
++        spin_ids.append(generate_spin_id(pipe_cont=dp, mol_name=mol.name))
+ 
+     # The spin IDs without spin or molecule info.
+     if spin_count == 1 and mol_count == 1:
+-        spin_ids.append(generate_spin_id(res_num=res.num, res_name=res.name))
++        spin_ids.append(generate_spin_id(pipe_cont=dp, res_num=res.num, 
+res_name=res.name))
++        spin_ids.append(generate_spin_id(pipe_cont=dp, res_name=res.name))
++        spin_ids.append(generate_spin_id(pipe_cont=dp, res_num=res.num))
+ 
+     # The spin IDs without residue or molecule info.
+     if res_count == 1 and mol_count == 1:
+-        spin_ids.append(generate_spin_id(spin_num=spin.num, 
+spin_name=spin.name))
++        spin_ids.append(generate_spin_id(pipe_cont=dp, spin_num=spin.num, 
+spin_name=spin.name))
++        spin_ids.append(generate_spin_id(pipe_cont=dp, spin_name=spin.name))
++        spin_ids.append(generate_spin_id(pipe_cont=dp, spin_num=spin.num))
++
++    # Collect the unique IDs.
++    unique = []
++    for id in spin_ids:
++        if id not in unique:
++            unique.append(id)
+ 
+     # Return the IDs.
+-    return spin_ids
++    return unique
+ 
+ 
+ def spin_id_variants_elim(dp=None, mol_index=None, res_index=None, 
+spin_index=None):
+@@ -3267,36 +3347,36 @@
+     spin_count = len(res.spin)
+ 
+     # The spin ID.
+-    spin_ids.append(generate_spin_id(mol_name=mol.name, res_num=res.num, 
+res_name=res.name, spin_num=spin.num, spin_name=spin.name))
++    spin_ids.append(generate_spin_id(pipe_cont=dp, mol_name=mol.name, 
+res_num=res.num, res_name=res.name, spin_num=spin.num, spin_name=spin.name))
+ 
+     # The spin IDs without spin info.
+     if spin_count &gt; 1:
+-        spin_ids.append(generate_spin_id(mol_name=mol.name, res_num=res.num, 
+res_name=res.name))
+-        spin_ids.append(generate_spin_id(res_num=res.num, res_name=res.name))
+-        spin_ids.append(generate_spin_id(mol_name=mol.name))
++        spin_ids.append(generate_spin_id(pipe_cont=dp, mol_name=mol.name, 
+res_num=res.num, res_name=res.name))
++        spin_ids.append(generate_spin_id(pipe_cont=dp, res_num=res.num, 
+res_name=res.name))
++        spin_ids.append(generate_spin_id(pipe_cont=dp, mol_name=mol.name))
+ 
+     # The spin IDs without residue info.
+     if res_count &gt; 1:
+-        spin_ids.append(generate_spin_id(mol_name=mol.name, 
+spin_num=spin.num, spin_name=spin.name))
+-        spin_ids.append(generate_spin_id(spin_num=spin.num, 
+spin_name=spin.name))
+-        spin_ids.append(generate_spin_id(mol_name=mol.name))
++        spin_ids.append(generate_spin_id(pipe_cont=dp, mol_name=mol.name, 
+spin_num=spin.num, spin_name=spin.name))
++        spin_ids.append(generate_spin_id(pipe_cont=dp, spin_num=spin.num, 
+spin_name=spin.name))
++        spin_ids.append(generate_spin_id(pipe_cont=dp, mol_name=mol.name))
+ 
+     # The spin IDs without molecule info.
+     if mol_count &gt; 1:
+-        spin_ids.append(generate_spin_id(res_num=res.num, res_name=res.name))
+-        spin_ids.append(generate_spin_id(res_num=res.num, res_name=res.name, 
+spin_num=spin.num, spin_name=spin.name))
++        spin_ids.append(generate_spin_id(pipe_cont=dp, res_num=res.num, 
+res_name=res.name))
++        spin_ids.append(generate_spin_id(pipe_cont=dp, res_num=res.num, 
+res_name=res.name, spin_num=spin.num, spin_name=spin.name))
+ 
+     # The spin IDs without spin or residue info.
+     if spin_count &gt; 1 and res_count &gt; 1:
+-        spin_ids.append(generate_spin_id(mol_name=mol.name))
++        spin_ids.append(generate_spin_id(pipe_cont=dp, mol_name=mol.name))
+ 
+     # The spin IDs without spin or molecule info.
+     if spin_count &gt; 1 and mol_count &gt; 1:
+-        spin_ids.append(generate_spin_id(res_num=res.num, res_name=res.name))
++        spin_ids.append(generate_spin_id(pipe_cont=dp, res_num=res.num, 
+res_name=res.name))
+ 
+     # The spin IDs without residue or molecule info.
+     if res_count &gt; 1 and mol_count &gt; 1:
+-        spin_ids.append(generate_spin_id(spin_num=spin.num, 
+spin_name=spin.name))
++        spin_ids.append(generate_spin_id(pipe_cont=dp, spin_num=spin.num, 
+spin_name=spin.name))
+ 
+     # Return the IDs.
+     return spin_ids
+@@ -3442,7 +3522,7 @@
+ 
+                 # Generate the spin id.
+                 if return_id:
+-                    spin_id = generate_spin_id(mol.name, res.num, res.name, 
+spin.num, spin.name)
++                    spin_id = generate_spin_id(pipe_cont=dp, 
+mol_name=mol.name, res_num=res.num, res_name=res.name, spin_num=spin.num, 
+spin_name=spin.name)
+ 
+                 # Yield the data.
+                 if full_info and return_id:
+
+Modified: trunk/generic_fns/structure/scientific.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/generic_fns/structure/scientific.py?rev=18734&amp;r1=18733&amp;r2=18734&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/generic_fns/structure/scientific.py?rev=18734&amp;r1=18733&amp;r2=18734&amp;view=diff</a>
+==============================================================================
+--- trunk/generic_fns/structure/scientific.py (original)
++++ trunk/generic_fns/structure/scientific.py Sun Mar 10 14:48:54 2013
+@@ -431,7 +431,7 @@
+         &quot;&quot;&quot;
+ 
+         # Generate the selection object.
+-        sel_obj = Selection(generate_spin_id(mol_name, res_num, res_name, 
+spin_num, spin_name))
++        sel_obj = Selection(generate_spin_id(mol_name=mol_name, 
+res_num=res_num, res_name=res_name, spin_num=spin_num, spin_name=spin_name))
+ 
+         # Initialise some objects.
+         vectors = []
+
+Modified: trunk/specific_fns/model_free/results.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/specific_fns/model_free/results.py?rev=18734&amp;r1=18733&amp;r2=18734&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/specific_fns/model_free/results.py?rev=18734&amp;r1=18733&amp;r2=18734&amp;view=diff</a>
+==============================================================================
+--- trunk/specific_fns/model_free/results.py (original)
++++ trunk/specific_fns/model_free/results.py Sun Mar 10 14:48:54 2013
+@@ -166,7 +166,7 @@
+         generic_fns.sequence.generate(mol_name, res_num, res_name, spin_num, 
+spin_name, verbose=False)
+ 
+         # Get the spin identification string.
+-        spin_id = generate_spin_id(mol_name, res_num, res_name, spin_num, 
+spin_name)
++        spin_id = generate_spin_id(mol_name=mol_name, res_num=res_num, 
+res_name=res_name, spin_num=spin_num, spin_name=spin_name)
+ 
+         # Set the selection status.
+         select = bool(int(spin_line[col['select']]))
+@@ -701,7 +701,7 @@
+                 spin_name = file_line[col['spin_name']]
+ 
+             # Create the spin ID.
+-            spin_id = generate_spin_id(mol_name, res_num, res_name, 
+spin_num, spin_name)
++            spin_id = generate_spin_id(mol_name=mol_name, res_num=res_num, 
+res_name=res_name, spin_num=spin_num, spin_name=spin_name)
+ 
+             # Get the spin container.
+             spin = return_spin(spin_id)
+
+Modified: trunk/specific_fns/relax_fit.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/specific_fns/relax_fit.py?rev=18734&amp;r1=18733&amp;r2=18734&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/specific_fns/relax_fit.py?rev=18734&amp;r1=18733&amp;r2=18734&amp;view=diff</a>
+==============================================================================
+--- trunk/specific_fns/relax_fit.py (original)
++++ trunk/specific_fns/relax_fit.py Sun Mar 10 14:48:54 2013
+@@ -672,7 +672,7 @@
+             # Print out.
+             if verbosity &gt;= 1:
+                 # Get the spin id string.
+-                spin_id = generate_spin_id(mol_name, res_num, res_name, 
+spin.num, spin.name)
++                spin_id = generate_spin_id(mol_name=mol_name, 
+res_num=res_num, res_name=res_name, spin_num=spin.num, spin_name=spin.name)
+ 
+                 # Individual spin printout.
+                 if verbosity &gt;= 2:
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Sun Mar 10 15:00:02 2013</div>  
+</body>
+</html>

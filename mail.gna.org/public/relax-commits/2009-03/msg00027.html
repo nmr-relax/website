@@ -1,0 +1,216 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r8922 &#45; /branches/bmrb/bmrblib/kinetics/heteronucl_T1_relaxation.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 06 Mar 2009 16:01:18 +0100 -->
+<!--X-Message-Id: E1LfbLq&#45;00070m&#45;EM@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r8922 - /branches/bmrb/bmrblib/kinetics/heteronucl_T1_relaxation.py -- March 06, 2009 - 16:01</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r8922 - /branches/bmrb/bmrblib/kinetics/heteronucl_T1_relaxation.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00027" class="tabs">Index by Date</a> | <a href="threads.html#00027" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00026.html">Date Prev</a>] [<a href="msg00028.html">Date Next</a>] [<a href="msg00026.html">Thread Prev</a>] [<a href="msg00028.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 06 Mar 2009 14:48:38 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00027.html">E1LfbLq-00070m-EM@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on March 06, 2009 - 16:01:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Mar  6 15:48:36 2009
+New Revision: 8922
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=8922&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=8922&amp;view=rev</a>
+Log:
+Extraction of R1 data is now supported by the bmrblib API.
+
+
+Modified:
+    branches/bmrb/bmrblib/kinetics/heteronucl_T1_relaxation.py
+
+Modified: branches/bmrb/bmrblib/kinetics/heteronucl_T1_relaxation.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/bmrb/bmrblib/kinetics/heteronucl_T1_relaxation.py?rev=8922&amp;r1=8921&amp;r2=8922&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/bmrb/bmrblib/kinetics/heteronucl_T1_relaxation.py?rev=8922&amp;r1=8921&amp;r2=8922&amp;view=diff</a>
+==============================================================================
+--- branches/bmrb/bmrblib/kinetics/heteronucl_T1_relaxation.py (original)
++++ branches/bmrb/bmrblib/kinetics/heteronucl_T1_relaxation.py Fri Mar  6 
+15:48:36 2009
+@@ -113,6 +113,41 @@
+         self.T1 = T1(self)
+ 
+ 
++    def loop(self):
++        &quot;&quot;&quot;Loop over the T1 saveframes, yielding the relaxation data.
++
++        @return:    The relaxation data consisting of the proton frequency, 
+residue numbers, residue
++                    names, atom names, values, and errors.
++        @rtype:     tuple of float, list of int, list of str, list of str, 
+list of float, list of
++                    float
++        &quot;&quot;&quot;
++
++        # Loop over all datanodes.
++        for datanode in self.datanodes:
++            # Find the Heteronuclear T1 saveframes via the SfCategory tag 
+index.
++            found = False
++            for index in range(len(datanode.tagtables[0].tagnames)):
++                # First match the tag names.
++                if datanode.tagtables[0].tagnames[index] == 
+self.heteronuclT1list.create_tag_label(self.heteronuclT1list.tag_names['SfCategory']):
++                    # Then the tag value.
++                    if datanode.tagtables[0].tagvalues[index][0] == 
+self.label+'_relaxation':
++                        found = True
++                        break
++
++            # Skip the datanode.
++            if not found:
++                continue
++
++            # Get general info.
++            frq = self.heteronuclT1list.read(datanode.tagtables[0])
++
++            # Get the T1 info.
++            res_nums, res_names, atom_names, values, errors = 
+self.T1.read(datanode.tagtables[1])
++
++            # Yield the data.
++            yield frq, res_nums, res_names, atom_names, values, errors
++
++
+ class HeteronuclT1List(TagCategory):
+     &quot;&quot;&quot;Base class for the HeteronuclT1List tag category.&quot;&quot;&quot;
+ 
+@@ -133,6 +168,22 @@
+         self.sf.frame.tagtables.append(TagTable(free=True, 
+tagnames=[self.tag_names_full['SpectrometerFrequency1H']], 
+tagvalues=[[str(self.sf.frq/1e6)]]))
+         self.sf.frame.tagtables.append(TagTable(free=True, 
+tagnames=[self.tag_names_full['T1CoherenceType']], 
+tagvalues=[[self.variables['coherence']]]))
+         self.sf.frame.tagtables.append(TagTable(free=True, 
+tagnames=[self.tag_names_full['T1ValUnits']], tagvalues=[['1/s']]))
++
++
++    def read(self, tagtable):
++        &quot;&quot;&quot;Extract the HeteronuclT1List tag category info.
++
++        @param tagtable:    The HeteronuclT1List tagtable.
++        @type tagtable:     Tagtable instance
++        @return:            The proton frequency in Hz.
++        @rtype:             float
++        &quot;&quot;&quot;
++
++        # The general info.
++        frq = 
+float(tagtable.tagvalues[tagtable.tagnames.index(self.tag_names_full['SpectrometerFrequency1H'])][0])
+ * 1e6
++
++        # Return the data.
++        return frq
+ 
+ 
+     def tag_setup(self, tag_category_label=None, sep=None):
+@@ -227,6 +278,33 @@
+         self.sf.frame.tagtables.append(table)
+ 
+ 
++    def read(self, tagtable):
++        &quot;&quot;&quot;Extract the T1 tag category info.
++
++        @param tagtable:    The T1 tagtable.
++        @type tagtable:     Tagtable instance
++        @return:            The residue numbers, residue names, atom names, 
+values, and errors.
++        @rtype:             tuple of list of int, list of str, list of str, 
+list of float, list of
++                            float
++        &quot;&quot;&quot;
++
++        # The entity info.
++        res_nums = 
+tagtable.tagvalues[tagtable.tagnames.index(self.tag_names_full['SeqID'])]
++        res_names = 
+tagtable.tagvalues[tagtable.tagnames.index(self.tag_names_full['CompID'])]
++        atom_names = 
+tagtable.tagvalues[tagtable.tagnames.index(self.tag_names_full['AtomID'])]
++        values = 
+tagtable.tagvalues[tagtable.tagnames.index(self.tag_names_full['Val'])]
++        errors = 
+tagtable.tagvalues[tagtable.tagnames.index(self.tag_names_full['ValErr'])]
++
++        # Convert the residue numbers to ints and the values and errors to 
+floats.
++        for i in range(len(res_nums)):
++            res_nums[i] = int(res_nums[i])
++            values[i] = float(res_nums[i])
++            errors[i] = float(res_nums[i])
++
++        # Return the data.
++        return res_nums, res_names, atom_names, values, errors
++
++
+     def tag_setup(self, tag_category_label=None, sep=None):
+         &quot;&quot;&quot;Replacement method for setting up the tag names.
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Mar 06 16:20:04 2009</div>  
+</body>
+</html>

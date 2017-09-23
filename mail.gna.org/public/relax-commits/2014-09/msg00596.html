@@ -1,0 +1,395 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r26090 &#45; /branches/frame_order_cleanup/auto_analyses/frame_order.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Sat, 27 Sep 2014 17:25:28 +0200 -->
+<!--X-Message-Id: E1XXtsG&#45;00056w&#45;Jp@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r26090 - /branches/frame_order_cleanup/auto_analyses/frame_order.py -- September 27, 2014 - 17:25</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r26090 - /branches/frame_order_cleanup/auto_analyses/frame_order.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00596" class="tabs">Index by Date</a> | <a href="threads.html#00596" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00595.html">Date Prev</a>] [<a href="msg00597.html">Date Next</a>] [<a href="msg00595.html">Thread Prev</a>] [<a href="msg00597.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Sat, 27 Sep 2014 15:25:28 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00596.html">E1XXtsG-00056w-Jp@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on September 27, 2014 - 17:25:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Sat Sep 27 17:25:28 2014
+New Revision: 26090
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=26090&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=26090&amp;view=rev</a>
+Log:
+Improvements, fixes, and expansion of the results and data visualisation file 
+creation.
+
+This is for the frame order auto-analysis.  The visualisation() method has 
+been renamed to
+results_output() and its scope expanded.  The function previously only called 
+the
+frame_order.pdb_model and frame_order.simulation user functions for creating 
+PDB representations of
+the frame order motions and performing a pseudo-Brownian frame order dynamics 
+simulate.  This has
+been extended to also call the results.write user function for outputting 
+results files and the
+rdc.corr_plot and pcs_corr_plot for generating correlation plots of the 
+measured vs. back-calculated
+data.
+
+All parts of the auto-analysis were output files are required now call this 
+method.  This ensures
+that all output files are always created, and are placed into the correct 
+directories.
+
+
+Modified:
+    branches/frame_order_cleanup/auto_analyses/frame_order.py
+
+Modified: branches/frame_order_cleanup/auto_analyses/frame_order.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/auto_analyses/frame_order.py?rev=26090&amp;r1=26089&amp;r2=26090&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/auto_analyses/frame_order.py?rev=26090&amp;r1=26089&amp;r2=26090&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/auto_analyses/frame_order.py   (original)
++++ branches/frame_order_cleanup/auto_analyses/frame_order.py   Sat Sep 27 
+17:25:28 2014
+@@ -458,14 +458,15 @@
+                 self.interpreter.eliminate()
+                 self.interpreter.monte_carlo.error_analysis()
+ 
+-                # Finish.
+-                self.interpreter.results.write(file='results', 
+dir=self.results_dir+'final', force=True)
++                # Create the output and visualisation files.
++                self.results_output(model='final', 
+dir=self.results_dir+'final', results_file=True)
++
++            # Regenerate the output and visualisation files for the final 
+results.
++            else:
++                self.results_output(model='final', 
+dir=self.results_dir+'final', results_file=False)
+ 
+             # Output the finishing time.
+             self.interpreter.time()
+-
+-            # Visualisation of the final results.
+-            self.visualisation(model='final')
+ 
+             # Save the final program state.
+             if self._final_state:
+@@ -518,13 +519,16 @@
+             self.pipe_name_dict[perm_model] = '%s permutation %s - %s' % 
+(title, perm, self.pipe_bundle)
+             self.pipe_name_list.append(self.pipe_name_dict[perm_model])
+ 
++            # The output directory.
++            dir = model_directory(perm_model, base_dir=self.results_dir)
++
+             # The results file already exists, so read its contents instead.
+             if self.read_results(model=perm_model, 
+pipe_name=self.pipe_name_dict[perm_model]):
+                 # Re-perform model elimination just in case.
+                 self.interpreter.eliminate()
+ 
+-                # The PDB representation of the model and visualisation 
+script (in case this was not completed correctly).
+-                self.visualisation(model=perm_model)
++                # Recreate the output and visualisation files (in case this 
+was not completed correctly).
++                self.results_output(model=perm_model, dir=dir, 
+results_file=False)
+ 
+                 # Jump to the next permutation.
+                 continue
+@@ -556,11 +560,8 @@
+             # Model elimination.
+             self.interpreter.eliminate()
+ 
+-            # Save the results.
+-            self.interpreter.results.write(dir=model_directory(perm_model, 
+base_dir=self.results_dir), force=True)
+-
+-            # The PDB representation of the model and visualisation script.
+-            self.visualisation(model=perm_model)
++            # Create the output and visualisation files.
++            self.results_output(model=perm_model, dir=dir, results_file=True)
+ 
+ 
+     def check_vars(self):
+@@ -867,13 +868,16 @@
+             self.pipe_name_dict[model] = '%s - %s' % (title, 
+self.pipe_bundle)
+             self.pipe_name_list.append(self.pipe_name_dict[model])
+ 
++            # The output directory.
++            dir = model_directory(model, base_dir=self.results_dir)
++
+             # The results file already exists, so read its contents instead.
+             if self.read_results(model=model, 
+pipe_name=self.pipe_name_dict[model]):
+                 # Re-perform model elimination just in case.
+                 self.interpreter.eliminate()
+ 
+-                # The PDB representation of the model and visualisation 
+script (in case this was not completed correctly).
+-                self.visualisation(model=model)
++                # Recreate the output files (in case this was not completed 
+correctly).
++                self.results_output(model=model, dir=dir, results_file=False)
+ 
+                 # Perform the axis permutation analysis.
+                 self.axis_permutation_analysis(model=model)
+@@ -958,11 +962,8 @@
+             # Model elimination.
+             self.interpreter.eliminate()
+ 
+-            # Save the results.
+-            self.interpreter.results.write(dir=model_directory(model, 
+base_dir=self.results_dir), force=True)
+-
+-            # The PDB representation of the model and visualisation script.
+-            self.visualisation(model=model)
++            # Create the output and visualisation files.
++            self.results_output(model=model, dir=dir, results_file=True)
+ 
+             # Perform the axis permutation analysis.
+             self.axis_permutation_analysis(model=model)
+@@ -988,11 +989,13 @@
+         self.pipe_name_dict[model] = '%s - %s' % (title, self.pipe_bundle)
+         self.pipe_name_list.append(self.pipe_name_dict[model])
+ 
++        # The output directory.
++        dir = model_directory(model, base_dir=self.results_dir) 
++
+         # The results file already exists, so read its contents instead.
+         if self.read_results(model=model, 
+pipe_name=self.pipe_name_dict[model]):
+-            # The PDB representation of the model and the pseudo-Brownian 
+dynamics simulation (in case this was not completed correctly).
+-            
+self.interpreter.frame_order.pdb_model(dir=model_directory(model, 
+base_dir=self.results_dir), force=True)
+-            self.interpreter.frame_order.simulate(dir=model_directory(model, 
+base_dir=self.results_dir), step_size=self.brownian_step_size, 
+snapshot=self.brownian_snapshot, total=self.brownian_total, force=True)
++            # Recreate the output and visualisation files (in case this was 
+not completed correctly).
++            self.results_output(model=model, dir=dir, results_file=False)
+ 
+             # Nothing more to do.
+             return
+@@ -1049,11 +1052,8 @@
+         # Results printout.
+         self.print_results()
+ 
+-        # Save the results.
+-        self.interpreter.results.write(dir=model_directory(model, 
+base_dir=self.results_dir), force=True)
+-
+-        # The PDB representation of the model and the pseudo-Brownian 
+dynamics simulation.
+-        self.interpreter.frame_order.pdb_model(dir=model_directory(model, 
+base_dir=self.results_dir), force=True)
++        # Create the output and visualisation files.
++        self.results_output(model=model, dir=dir, results_file=True)
+ 
+ 
+     def print_results(self):
+@@ -1210,6 +1210,58 @@
+         return new
+ 
+ 
++    def results_output(self, dir=None, model=None, results_file=True):
++        &quot;&quot;&quot;Create visual representations of the frame order results for the 
+given model.
++
++        This will call the following user functions:
++
++            - results.write to output a results file (turned off if the 
+results_file argument is False).
++            - rdc.corr_plot and pcs.corr_plot to visualise the quality of 
+the data and fit as 2D Grace correlation plots.
++            - frame_order.pdb_model to generate a PDB representation of the 
+frame order motions.
++            - frame_order.simulate to perform a pseudo-Brownian frame order 
+dynamics simulation.
++
++        A relax script called 'pymol_display.py' will be created for easily 
+visualising the PDB representation from the frame_order.pdb_model user 
+function.
++
++
++        This includes a PDB representation of the motions (the 'cone.pdb' 
+file located in each model directory) together with a relax script for 
+displaying the average domain positions together with the cone/motion 
+representation in PyMOL (the 'pymol_display.py' file, also created in the 
+model directory).
++
++        @keyword dir:           The output directory.
++        @type dir:              str
++        @keyword model:         The frame order model.  This should match 
+the model of the current data pipe, unless the special value of 'final' is 
+used to indicate the visualisation of the final results.
++        @type model:            str
++        @keyword results_file:  A flag which if True will cause a results 
+file to be created via the results.write user function.
++        @type results_file:     bool
++        &quot;&quot;&quot;
++
++        # Printout.
++        subsection(file=sys.stdout, text=&quot;Generating the results and data 
+visualisation files&quot;)
++
++        # Sanity check.
++        if model != 'final' and model.replace(' permutation A', 
+'').replace(' permutation B', '') != cdp.model:
++            raise RelaxError(&quot;The model '%s' does not match the model '%s' 
+of the current data pipe.&quot; % (model.replace(' permuted', ''), cdp.model))
++
++        # The results file.
++        if results_file:
++            self.interpreter.results.write(dir=dir, force=True)
++
++        # The RDC and PCS correlation plots.
++        self.interpreter.rdc.corr_plot(dir=dir, force=True)
++        self.interpreter.pcs.corr_plot(dir=dir, force=True)
++
++        # The PDB representation of the model.
++        self.interpreter.frame_order.pdb_model(dir=dir, force=True)
++
++        # Create the visualisation script for the PDB representation.
++        script = open_write_file(file_name='pymol_display.py', dir=dir, 
+force=True)
++        script.write(&quot;# relax script for displaying the frame order results 
+of this '%s' model in PyMOL.\n\n&quot; % model)
++        script.write(&quot;# PyMOL visualisation.\n&quot;)
++        script.write(&quot;pymol.frame_order()\n&quot;)
++        script.close()
++
++        # The pseudo-Brownian dynamics simulation.
++        self.interpreter.frame_order.simulate(dir=dir, 
+step_size=self.brownian_step_size, snapshot=self.brownian_snapshot, 
+total=self.brownian_total, force=True)
++
++
+     def sobol_setup(self, info=None):
+         &quot;&quot;&quot;Correctly handle the frame_order.sobol_setup user function.
+ 
+@@ -1231,38 +1283,6 @@
+         # Full setup.
+         else:
+             self.interpreter.frame_order.sobol_setup(max_num=max_num, 
+oversample=oversample)
+-
+-
+-    def visualisation(self, model=None):
+-        &quot;&quot;&quot;Create visual representations of the frame order results for the 
+given model.
+-
+-        This includes a PDB representation of the motions (the 'cone.pdb' 
+file located in each model directory) together with a relax script for 
+displaying the average domain positions together with the cone/motion 
+representation in PyMOL (the 'pymol_display.py' file, also created in the 
+model directory).
+-
+-        @keyword model:     The frame order model to visualise.  This should 
+match the model of the current data pipe, unless the special value of 'final' 
+is used to indicate the visualisation of the final results.
+-        @type model:        str
+-        &quot;&quot;&quot;
+-
+-        # Sanity check.
+-        if model != 'final' and model.replace(' permutation A', 
+'').replace(' permutation B', '') != cdp.model:
+-            raise RelaxError(&quot;The model '%s' does not match the model '%s' 
+of the current data pipe.&quot; % (model.replace(' permuted', ''), cdp.model))
+-
+-        # The PDB representation of the model and the pseudo-Brownian 
+dynamics simulation.
+-        self.interpreter.frame_order.pdb_model(dir=model_directory(model, 
+base_dir=self.results_dir), force=True)
+-        self.interpreter.frame_order.simulate(dir=model_directory(model, 
+base_dir=self.results_dir), step_size=self.brownian_step_size, 
+snapshot=self.brownian_snapshot, total=self.brownian_total, force=True)
+-
+-        # Create the visualisation script.
+-        subsection(file=sys.stdout, text=&quot;Creating a PyMOL visualisation 
+script.&quot;)
+-        script = open_write_file(file_name='pymol_display.py', 
+dir=model_directory(model, base_dir=self.results_dir), force=True)
+-
+-        # Add a comment for the user.
+-        script.write(&quot;# relax script for displaying the frame order results 
+of this '%s' model in PyMOL.\n\n&quot; % model)
+-
+-        # The script contents.
+-        script.write(&quot;# PyMOL visualisation.\n&quot;)
+-        script.write(&quot;pymol.frame_order()\n&quot;)
+-
+-        # Close the file.
+-        script.close()
+ 
+ 
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Sat Sep 27 17:40:02 2014</div>  
+</body>
+</html>

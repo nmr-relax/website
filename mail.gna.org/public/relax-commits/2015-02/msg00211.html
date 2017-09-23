@@ -1,0 +1,249 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r27646 &#45; in /branches/frame_order_cleanup: lib/frame_order/ specific_analyses/frame_order/ user_functions/ -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 16 Feb 2015 10:08:49 +0100 -->
+<!--X-Message-Id: E1YNHfd&#45;0000f4&#45;Mu@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r27646 - in /branches/frame_order_cleanup: lib/frame_order/ specific_analyses/frame_order/ user_functions/ -- February 16, 2015 - 10:08</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r27646 - in /branches/frame_order_cleanup: lib/frame_order/ specific_analyses/frame_order/ user_functions/</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00211" class="tabs">Index by Date</a> | <a href="threads.html#00211" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00210.html">Date Prev</a>] [<a href="msg00212.html">Date Next</a>] [<a href="msg00210.html">Thread Prev</a>] [<a href="msg00212.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 16 Feb 2015 09:08:49 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00211.html">E1YNHfd-0000f4-Mu@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on February 16, 2015 - 10:08:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Mon Feb 16 10:08:49 2015
+New Revision: 27646
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=27646&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=27646&amp;view=rev</a>
+Log:
+Introduced the max_rotations argument into the frame_order.distribute user 
+function.
+
+This is used to prevent the user function from running forever.  This happens 
+whenever a cone
+opening angle or torsion angle is zero, and hence the random sampling of the 
+rotational space will
+never find rotations within the motional distribution.
+
+
+Modified:
+    branches/frame_order_cleanup/lib/frame_order/simulation.py
+    branches/frame_order_cleanup/specific_analyses/frame_order/uf.py
+    branches/frame_order_cleanup/user_functions/frame_order.py
+
+Modified: branches/frame_order_cleanup/lib/frame_order/simulation.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/frame_order/simulation.py?rev=27646&amp;r1=27645&amp;r2=27646&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/frame_order/simulation.py?rev=27646&amp;r1=27645&amp;r2=27646&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/lib/frame_order/simulation.py  (original)
++++ branches/frame_order_cleanup/lib/frame_order/simulation.py  Mon Feb 16 
+10:08:49 2015
+@@ -211,7 +211,7 @@
+     structure.write_pdb(file=file)
+ 
+ 
+-def uniform_distribution(file=None, model=None, structure=None, 
+parameters={}, eigenframe=None, pivot=None, atom_id=None, total=1000):
++def uniform_distribution(file=None, model=None, structure=None, 
+parameters={}, eigenframe=None, pivot=None, atom_id=None, total=1000, 
+max_rotations=100000):
+     &quot;&quot;&quot;Uniform distribution of the frame order motions.
+ 
+     @keyword file:          The opened and writable file object to place the 
+PDB models of the distribution into.
+@@ -230,6 +230,8 @@
+     @type atom_id:          None or str
+     @keyword total:         The total number of states in the distribution.
+     @type total:            int
++    @keyword max_rotations: The maximum number of rotations to generate the 
+distribution from.  This prevents an execution for an infinite amount of time 
+when a frame order amplitude parameter is close to zero so that the subset of 
+all rotations within the distribution is close to zero.
++    @type max_rotations:    int
+     &quot;&quot;&quot;
+ 
+     # Check the structural object.
+@@ -287,9 +289,13 @@
+ 
+     # Distribution.
+     current_state = 1
++    num = -1
+     while True:
++        # The total number of rotations.
++        num += 1
++
+         # End.
+-        if current_state == total:
++        if current_state == total or num &gt;= max_rotations:
+             break
+ 
+         # Loop over each state, or motional mode.
+
+Modified: branches/frame_order_cleanup/specific_analyses/frame_order/uf.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/specific_analyses/frame_order/uf.py?rev=27646&amp;r1=27645&amp;r2=27646&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/specific_analyses/frame_order/uf.py?rev=27646&amp;r1=27645&amp;r2=27646&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/specific_analyses/frame_order/uf.py    
+(original)
++++ branches/frame_order_cleanup/specific_analyses/frame_order/uf.py    Mon 
+Feb 16 10:08:49 2015
+@@ -47,19 +47,21 @@
+ from specific_analyses.frame_order.parameters import assemble_param_vector, 
+update_model
+ 
+ 
+-def distribute(file=&quot;distribution.pdb.bz2&quot;, dir=None, total=1000, model=1, 
+force=True):
++def distribute(file=&quot;distribution.pdb.bz2&quot;, dir=None, total=1000, 
+max_rotations=100000, model=1, force=True):
+     &quot;&quot;&quot;Create a uniform distribution of structures for the frame order 
+motions.
+ 
+-    @keyword file:      The PDB file for storing the frame order motional 
+distribution.  The compression is determined automatically by the file 
+extensions '*.pdb', '*.pdb.gz', and '*.pdb.bz2'.
+-    @type file:         str
+-    @keyword dir:       The directory name to place the file into.
+-    @type dir:          str or None
+-    @keyword total:     The total number of states/model/structures in the 
+distribution.
+-    @type total:        int
+-    @keyword model:     Only one model from an analysed ensemble of 
+structures can be used for the distribution, as the corresponding PDB file 
+consists of one model per state.
+-    @type model:        int
+-    @keyword force:     A flag which, if set to True, will overwrite the any 
+pre-existing file.
+-    @type force:        bool
++    @keyword file:          The PDB file for storing the frame order 
+motional distribution.  The compression is determined automatically by the 
+file extensions '*.pdb', '*.pdb.gz', and '*.pdb.bz2'.
++    @type file:             str
++    @keyword dir:           The directory name to place the file into.
++    @type dir:              str or None
++    @keyword total:         The total number of states/model/structures in 
+the distribution.
++    @type total:            int
++    @keyword max_rotations: The maximum number of rotations to generate the 
+distribution from.  This prevents an execution for an infinite amount of time 
+when a frame order amplitude parameter is close to zero so that the subset of 
+all rotations within the distribution is close to zero.
++    @type max_rotations:    int
++    @keyword model:         Only one model from an analysed ensemble of 
+structures can be used for the distribution, as the corresponding PDB file 
+consists of one model per state.
++    @type model:            int
++    @keyword force:         A flag which, if set to True, will overwrite the 
+any pre-existing file.
++    @type force:            bool
+     &quot;&quot;&quot;
+ 
+     # Printout.
+@@ -108,7 +110,7 @@
+     frame = generate_axis_system()
+ 
+     # Create the distribution.
+-    uniform_distribution(file=file, model=cdp.model, structure=structure, 
+parameters=params, eigenframe=frame, pivot=pivot, atom_id=domain_moving(), 
+total=total)
++    uniform_distribution(file=file, model=cdp.model, structure=structure, 
+parameters=params, eigenframe=frame, pivot=pivot, atom_id=domain_moving(), 
+total=total, max_rotations=max_rotations)
+ 
+     # Close the file.
+     file.close()
+
+Modified: branches/frame_order_cleanup/user_functions/frame_order.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/user_functions/frame_order.py?rev=27646&amp;r1=27645&amp;r2=27646&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/user_functions/frame_order.py?rev=27646&amp;r1=27645&amp;r2=27646&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/user_functions/frame_order.py  (original)
++++ branches/frame_order_cleanup/user_functions/frame_order.py  Mon Feb 16 
+10:08:49 2015
+@@ -93,6 +93,16 @@
+     py_type = &quot;int&quot;,
+     desc_short = &quot;total number of structures&quot;,
+     desc = &quot;The total number of structures to include in the uniform 
+distribution.&quot;,
++    wiz_element_type = &quot;spin&quot;
++)
++uf.add_keyarg(
++    name = &quot;max_rotations&quot;,
++    default = 1000000,
++    min = 1,
++    max = 100000000,
++    py_type = &quot;int&quot;,
++    desc_short = &quot;maximum number of rotations&quot;,
++    desc = &quot;The maximum number of rotations to generate the distribution 
+from.  This prevents the user function from executing for an infinite amount 
+of time.  This occurs whenever a frame order amplitude parameter (cone 
+opening angle or torsion angle) is zero so that the subset of all rotations 
+within the motional distribution is also zero.&quot;,
+     wiz_element_type = &quot;spin&quot;
+ )
+ uf.add_keyarg(
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Feb 16 10:20:03 2015</div>  
+</body>
+</html>

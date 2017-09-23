@@ -1,0 +1,155 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r20667 &#45; /trunk/lib/spectrum/xeasy.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 21 Aug 2013 16:13:22 +0200 -->
+<!--X-Message-Id: E1VC9A2&#45;0005B6&#45;Tw@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r20667 - /trunk/lib/spectrum/xeasy.py -- August 21, 2013 - 16:13</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r20667 - /trunk/lib/spectrum/xeasy.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00184" class="tabs">Index by Date</a> | <a href="threads.html#00184" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00183.html">Date Prev</a>] [<a href="msg00185.html">Date Next</a>] [<a href="msg00183.html">Thread Prev</a>] [<a href="msg00185.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 21 Aug 2013 14:13:22 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00184.html">E1VC9A2-0005B6-Tw@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on August 21, 2013 - 16:13:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Aug 21 16:13:22 2013
+New Revision: 20667
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=20667&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=20667&amp;view=rev</a>
+Log:
+Implemented the reading of chemical shifts in the 
+lib.spectrum.xeasy.read_list() function.
+
+
+Modified:
+    trunk/lib/spectrum/xeasy.py
+
+Modified: trunk/lib/spectrum/xeasy.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/lib/spectrum/xeasy.py?rev=20667&amp;r1=20666&amp;r2=20667&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/lib/spectrum/xeasy.py?rev=20667&amp;r1=20666&amp;r2=20667&amp;view=diff</a>
+==============================================================================
+--- trunk/lib/spectrum/xeasy.py (original)
++++ trunk/lib/spectrum/xeasy.py Wed Aug 21 16:13:22 2013
+@@ -42,8 +42,10 @@
+     &quot;&quot;&quot;
+ 
+     # The hardcoded column positions (note that w1 and w2 are swapped!).
+-    w1_col = 7
+-    w2_col = 4
++    w1_col = 3
++    w2_col = 2
++    ass_w1_col = 7
++    ass_w2_col = 4
+     if int_col == None:
+         int_col = 10
+ 
+@@ -70,7 +72,7 @@
+     # Loop over the file data.
+     for line in file_data:
+         # Test for invalid assignment lines which have the column numbers 
+changed and return empty data.
+-        if line[w1_col] == 'inv.' or line[w2_col] == 'inv.':
++        if line[ass_w1_col] == 'inv.' or line[ass_w2_col] == 'inv.':
+             continue
+ 
+         # The residue number.
+@@ -80,14 +82,24 @@
+             raise RelaxError(&quot;Improperly formatted XEasy file, cannot read 
+the line %s.&quot; % line)
+ 
+         # Nuclei names.
+-        name1 = line[w1_col]
+-        name2 = line[w2_col]
++        name1 = line[ass_w1_col]
++        name2 = line[ass_w2_col]
++
++        # Chemical shifts.
++        try:
++            w1 = float(line[w1_col])
++        except ValueError:
++            raise RelaxError(&quot;The w1 chemical shift from the line %s is 
+invalid.&quot; % line)
++        try:
++            w2 = float(line[w2_col])
++        except ValueError:
++            raise RelaxError(&quot;The w2 chemical shift from the line %s is 
+invalid.&quot; % line)
+ 
+         # Intensity.
+         try:
+             intensity = float(line[int_col])
+         except ValueError:
+-            raise RelaxError(&quot;The peak intensity value %s from the line %s 
+is invalid.&quot; % (intensity, line))
++            raise RelaxError(&quot;The peak intensity value from the line %s is 
+invalid.&quot; % line)
+ 
+         # Add the assignment to the peak list object.
+-        peak_list.add(res_nums=[res_num, res_num], spin_names=[name1, 
+name2], intensity=intensity)
++        peak_list.add(res_nums=[res_num, res_num], spin_names=[name1, 
+name2], shifts=[w1, w2], intensity=intensity)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Aug 21 16:20:02 2013</div>  
+</body>
+</html>

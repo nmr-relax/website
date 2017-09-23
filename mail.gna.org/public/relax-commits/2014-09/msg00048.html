@@ -1,0 +1,199 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r25542 &#45; /branches/est_par_error/target_functions/chi2.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 02 Sep 2014 14:03:33 +0200 -->
+<!--X-Message-Id: E1XOmo9&#45;0000mg&#45;Qo@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r25542 - /branches/est_par_error/target_functions/chi2.py -- September 02, 2014 - 14:03</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r25542 - /branches/est_par_error/target_functions/chi2.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00048" class="tabs">Index by Date</a> | <a href="threads.html#00048" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00047.html">Date Prev</a>] [<a href="msg00049.html">Date Next</a>] [<a href="msg00047.html">Thread Prev</a>] [<a href="msg00049.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 02 Sep 2014 12:03:33 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00048.html">E1XOmo9-0000mg-Qo@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on September 02, 2014 - 14:03:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Tue Sep  2 14:03:33 2014
+New Revision: 25542
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=25542&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=25542&amp;view=rev</a>
+Log:
+Added function to target function to chi2, to try to compute the derivative 
+of the chi2 function.
+
+The function is in a test state, with several tests and looping.
+
+task #7824(<a  rel="nofollow" href="https://gna.org/task/index.php?7824">https://gna.org/task/index.php?7824</a>): Model parameter ERROR 
+estimation from Jacobian and Co-variance matrix of dispersion models.
+
+Modified:
+    branches/est_par_error/target_functions/chi2.py
+
+Modified: branches/est_par_error/target_functions/chi2.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/est_par_error/target_functions/chi2.py?rev=25542&amp;r1=25541&amp;r2=25542&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/est_par_error/target_functions/chi2.py?rev=25542&amp;r1=25541&amp;r2=25542&amp;view=diff</a>
+==============================================================================
+--- branches/est_par_error/target_functions/chi2.py     (original)
++++ branches/est_par_error/target_functions/chi2.py     Tue Sep  2 14:03:33 
+2014
+@@ -22,8 +22,10 @@
+ &quot;&quot;&quot;Module containing functions for calculating the chi-squared value, 
+gradient, and Hessian.&quot;&quot;&quot;
+ 
+ # Python module imports.
+-from numpy import dot, einsum, sum, transpose
+-
++from numpy import all, dot, einsum, sum, transpose, zeros
++
++# relax module imports.
++from lib.errors import RelaxError
+ 
+ # Chi-squared value.
+ ####################
+@@ -198,12 +200,68 @@
+     # NM: Number of spectrometer frequencies.
+     # NO: Maximum number of offsets.
+     # ND: Number of dispersion(data) points.
+-    NJ, NE, NS, NM, NO, ND = back_calc_grad.shape
+-
+-    # Calculate the chi-squared gradient.
+-    grad = -2.0 * einsum('...ij, ...jk', 1.0 / (errors**2) * (data - 
+back_calc_vals), back_calc_grad)
++    ND, NE, NS, NM, NO, NJ = back_calc_grad.shape
++
++    # Calculate the weighted residual
++    weighted_residual = 1.0 / (errors**2) * (data - back_calc_vals)
++
++    # Calculate the change in weighted_residual
++    collect_grad = []
++
++    for ei in range(NE):
++        for si in range(NS):
++            for mi in range(NM):
++                for oi in range(NO):
++                    # Get current Jacobian.
++                    cur_back_calc_grad = back_calc_grad[0:ND:1, ei, si, mi, 
+oi]
++
++                    # Transpose back, to get rows. Compare with above.
++                    test_back_calc_grad_t = transpose(cur_back_calc_grad)
++                    test_errors = errors[ei, si, mi, oi]
++                    test_data = data[ei, si, mi, oi]
++                    test_back_calc_vals = back_calc_vals[ei, si, mi, oi]
++                    test_weight_res = 1.0 / (test_errors**2) * (test_data - 
+test_back_calc_vals)
++                    test_dot = dot(test_weight_res, 
+transpose(test_back_calc_grad_t))
++                    test_grad = - 2.0 * test_dot
++
++                    # Define array to update parameters in.
++                    jacobian_chi2_minfx = zeros([NJ])
++
++                    # Update value elements.
++                    dchi2(dchi2=jacobian_chi2_minfx, M=NJ, data=test_data, 
+back_calc_vals=test_back_calc_vals, back_calc_grad=test_back_calc_grad_t, 
+errors=test_errors)
++
++                    # From current calc.
++                    cur_weighted_residual = weighted_residual[ei, si, mi, oi]
++                    weight_equal = test_weight_res == cur_weighted_residual
++                    if not all(weight_equal):
++                        raise RelaxError(&quot;There is something wrong with the 
+weight to the Jacobian.&quot;)
++
++                    # Einsum not working?
++                    #cur_dot = einsum('...ij, ...jk', cur_weighted_residual 
+, cur_back_calc_grad)
++                    cur_dot = dot(cur_weighted_residual, cur_back_calc_grad)
++                    cur_grad = - 2.0 * test_dot
++                    equal_grad = test_grad == cur_grad
++                    if not all(equal_grad):
++                        raise RelaxError(&quot;There is something wrong with the 
+gradient to the Jacobian.&quot;)
++
++                    equal_grad_func = jacobian_chi2_minfx == cur_grad
++                    if not all(equal_grad):
++                        raise RelaxError(&quot;There is something wrong with the 
+function gradient to the Jacobian.&quot;)
++
++                    # Collect all gradients to test them.
++                    collect_grad.append(cur_grad)
++
++    # Set the gradient to the first.
++    grad = collect_grad[0]
++
++    # Test they are all equal.
++    for grad_i in collect_grad:
++        equal_grad_i = grad == grad_i
++        if not all(equal_grad_i):
++            raise RelaxError(&quot;The returned gradient differ for the 
+Jacobian.&quot;)
+ 
+     return grad
++
+ 
+ def dchi2_element(data, back_calc_vals, back_calc_grad_j, errors):
+     &quot;&quot;&quot;Calculate the chi-squared gradient element j.
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Sep 02 14:20:03 2014</div>  
+</body>
+</html>

@@ -1,0 +1,191 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r23221 &#45; /branches/disp_speed/lib/dispersion/tp02.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 19 May 2014 01:19:03 +0200 -->
+<!--X-Message-Id: E1WmAMB&#45;0000rj&#45;0R@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r23221 - /branches/disp_speed/lib/dispersion/tp02.py -- May 19, 2014 - 01:19</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r23221 - /branches/disp_speed/lib/dispersion/tp02.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00324" class="tabs">Index by Date</a> | <a href="threads.html#00324" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00323.html">Date Prev</a>] [<a href="msg00325.html">Date Next</a>] [<a href="msg00323.html">Thread Prev</a>] [<a href="msg00325.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Sun, 18 May 2014 23:19:02 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00324.html">E1WmAMB-0000rj-0R@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on May 19, 2014 - 01:19:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Mon May 19 01:19:02 2014
+New Revision: 23221
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=23221&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=23221&amp;view=rev</a>
+Log:
+Speed-up of model TP02.
+
+task #7793: (<a  rel="nofollow" href="https://gna.org/task/?7793">https://gna.org/task/?7793</a>) Speed-up of dispersion models.
+
+The change for running systemtest is:
+test_curve_type_r1rho_fixed_time
+0.057s -&gt; 0.049s
+
+test_tp02_data_to_ns_r1rho_2site
+10.539s -&gt; 10.456s
+
+test_tp02_data_to_tp02
+8.608s -&gt; 5.727s
+
+This is won by not checking single values in the R1rho array for math domain
+errors, but calculating all steps, and in one single round check for finite 
+values.
+If just one non-finite value is found, the whole array is returned with a 
+large
+penalty of 1e100.
+
+This makes all calculations be the fastest numpy array way.
+
+Modified:
+    branches/disp_speed/lib/dispersion/tp02.py
+
+Modified: branches/disp_speed/lib/dispersion/tp02.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/disp_speed/lib/dispersion/tp02.py?rev=23221&amp;r1=23220&amp;r2=23221&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/disp_speed/lib/dispersion/tp02.py?rev=23221&amp;r1=23220&amp;r2=23221&amp;view=diff</a>
+==============================================================================
+--- branches/disp_speed/lib/dispersion/tp02.py  (original)
++++ branches/disp_speed/lib/dispersion/tp02.py  Mon May 19 01:19:02 2014
+@@ -60,7 +60,7 @@
+ &quot;&quot;&quot;
+ 
+ # Python module imports.
+-from math import atan2, sin
++from numpy import arctan2, isfinite, sin, sum
+ 
+ 
+ def r1rho_TP02(r1rho_prime=None, omega=None, offset=None, pA=None, pB=None, 
+dw=None, kex=None, R1=0.0, spin_lock_fields=None, spin_lock_fields2=None, 
+back_calc=None, num_points=None):
+@@ -110,34 +110,31 @@
+     # The numerator.
+     numer = pA * pB * dw**2 * kex
+ 
+-    # Loop over the dispersion points, back calculating the R1rho values.
++    # We assume that A resonates at 0 [s^-1], without loss of generality.
++    waeff2 = spin_lock_fields2 + da2       # Effective field at A.
++    wbeff2 = spin_lock_fields2 + db2       # Effective field at B.
++    weff2 = spin_lock_fields2 + d2         # Effective field at pop-average.
++
++    # The rotating frame flip angle.
++    theta = arctan2(spin_lock_fields, d)
++
++    # Repetitive calculations (to speed up calculations).
++    sin_theta2 = sin(theta)**2
++    R1_cos_theta2 = R1 * (1.0 - sin_theta2)
++    R1rho_prime_sin_theta2 = r1rho_prime * sin_theta2
++
++    # Denominator.
++    denom = waeff2 * wbeff2 / weff2 + kex2
++    #denom_extended = waeff2*wbeff2/weff2+kex2-2*sin_theta2*pA*pB*dw**2
++ 
++    # R1rho calculation.
++    R1rho = R1_cos_theta2 + R1rho_prime_sin_theta2 + sin_theta2 * numer / 
+denom
++
++    # Catch errors, taking a sum over array is the fastest way to check for
++    # +/- inf (infinity) and nan (not a number).
++    if not isfinite(sum(R1rho)):
++        R1rho = array([1e100]*num_points)
++
++    # Parse back the value to update the back_calc class object.
+     for i in range(num_points):
+-        # We assume that A resonates at 0 [s^-1], without loss of generality.
+-        waeff2 = spin_lock_fields2[i] + da2       # Effective field at A.
+-        wbeff2 = spin_lock_fields2[i] + db2       # Effective field at B.
+-        weff2 = spin_lock_fields2[i] + d2         # Effective field at 
+pop-average.
+-
+-        # The rotating frame flip angle.
+-        theta = atan2(spin_lock_fields[i], d)
+-
+-        # Repetitive calculations (to speed up calculations).
+-        sin_theta2 = sin(theta)**2
+-        R1_cos_theta2 = R1 * (1.0 - sin_theta2)
+-        R1rho_prime_sin_theta2 = r1rho_prime * sin_theta2
+-
+-        # Catch zeros (to avoid pointless mathematical operations).
+-        if numer == 0.0:
+-            back_calc[i] = R1_cos_theta2 + R1rho_prime_sin_theta2
+-            continue
+-
+-        # Denominator.
+-        denom = waeff2 * wbeff2 / weff2 + kex2
+-        #denom_extended = waeff2*wbeff2/weff2+kex2-2*sin_theta2*pA*pB*dw**2
+- 
+-        # Avoid divide by zero.
+-        if denom == 0.0:
+-            back_calc[i] = 1e100
+-            continue
+-
+-        # R1rho calculation.
+-        back_calc[i] = R1_cos_theta2 + R1rho_prime_sin_theta2 + sin_theta2 * 
+numer / denom
++        back_calc[i] = R1rho[i]
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon May 19 03:40:02 2014</div>  
+</body>
+</html>

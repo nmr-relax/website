@@ -1,0 +1,202 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r15408 &#45; in /1.3: multi/__init__.py relax.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 29 Feb 2012 13:54:29 +0100 -->
+<!--X-Message-Id: E1S2j37&#45;00050V&#45;Av@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r15408 - in /1.3: multi/__init__.py relax.py -- February 29, 2012 - 13:54</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r15408 - in /1.3: multi/__init__.py relax.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00123" class="tabs">Index by Date</a> | <a href="threads.html#00123" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00122.html">Date Prev</a>] [<a href="msg00124.html">Date Next</a>] [<a href="msg00122.html">Thread Prev</a>] [<a href="msg00124.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 29 Feb 2012 12:54:29 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00123.html">E1S2j37-00050V-Av@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on February 29, 2012 - 13:54:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Feb 29 13:54:29 2012
+New Revision: 15408
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=15408&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=15408&amp;view=rev</a>
+Log:
+Shifted the Application_callback class into the multi.__init__ module to 
+shift it into the API.
+
+The __init__ module now hopefully contains the entirety of the public 
+interface or API of the
+multi-processor package.  This should simplify the interaction of the package 
+with the importing
+program.
+
+
+Modified:
+    1.3/multi/__init__.py
+    1.3/relax.py
+
+Modified: 1.3/multi/__init__.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/multi/__init__.py?rev=15408&amp;r1=15407&amp;r2=15408&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/multi/__init__.py?rev=15408&amp;r1=15407&amp;r2=15408&amp;view=diff</a>
+==============================================================================
+--- 1.3/multi/__init__.py (original)
++++ 1.3/multi/__init__.py Wed Feb 29 13:54:29 2012
+@@ -120,6 +120,68 @@
+ 
+ 
+ 
++class Application_callback(object):
++    '''Call backs provided to the host application by the multi processor 
+framework.
++
++    This class allows for independence from the host class/application.
++
++    @note:  B{The logic behind the design} the callbacks are defined as two 
+attributes
++            self.init_master and self.handle_exception as handle_exception 
+can be null (which is
++            used to request the use of the processors default error handling 
+code). Note, however,
++            that a class with the equivalent methods would also works as 
+python effectively handles
++            methods as attributes of a class. The signatures for the 
+callback methods are documented
++            by the default methods default_init_master &amp; 
+default_handle_exception.
++    '''
++
++    def __init__(self, master):
++        '''Initialise the callback interface.
++
++        @param master:  The data for the host application. In the default 
+implementation this is an
++                        object we call methods on but it could be anything...
++        @type master:   object
++        '''
++
++        self.master = master
++        '''The host application.'''
++
++        self.init_master = self.default_init_master
++        self.handle_exception = self.default_handle_exception
++
++
++    def default_handle_exception(self, processor, exception):
++        '''Handle an exception raised in the processor framework.
++
++        The function is responsible for aborting the processor by calling 
+processor.abort() as its
++        final act.
++
++        @param processor:   The processor instance.
++        @type processor:    multi.processor.Processor instance
++        @param exception:   The exception raised by the processor or slave 
+processor. In the case of
++                            a slave processor exception this may well be a 
+wrapped exception of type
++                            multi.processor.Capturing_exception which was 
+raised at the point the
++                            exception was received on the master processor 
+but contains an enclosed
++                            exception from a slave.
++        @type exception:    Exception instance
++        '''
++
++        # Print the traceback.
++        traceback.print_exc(file=sys.stderr)
++
++        # Stop the processor.
++        processor.abort()
++
++
++    def default_init_master(self, processor):
++        '''Start the main loop of the host application.
++
++        @param processor:   The processor instance.
++        @type processor:    multi.processor.Processor instance
++        '''
++
++        self.master.run()
++
++
++
+ class Processor_box(object):
+     &quot;&quot;&quot;A storage class for the Processor instance and its attributes.
+ 
+
+Modified: 1.3/relax.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/relax.py?rev=15408&amp;r1=15407&amp;r2=15408&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/relax.py?rev=15408&amp;r1=15407&amp;r2=15408&amp;view=diff</a>
+==============================================================================
+--- 1.3/relax.py (original)
++++ 1.3/relax.py Wed Feb 29 13:54:29 2012
+@@ -54,8 +54,7 @@
+ import generic_fns
+ if dep_check.wx_module:
+     import gui
+-from multi import load_multiprocessor
+-from multi.processor import Application_callback
++from multi import Application_callback, load_multiprocessor
+ from prompt.gpl import gpl
+ from prompt import interpreter
+ import relax_errors
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Feb 29 15:00:02 2012</div>  
+</body>
+</html>

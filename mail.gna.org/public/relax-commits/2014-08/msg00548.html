@@ -1,0 +1,305 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r25414 &#45; in /trunk/target_functions: c_chi2.c c_chi2.h relax_fit.c relax_fit.h -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 29 Aug 2014 09:16:52 +0200 -->
+<!--X-Message-Id: E1XNGQV&#45;0006FW&#45;VY@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r25414 - in /trunk/target_functions: c_chi2.c c_chi2.h relax_fit.c relax_fit.h -- August 29, 2014 - 09:16</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r25414 - in /trunk/target_functions: c_chi2.c c_chi2.h relax_fit.c relax_fit.h</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00548" class="tabs">Index by Date</a> | <a href="threads.html#00548" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00547.html">Date Prev</a>] [<a href="msg00549.html">Date Next</a>] [<a href="msg00547.html">Thread Prev</a>] [<a href="msg00549.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 29 Aug 2014 07:16:51 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00548.html">E1XNGQV-0006FW-VY@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on August 29, 2014 - 09:16:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Aug 29 09:16:51 2014
+New Revision: 25414
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=25414&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=25414&amp;view=rev</a>
+Log:
+Speed up of the target_functions.relax_fit C module.
+
+The variances are now precalculated in the setup() function from the errors, 
+so that the use of the
+square() function is minimised.  The chi-squared equation, gradient, and 
+Hessian functions now
+accept the variance rather than standard deviation argument and hence the 
+squaring of errors has
+been removed.  This avoids a lot of duplicated maths operations.
+
+
+Modified:
+    trunk/target_functions/c_chi2.c
+    trunk/target_functions/c_chi2.h
+    trunk/target_functions/relax_fit.c
+    trunk/target_functions/relax_fit.h
+
+Modified: trunk/target_functions/c_chi2.c
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/target_functions/c_chi2.c?rev=25414&amp;r1=25413&amp;r2=25414&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/target_functions/c_chi2.c?rev=25414&amp;r1=25413&amp;r2=25414&amp;view=diff</a>
+==============================================================================
+--- trunk/target_functions/c_chi2.c     (original)
++++ trunk/target_functions/c_chi2.c     Fri Aug 29 09:16:51 2014
+@@ -21,7 +21,7 @@
+ #include &quot;c_chi2.h&quot;
+ 
+ 
+-double chi2(double values[MAX_DATA], double sd[MAX_DATA], double 
+back_calc[MAX_DATA], int num_times) {
++double chi2(double values[MAX_DATA], double variance[MAX_DATA], double 
+back_calc[MAX_DATA], int num_times) {
+     /* Function to calculate the chi-squared value.
+ 
+     The chi-sqared equation
+@@ -50,14 +50,14 @@
+ 
+     /* Loop over the time points and sum the chi-squared components. */
+     for (i = 0; i &lt; num_times; ++i) {
+-        chi2 = chi2 + square((values[i] - back_calc[i]) / sd[i]);
++        chi2 = chi2 + square(values[i] - back_calc[i]) / variance[i];
+     }
+ 
+     return chi2;
+ }
+ 
+ 
+-void dchi2(double dchi2[MAX_PARAMS], double data[MAX_DATA], double 
+back_calc_vals[MAX_DATA], double back_calc_grad[MAX_PARAMS][MAX_DATA], double 
+errors[MAX_DATA], int num_points, int num_params) {
++void dchi2(double dchi2[MAX_PARAMS], double data[MAX_DATA], double 
+back_calc_vals[MAX_DATA], double back_calc_grad[MAX_PARAMS][MAX_DATA], double 
+variance[MAX_DATA], int num_points, int num_params) {
+     /* Calculate the full chi-squared gradient.
+ 
+     The chi-squared gradient
+@@ -90,8 +90,8 @@
+     @type back_calc_vals:   numpy rank-1 size N array
+     @param back_calc_grad:  The matrix of dyi(theta)/dtheta values.
+     @type back_calc_grad:   numpy rank-2 size MxN array
+-    @param errors:          The vector of sigma_i values.
+-    @type errors:           numpy rank-1 size N array
++    @param variance:        The vector of sigma_i values squared.
++    @type variance:         numpy rank-1 size N array
+     @param num_points:      The number of data points to sum over.
+     @type num_points:       int
+     @param num_params:      The dimensions of the gradient.
+@@ -105,13 +105,13 @@
+     for (j = 0; j &lt; num_params; ++j) {
+         dchi2[j] = 0.0;
+         for (i = 0; i &lt; num_points; ++i) {
+-            dchi2[j] += -2.0 / square(errors[i]) * (data[i] - 
+back_calc_vals[i]) * back_calc_grad[j][i];
++            dchi2[j] += -2.0 / variance[i] * (data[i] - back_calc_vals[i]) * 
+back_calc_grad[j][i];
+         }
+     }
+ }
+ 
+ 
+-void d2chi2(double d2chi2[MAX_PARAMS][MAX_PARAMS], double data[MAX_DATA], 
+double back_calc_vals[MAX_DATA], double back_calc_grad[MAX_PARAMS][MAX_DATA], 
+double back_calc_hess[MAX_PARAMS][MAX_PARAMS][MAX_DATA], double 
+errors[MAX_DATA], int num_points, int num_params) {
++void d2chi2(double d2chi2[MAX_PARAMS][MAX_PARAMS], double data[MAX_DATA], 
+double back_calc_vals[MAX_DATA], double back_calc_grad[MAX_PARAMS][MAX_DATA], 
+double back_calc_hess[MAX_PARAMS][MAX_PARAMS][MAX_DATA], double 
+variance[MAX_DATA], int num_points, int num_params) {
+     /* Calculate the full chi-squared Hessian.
+ 
+     The chi-squared Hessian
+@@ -148,8 +148,8 @@
+     @type back_calc_grad:       numpy rank-2 size MxN array
+     @param back_calc_hess:      The matrix of d2yi(theta)/dtheta.dtheta 
+values.
+     @type back_calc_hess:       numpy rank-3 size MxMxN array
+-    @param errors:              The vector of sigma_i values.
+-    @type errors:               numpy rank-1 size N array
++    @param variance:            The vector of sigma_i values squared.
++    @type variance:             numpy rank-1 size N array
+     @param num_points:          The number of data points to sum over.
+     @type num_points:           int
+     @param num_params:          The dimensions of the Hessian.
+@@ -164,7 +164,7 @@
+         for (k = 0; k &lt; num_params; ++k) {
+             d2chi2[j][k] = 0.0;
+             for (i = 0; i &lt; num_points; ++i) {
+-                d2chi2[j][k] += 2.0 / square(errors[i]) * 
+(back_calc_grad[j][i] * back_calc_grad[k][i] - (data[i] - back_calc_vals[i]) 
+* back_calc_hess[j][k][i]);
++                d2chi2[j][k] += 2.0 / variance[i] * (back_calc_grad[j][i] * 
+back_calc_grad[k][i] - (data[i] - back_calc_vals[i]) * 
+back_calc_hess[j][k][i]);
+             }
+         }
+     }
+
+Modified: trunk/target_functions/c_chi2.h
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/target_functions/c_chi2.h?rev=25414&amp;r1=25413&amp;r2=25414&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/target_functions/c_chi2.h?rev=25414&amp;r1=25413&amp;r2=25414&amp;view=diff</a>
+==============================================================================
+--- trunk/target_functions/c_chi2.h     (original)
++++ trunk/target_functions/c_chi2.h     Fri Aug 29 09:16:51 2014
+@@ -26,9 +26,9 @@
+ #define RELAX_C_CHI2
+ 
+ /* Define all of the functions. */
+-double chi2(double values[MAX_DATA], double sd[MAX_DATA], double 
+back_calc[MAX_DATA], int num_times);
+-void dchi2(double dchi2[MAX_PARAMS], double data[MAX_DATA], double 
+back_calc_vals[MAX_DATA], double back_calc_grad[MAX_PARAMS][MAX_DATA], double 
+errors[MAX_DATA], int num_times, int M);
+-void d2chi2(double d2chi2[MAX_PARAMS][MAX_PARAMS], double data[MAX_DATA], 
+double back_calc_vals[MAX_DATA], double back_calc_grad[MAX_PARAMS][MAX_DATA], 
+double back_calc_hess[MAX_PARAMS][MAX_PARAMS][MAX_DATA], double 
+errors[MAX_DATA], int num_times, int M);
++double chi2(double values[MAX_DATA], double variance[MAX_DATA], double 
+back_calc[MAX_DATA], int num_times);
++void dchi2(double dchi2[MAX_PARAMS], double data[MAX_DATA], double 
+back_calc_vals[MAX_DATA], double back_calc_grad[MAX_PARAMS][MAX_DATA], double 
+variance[MAX_DATA], int num_times, int M);
++void d2chi2(double d2chi2[MAX_PARAMS][MAX_PARAMS], double data[MAX_DATA], 
+double back_calc_vals[MAX_DATA], double back_calc_grad[MAX_PARAMS][MAX_DATA], 
+double back_calc_hess[MAX_PARAMS][MAX_PARAMS][MAX_DATA], double 
+variance[MAX_DATA], int num_times, int M);
+ 
+ /* Define the function for calculating the square of a number. */
+ #define square(x) ((x)*(x))
+
+Modified: trunk/target_functions/relax_fit.c
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/target_functions/relax_fit.c?rev=25414&amp;r1=25413&amp;r2=25414&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/target_functions/relax_fit.c?rev=25414&amp;r1=25413&amp;r2=25414&amp;view=diff</a>
+==============================================================================
+--- trunk/target_functions/relax_fit.c  (original)
++++ trunk/target_functions/relax_fit.c  Fri Aug 29 09:16:51 2014
+@@ -66,6 +66,9 @@
+         sd[i] = PyFloat_AsDouble(element);
+         Py_CLEAR(element);
+ 
++        /* Convert the errors to variances to avoid duplicated maths 
+operations for faster calculations. */
++        variance[i] = square(sd[i]);
++
+         /* The relax_times argument element. */
+         element = PySequence_GetItem(relax_times_arg, i);
+         relax_times[i] = PyFloat_AsDouble(element);
+@@ -120,7 +123,7 @@
+     exponential(params[index_I0], params[index_R], relax_times, back_calc, 
+num_times);
+ 
+     /* Calculate and return the chi-squared value. */
+-    return PyFloat_FromDouble(chi2(values, sd, back_calc, num_times));
++    return PyFloat_FromDouble(chi2(values, variance, back_calc, num_times));
+ }
+ 
+ 
+@@ -150,7 +153,7 @@
+     exponential_dI0(params[index_I0], params[index_R], index_I0, 
+relax_times, back_calc_grad, num_times);
+ 
+     /* The chi-squared gradient. */
+-    dchi2(dchi2_vals, values, back_calc, back_calc_grad, sd, num_times, 
+num_params);
++    dchi2(dchi2_vals, values, back_calc, back_calc_grad, variance, 
+num_times, num_params);
+ 
+     /* Convert to a Python list, and scale the values. */
+     list = PyList_New(0);
+@@ -194,7 +197,7 @@
+     exponential_dR_dI0(params[index_I0], params[index_R], index_R, index_I0, 
+relax_times, back_calc_hess, num_times);
+ 
+     /* The chi-squared Hessian. */
+-    d2chi2(d2chi2_vals, values, back_calc, back_calc_grad, back_calc_hess, 
+sd, num_times, num_params);
++    d2chi2(d2chi2_vals, values, back_calc, back_calc_grad, back_calc_hess, 
+variance, num_times, num_params);
+ 
+     /* Convert to a Python list, and scale the values. */
+     list = PyList_New(0);
+@@ -276,7 +279,7 @@
+     /* Assemble the chi-squared Jacobian. */
+     for (j = 0; j &lt; num_params; ++j) {
+         for (i = 0; i &lt; num_times; ++i) {
+-            jacobian_matrix[j][i] = -2.0 / square(sd[i]) * (values[i] - 
+back_calc[i]) * back_calc_grad[j][i];
++            jacobian_matrix[j][i] = -2.0 / variance[i] * (values[i] - 
+back_calc[i]) * back_calc_grad[j][i];
+         }
+     }
+ 
+
+Modified: trunk/target_functions/relax_fit.h
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/target_functions/relax_fit.h?rev=25414&amp;r1=25413&amp;r2=25414&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/target_functions/relax_fit.h?rev=25414&amp;r1=25413&amp;r2=25414&amp;view=diff</a>
+==============================================================================
+--- trunk/target_functions/relax_fit.h  (original)
++++ trunk/target_functions/relax_fit.h  Fri Aug 29 09:16:51 2014
+@@ -53,3 +53,4 @@
+ static double sd[MAX_DATA];
+ static double relax_times[MAX_DATA];
+ static double scaling_matrix[MAX_PARAMS];
++static double variance[MAX_DATA];
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Aug 29 09:20:02 2014</div>  
+</body>
+</html>

@@ -1,0 +1,239 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r23974 &#45; in /branches/frame_order_cleanup: lib/frame_order/double_rotor.py target_functions/frame_order.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 16 Jun 2014 11:49:11 +0200 -->
+<!--X-Message-Id: E1WwTXL&#45;0008TR&#45;59@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r23974 - in /branches/frame_order_cleanup: lib/frame_order/double_rotor.py target_functions/frame_order.py -- June 16, 2014 - 11:49</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r23974 - in /branches/frame_order_cleanup: lib/frame_order/double_rotor.py target_functions/frame_order.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00361" class="tabs">Index by Date</a> | <a href="threads.html#00361" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00360.html">Date Prev</a>] [<a href="msg00362.html">Date Next</a>] [<a href="msg00360.html">Thread Prev</a>] [<a href="msg00362.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 16 Jun 2014 09:49:11 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00361.html">E1WwTXL-0008TR-59@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on June 16, 2014 - 11:49:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Mon Jun 16 11:49:10 2014
+New Revision: 23974
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=23974&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=23974&amp;view=rev</a>
+Log:
+Updated the double rotor frame order model to be in a pseudo-functional state.
+
+Bugs in the target function method have been removed, the calc_vectors() 
+target function now accepts
+the pivot2 argument (but does nothing with it yet), and the 
+lib.frame_order.double_rotor module has
+been updated to match the logic used in all other lib.frame_order modules.
+
+
+Modified:
+    branches/frame_order_cleanup/lib/frame_order/double_rotor.py
+    branches/frame_order_cleanup/target_functions/frame_order.py
+
+Modified: branches/frame_order_cleanup/lib/frame_order/double_rotor.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/frame_order/double_rotor.py?rev=23974&amp;r1=23973&amp;r2=23974&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/frame_order/double_rotor.py?rev=23974&amp;r1=23973&amp;r2=23974&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/lib/frame_order/double_rotor.py        
+(original)
++++ branches/frame_order_cleanup/lib/frame_order/double_rotor.py        Mon 
+Jun 16 11:49:10 2014
+@@ -24,7 +24,8 @@
+ 
+ # Python module imports.
+ from math import pi, sqrt
+-from numpy import divide, dot, inner, multiply, sinc, transpose
++from numpy import divide, dot, inner, multiply, sinc, swapaxes, tensordot, 
+transpose
++from numpy.linalg import norm
+ 
+ # relax module imports.
+ from lib.frame_order.matrix_ops import rotate_daeg
+@@ -147,7 +148,7 @@
+         divide(pcs_theta, float(num), pcs_theta)
+ 
+ 
+-def pcs_pivot_motion_double_rotor(full_in_ref_frame=None, r_pivot_atom=None, 
+r_pivot_atom_rev=None, r_ln_pivot=None, A=None, R_eigen=None, RT_eigen=None, 
+Ri_prime=None, pcs_theta=None, pcs_theta_err=None, missing_pcs=None):
++def pcs_pivot_motion_double_rotor(full_in_ref_frame=None, r_pivot_atom=None, 
+r_pivot_atom_rev=None, r_ln_pivot=None, A=None, Ri=None, pcs_theta=None, 
+pcs_theta_err=None, missing_pcs=None):
+     &quot;&quot;&quot;Calculate the PCS value after a pivoted motion for the double rotor 
+model.
+ 
+     @keyword full_in_ref_frame: An array of flags specifying if the tensor 
+in the reference frame is the full or reduced tensor.
+@@ -160,12 +161,8 @@
+     @type r_ln_pivot:           numpy rank-2, 3D array
+     @keyword A:                 The full alignment tensor of the non-moving 
+domain.
+     @type A:                    numpy rank-2, 3D array
+-    @keyword R_eigen:           The eigenframe rotation matrix.
+-    @type R_eigen:              numpy rank-2, 3D array
+-    @keyword RT_eigen:          The transpose of the eigenframe rotation 
+matrix (for faster calculations).
+-    @type RT_eigen:             numpy rank-2, 3D array
+-    @keyword Ri_prime:          The pre-calculated rotation matrix for the 
+in-frame double rotor motion for state i.
+-    @type Ri_prime:             numpy rank-2, 3D array
++    @keyword Ri:                The frame-shifted, pre-calculated rotation 
+matrix for state i.
++    @type Ri:                   numpy rank-2, 3D array
+     @keyword pcs_theta:         The storage structure for the 
+back-calculated PCS values.
+     @type pcs_theta:            numpy rank-2 array
+     @keyword pcs_theta_err:     The storage structure for the 
+back-calculated PCS errors.
+@@ -174,19 +171,16 @@
+     @type missing_pcs:          numpy rank-2 array
+     &quot;&quot;&quot;
+ 
+-    # The rotation.
+-    R_i = dot(R_eigen, dot(Ri_prime, RT_eigen))
++    # Pre-calculate all the new vectors (forwards and reverse).
++    rot_vect_rev = dot(r_pivot_atom_rev, Ri) + r_ln_pivot
++    rot_vect = dot(r_pivot_atom, Ri) + r_ln_pivot
+ 
+-    # Pre-calculate all the new vectors (forwards and reverse).
+-    rot_vect_rev = transpose(dot(R_i, r_pivot_atom_rev) + r_ln_pivot)
+-    rot_vect = transpose(dot(R_i, r_pivot_atom) + r_ln_pivot)
++    # The vector length (to the 5th power).
++    length_rev = 1.0 / norm(rot_vect_rev, axis=1)**5
++    length = 1.0 / norm(rot_vect, axis=1)**5
+ 
+     # Loop over the atoms.
+-    for j in range(len(r_pivot_atom[0])):
+-        # The vector length (to the 5th power).
+-        length_rev = 1.0 / sqrt(inner(rot_vect_rev[j], rot_vect_rev[j]))**5
+-        length = 1.0 / sqrt(inner(rot_vect[j], rot_vect[j]))**5
+-
++    for j in range(len(r_pivot_atom[:, 0])):
+         # Loop over the alignments.
+         for i in range(len(pcs_theta)):
+             # Skip missing data.
+@@ -196,10 +190,10 @@
+             # The projection.
+             if full_in_ref_frame[i]:
+                 proj = dot(rot_vect[j], dot(A[i], rot_vect[j]))
+-                length_i = length
++                length_i = length[j]
+             else:
+                 proj = dot(rot_vect_rev[j], dot(A[i], rot_vect_rev[j]))
+-                length_i = length_rev
++                length_i = length_rev[j]
+ 
+             # The PCS.
+             pcs_theta[i, j] += proj * length_i
+
+Modified: branches/frame_order_cleanup/target_functions/frame_order.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/target_functions/frame_order.py?rev=23974&amp;r1=23973&amp;r2=23974&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/target_functions/frame_order.py?rev=23974&amp;r1=23973&amp;r2=23974&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/target_functions/frame_order.py        
+(original)
++++ branches/frame_order_cleanup/target_functions/frame_order.py        Mon 
+Jun 16 11:49:10 2014
+@@ -431,7 +431,7 @@
+         # PCS via numerical integration.
+         if self.pcs_flag:
+             # Numerical integration of the PCSs.
+-            pcs_numeric_int_double_rotor(points=self.sobol_angles, 
+sigma_max=sigma_max, sigma_max_2=sigma_max_2, c=self.pcs_const, 
+full_in_ref_frame=self.full_in_ref_frame, r_pivot_atom=self.r_pivot_atom, 
+r_pivot_atom_rev=self.r_pivot_atom_rev, r_ln_pivot=self.r_ln_pivot, 
+A=self.A_3D, R_eigen=R_eigen_full, RT_eigen=RT_eigen, Ri_prime=self.Ri_prime, 
+pcs_theta=self.pcs_theta, pcs_theta_err=self.pcs_theta_err, 
+missing_pcs=self.missing_pcs)
++            pcs_numeric_int_double_rotor(points=self.sobol_angles, 
+sigma_max=sigma_max, sigma_max_2=sigma_max_2, c=self.pcs_const, 
+full_in_ref_frame=self.full_in_ref_frame, r_pivot_atom=self.r_pivot_atom, 
+r_pivot_atom_rev=self.r_pivot_atom_rev, r_ln_pivot=self.r_ln_pivot, 
+A=self.A_3D, R_eigen=self.R_eigen, RT_eigen=RT_eigen, Ri_prime=self.Ri_prime, 
+pcs_theta=self.pcs_theta, pcs_theta_err=self.pcs_theta_err, 
+missing_pcs=self.missing_pcs)
+ 
+             # Calculate and sum the single alignment chi-squared value (for 
+the PCS).
+             for align_index in range(self.num_align):
+@@ -1132,11 +1132,13 @@
+         return chi2_sum
+ 
+ 
+-    def calc_vectors(self, pivot=None, R_ave=None, RT_ave=None):
++    def calc_vectors(self, pivot=None, pivot2=None, R_ave=None, RT_ave=None):
+         &quot;&quot;&quot;Calculate the pivot to atom and lanthanide to pivot vectors for 
+the target functions.
+ 
+         @keyword pivot:     The pivot point.
+         @type pivot:        numpy rank-1, 3D array
++        @keyword pivot2:    The 2nd pivot point.
++        @type pivot2:       numpy rank-1, 3D array
+         @keyword R_ave:     The rotation matrix for rotating from the 
+reference frame to the average position.
+         @type R_ave:        numpy rank-2, 3D array
+         @keyword RT_ave:    The transpose of R_ave.
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Jun 16 12:20:02 2014</div>  
+</body>
+</html>

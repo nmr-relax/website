@@ -1,0 +1,378 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r20580 &#45; /trunk/devel_scripts/python_seek.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 13 Aug 2013 14:42:28 +0200 -->
+<!--X-Message-Id: E1V9Dvg&#45;0000k5&#45;EE@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r20580 - /trunk/devel_scripts/python_seek.py -- August 13, 2013 - 14:42</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r20580 - /trunk/devel_scripts/python_seek.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00097" class="tabs">Index by Date</a> | <a href="threads.html#00097" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00096.html">Date Prev</a>] [<a href="msg00098.html">Date Next</a>] [<a href="msg00096.html">Thread Prev</a>] [<a href="msg00098.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 13 Aug 2013 12:42:28 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00097.html">E1V9Dvg-0000k5-EE@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on August 13, 2013 - 14:42:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Aug 13 14:42:28 2013
+New Revision: 20580
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=20580&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=20580&amp;view=rev</a>
+Log:
+Added a special script for locating all Python versions and printing out the 
+installed modules.
+
+
+Added:
+    trunk/devel_scripts/python_seek.py   (with props)
+
+Added: trunk/devel_scripts/python_seek.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/devel_scripts/python_seek.py?rev=20580&amp;view=auto">http://svn.gna.org/viewcvs/relax/trunk/devel_scripts/python_seek.py?rev=20580&amp;view=auto</a>
+==============================================================================
+--- trunk/devel_scripts/python_seek.py (added)
++++ trunk/devel_scripts/python_seek.py Tue Aug 13 14:42:28 2013
+@@ -1,0 +1,273 @@
++#! /usr/bin/env python
++
++# Script for finding all Python binaries on the system and to print out 
+various package versions.
++# This requires access to a shell and the locate, grep, and other programs.
++
++
++# Python module imports.
++from os import X_OK, access, system
++from os.path import isfile, islink
++from subprocess import PIPE, Popen
++import sys
++
++
++class Python_info:
++    &quot;&quot;&quot;Find all Python versions and the supported modules.&quot;&quot;&quot;
++
++    def __init__(self, format=&quot;    %-10s %-20s&quot;, debug=False):
++        &quot;&quot;&quot;Set up and run.&quot;&quot;&quot;
++
++        # Store the args.
++        self.format = format
++        self.debug = debug
++
++        # Get a list of all Python binaries.
++        files = self.get_files()
++
++        # Loop over the binaries.
++        for file in files:
++            # Printout.
++            print(&quot;Testing %s:&quot; % file)
++
++            # Determine and print out the version info.
++            self.version_python(file)
++            self.version_minfx(file)
++            self.version_bmrblib(file)
++            self.version_numpy(file)
++            self.version_scipy(file)
++            self.version_wx(file)
++            self.version_mpi4py(file)
++            self.version_epydoc(file)
++
++
++    def execute(self, label=None, file=None, commands=None):
++        &quot;&quot;&quot;Execute Python in a pipe.&quot;&quot;&quot;
++
++        # Execute the Python binary.
++        python = Popen(file, shell=True, stdin=PIPE, stdout=PIPE, 
+stderr=PIPE, close_fds=False)
++
++        # Execute.
++        for command in commands:
++            python.stdin.write(command)
++
++        # Close the pipe.
++        python.stdin.close()
++
++        # Write to stdout.
++        line = None
++        for line in python.stdout.readlines():
++            # Decode Python 3 byte arrays.
++            if hasattr(line, 'decode'):
++                line = line.decode()
++
++        # Store the last line as the version
++        if line:
++            version = line[:-1]
++        else:
++            version = None
++
++        # Write to stderr.
++        if self.debug:
++            for line in python.stderr.readlines():
++                # Decode Python 3 byte arrays.
++                if hasattr(line, 'decode'):
++                    line = line.decode()
++
++                # Write.
++                sys.stderr.write(line)
++
++        # Write the version info.
++        print(self.format % (label, version))
++
++
++    def get_files(self):
++        &quot;&quot;&quot;Find all Python binaries.&quot;&quot;&quot;
++
++        # Run the locate command and filter the results.
++        cmd = &quot;locate python | grep '\/python$\|\/python...$' | grep bin&quot;
++        pipe = Popen(cmd, shell=True, stdin=PIPE, stdout=PIPE, stderr=PIPE, 
+close_fds=False)
++
++        # Close the pipe.
++        pipe.stdin.close()
++
++        # Store the Python binaries.
++        binaries = []
++        for line in pipe.stdout.readlines():
++            # The file name.
++            file = line[:-1]
++
++            # Check if the path is a file.
++            if not isfile(file):
++                continue
++
++            # Check for if the file is executable.
++            if not access(file, X_OK):
++                continue
++
++            # Check if the path is a link.
++            if islink(file):
++                continue
++
++            # Add the file.
++            binaries.append(file)
++
++        # Return the file list.
++        return binaries
++
++
++    def version_bmrblib(self, file=None):
++        &quot;&quot;&quot;Determine and print out the bmrblib module version info.&quot;&quot;&quot;
++
++        # The commands.
++        commands = [
++            &quot;try:\n&quot;,
++            &quot;    import bmrblib\n&quot;,
++            &quot;    if hasattr(bmrblib, '__version__'):\n&quot;,
++            &quot;        version = bmrblib.__version__\n&quot;,
++            &quot;    else:\n&quot;,
++            &quot;        version = 'Unknown'\n&quot;,
++            &quot;except:\n&quot;,
++            &quot;    version = '-'\n&quot;,
++            &quot;print(version)\n&quot;,
++        ]
++
++        # Execute and print the version
++        self.execute(label=&quot;bmrblib:&quot;, file=file, commands=commands)
++
++
++    def version_epydoc(self, file=None):
++        &quot;&quot;&quot;Determine and print out the epydoc module version info.&quot;&quot;&quot;
++
++        # The commands.
++        commands = [
++            &quot;try:\n&quot;,
++            &quot;    import epydoc\n&quot;,
++            &quot;    version = epydoc.__version__\n&quot;,
++            &quot;except:\n&quot;,
++            &quot;    version = '-'\n&quot;,
++            &quot;print(version)\n&quot;,
++        ]
++
++        # Execute and print the version
++        self.execute(label=&quot;epydoc:&quot;, file=file, commands=commands)
++
++
++    def version_minfx(self, file=None):
++        &quot;&quot;&quot;Determine and print out the minfx module version info.&quot;&quot;&quot;
++
++        # The commands.
++        commands = [
++            &quot;try:\n&quot;,
++            &quot;    import minfx\n&quot;,
++            &quot;    if hasattr(minfx, '__version__'):\n&quot;,
++            &quot;        version = minfx.__version__\n&quot;,
++            &quot;    else:\n&quot;,
++            &quot;        version = 'Unknown'\n&quot;,
++            &quot;except:\n&quot;,
++            &quot;    version = '-'\n&quot;,
++            &quot;print(version)\n&quot;,
++        ]
++
++        # Execute and print the version
++        self.execute(label=&quot;minfx:&quot;, file=file, commands=commands)
++
++
++    def version_mpi4py(self, file=None):
++        &quot;&quot;&quot;Determine and print out the mpi4py module version info.&quot;&quot;&quot;
++
++        # The commands.
++        commands = [
++            &quot;try:\n&quot;,
++            &quot;    import mpi4py\n&quot;,
++            &quot;    version = mpi4py.__version__\n&quot;,
++            &quot;except:\n&quot;,
++            &quot;    version = '-'\n&quot;,
++            &quot;print(version)\n&quot;,
++        ]
++
++        # Execute and print the version
++        self.execute(label=&quot;mpi4py:&quot;, file=file, commands=commands)
++
++
++    def version_numpy(self, file=None):
++        &quot;&quot;&quot;Determine and print out the numpy module version info.&quot;&quot;&quot;
++
++        # The commands.
++        commands = [
++            &quot;try:\n&quot;,
++            &quot;    import numpy\n&quot;,
++            &quot;    version = numpy.version.version\n&quot;,
++            &quot;except:\n&quot;,
++            &quot;    version = '-'\n&quot;,
++            &quot;print(version)\n&quot;,
++        ]
++
++        # Execute and print the version
++        self.execute(label=&quot;numpy:&quot;, file=file, commands=commands)
++
++
++    def version_scipy(self, file=None):
++        &quot;&quot;&quot;Determine and print out the scipy module version info.&quot;&quot;&quot;
++
++        # The commands.
++        commands = [
++            &quot;try:\n&quot;,
++            &quot;    import scipy\n&quot;,
++            &quot;    version = scipy.version.version\n&quot;,
++            &quot;except:\n&quot;,
++            &quot;    version = '-'\n&quot;,
++            &quot;print(version)\n&quot;,
++        ]
++
++        # Execute and print the version
++        self.execute(label=&quot;scipy:&quot;, file=file, commands=commands)
++
++
++    def version_wx(self, file=None):
++        &quot;&quot;&quot;Determine and print out the wx module version info.&quot;&quot;&quot;
++
++        # The commands.
++        commands = [
++            &quot;try:\n&quot;,
++            &quot;    import wx\n&quot;,
++            &quot;    version = wx.version()\n&quot;,
++            &quot;except:\n&quot;,
++            &quot;    version = '-'\n&quot;,
++            &quot;print(version)\n&quot;,
++        ]
++
++        # Execute and print the version
++        self.execute(label=&quot;wx:&quot;, file=file, commands=commands)
++
++
++    def version_python(self, file=None):
++        &quot;&quot;&quot;Determine and print out the Python and module version info.&quot;&quot;&quot;
++
++        # The commands.
++        commands = [
++            &quot;python_version = 'None'\n&quot;,
++            &quot;try:\n&quot;,
++            &quot;    import platform\n&quot;,
++            &quot;    python_version = platform.python_version()\n&quot;,
++            &quot;except:\n&quot;,
++            &quot;    import sys\n&quot;,
++            &quot;    if hasattr(sys, 'version_info'):\n&quot;,
++            &quot;        python_version = '%s.%s.%s' % (sys.version_info[0], 
+sys.version_info[1], sys.version_info[2])\n&quot;,
++            &quot;    elif hasattr(sys, 'version'):\n&quot;,
++            &quot;        if sys.version[3] == ' ':\n&quot;,
++            &quot;            python_version = sys.version[:3]\n&quot;,
++            &quot;        elif sys.version[5] == ' ':\n&quot;,
++            &quot;            python_version = sys.version[:5]\n&quot;,
++            &quot;        else:\n&quot;,
++            &quot;            python_version = sys.version\n&quot;,
++            &quot;\n&quot;,
++            &quot;print(python_version)\n&quot;,
++        ]
++
++        # Execute and print the version
++        self.execute(label=&quot;Python:&quot;, file=file, commands=commands)
++
++
++
++# Execute.
++Python_info(debug=False)
+
+Propchange: trunk/devel_scripts/python_seek.py
+------------------------------------------------------------------------------
+    svn:executable = *
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Aug 13 15:00:02 2013</div>  
+</body>
+</html>

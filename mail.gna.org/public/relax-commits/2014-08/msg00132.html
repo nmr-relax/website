@@ -1,0 +1,152 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r24998 &#45; /branches/R1_fitting/auto_analyses/relax_disp.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 12 Aug 2014 11:28:50 +0200 -->
+<!--X-Message-Id: E1XH8Nu&#45;0008EB&#45;Bq@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r24998 - /branches/R1_fitting/auto_analyses/relax_disp.py -- August 12, 2014 - 11:28</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r24998 - /branches/R1_fitting/auto_analyses/relax_disp.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00132" class="tabs">Index by Date</a> | <a href="threads.html#00132" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00131.html">Date Prev</a>] [<a href="msg00133.html">Date Next</a>] [<a href="msg00131.html">Thread Prev</a>] [<a href="msg00133.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 12 Aug 2014 09:28:50 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00132.html">E1XH8Nu-0008EB-Bq@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on August 12, 2014 - 11:28:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Tue Aug 12 11:28:49 2014
+New Revision: 24998
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=24998&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=24998&amp;view=rev</a>
+Log:
+Implemented the sorting of models, for auto analyses.
+
+sr #3135(<a  rel="nofollow" href="https://gna.org/support/?3135">https://gna.org/support/?3135</a>): Optimisation of the R1 relaxation 
+rate for the off-resonance R1rho relaxation dispersion models.
+
+Modified:
+    branches/R1_fitting/auto_analyses/relax_disp.py
+
+Modified: branches/R1_fitting/auto_analyses/relax_disp.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/R1_fitting/auto_analyses/relax_disp.py?rev=24998&amp;r1=24997&amp;r2=24998&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/R1_fitting/auto_analyses/relax_disp.py?rev=24998&amp;r1=24997&amp;r2=24998&amp;view=diff</a>
+==============================================================================
+--- branches/R1_fitting/auto_analyses/relax_disp.py     (original)
++++ branches/R1_fitting/auto_analyses/relax_disp.py     Tue Aug 12 11:28:49 
+2014
+@@ -38,7 +38,7 @@
+ from prompt.interpreter import Interpreter
+ from specific_analyses.relax_disp.data import has_exponential_exp_type, 
+has_cpmg_exp_type, has_fixed_time_exp_type, has_r1rho_exp_type, loop_frq
+ from specific_analyses.relax_disp.data import INTERPOLATE_DISP, 
+INTERPOLATE_OFFSET, X_AXIS_DISP, X_AXIS_W_EFF, X_AXIS_THETA, Y_AXIS_R2_R1RHO, 
+Y_AXIS_R2_EFF
+-from specific_analyses.relax_disp.variables import nesting_model
++from specific_analyses.relax_disp.variables import nesting_model, sort_models
+ from specific_analyses.relax_disp.variables import EQ_ANALYTIC, EQ_NUMERIC, 
+EQ_SILICO, MODEL_LIST_ANALYTIC, MODEL_LIST_NEST, MODEL_LIST_NUMERIC, 
+MODEL_LIST_R1RHO_FIT_R1, MODEL_LIST_R1RHO_W_R1, MODEL_LIST_R1RHO_FULL, 
+MODEL_NOREX, MODEL_NOREX_R1RHO, MODEL_NOREX_R1RHO_FIT_R1, MODEL_PARAMS, 
+MODEL_R2EFF, PARAMS_R20
+ from status import Status; status = Status()
+ 
+@@ -98,7 +98,6 @@
+         self.pipe_name = pipe_name
+         self.pipe_bundle = pipe_bundle
+         self.results_dir = results_dir
+-        self.models = models
+         self.grid_inc = grid_inc
+         self.mc_sim_num = mc_sim_num
+         self.exp_mc_sim_num = exp_mc_sim_num
+@@ -109,6 +108,26 @@
+         self.numeric_only = numeric_only
+         self.mc_sim_all_models = mc_sim_all_models
+         self.eliminate = eliminate
++
++        # Sort the models for analyses.
++        sorted_models = sort_models(models=models)
++        if sorted_models != models:
++            # Printout.
++            subsection(file=sys.stdout, text=&quot;Sorting models for optimal 
+nesting of models.&quot;, prespace=1)
++            print(&quot;Models are are sorted in order:&quot;)
++            print(&quot; - exp_type: EXP_TYPE_R2EFF, EXP_TYPE_NOREX, 
+EXP_TYPE_NOREX_R1RHO, EXP_TYPE_CPMG_SQ, EXP_TYPE_CPMG_MMQ, EXP_TYPE_R1RHO&quot;)
++            print(&quot; - equation: %s, %s, %s&quot; % (EQ_SILICO, EQ_ANALYTIC, 
+EQ_NUMERIC))
++            print(&quot; - Nr of chemical sites: 2 or 3&quot;)
++            print(&quot; - Year: Newest models first.&quot;)
++            print(&quot;-  Nr of params:&quot;)
++            print(&quot;\nPrevious model order: %s&quot; % (models))
++            print(&quot;\nNew model order: %s&quot; % (sorted_models))
++
++            # Store the new order of models.
++            self.models = sorted_models
++        else:
++            self.models = models
++
+ 
+         # No results directory, so default to the current directory.
+         if not self.results_dir:
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Aug 12 15:40:03 2014</div>  
+</body>
+</html>

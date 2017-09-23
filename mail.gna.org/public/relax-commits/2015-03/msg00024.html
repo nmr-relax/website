@@ -1,0 +1,168 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r27746 &#45; /trunk/pipe_control/pcs.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 03 Mar 2015 15:04:48 +0100 -->
+<!--X-Message-Id: E1YSnRI&#45;0003dV&#45;9z@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r27746 - /trunk/pipe_control/pcs.py -- March 03, 2015 - 15:04</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r27746 - /trunk/pipe_control/pcs.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00024" class="tabs">Index by Date</a> | <a href="threads.html#00024" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00023.html">Date Prev</a>] [<a href="msg00025.html">Date Next</a>] [<a href="msg00023.html">Thread Prev</a>] [<a href="msg00025.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 03 Mar 2015 14:04:48 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00024.html">E1YSnRI-0003dV-9z@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on March 03, 2015 - 15:04:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Mar  3 15:04:47 2015
+New Revision: 27746
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=27746&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=27746&amp;view=rev</a>
+Log:
+Added full per-alignment data printouts to the pcs.copy user function to 
+match rdc.copy.
+
+The feedback is important to know what was actually copied.
+
+
+Modified:
+    trunk/pipe_control/pcs.py
+
+Modified: trunk/pipe_control/pcs.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/pipe_control/pcs.py?rev=27746&amp;r1=27745&amp;r2=27746&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/pipe_control/pcs.py?rev=27746&amp;r1=27745&amp;r2=27746&amp;view=diff</a>
+==============================================================================
+--- trunk/pipe_control/pcs.py   (original)
++++ trunk/pipe_control/pcs.py   Tue Mar  3 15:04:47 2015
+@@ -33,9 +33,10 @@
+ 
+ # relax module imports.
+ from lib.alignment.pcs import ave_pcs_tensor, pcs_tensor
++from lib.check_types import is_float
+ from lib.errors import RelaxError, RelaxNoAlignError, RelaxNoPdbError, 
+RelaxNoPCSError, RelaxNoSequenceError
+ from lib.geometry.vectors import random_unit_vector
+-from lib.io import open_write_file
++from lib.io import open_write_file, write_data
+ from lib.periodic_table import periodic_table
+ from lib.physical_constants import pcs_constant
+ from lib.plotting.api import write_xy_data, write_xy_header
+@@ -326,6 +327,7 @@
+             dp_to.pcs_ids.append(align_id)
+ 
+         # Spin loop.
++        data = []
+         for mol_index, res_index, spin_index in spin_index_loop():
+             # Alias the spin containers.
+             spin_from = 
+dp_from.mol[mol_index].res[res_index].spin[spin_index]
+@@ -344,12 +346,41 @@
+                 spin_to.pcs_err = {}
+ 
+             # Copy the value and error from pipe_from.
++            value = None
++            error = None
++            value_bc = None
+             if hasattr(spin_from, 'pcs'):
+-                spin_to.pcs[align_id] = spin_from.pcs[align_id]
++                value = spin_from.pcs[align_id]
++                spin_to.pcs[align_id] = value
+             if back_calc and hasattr(spin_from, 'pcs_bc'):
+-                spin_to.pcs_bc[align_id] = spin_from.pcs_bc[align_id]
++                value_bc = spin_from.pcs_bc[align_id]
++                spin_to.pcs_bc[align_id] = value_bc
+             if hasattr(spin_from, 'pcs_err'):
+-                spin_to.pcs_err[align_id] = spin_from.pcs_err[align_id]
++                error = spin_from.pcs_err[align_id]
++                spin_to.pcs_err[align_id] = error
++
++            # Append the data for printout.
++            data.append([spin_from._spin_ids[0]])
++            if is_float(value):
++                data[-1].append(&quot;%20.15f&quot; % value)
++            else:
++                data[-1].append(&quot;%20s&quot; % value)
++            if back_calc:
++                if is_float(value_bc):
++                    data[-1].append(&quot;%20.15f&quot; % value_bc)
++                else:
++                    data[-1].append(&quot;%20s&quot; % value_bc)
++            if is_float(error):
++                data[-1].append(&quot;%20.15f&quot; % error)
++            else:
++                data[-1].append(&quot;%20s&quot; % error)
++
++        # Printout.
++        print(&quot;The following PCSs have been copied:\n&quot;)
++        if back_calc:
++            write_data(out=sys.stdout, headings=[&quot;Spin_ID&quot;, &quot;Value&quot;, 
+&quot;Back-calculated&quot;, &quot;Error&quot;], data=data)
++        else:
++            write_data(out=sys.stdout, headings=[&quot;Spin_ID&quot;, &quot;Value&quot;, 
+&quot;Error&quot;], data=data)
+ 
+ 
+ def corr_plot(format=None, title=None, subtitle=None, file=None, dir=None, 
+force=False):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Mar 03 15:20:02 2015</div>  
+</body>
+</html>

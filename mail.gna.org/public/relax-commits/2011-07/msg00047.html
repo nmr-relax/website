@@ -1,0 +1,196 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r13404 &#45; /branches/gui_testing/gui/components/spin_view.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 01 Jul 2011 21:46:13 +0200 -->
+<!--X-Message-Id: E1QcjfJ&#45;0000DZ&#45;Hn@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r13404 - /branches/gui_testing/gui/components/spin_view.py -- July 01, 2011 - 21:46</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r13404 - /branches/gui_testing/gui/components/spin_view.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00047" class="tabs">Index by Date</a> | <a href="threads.html#00047" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00046.html">Date Prev</a>] [<a href="msg00048.html">Date Next</a>] [<a href="msg00046.html">Thread Prev</a>] [<a href="msg00048.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 01 Jul 2011 19:46:13 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00047.html">E1QcjfJ-0000DZ-Hn@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on July 01, 2011 - 21:46:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Jul  1 21:46:13 2011
+New Revision: 13404
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=13404&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=13404&amp;view=rev</a>
+Log:
+Molecules are now handled differently in Mol_res_spin_tree if the already 
+exist or not.
+
+New molecules are added to the tree while old ones are left alone.
+
+
+Modified:
+    branches/gui_testing/gui/components/spin_view.py
+
+Modified: branches/gui_testing/gui/components/spin_view.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/gui_testing/gui/components/spin_view.py?rev=13404&amp;r1=13403&amp;r2=13404&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/gui_testing/gui/components/spin_view.py?rev=13404&amp;r1=13403&amp;r2=13404&amp;view=diff</a>
+==============================================================================
+--- branches/gui_testing/gui/components/spin_view.py (original)
++++ branches/gui_testing/gui/components/spin_view.py Fri Jul  1 21:46:13 2011
+@@ -557,6 +557,9 @@
+         # The tree.
+         self.tree = wx.TreeCtrl(parent=self, id=-1, pos=wx.DefaultPosition, 
+size=wx.DefaultSize, style=wx.TR_DEFAULT_STYLE)
+ 
++        # A tracking structure for the tree IDs.
++        self.tree_ids = {}
++
+         # Resize the tree element.
+         self.Bind(wx.EVT_SIZE, self._resize)
+ 
+@@ -813,37 +816,58 @@
+         @type mol_id:   str
+         &quot;&quot;&quot;
+ 
+-        # Append a molecule with name to the tree.
+-        mol_branch = self.tree.AppendItem(self.root, &quot;Molecule: %s&quot; % 
+mol.name)
+-        self.tree.SetPyData(mol_branch, ['mol', mol.name, mol_id])
+-
+-        # Set the bitmap.
+-        self.tree.SetItemImage(mol_branch, self.icon_mol_index, 
+wx.TreeItemIcon_Normal)
+-        self.tree.SetItemImage(mol_branch, self.icon_mol_unfold_index, 
+wx.TreeItemIcon_Expanded)
++        # Find the molecule, if it already exists.
++        new_mol = True
++        for key in self.tree_ids.keys():
++            # Get the python data.
++            info = self.tree.GetItemPyData(key)
++
++            # Check the mol_id for a match and, if so, terminate to speed 
+things up.
++            if mol_id == info[2]:
++                new_mol = False
++                mol_branch_id = key
++                break
++
++        # A new molecule.
++        if new_mol:
++            # Append a molecule with name to the tree.
++            mol_branch_id = self.tree.AppendItem(self.root, &quot;Molecule: %s&quot; % 
+mol.name)
++            self.tree.SetPyData(mol_branch_id, ['mol', mol.name, mol_id])
++
++            # Add the id to the tracking structure.
++            self.tree_ids[mol_branch_id] = None
++
++            # Set the bitmap.
++            self.tree.SetItemImage(mol_branch_id, self.icon_mol_index, 
+wx.TreeItemIcon_Normal)
++            self.tree.SetItemImage(mol_branch_id, 
+self.icon_mol_unfold_index, wx.TreeItemIcon_Expanded)
+ 
+         # Update the residues of this molecule.
+         for res, res_id in residue_loop(mol_id, return_id=True):
+-            self.update_res(mol_branch, mol, res, res_id)
++            self.update_res(mol_branch_id, mol, res, res_id)
++
++        # Start new molecules expanded.
++        if new_mol:
++            self.tree.Expand(mol_branch_id)
+ 
+         # Expand the root.
+         self.tree.Expand(self.root)
+ 
+ 
+-    def update_res(self, mol_branch, mol, res, res_id):
++    def update_res(self, mol_branch_id, mol, res, res_id):
+         &quot;&quot;&quot;Update the given residue in the tree.
+ 
+-        @param mol_branch:  The molecule branch ID of the wx.TreeCtrl object.
+-        @type mol_branch:   TreeItemId
+-        @param mol:     The molecule container.
+-        @type mol:      MoleculeContainer instance
+-        @param res:         The residue container.
+-        @type res:          ResidueContainer instance
+-        @param res_id:      The residue identification string.
+-        @type res_id:       str
++        @param mol_branch_id:   The molecule branch ID of the wx.TreeCtrl 
+object.
++        @type mol_branch_id:    TreeItemId
++        @param mol:             The molecule container.
++        @type mol:              MoleculeContainer instance
++        @param res:             The residue container.
++        @type res:              ResidueContainer instance
++        @param res_id:          The residue identification string.
++        @type res_id:           str
+         &quot;&quot;&quot;
+ 
+         # Append a residue with name and number to the tree.
+-        res_branch = self.tree.AppendItem(mol_branch, &quot;Residue: %s %s&quot; % 
+(res.num, res.name))
++        res_branch = self.tree.AppendItem(mol_branch_id, &quot;Residue: %s %s&quot; % 
+(res.num, res.name))
+         self.tree.SetPyData(res_branch, ['res', mol.name, res.num, res.name])
+ 
+         # Set the bitmap.
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Jul 01 22:00:02 2011</div>  
+</body>
+</html>

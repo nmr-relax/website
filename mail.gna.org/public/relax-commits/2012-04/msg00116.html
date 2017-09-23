@@ -1,0 +1,198 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r15764 &#45; in /1.3: gui/interpreter.py prompt/base_class.py	prompt/interpreter.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 17 Apr 2012 17:41:07 +0200 -->
+<!--X-Message-Id: E1SKAWh&#45;0006Mm&#45;9R@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r15764 - in /1.3: gui/interpreter.py prompt/base_class.py	prompt/interpreter.py -- April 17, 2012 - 17:41</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r15764 - in /1.3: gui/interpreter.py prompt/base_class.py	prompt/interpreter.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00116" class="tabs">Index by Date</a> | <a href="threads.html#00116" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00115.html">Date Prev</a>] [<a href="msg00117.html">Date Next</a>] [<a href="msg00115.html">Thread Prev</a>] [<a href="msg00117.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 17 Apr 2012 15:41:07 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00116.html">E1SKAWh-0006Mm-9R@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on April 17, 2012 - 17:41:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Apr 17 17:41:06 2012
+New Revision: 15764
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=15764&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=15764&amp;view=rev</a>
+Log:
+ANSI escape characters are now turned off forcibly when in GUI mode.
+
+The prompt.interpreter.Interpreter class was being initialised during the 
+import startup phase due to
+the gui.interpreter.Interpreter singleton class.  This meant that sys.stdout 
+had not been redirected
+to the relax controller yet and was still set to the terminal TTY.  This hack 
+turns off the relax
+prompt colouring forcibly.
+
+
+Modified:
+    1.3/gui/interpreter.py
+    1.3/prompt/base_class.py
+    1.3/prompt/interpreter.py
+
+Modified: 1.3/gui/interpreter.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/gui/interpreter.py?rev=15764&amp;r1=15763&amp;r2=15764&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/gui/interpreter.py?rev=15764&amp;r1=15763&amp;r2=15764&amp;view=diff</a>
+==============================================================================
+--- 1.3/gui/interpreter.py (original)
++++ 1.3/gui/interpreter.py Tue Apr 17 17:41:06 2012
+@@ -1,6 +1,6 @@
+ 
+###############################################################################
+ #                                                                            
+ #
+-# Copyright (C) 2011 Edward d'Auvergne                                       
+ #
++# Copyright (C) 2011-2012 Edward d'Auvergne                                  
+ #
+ #                                                                            
+ #
+ # This file is part of the program relax.                                    
+ #
+ #                                                                            
+ #
+@@ -65,6 +65,11 @@
+             self._instance._interpreter_thread = Interpreter_thread()
+             self._instance._interpreter_thread.start()
+ 
++            # Hack to turn off ANSI escape characters in GUI mode.
++            self._instance._interpreter.ps1 = 
+self._instance._interpreter._exec_info.ps1
++            self._instance._interpreter.ps2 = 
+self._instance._interpreter._exec_info.ps2
++            self._instance._interpreter.ps3 = 
+self._instance._interpreter._exec_info.ps3
++
+         # Already instantiated, so return the instance.
+         return self._instance
+ 
+
+Modified: 1.3/prompt/base_class.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/prompt/base_class.py?rev=15764&amp;r1=15763&amp;r2=15764&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/prompt/base_class.py?rev=15764&amp;r1=15763&amp;r2=15764&amp;view=diff</a>
+==============================================================================
+--- 1.3/prompt/base_class.py (original)
++++ 1.3/prompt/base_class.py Tue Apr 17 17:41:06 2012
+@@ -226,10 +226,9 @@
+         self.ps3 = '\n%s' % self.ps1
+ 
+         # Coloured text.
+-        if sys.stdout.isatty():
+-            self.ps1 = &quot;\033[94m%s\033[0m&quot; % self.ps1
+-            self.ps2 = &quot;\033[94m%s\033[0m&quot; % self.ps2
+-            self.ps3 = &quot;\n\033[94m%s\033[0m&quot; % self.ps1
++        self.ps1_colour = &quot;\033[94m%s\033[0m&quot; % self.ps1
++        self.ps2_colour = &quot;\033[94m%s\033[0m&quot; % self.ps2
++        self.ps3_colour = &quot;\n\033[94m%s\033[0m&quot; % self.ps1
+ 
+ 
+ 
+
+Modified: 1.3/prompt/interpreter.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/prompt/interpreter.py?rev=15764&amp;r1=15763&amp;r2=15764&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/prompt/interpreter.py?rev=15764&amp;r1=15763&amp;r2=15764&amp;view=diff</a>
+==============================================================================
+--- 1.3/prompt/interpreter.py (original)
++++ 1.3/prompt/interpreter.py Tue Apr 17 17:41:06 2012
+@@ -1,6 +1,6 @@
+ 
+###############################################################################
+ #                                                                            
+ #
+-# Copyright (C) 2003-2011 Edward d'Auvergne                                  
+ #
++# Copyright (C) 2003-2012 Edward d'Auvergne                                  
+ #
+ #                                                                            
+ #
+ # This file is part of the program relax.                                    
+ #
+ #                                                                            
+ #
+@@ -131,9 +131,14 @@
+         self._exec_info = Exec_info()
+ 
+         # The prompts (change the Python prompt, as well as the function 
+print outs).
+-        sys.ps1 = self._exec_info.ps1
+-        sys.ps2 = self._exec_info.ps2
+-        sys.ps3 = self._exec_info.ps3
++        if sys.stdout.isatty():
++            sys.ps1 = self._exec_info.ps1_colour
++            sys.ps2 = self._exec_info.ps2_colour
++            sys.ps3 = self._exec_info.ps3_colour
++        else:
++            sys.ps1 = self._exec_info.ps1
++            sys.ps2 = self._exec_info.ps2
++            sys.ps3 = self._exec_info.ps3
+ 
+         # The function intro flag (store in the execution information 
+container).
+         self._exec_info.intro = False
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Apr 17 18:20:02 2012</div>  
+</body>
+</html>

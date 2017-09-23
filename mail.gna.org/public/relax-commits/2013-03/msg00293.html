@@ -1,0 +1,162 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r18875 &#45; /trunk/generic_fns/structure/internal.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 19 Mar 2013 13:55:15 +0100 -->
+<!--X-Message-Id: E1UHw4R&#45;0003FV&#45;QU@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r18875 - /trunk/generic_fns/structure/internal.py -- March 19, 2013 - 13:55</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r18875 - /trunk/generic_fns/structure/internal.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00293" class="tabs">Index by Date</a> | <a href="threads.html#00293" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00292.html">Date Prev</a>] [<a href="msg00294.html">Date Next</a>] [<a href="msg00292.html">Thread Prev</a>] [<a href="msg00294.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 19 Mar 2013 12:55:15 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00293.html">E1UHw4R-0003FV-QU@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on March 19, 2013 - 13:55:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Mar 19 13:55:15 2013
+New Revision: 18875
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=18875&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=18875&amp;view=rev</a>
+Log:
+SHEET PDB records are now read, stored, and written out by the internal 
+structural object.
+
+This affects the structure.read_pdb and structure.write_pdb user functions.  
+The sheet is stored as
+a metadata type object - its elements do not correspond to the atoms in the 
+structural object.
+
+
+Modified:
+    trunk/generic_fns/structure/internal.py
+
+Modified: trunk/generic_fns/structure/internal.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/generic_fns/structure/internal.py?rev=18875&amp;r1=18874&amp;r2=18875&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/generic_fns/structure/internal.py?rev=18875&amp;r1=18874&amp;r2=18875&amp;view=diff</a>
+==============================================================================
+--- trunk/generic_fns/structure/internal.py (original)
++++ trunk/generic_fns/structure/internal.py Tue Mar 19 13:55:15 2013
+@@ -454,6 +454,16 @@
+                 if not hasattr(self, 'helices'):
+                     self.helices = []
+                 self.helices.append([helix_id, init_chain_id, init_res_name, 
+init_seq_num, end_chain_id, end_res_name, end_seq_num, helix_class, length])
++
++            # A sheet.
++            if lines[i][:5] == 'SHEET':
++                # Parse the record.
++                record_type, strand, sheet_id, num_strands, init_res_name, 
+init_chain_id, init_seq_num, init_icode, end_res_name, end_chain_id, 
+end_seq_num, end_icode, sense, cur_atom, cur_res_name, cur_chain_id, 
+cur_res_seq, cur_icode, prev_atom, prev_res_name, prev_chain_id, 
+prev_res_seq, prev_icode = pdb_read.sheet(lines[i])
++
++                # Store the data.
++                if not hasattr(self, 'sheets'):
++                    self.sheets = []
++                self.sheets.append([strand, sheet_id, num_strands, 
+init_res_name, init_chain_id, init_seq_num, init_icode, end_res_name, 
+end_chain_id, end_seq_num, end_icode, sense, cur_atom, cur_res_name, 
+cur_chain_id, cur_res_seq, cur_icode, prev_atom, prev_res_name, 
+prev_chain_id, prev_res_seq, prev_icode])
+ 
+         # Return the remaining lines.
+         return lines[i:]
+@@ -1877,6 +1887,18 @@
+             pdb_write.helix(file, ser_num=index, helix_id=helix_id, 
+init_chain_id=init_chain_id, init_res_name=init_res_name, 
+init_seq_num=init_seq_num, end_chain_id=end_chain_id, 
+end_res_name=end_res_name, end_seq_num=end_seq_num, helix_class=helix_class, 
+length=length)
+             index += 1
+ 
++        # The SHEET records.
++        ####################
++
++        # Printout.
++        print(&quot;SHEET&quot;)
++
++        # Loop over and unpack the helix data.
++        index = 1
++        for strand, sheet_id, num_strands, init_res_name, init_chain_id, 
+init_seq_num, init_icode, end_res_name, end_chain_id, end_seq_num, end_icode, 
+sense, cur_atom, cur_res_name, cur_chain_id, cur_res_seq, cur_icode, 
+prev_atom, prev_res_name, prev_chain_id, prev_res_seq, prev_icode in 
+self.sheets:
++            pdb_write.sheet(file, strand=strand, sheet_id=sheet_id, 
+num_strands=num_strands, init_res_name=init_res_name, 
+init_chain_id=init_chain_id, init_seq_num=init_seq_num, 
+init_icode=init_icode, end_res_name=end_res_name, end_chain_id=end_chain_id, 
+end_seq_num=end_seq_num, end_icode=end_icode, sense=sense, cur_atom=cur_atom, 
+cur_res_name=cur_res_name, cur_chain_id=cur_chain_id, 
+cur_res_seq=cur_res_seq, cur_icode=cur_icode, prev_atom=prev_atom, 
+prev_res_name=prev_res_name, prev_chain_id=prev_chain_id, 
+prev_res_seq=prev_res_seq, prev_icode=prev_icode)
++            index += 1
++
+ 
+         ######################
+         # Coordinate section #
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Mar 19 15:00:02 2013</div>  
+</body>
+</html>

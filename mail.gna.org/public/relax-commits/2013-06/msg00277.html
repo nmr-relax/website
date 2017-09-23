@@ -1,0 +1,162 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r20088 &#45; /trunk/pipe_control/interatomic.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 13 Jun 2013 11:44:23 +0200 -->
+<!--X-Message-Id: E1Un44t&#45;00024m&#45;Lc@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r20088 - /trunk/pipe_control/interatomic.py -- June 13, 2013 - 11:44</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r20088 - /trunk/pipe_control/interatomic.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00277" class="tabs">Index by Date</a> | <a href="threads.html#00277" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00276.html">Date Prev</a>] [<a href="msg00278.html">Date Next</a>] [<a href="msg00276.html">Thread Prev</a>] [<a href="msg00278.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 13 Jun 2013 09:44:23 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00277.html">E1Un44t-00024m-Lc@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on June 13, 2013 - 11:44:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Jun 13 11:44:23 2013
+New Revision: 20088
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=20088&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=20088&amp;view=rev</a>
+Log:
+Improved the functionality of the interatom.read_dist user function.
+
+The file data is now stripped using lib.io.strip to remove comments and blank 
+lines.  And now if the
+iteratomic data container cannot be found, it is created instead of raising a 
+RelaxError.
+
+
+Modified:
+    trunk/pipe_control/interatomic.py
+
+Modified: trunk/pipe_control/interatomic.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/pipe_control/interatomic.py?rev=20088&amp;r1=20087&amp;r2=20088&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/pipe_control/interatomic.py?rev=20088&amp;r1=20087&amp;r2=20088&amp;view=diff</a>
+==============================================================================
+--- trunk/pipe_control/interatomic.py (original)
++++ trunk/pipe_control/interatomic.py Thu Jun 13 11:44:23 2013
+@@ -36,7 +36,7 @@
+ from pipe_control.mol_res_spin import Selection, count_spins, 
+exists_mol_res_spin_data, return_spin, spin_loop
+ from pipe_control import pipes
+ from lib.errors import RelaxError, RelaxInteratomInconsistentError, 
+RelaxNoInteratomError, RelaxNoSpinError
+-from lib.io import extract_data, write_data
++from lib.io import extract_data, strip, write_data
+ from lib.warnings import RelaxWarning, RelaxZeroVectorWarning
+ 
+ 
+@@ -152,7 +152,7 @@
+             raise RelaxInteratomInconsistentError(pipe1, pipe2)
+ 
+ 
+-def create_interatom(spin_id1=None, spin_id2=None, pipe=None):
++def create_interatom(spin_id1=None, spin_id2=None, pipe=None, verbose=False):
+     &quot;&quot;&quot;Create and return the interatomic data container for the two spins.
+ 
+     @keyword spin_id1:  The spin ID string of the first atom.
+@@ -161,9 +161,15 @@
+     @type spin_id2:     str
+     @keyword pipe:      The data pipe to create the interatomic data 
+container for.  This defaults to the current data pipe if not supplied.
+     @type pipe:         str or None
++    @keyword verbose:   A flag which if True will result printouts.
++    @type verbose:      bool
+     @return:            The newly created interatomic data container.
+     @rtype:             data.interatomic.InteratomContainer instance
+     &quot;&quot;&quot;
++
++    # Printout.
++    if verbose:
++        print(&quot;Creating an interatomic data container between the spins '%s' 
+and '%s'.&quot; % (spin_id1, spin_id2))
+ 
+     # The data pipe.
+     if pipe == None:
+@@ -451,8 +457,9 @@
+     if not exists_mol_res_spin_data():
+         raise RelaxNoSequenceError
+ 
+-    # Extract the data from the file.
++    # Extract the data from the file, and clean it up.
+     file_data = extract_data(file, dir, sep=sep)
++    file_data = strip(file_data)
+ 
+     # Loop over the RDC data.
+     data = []
+@@ -490,9 +497,9 @@
+         # Get the interatomic data container.
+         interatom = return_interatom(spin_id1, spin_id2)
+ 
+-        # No container found.
++        # No container found, so create it.
+         if interatom == None:
+-            raise RelaxNoInteratomError(spin_id1=spin_id1, spin_id2=spin_id2)
++            interatom = create_interatom(spin_id1=spin_id1, 
+spin_id2=spin_id2, verbose=True)
+ 
+         # Store the averaged distance.
+         interatom.r = ave_dist
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Jun 13 12:00:01 2013</div>  
+</body>
+</html>

@@ -1,0 +1,433 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r17296 &#45; /branches/frame_order_testing/specific_fns/frame_order.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 23 Jul 2012 15:46:44 +0200 -->
+<!--X-Message-Id: E1StIyC&#45;0007O8&#45;7U@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r17296 - /branches/frame_order_testing/specific_fns/frame_order.py -- July 23, 2012 - 15:46</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r17296 - /branches/frame_order_testing/specific_fns/frame_order.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00182" class="tabs">Index by Date</a> | <a href="threads.html#00182" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00181.html">Date Prev</a>] [<a href="msg00183.html">Date Next</a>] [<a href="msg00181.html">Thread Prev</a>] [<a href="msg00183.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 23 Jul 2012 13:46:44 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00182.html">E1StIyC-0007O8-7U@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on July 23, 2012 - 15:46:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Mon Jul 23 15:46:43 2012
+New Revision: 17296
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=17296&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=17296&amp;view=rev</a>
+Log:
+Updated the frame order base_data_loop() generator method and its 
+dependencies for the interatomic design.
+
+This includes the create_mc_data(), return_error() and sim_pack_data() 
+methods.
+
+
+Modified:
+    branches/frame_order_testing/specific_fns/frame_order.py
+
+Modified: branches/frame_order_testing/specific_fns/frame_order.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_testing/specific_fns/frame_order.py?rev=17296&amp;r1=17295&amp;r2=17296&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_testing/specific_fns/frame_order.py?rev=17296&amp;r1=17295&amp;r2=17296&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_testing/specific_fns/frame_order.py (original)
++++ branches/frame_order_testing/specific_fns/frame_order.py Mon Jul 23 
+15:46:43 2012
+@@ -38,7 +38,7 @@
+ from float import isNaN, isInf
+ from generic_fns import pipes
+ from generic_fns.angles import wrap_angles
+-from generic_fns.interatomic import interatomic_loop
++from generic_fns.interatomic import interatomic_loop, return_interatom
+ from generic_fns.mol_res_spin import return_spin, spin_loop
+ from generic_fns.structure import geometric
+ from generic_fns.structure.cones import Iso_cone, Pseudo_elliptic
+@@ -1539,39 +1539,38 @@
+         # First the tensors.
+         yield 'A'
+ 
+-        # Then the spin IDs for the moving domain.
++        # The moving domain ID.
+         id = cdp.domain[self._domain_moving()]
++
++        # Loop over the interatomic data containers for the moving domain 
+(for the RDC data).
++        for interatom in interatomic_loop(id):
++            # Skip deselected containers.
++            if not interatom.select:
++                continue
++
++            # No RDC, so skip.
++            if not hasattr(interatom, 'rdc'):
++                continue
++
++            # Loop over the alignment IDs.
++            for align_id in cdp.pcs_ids:
++                # Yield the info set.
++                yield ['rdc', interatom.spin_id1, interatom.spin_id2, 
+align_id]
++
++        # Loop over the spin containers for the moving domain (for the PCS 
+data).
+         for spin, spin_id in spin_loop(id, return_id=True):
+-            # Re-initialise the data structure.
+-            base_ids = [spin_id, None, None]
+-
+             # Skip deselected spins.
+             if not spin.select:
+                 continue
+ 
+-            # RDC data.
+-            if hasattr(spin, 'rdc'):
+-                base_ids[1] = 'rdc'
+-
+-                # Loop over the alignment IDs.
+-                for id in cdp.rdc_ids:
+-                    # Add the ID.
+-                    base_ids[2] = id
+-
+-                    # Yield the set.
+-                    yield base_ids
+-
+-            # PCS data.
+-            if hasattr(spin, 'pcs'):
+-                base_ids[1] = 'pcs'
+-
+-                # Loop over the alignment IDs.
+-                for id in cdp.pcs_ids:
+-                    # Add the ID.
+-                    base_ids[2] = id
+-
+-                    # Yield the set.
+-                    yield base_ids
++            # No PCS, so skip.
++            if not hasattr(spin, 'pcs'):
++                continue
++
++            # Loop over the alignment IDs.
++            for align_id in cdp.pcs_ids:
++                # Yield the info set.
++                yield ['pcs', spin_id, align_id]
+ 
+ 
+     def calculate(self, spin_id=None, verbosity=1, sim_index=None):
+@@ -1601,8 +1600,8 @@
+     def create_mc_data(self, data_id=None):
+         &quot;&quot;&quot;Create the Monte Carlo data by back calculating the reduced 
+tensor data.
+ 
+-        @keyword data_id:   Unused.
+-        @type data_id:      None
++        @keyword data_id:   The data set as yielded by the base_data_loop() 
+generator method.
++        @type data_id:      str or list of str
+         @return:            The Monte Carlo simulation data.
+         @rtype:             list of floats
+         &quot;&quot;&quot;
+@@ -1621,40 +1620,47 @@
+                 mc_data.append(tensor.Axz)
+                 mc_data.append(tensor.Ayz)
+ 
+-        # The spin specific data.
+-        else:
++        # The RDC data.
++        elif data_id[0] == 'rdc':
++            # Unpack the set.
++            data_type, spin_id1, spin_id2, align_id = data_id
++
++            # Get the interatomic data container.
++            interatom = return_interatom(spin_id1, spin_id2)
++
++            # Does back-calculated data exist?
++            if not hasattr(interatom, 'rdc_bc'):
++                self.calculate()
++
++            # The data.
++            if not hasattr(interatom, 'rdc_bc') or not 
+interatom.rdc_bc.has_key(align_id):
++                data = None
++            else:
++                data = interatom.rdc_bc[align_id]
++
++            # Append the data.
++            mc_data.append(data)
++
++        # The PCS data.
++        elif data_id[0] == 'pcs':
++            # Unpack the set.
++            data_type, spin_id, align_id = data_id
++
+             # Get the spin container.
+-            spin = return_spin(data_id[0])
+-
+-            # RDC data.
+-            if data_id[1] == 'rdc' and hasattr(spin, 'rdc'):
+-                # Does back-calculated data exist?
+-                if not hasattr(spin, 'rdc_bc'):
+-                    self.calculate()
+-
+-                # The data.
+-                if not hasattr(spin, 'rdc_bc') or not 
+spin.rdc_bc.has_key(data_id[2]):
+-                    data = None
+-                else:
+-                    data = spin.rdc_bc[data_id[2]]
+-
+-                # Append the data.
+-                mc_data.append(data)
+-
+-            # PCS data.
+-            elif data_id[1] == 'pcs' and hasattr(spin, 'pcs'):
+-                # Does back-calculated data exist?
+-                if not hasattr(spin, 'pcs_bc'):
+-                    self.calculate()
+-
+-                # The data.
+-                if not hasattr(spin, 'pcs_bc') or not 
+spin.pcs_bc.has_key(data_id[2]):
+-                    data = None
+-                else:
+-                    data = spin.pcs_bc[data_id[2]]
+-
+-                # Append the data.
+-                mc_data.append(data)
++            spin = return_spin(spin_id)
++
++            # Does back-calculated data exist?
++            if not hasattr(spin, 'pcs_bc'):
++                self.calculate()
++
++            # The data.
++            if not hasattr(spin, 'pcs_bc') or not 
+spin.pcs_bc.has_key(align_id):
++                data = None
++            else:
++                data = spin.pcs_bc[align_id]
++
++            # Append the data.
++            mc_data.append(data)
+ 
+         # Return the data.
+         return mc_data
+@@ -1997,10 +2003,10 @@
+     def return_error(self, data_id):
+         &quot;&quot;&quot;Return the alignment tensor error structure.
+ 
+-        @param data_id: The information yielded by the base_data_loop() 
+generator method.
+-        @type data_id:  None
+-        @return:        The array of tensor error values.
+-        @rtype:         list of float
++        @param data_id:     The data set as yielded by the base_data_loop() 
+generator method.
++        @type data_id:      str or list of str
++        @return:            The array of tensor error values.
++        @rtype:             list of float
+         &quot;&quot;&quot;
+ 
+         # Initialise the MC data structure.
+@@ -2017,28 +2023,35 @@
+                 mc_errors.append(tensor.Axz_err)
+                 mc_errors.append(tensor.Ayz_err)
+ 
+-        # The spin specific data.
+-        else:
++        # The RDC data.
++        elif data_id[0] == 'rdc':
++            # Unpack the set.
++            data_type, spin_id1, spin_id2, align_id = data_id
++
++            # Get the interatomic data container.
++            interatom = return_interatom(spin_id1, spin_id2)
++
++            # Do errors exist?
++            if not hasattr(interatom, 'rdc_err'):
++                raise RelaxError(&quot;The RDC errors are missing for interatomic 
+data container between spins '%s' and '%s'.&quot; % (spin_id1, spin_id2))
++
++            # Append the data.
++            mc_errors.append(interatom.rdc_err[align_id])
++
++        # The PCS data.
++        elif data_id[0] == 'pcs':
++            # Unpack the set.
++            data_type, spin_id, align_id = data_id
++
+             # Get the spin container.
+-            spin = return_spin(data_id[0])
+-
+-            # RDC data.
+-            if data_id[1] == 'rdc' and hasattr(spin, 'rdc'):
+-                # Do errors exist?
+-                if not hasattr(spin, 'rdc_err'):
+-                    raise RelaxError(&quot;The RDC errors are missing for spin 
+'%s'.&quot; % data_id[0])
+-
+-                # Append the data.
+-                mc_errors.append(spin.rdc_err[data_id[2]])
+-
+-            # PCS data.
+-            elif data_id[1] == 'pcs' and hasattr(spin, 'pcs'):
+-                # Do errors exist?
+-                if not hasattr(spin, 'pcs_err'):
+-                    raise RelaxError(&quot;The PCS errors are missing for spin 
+'%s'.&quot; % data_id[0])
+-
+-                # Append the data.
+-                mc_errors.append(spin.pcs_err[data_id[2]])
++            spin = return_spin(spin_id)
++
++            # Do errors exist?
++            if not hasattr(spin, 'pcs_err'):
++                raise RelaxError(&quot;The PCS errors are missing for spin '%s'.&quot; 
+% spin_id)
++
++            # Append the data.
++            mc_errors.append(spin.pcs_err[align_id])
+ 
+         # Return the errors.
+         return mc_errors
+@@ -2178,8 +2191,8 @@
+     def sim_pack_data(self, data_id, sim_data):
+         &quot;&quot;&quot;Pack the Monte Carlo simulation data.
+ 
+-        @param data_id:     The identification data as yielded by the 
+base_data_loop() generator method.
+-        @type data_id:      string or list of str
++        @param data_id:     The data set as yielded by the base_data_loop() 
+generator method.
++        @type data_id:      str or list of str
+         @param sim_data:    The Monte Carlo simulation data.
+         @type sim_data:     list of float
+         &quot;&quot;&quot;
+@@ -2204,32 +2217,40 @@
+                     tensor.Axz_sim.append(sim_data[i][5*j + 3])
+                     tensor.Ayz_sim.append(sim_data[i][5*j + 4])
+ 
+-        # The spin specific data.
+-        else:
++        # The RDC data.
++        elif data_id[0] == 'rdc':
++            # Unpack the set.
++            data_type, spin_id1, spin_id2, align_id = data_id
++
++            # Get the interatomic data container.
++            interatom = return_interatom(spin_id1, spin_id2)
++
++            # Initialise.
++            if not hasattr(interatom, 'rdc_sim'):
++                interatom.rdc_sim = {}
++                    
++            # Store the data structure.
++            interatom.rdc_sim[align_id] = []
++            for i in range(cdp.sim_number):
++                print sim_data[i]
++                interatom.rdc_sim[align_id].append(sim_data[i][0])
++
++        # The PCS data.
++        elif data_id[0] == 'pcs':
++            # Unpack the set.
++            data_type, spin_id, align_id = data_id
++
+             # Get the spin container.
+-            spin = return_spin(data_id[0])
+-
+-            # RDC data.
+-            if data_id[1] == 'rdc' and hasattr(spin, 'rdc'):
+-                # Initialise.
+-                if not hasattr(spin, 'rdc_sim'):
+-                    spin.rdc_sim = {}
+-                    
+-                # Store the data structure.
+-                spin.rdc_sim[data_id[2]] = []
+-                for i in range(cdp.sim_number):
+-                    spin.rdc_sim[data_id[2]].append(sim_data[i][0])
+-
+-            # PCS data.
+-            if data_id[1] == 'pcs' and hasattr(spin, 'pcs'):
+-                # Initialise.
+-                if not hasattr(spin, 'pcs_sim'):
+-                    spin.pcs_sim = {}
+-                    
+-                # Store the data structure.
+-                spin.pcs_sim[data_id[2]] = []
+-                for i in range(cdp.sim_number):
+-                    spin.pcs_sim[data_id[2]].append(sim_data[i][0])
++            spin = return_spin(spin_id)
++
++            # Initialise.
++            if not hasattr(spin, 'pcs_sim'):
++                spin.pcs_sim = {}
++                
++            # Store the data structure.
++            spin.pcs_sim[data_id[2]] = []
++            for i in range(cdp.sim_number):
++                spin.pcs_sim[data_id[2]].append(sim_data[i][0])
+ 
+ 
+     def sim_return_param(self, model_info, index):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Jul 23 16:00:02 2012</div>  
+</body>
+</html>

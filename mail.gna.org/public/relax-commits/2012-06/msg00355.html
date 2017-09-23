@@ -1,0 +1,201 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r16910 &#45; /trunk/generic_fns/mol_res_spin.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 14 Jun 2012 15:40:45 +0200 -->
+<!--X-Message-Id: E1SfAI1&#45;0002Di&#45;1b@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r16910 - /trunk/generic_fns/mol_res_spin.py -- June 14, 2012 - 15:40</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r16910 - /trunk/generic_fns/mol_res_spin.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00355" class="tabs">Index by Date</a> | <a href="threads.html#00355" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00354.html">Date Prev</a>] [<a href="msg00356.html">Date Next</a>] [<a href="msg00354.html">Thread Prev</a>] [<a href="msg00356.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 14 Jun 2012 13:40:44 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00355.html">E1SfAI1-0002Di-1b@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on June 14, 2012 - 15:40:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Jun 14 15:40:44 2012
+New Revision: 16910
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=16910&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=16910&amp;view=rev</a>
+Log:
+generic_fns.mol_res_spin.create_pseudo_spin() is now adding data to the spin 
+ID look up table.
+
+To support this, the return_residue() method now takes the 'indices' argument 
+and returns the
+molecule and residue indices.
+
+
+Modified:
+    trunk/generic_fns/mol_res_spin.py
+
+Modified: trunk/generic_fns/mol_res_spin.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/generic_fns/mol_res_spin.py?rev=16910&amp;r1=16909&amp;r2=16910&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/generic_fns/mol_res_spin.py?rev=16910&amp;r1=16909&amp;r2=16910&amp;view=diff</a>
+==============================================================================
+--- trunk/generic_fns/mol_res_spin.py (original)
++++ trunk/generic_fns/mol_res_spin.py Thu Jun 14 15:40:44 2012
+@@ -1055,11 +1055,13 @@
+ 
+         # Get the residue container to add the spin to.
+         if res_id:
+-            res_to_cont = return_residue(res_id)
++            res_to_cont, mol_index, res_index = return_residue(res_id, 
+indices=True)
+             if res_to_cont == None:
+                 raise RelaxError(&quot;The residue in &quot; + repr(res_id) + &quot; does 
+not exist in the current data pipe.&quot;)
+         else:
+             res_to_cont = cdp.mol[0].res[0]
++            mol_index = 0
++            res_index = 0
+ 
+         # Check the averaging technique.
+         if averaging not in ['linear']:
+@@ -1108,6 +1110,7 @@
+         # Add the spin.
+         res_to_cont.spin.add_item(spin_num=spin_num, spin_name=spin_name)
+         spin = res_to_cont.spin[-1]
++        spin_index = len(res_to_cont.spin) - 1
+ 
+         # Set the pseudo-atom spin container attributes.
+         spin.averaging = averaging
+@@ -1121,6 +1124,10 @@
+                 spin.pos = ave
+             else:
+                 spin.pos = ave[0]
++
++        # Add the spin ID and indices to the lookup table.
++        spin_id = generate_spin_id(mol_name=cdp.mol[mol_index].name, 
+res_num=cdp.mol[mol_index].res[res_index].num, 
+res_name=cdp.mol[mol_index].res[res_index].name, spin_num=spin.num, 
+spin_name=spin.name)
++        cdp.mol.lookup_table[spin_id] = [mol_index, res_index, spin_index]
+ 
+     # Release the lock.
+     finally:
+@@ -2296,14 +2303,14 @@
+     return mol_container
+ 
+ 
+-def return_residue(selection=None, pipe=None):
++def return_residue(selection=None, pipe=None, indices=False):
+     &quot;&quot;&quot;Function for returning the residue data container of the given 
+selection.
+ 
+     @param selection:   The residue selection identifier.
+     @type selection:    str
+     @param pipe:        The data pipe containing the residue.  Defaults to 
+the current data pipe.
+     @type pipe:         str
+-    @return:            The residue specific data container.
++    @return:            The residue specific data container, and the 
+molecule and residue indices if asked.
+     @rtype:             instance of the ResidueContainer class.
+     &quot;&quot;&quot;
+ 
+@@ -2324,19 +2331,23 @@
+     res = None
+     res_num = 0
+     res_container = None
+-    for mol in dp.mol:
++    for i in range(len(dp.mol)):
+         # Skip the molecule if there is no match to the selection.
+-        if mol not in select_obj:
++        if dp.mol[i] not in select_obj:
+             continue
+ 
++        # Store the molecule index.
++        mol_index = i
++
+         # Loop over the residues.
+-        for res in mol.res:
++        for j in range(len(cdp.mol[i].res)):
+             # Skip the residue if there is no match to the selection.
+-            if res not in select_obj:
++            if cdp.mol[i].res[j] not in select_obj:
+                 continue
+ 
+-            # Store the residue container.
+-            res_container = res
++            # Store the residue container and index.
++            res_container = cdp.mol[i].res[j]
++            res_index = j
+ 
+             # Increment the residue number counter.
+             res_num = res_num + 1
+@@ -2346,7 +2357,10 @@
+         raise RelaxMultiResIDError(selection)
+ 
+     # Return the residue container.
+-    return res_container
++    if indices:
++        return res_container, mol_index, res_index
++    else:
++        return res_container
+ 
+ 
+ def return_spin(selection=None, pipe=None, full_info=False):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Jun 14 16:20:01 2012</div>  
+</body>
+</html>

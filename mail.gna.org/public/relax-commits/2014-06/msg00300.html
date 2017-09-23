@@ -1,0 +1,199 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r23913 &#45; /branches/disp_spin_speed/lib/dispersion/m61b.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 13 Jun 2014 11:06:16 +0200 -->
+<!--X-Message-Id: E1WvNRA&#45;0004PR&#45;Dj@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r23913 - /branches/disp_spin_speed/lib/dispersion/m61b.py -- June 13, 2014 - 11:06</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r23913 - /branches/disp_spin_speed/lib/dispersion/m61b.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00300" class="tabs">Index by Date</a> | <a href="threads.html#00300" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00299.html">Date Prev</a>] [<a href="msg00301.html">Date Next</a>] [<a href="msg00299.html">Thread Prev</a>] [<a href="msg00301.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 13 Jun 2014 09:06:16 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00300.html">E1WvNRA-0004PR-Dj@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on June 13, 2014 - 11:06:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Fri Jun 13 11:06:15 2014
+New Revision: 23913
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=23913&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=23913&amp;view=rev</a>
+Log:
+Methods to replace math domain errors in model M61b, has been replaced with 
+numpy masks.
+
+Documentation is also fixed.
+
+Task #7807 (<a  rel="nofollow" href="https://gna.org/task/index.php?7807">https://gna.org/task/index.php?7807</a>): Speed-up of dispersion 
+models for Clustered analysis.
+
+Modified:
+    branches/disp_spin_speed/lib/dispersion/m61b.py
+
+Modified: branches/disp_spin_speed/lib/dispersion/m61b.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/disp_spin_speed/lib/dispersion/m61b.py?rev=23913&amp;r1=23912&amp;r2=23913&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/disp_spin_speed/lib/dispersion/m61b.py?rev=23913&amp;r1=23912&amp;r2=23913&amp;view=diff</a>
+==============================================================================
+--- branches/disp_spin_speed/lib/dispersion/m61b.py     (original)
++++ branches/disp_spin_speed/lib/dispersion/m61b.py     Fri Jun 13 11:06:15 
+2014
+@@ -60,7 +60,8 @@
+ &quot;&quot;&quot;
+ 
+ # Python module imports.
+-from numpy import abs, array, isfinite, min, sum
++from numpy import abs, any, array, isfinite, min, sum
++from numpy.ma import fix_invalid, masked_where
+ 
+ def r1rho_M61b(r1rho_prime=None, pA=None, dw=None, kex=None, 
+spin_lock_fields2=None, back_calc=None, num_points=None):
+     &quot;&quot;&quot;Calculate the R1rho values for the M61 skew model.
+@@ -69,20 +70,24 @@
+ 
+ 
+     @keyword r1rho_prime:       The R1rho_prime parameter value (R1rho with 
+no exchange).
+-    @type r1rho_prime:          float
++    @type r1rho_prime:          numpy float array of rank 
+[NE][NS][[NM][NO][ND]
+     @keyword pA:                The population of state A.
+     @type pA:                   float
+     @keyword dw:                The chemical exchange difference between 
+states A and B in rad/s.
+-    @type dw:                   float
++    @type dw:                   numpy float array of rank 
+[NE][NS][[NM][NO][ND]
+     @keyword kex:               The kex parameter value (the exchange rate 
+in rad/s).
+     @type kex:                  float
+     @keyword spin_lock_fields2: The R1rho spin-lock field strengths squared 
+(in rad^2.s^-2).
+-    @type spin_lock_fields2:    numpy rank-1 float array
++    @type spin_lock_fields2:    numpy float array of rank 
+[NE][NS][[NM][NO][ND]
+     @keyword back_calc:         The array for holding the back calculated 
+R1rho values.  Each element corresponds to the combination of spin lock field.
+-    @type back_calc:            numpy rank-1 float array
++    @type back_calc:            numpy float array of rank 
+[NE][NS][[NM][NO][ND]
+     @keyword num_points:        The number of points on the dispersion 
+curve, equal to the length of the spin_lock_fields and back_calc arguments.
+-    @type num_points:           int
++    @type num_points:           numpy int array of rank [NE][NS][[NM][NO][ND]
+     &quot;&quot;&quot;
++
++    # Flag to tell if values should be replaced if numer is zero.
++    t_numer_zero = False
++    t_denom_zero = False
+ 
+     # The B population.
+     pB = 1.0 - pA
+@@ -96,26 +101,34 @@
+ 
+     # Catch zeros (to avoid pointless mathematical operations).
+     # This will result in no exchange, returning flat lines.
+-    if numer == 0.0:
+-        back_calc[:] = array([r1rho_prime]*num_points)
+-        return
++    if min(numer) == 0.0:
++        t_numer_zero = True
++        mask_numer_zero = masked_where(numer == 0.0, numer)
+ 
+     # Denominator.
+     denom = kex2_pA2dw2 + spin_lock_fields2
+ 
+     # Catch math domain error of dividing with 0.
+     # This is when denom=0.
+-    if min(abs(denom)) == 0:
+-        back_calc[:] = array([1e100]*num_points)
+-        return
+-
++    mask_denom_zero = denom == 0.0
++    if any(mask_denom_zero):
++        t_denom_zero = True
++        denom[mask_denom_zero] = 1.0
+ 
+     # R1rho calculation.
+-    R1rho = r1rho_prime + numer / denom
++    back_calc[:] = r1rho_prime + numer / denom
++
++    # Replace data in array.
++    # If numer is zero.
++    if t_numer_zero:
++        back_calc[mask_numer_zero.mask] = r1rho_prime[mask_numer_zero.mask]
++
++    # If denom is zero.
++    if t_denom_zero:
++        back_calc[mask_denom_zero] = 1e100
+ 
+     # Catch errors, taking a sum over array is the fastest way to check for
+     # +/- inf (infinity) and nan (not a number).
+-    if not isfinite(sum(R1rho)):
+-        R1rho = array([1e100]*num_points)
+-
+-    back_calc[:] = R1rho
++    if not isfinite(sum(back_calc)):
++        # Replaces nan, inf, etc. with fill value.
++        fix_invalid(back_calc, copy=False, fill_value=1e100)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Jun 13 11:20:02 2014</div>  
+</body>
+</html>

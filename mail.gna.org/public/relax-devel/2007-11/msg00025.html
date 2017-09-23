@@ -1,0 +1,237 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: Re: Pickling problems with the relax data storage singleton. -->
+<!--X-From-R13: "Quevf [npDnvyq" <znpenvyqNjruv.rqh.nh> -->
+<!--X-Date: Mon, 26 Nov 2007 03:32:35 +0100 -->
+<!--X-Message-Id: 3b3f50350711251832k469e45a5r247696eaf3e83952@mail.gmail.com -->
+<!--X-Content-Type: text/plain -->
+<!--X-Reference: 7f080ed10711201001s59a00533pf3c0ee3f88a79edb@mail.gmail.com -->
+<!--X-Reference: 474543CC.50505@bmb.leeds.ac.uk -->
+<!--X-Reference: 7f080ed10711220106t543aade7o54657f5cced18858@mail.gmail.com -->
+<!--X-Reference: 474552DE.9090007@bmb.leeds.ac.uk -->
+<!--X-Reference: 7f080ed10711220830s56faf4d8v1941fa6c61052f35@mail.gmail.com -->
+<!--X-Reference: 47468BE4.7000804@bmb.leeds.ac.uk -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>Re: Pickling problems with the relax data storage singleton. -- November 26, 2007 - 03:32</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />Re: Pickling problems with the relax data storage singleton.</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00025" class="tabs">Index by Date</a> | <a href="threads.html#00025" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00024.html">Date Prev</a>] [<a href="msg00026.html">Date Next</a>] [<a href="msg00024.html">Thread Prev</a>] [<a href="msg00026.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: &quot;Gary Thompson&quot; &lt;garyt@xxxxxxxxxxxxxxx&gt;</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 26 Nov 2007 13:32:23 +1100</li>
+<li class="menuitem">
+<em>Cc</em>: relax-devel@xxxxxxx</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00025.html">3b3f50350711251832k469e45a5r247696eaf3e83952@mail.gmail.com</a>&gt;</li>
+<li class="menuitem">
+<em>References</em>: &lt;7f080ed10711201001s59a00533pf3c0ee3f88a79edb@xxxxxxxxxxxxxx&gt;	&lt;474543CC.50505@xxxxxxxxxxxxxxx&gt;	&lt;7f080ed10711220106t543aade7o54657f5cced18858@xxxxxxxxxxxxxx&gt;	&lt;474552DE.9090007@xxxxxxxxxxxxxxx&gt;	&lt;7f080ed10711220830s56faf4d8v1941fa6c61052f35@xxxxxxxxxxxxxx&gt;	&lt;47468BE4.7000804@xxxxxxxxxxxxxxx&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>Chris MacRaild</strong> on November 26, 2007 - 03:32:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">On Nov 23, 2007 7:14 PM, Gary Thompson &lt;garyt@xxxxxxxxxxxxxxx&gt; wrote:
+
+</pre><blockquote class="blockquote"><blockquote class="blockquote"><blockquote class="blockquote"><pre style="margin: 0em;">Hi Ed
+
+from looking at the error here I think the problem is that python
+internally thinks that Data() is still the classes constructor and is
+suprised to find that it is a different object...
+
+I think the answer is on the following page
+<a  rel="nofollow" href="http://docs.python.org/lib/pickle-inst.html">http://docs.python.org/lib/pickle-inst.html</a> you need to define
+__getstate__ and __setstate__ but...
+
+Its Worse than that he's Dead Jim
+---------------------------------
+
+There is possibly more that you have to do here, we need to check what
+happens if two state pickles are read in: do we get two different
+singletons ! What happens if we read in a pickle after already creating
+a Data object...
+
+</pre></blockquote></blockquote></blockquote><pre style="margin: 0em;">
+
+I'm having problems with my computer at home, so cant test any of this
+properly, but have a couple of ideas
+
+One solution is to change names just before we pickle, then change
+back after unpickling.
+
+saveData = Data
+Data = saveData.__class__
+
+should restore sanity, and allow:
+
+pickle.dump(saveData, file)
+
+It is a pretty crude hack, however, and as Gary says, raises lots of
+questions as to what will happen if a state is loaded on top of the
+existing, etc...
+
+
+Another (better?) option would be to do saving and restoring state at
+a lower level. So instead of simply pickling the whole Data object, we
+have save and restore methods of the Data class that do the pickling
+in a more controled way. This seems to me more true to the intent of
+the singleton pattern, avoiding the complications Gary refers to. Also
+the control over what gets saved and how might be useful.
+
+A quick sketch of the sort of thing I'm thinking:
+
+class Data(dict):
+    ...
+    def _save(file):
+        P = Pickler(file)
+        dont_save = [] # a list of attributes that don't need saving,
+eg. methods
+        for name,  attr in self.__dict__.items():
+            if not name in dont_save:
+                P.dump((name,attr))
+
+    def _restore(file):
+        P = Unpickler(file)
+        while True:
+            try:
+                name, attr = U.load()
+            except EOFError:
+                break
+            setAttr(self, name, attr)
+
+Then the user commands save_state and restore_state are just
+front-ends to Data._save and Data._restore. Pickle needn't wory itself
+with our unusual namespace, because only attributes of Data are
+pickled, not Data itself. Save and restore functions are mehtods of
+the Singleton object, so there is no risk of breaking the Singleton
+pattern. Finally, we have the basis of a mechanism there to control
+what gets saved/restored and how.
+
+Cheers,
+
+Chris
+
+
+</pre><blockquote class="blockquote"><blockquote class="blockquote"><blockquote class="blockquote"><pre style="margin: 0em;">we definitley need to write some tests for these cases
+
+
+regards
+gary
+
+--
+-------------------------------------------------------------------
+Dr Gary Thompson
+Astbury Centre for Structural Molecular Biology,
+University of Leeds, Astbury Building,
+Leeds, LS2 9JT, West-Yorkshire, UK             Tel. +44-113-3433024
+email: garyt@xxxxxxxxxxxxxxx                   Fax  +44-113-2331407
+-------------------------------------------------------------------
+
+
+
+
+
+</pre></blockquote><pre style="margin: 0em;">
+
+.
+
+
+
+</pre></blockquote><pre style="margin: 0em;">
+
+
+--
+-------------------------------------------------------------------
+Dr Gary Thompson
+Astbury Centre for Structural Molecular Biology,
+University of Leeds, Astbury Building,
+Leeds, LS2 9JT, West-Yorkshire, UK             Tel. +44-113-3433024
+email: garyt@xxxxxxxxxxxxxxx                   Fax  +44-113-2331407
+-------------------------------------------------------------------
+
+
+
+
+_______________________________________________
+relax (<a  rel="nofollow" href="http://nmr-relax.com">http://nmr-relax.com</a>)
+
+This is the relax-devel mailing list
+relax-devel@xxxxxxx
+
+To unsubscribe from this list, get a password
+reminder, or change your subscription options,
+visit the list information page at
+<a  rel="nofollow" href="https://mail.gna.org/listinfo/relax-devel">https://mail.gna.org/listinfo/relax-devel</a>
+
+</pre></blockquote><pre style="margin: 0em;">
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<ul><li><strong>Follow-Ups</strong>:
+<ul>
+<li><strong><a name="00027" href="msg00027.html">Re: Pickling problems with the relax data storage singleton.</a></strong>
+<ul><li><em>From:</em> Edward d'Auvergne</li></ul></li>
+<li><strong><a name="00026" href="msg00026.html">Re: Pickling problems with the relax data storage singleton.</a></strong>
+<ul><li><em>From:</em> gary thompson</li></ul></li>
+</ul></li></ul>
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<ul><li><strong>References</strong>:
+<ul>
+<li><strong><a name="00021" href="msg00021.html">Pickling problems with the relax data storage singleton.</a></strong>
+<ul><li><em>From:</em> Edward d'Auvergne</li></ul></li>
+<li><strong><a name="00022" href="msg00022.html">Re: Pickling problems with the relax data storage singleton.</a></strong>
+<ul><li><em>From:</em> Gary Thompson</li></ul></li>
+<li><strong><a name="00023" href="msg00023.html">Re: Pickling problems with the relax data storage singleton.</a></strong>
+<ul><li><em>From:</em> Edward d'Auvergne</li></ul></li>
+<li><strong><a name="00024" href="msg00024.html">Re: Pickling problems with the relax data storage singleton.</a></strong>
+<ul><li><em>From:</em> Gary Thompson</li></ul></li>
+</ul></li></ul>
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Nov 26 11:21:22 2007</div>  
+</body>
+</html>

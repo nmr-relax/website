@@ -1,0 +1,415 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r25473 &#45; in /trunk/test_suite/shared_data/curve_fitting/numeric_topology: estimate_errors.py estimate_errors_analyse.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Sat, 30 Aug 2014 18:06:02 +0200 -->
+<!--X-Message-Id: E1XNlAA&#45;0003QM&#45;O0@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r25473 - in /trunk/test_suite/shared_data/curve_fitting/numeric_topology: estimate_errors.py estimate_errors_analyse.py -- August 30, 2014 - 18:06</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r25473 - in /trunk/test_suite/shared_data/curve_fitting/numeric_topology: estimate_errors.py estimate_errors_analyse.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00607" class="tabs">Index by Date</a> | <a href="threads.html#00607" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00606.html">Date Prev</a>] [<a href="msg00608.html">Date Next</a>] [<a href="msg00606.html">Thread Prev</a>] [<a href="msg00608.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Sat, 30 Aug 2014 16:06:02 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00607.html">E1XNlAA-0003QM-O0@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on August 30, 2014 - 18:06:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Sat Aug 30 18:06:02 2014
+New Revision: 25473
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=25473&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=25473&amp;view=rev</a>
+Log:
+First try to make a test script for estimating effienciency on R2eff error 
+calculations.
+
+task #7822(<a  rel="nofollow" href="https://gna.org/task/index.php?7822">https://gna.org/task/index.php?7822</a>): Implement user function to 
+estimate R2eff and associated errors for exponential curve fitting.
+
+Added:
+    
+trunk/test_suite/shared_data/curve_fitting/numeric_topology/estimate_errors.py
+    
+trunk/test_suite/shared_data/curve_fitting/numeric_topology/estimate_errors_analyse.py
+
+Added: 
+trunk/test_suite/shared_data/curve_fitting/numeric_topology/estimate_errors.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/test_suite/shared_data/curve_fitting/numeric_topology/estimate_errors.py?rev=25473&amp;view=auto">http://svn.gna.org/viewcvs/relax/trunk/test_suite/shared_data/curve_fitting/numeric_topology/estimate_errors.py?rev=25473&amp;view=auto</a>
+==============================================================================
+--- 
+trunk/test_suite/shared_data/curve_fitting/numeric_topology/estimate_errors.py
+      (added)
++++ 
+trunk/test_suite/shared_data/curve_fitting/numeric_topology/estimate_errors.py
+      Sat Aug 30 18:06:02 2014
+@@ -0,0 +1,246 @@
++# Calculate the R and I0 errors via bootstrapping.
++# As this is an exact solution, bootstrapping is identical to Monte Carlo 
+simulations.
++
++# Python module imports.
++from minfx.generic import generic_minimise
++from numpy import array, arange, asarray, diag, dot, exp, eye, float64, log, 
+multiply, ones, sqrt, sum, std, transpose, where
++from numpy.linalg import inv, qr
++from random import gauss, sample, randint, randrange
++from collections import OrderedDict
++#import pickle
++import cPickle as pickle
++
++# Create and ordered dict, which can be looped over.
++dic = OrderedDict()
++
++# The real parameters.
++R = 1.0
++I0 = 1000.0
++params = array([R, I0], float64)
++
++# Number of simulations.
++sim = 2
++
++# Create number of timepoints. Between 3 and 10 for exponential curve 
+fitting.
++nt_min = 3
++nt_max = 4
++
++# Produce range with all possible time points.
++# Draw from this.
++all_times = arange(0.1, 1.1, 0.1)
++
++# Define error level on intensity.
++# Intensity with errors at 1 % error level, which themselves fluctuates with 
+10%.
++I_err_level = I0 / 100
++I_err_std = I_err_level / 10
++
++# Now produce range with all possible error sigmas.
++all_errors = []
++for j in range(len(all_times)):
++    error = gauss( I_err_level, I_err_std)
++    all_errors.append(error)
++
++# Convert to numpy array.
++all_errors = asarray(all_errors)
++
++# Store to dic
++dic['R'] = R
++dic['I0'] = I0
++dic['params'] = params
++dic['sim'] = sim
++dic['nt_min'] = nt_min
++dic['nt_max'] = nt_max
++dic['all_times'] = all_times
++dic['I_err_level'] = I_err_level
++dic['I_err_std'] = I_err_std
++dic['all_errors'] = all_errors
++
++########### Define functions ##################################
++
++def func_exp(params=None, times=None):
++    &quot;&quot;&quot;Calculate the function values of exponential function.&quot;&quot;&quot;
++    # Unpack
++    r2eff, i0 = params
++    return i0 * exp( -times * r2eff)
++
++def est_x0_exp(times=None, I=None):
++    &quot;&quot;&quot;Estimate starting parameter x0 = [R, I0], by converting the 
+exponential curve to a linear problem.  Then solving by linear least squares 
+of: ln(Intensity[j]) = ln(I0) - time[j]* R.
++    &quot;&quot;&quot;
++    # Convert to linear problem.
++    ln_I = log(I)
++    x = - 1. * times
++    n = len(times)
++    # ln_I = R (-t) + ln(i0)
++    # f(x) = a x + b 
++    # Solve by linear least squares.
++    a = (sum(x*ln_I) - 1./n * sum(x) * sum(ln_I) ) / ( sum(x**2) - 1./n * 
+(sum(x))**2 )
++    b = 1./n * sum(ln_I) - a * 1./n * sum(x)
++    # Convert back from linear to exp function. Best estimate for parameter.
++    R = a
++    I0 = exp(b)
++    # Return.
++    return [R, I0]
++
++def est_x0_exp_weight(times=None, I=None, errors=None):
++    &quot;&quot;&quot;Estimate starting parameter x0 = [R, I0], by converting the 
+exponential curve to a linear problem.  Then solving by linear least squares 
+of: ln(Intensity[j]) = ln(I0) - time[j]* R.
++    &quot;&quot;&quot;
++    # Convert to linear problem.
++    ln_I = log(I* 1. / errors)
++    x = - 1. * times
++    n = len(times)
++    # ln_Iw = R (-t) + ln(i0 / errors)
++    # f(x) = a x + b 
++    # Solve by linear least squares.
++    a = (sum(x*ln_I) - 1./n * sum(x) * sum(ln_I) ) / ( sum(x**2) - 1./n * 
+(sum(x))**2 )
++    b = 1./n * sum(ln_I) - a * 1./n * sum(x)
++    # Convert back from linear to exp function. Best estimate for parameter.
++    R = a
++    I0 = exp(b) * errors
++    # Return.
++    return [R, I0]
++
++def point_r2eff_err(times=None, I=None, errors=None):
++    &quot;&quot;&quot;Calculate the R2 error for relaxation time data.
++                                  
+______________________________________________________________________
++                        1        / / sigma_I[1] \ 2     / sigma_I[2] \ 2     
+       / sigma_I[n] \ 2
++        sigma_R_i =  -------    /  | --------   |   +   | --------   |    +  
+       | --------   | 
++                     times[i] \/   \   I[1]     /       \    I[2]    /       
+....   \    I[j]    /
++
++    where n is number of time points.
++    &quot;&quot;&quot;
++    sigma_R = []
++    n = len(times)
++    for i, time in enumerate(times):
++        sigma_sum = 0
++        for j in range(n):
++            sigma_sum += (errors[j] / I[j])**2
++        sqrt_sigma_sum = sqrt(sigma_sum)
++        sigma_R_i = 1. / time * sqrt_sigma_sum
++        sigma_R.append(sigma_R_i)
++    return asarray(sigma_R)
++
++def func_exp_chi2(params=None, times=None, I=None, errors=None):
++    &quot;&quot;&quot;Target function for minimising chi2 in minfx, for exponential fit.&quot;&quot;&quot;
++
++    # Calculate.
++    back_calc = func_exp(params=params, times=times)
++    # Calculate and return the chi-squared value.
++    return chi2(data=I, back_calc=back_calc, errors=errors)
++
++def chi2(data=None, back_calc=None, errors=None):
++    &quot;&quot;&quot;Function to calculate the chi-squared value.&quot;&quot;&quot;
++
++    # Calculate the chi-squared statistic.
++    return sum((1.0 / errors * (data - back_calc))**2)
++
++def func_exp_grad(params=None, times=None, errors=None):
++    &quot;&quot;&quot;The gradient (Jacobian matrix) of func_exp for Co-variance 
+calculation.&quot;&quot;&quot;
++
++    # Unpack the parameter values.
++    r2eff = params[0]
++    i0 = params[1]
++    # Make partial derivative, with respect to r2eff.
++    d_exp_d_r2eff = -i0 * times * exp(-r2eff * times)
++    # Make partial derivative, with respect to i0.
++    d_exp_d_i0 = exp(-r2eff * times)
++    # Define Jacobian as m rows with function derivatives and n columns of 
+parameters.
++    jacobian_matrix_exp = transpose(array( [d_exp_d_r2eff , d_exp_d_i0] ) )
++    # Return Jacobian matrix.
++    return jacobian_matrix_exp
++
++def multifit_covar(J=None, weights=None):
++    &quot;&quot;&quot;This is the implementation of the multifit covariance.&quot;&quot;&quot;
++    # Make a square diagonal matrix.
++    eye_mat = eye(weights.shape[0])
++    # Form weight matrix.
++    W = multiply(eye_mat, weights)
++    # Calculate step by step, by matrix multiplication.
++    Jt = transpose(J)
++    Jt_W = dot(Jt, W)
++    Jt_W_J = dot(Jt_W, J)
++    # Invert matrix by QR decomposition.
++    Q, R = qr(Jt_W_J)
++    # Form the covariance matrix.
++    Qxx = dot(inv(R), transpose(Q) )
++    return Qxx
++
++
++########### Do simulations ##################################
++
++# Loop over sims.
++for i in range(sim):
++    # Create index in dic.
++    dic[i] = OrderedDict()
++
++    # Create random number of timepoints. Between 3 and 10 for exponential 
+curve fitting.
++    nt = randint(nt_min, nt_max)
++    dic[i]['nt'] = nt
++
++    # Create time array, by drawing from the all time points array.
++    times = asarray( sample(population=all_times, k=nt) )
++    dic[i]['times'] = times
++
++    # Get the indexes which was drawn from.
++    indexes = []
++    for time in times:
++        indexes.append( int(where(time == all_times)[0]) )
++    dic[i]['indexes'] = indexes
++
++    # Draw errors from same indexes.
++    errors = all_errors[indexes]
++    dic[i]['errors'] = errors
++
++    # Calculate the real intensity.
++    I = func_exp(params=params, times=times)
++    dic[i]['I'] = I
++
++    # Now produce Intensity with errors.
++    I_err = []
++    for j, error in enumerate(errors):
++        I_error = gauss(I[j], error)
++        I_err.append(I_error)
++
++    # Convert to numpy array.
++    I_err = asarray(I_err)
++    dic[i]['I_err'] = I_err
++
++    # Now estimate with no weighting.
++    R_e, I0_e = est_x0_exp(times=times, I=I_err)
++    dic[i]['R_e'] = R_e
++    dic[i]['I0_e'] = I0_e
++
++    # Now estimate with weighting.
++    R_ew, I0_ew = est_x0_exp_weight(times=times, I=I_err, errors=errors)
++    dic[i]['R_ew'] = R_e
++    dic[i]['I0_ew'] = I0_e
++
++    # Now estimate errors for parameters.
++    sigma_R = point_r2eff_err(times=times, I=I_err, errors=errors)
++    dic[i]['sigma_R'] = sigma_R
++
++    # Minimisation.
++    args = (times, I_err, errors)
++    min_algor = 'simplex'
++    x0 = array([R_e, I0_e])
++
++    params_minfx, chi2_minfx, iter_count, f_count, g_count, h_count, warning 
+= generic_minimise(func=func_exp_chi2, args=args, x0=x0, min_algor=min_algor, 
+full_output=True, print_flag=0)
++    R_m, I0_m = params_minfx
++    dic[i]['R_m'] = R_m
++    dic[i]['I0_m'] = I0_m
++
++    # Estimate errors from Jacobian
++    jacobian = func_exp_grad(params=params, times=times, errors=errors)
++    dic[i]['jacobian'] = jacobian
++    weights = 1. / errors**2
++    dic[i]['weights'] = weights
++
++    # Covariance matrix.
++    pcov = multifit_covar(J=jacobian, weights=weights)
++    dic[i]['pcov'] = pcov
++    sigma_R_p, sigma_I0_p = sqrt(diag(pcov))
++    dic[i]['sigma_R_p'] = sigma_R_p
++    dic[i]['sigma_I0_p'] = sigma_I0_p
++
++
++# Write to pickle.
++pickle.dump( dic, open( &quot;estimate_errors.p&quot;, &quot;wb&quot; ) )
+
+Added: 
+trunk/test_suite/shared_data/curve_fitting/numeric_topology/estimate_errors_analyse.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/test_suite/shared_data/curve_fitting/numeric_topology/estimate_errors_analyse.py?rev=25473&amp;view=auto">http://svn.gna.org/viewcvs/relax/trunk/test_suite/shared_data/curve_fitting/numeric_topology/estimate_errors_analyse.py?rev=25473&amp;view=auto</a>
+==============================================================================
+--- 
+trunk/test_suite/shared_data/curve_fitting/numeric_topology/estimate_errors_analyse.py
+      (added)
++++ 
+trunk/test_suite/shared_data/curve_fitting/numeric_topology/estimate_errors_analyse.py
+      Sat Aug 30 18:06:02 2014
+@@ -0,0 +1,29 @@
++# Calculate the R and I0 errors via bootstrapping.
++# As this is an exact solution, bootstrapping is identical to Monte Carlo 
+simulations.
++
++# Python module imports.
++from collections import OrderedDict
++#import pickle
++import cPickle as pickle
++
++# Open data.
++dic = pickle.load( open( &quot;estimate_errors.p&quot;, &quot;rb&quot; ) )
++
++
++# Make plots?
++make_plots = False
++if make_plots:
++    from pylab import show, plot
++
++#    if make_plots:
++#        plot(times, I, 'b.', label='I')
++#        plot(times, I_err, 'r.', label='I_err')
++
++
++# Loop over dic.
++if False:
++    for i, i_dic in dic.iteritems():
++        print i, i_dic
++
++if make_plots:
++    show()
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Sun Aug 31 09:00:06 2014</div>  
+</body>
+</html>

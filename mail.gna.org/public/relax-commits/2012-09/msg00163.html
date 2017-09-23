@@ -1,0 +1,237 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r17573 &#45; /trunk/test_suite/gui_tests/model_free.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 27 Sep 2012 10:08:13 +0200 -->
+<!--X-Message-Id: E1TH98m&#45;0002LF&#45;W6@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r17573 - /trunk/test_suite/gui_tests/model_free.py -- September 27, 2012 - 10:08</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r17573 - /trunk/test_suite/gui_tests/model_free.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00163" class="tabs">Index by Date</a> | <a href="threads.html#00163" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00162.html">Date Prev</a>] [<a href="msg00164.html">Date Next</a>] [<a href="msg00162.html">Thread Prev</a>] [<a href="msg00164.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 27 Sep 2012 08:08:12 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00163.html">E1TH98m-0002LF-W6@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on September 27, 2012 - 10:08:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Sep 27 10:08:12 2012
+New Revision: 17573
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=17573&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=17573&amp;view=rev</a>
+Log:
+Fixes for the checks in the Mf.test_mf_auto_analysis() GUI test for the 
+recent test suite data changes.
+
+
+Modified:
+    trunk/test_suite/gui_tests/model_free.py
+
+Modified: trunk/test_suite/gui_tests/model_free.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/test_suite/gui_tests/model_free.py?rev=17573&amp;r1=17572&amp;r2=17573&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/test_suite/gui_tests/model_free.py?rev=17573&amp;r1=17572&amp;r2=17573&amp;view=diff</a>
+==============================================================================
+--- trunk/test_suite/gui_tests/model_free.py (original)
++++ trunk/test_suite/gui_tests/model_free.py Thu Sep 27 10:08:12 2012
+@@ -115,6 +115,11 @@
+         analysis.setup_dipole_pair()
+ 
+         # Dipole-dipole interaction wizard:  The dipole_pair.define, 
+dipole_pair.set_dist, and dipole_pair.unit_vectors user functions.
++        analysis.dipole_wizard._apply()
++        interpreter.flush()    # Required because of the asynchronous uf 
+call.
++        page = analysis.dipole_wizard.get_page(0)
++        page.uf_args['spin_id1'].SetValue(str_to_gui(&quot;@NE1&quot;))
++        page.uf_args['spin_id2'].SetValue(str_to_gui(&quot;@HE1&quot;))
+         analysis.dipole_wizard._go_next()
+         interpreter.flush()    # Required because of the asynchronous uf 
+call.
+         analysis.dipole_wizard._go_next()
+@@ -176,10 +181,11 @@
+         
+auto_model_free.dauvergne_protocol.dAuvergne_protocol.opt_max_iterations = 
+1000
+ 
+         # Execute relax.
+-        analysis.execute(wx.CommandEvent(wx.wxEVT_COMMAND_BUTTON_CLICKED, 
+analysis.button_exec_relax.GetId()))
++        state = 
+analysis.execute(wx.CommandEvent(wx.wxEVT_COMMAND_BUTTON_CLICKED, 
+analysis.button_exec_relax.GetId()))
+ 
+         # Wait for execution to complete.
+-        analysis.thread.join()
++        if hasattr(analysis, 'thread'):
++            analysis.thread.join()
+ 
+         # Flush all wx events.
+         wx.Yield()
+@@ -202,12 +208,22 @@
+         self.assertAlmostEqual(cdp.chi2, 4e-19)
+ 
+         # The spin ID info.
+-        mol_names = [&quot;sphere_mol1&quot;] * 9*2
+-        res_names = [&quot;GLY&quot;] * 9*2
+-        res_nums = [val for pair in zip(range(1, 10), range(1, 10)) for val 
+in pair]
+-        spin_names = [&quot;N&quot;, &quot;H&quot;] * 9
+-        spin_nums = numpy.array(range(9*2)) * 2 + 1
+-        spin_nums = range(1, 20)
++        mol_names = [&quot;sphere_mol1&quot;] * 20
++        res_names = [&quot;GLY&quot;] * 20
++        res_nums = []
++        for i in range(1, 10):
++            res_nums.append(i)
++            res_nums.append(i)
++        res_nums.append(i)
++        res_nums.append(i)
++        spin_names = [&quot;N&quot;, &quot;H&quot;] * 9 + [&quot;NE1&quot;, &quot;HE1&quot;]
++        spin_nums = range(1, 21)
++        isotopes = [&quot;15N&quot;, &quot;1H&quot;] * 10
++        csa = [-172e-6, None] * 10
++        select = [True, False] * 10
++        fixed = [False, False] * 10
++        s2 = [0.8, None] * 10
++        te = [20e-12, None] * 10
+ 
+         # Check the spin data.
+         i = 0
+@@ -219,42 +235,43 @@
+             self.assertEqual(spin.name, spin_names[i])
+             self.assertEqual(spin.num,  spin_nums[i])
+ 
+-            # The 1H spin checks.
+-            if i%2:
+-                # The data.
+-                self.assertEqual(spin.select, False)
+-                self.assertEqual(spin.isotope, '1H')
+-
+-            # The 15N spin checks.
++            # The data.
++            self.assertEqual(spin.select, select[i])
++            self.assertEqual(spin.fixed, fixed[i])
++            self.assertEqual(spin.isotope, isotopes[i])
++            if csa[i] == None:
++                self.assertEqual(spin.csa, None)
+             else:
+-                # The data.
+-                self.assertEqual(spin.select, True)
+-                self.assertEqual(spin.fixed, False)
+-                self.assertEqual(spin.isotope, '15N')
+-                self.assertAlmostEqual(spin.csa, -172e-6)
+-
+-                # The model-free data.
+-                self.assertEqual(spin.model, 'm2')
+-                self.assertEqual(spin.equation, 'mf_orig')
+-                self.assertEqual(len(spin.params), 2)
+-                self.assertEqual(spin.params[0], 's2')
+-                self.assertEqual(spin.params[1], 'te')
++                self.assertAlmostEqual(spin.csa, csa[i])
++
++            # The model-free data.
++            self.assertEqual(spin.model, 'm2')
++            self.assertEqual(spin.equation, 'mf_orig')
++            self.assertEqual(len(spin.params), 2)
++            self.assertEqual(spin.params[0], 's2')
++            self.assertEqual(spin.params[1], 'te')
++            if s2[i] == None:
++                self.assertEqual(spin.s2, None)
++            else:
+                 self.assertAlmostEqual(spin.s2, 0.8)
+-                self.assertEqual(spin.s2f, None)
+-                self.assertEqual(spin.s2s, None)
+-                self.assertEqual(spin.local_tm, None)
++            self.assertEqual(spin.s2f, None)
++            self.assertEqual(spin.s2s, None)
++            self.assertEqual(spin.local_tm, None)
++            if te[i] == None:
++                self.assertEqual(spin.te, None)
++            else:
+                 self.assertAlmostEqual(spin.te, 20e-12)
+-                self.assertEqual(spin.tf, None)
+-                self.assertEqual(spin.ts, None)
+-                self.assertEqual(spin.rex, None)
+-
+-                # The spin minimisation info.
+-                self.assertEqual(spin.chi2, None)
+-                self.assertEqual(spin.iter, None)
+-                self.assertEqual(spin.f_count, None)
+-                self.assertEqual(spin.g_count, None)
+-                self.assertEqual(spin.h_count, None)
+-                self.assertEqual(spin.warning, None)
++            self.assertEqual(spin.tf, None)
++            self.assertEqual(spin.ts, None)
++            self.assertEqual(spin.rex, None)
++
++            # The spin minimisation info.
++            self.assertEqual(spin.chi2, None)
++            self.assertEqual(spin.iter, None)
++            self.assertEqual(spin.f_count, None)
++            self.assertEqual(spin.g_count, None)
++            self.assertEqual(spin.h_count, None)
++            self.assertEqual(spin.warning, None)
+ 
+             # Increment the index.
+             i += 1
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Sep 27 16:20:02 2012</div>  
+</body>
+</html>

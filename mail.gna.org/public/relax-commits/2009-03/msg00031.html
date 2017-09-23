@@ -1,0 +1,287 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r8925 &#45; /1.3/generic_fns/relax_data.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 06 Mar 2009 19:21:29 +0100 -->
+<!--X-Message-Id: E1Lfefp&#45;0001g3&#45;7s@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r8925 - /1.3/generic_fns/relax_data.py -- March 06, 2009 - 19:21</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r8925 - /1.3/generic_fns/relax_data.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00031" class="tabs">Index by Date</a> | <a href="threads.html#00031" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00030.html">Date Prev</a>] [<a href="msg00032.html">Date Next</a>] [<a href="msg00030.html">Thread Prev</a>] [<a href="msg00032.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 06 Mar 2009 18:21:29 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00031.html">E1Lfefp-0001g3-7s@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on March 06, 2009 - 19:21:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Mar  6 19:21:27 2009
+New Revision: 8925
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=8925&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=8925&amp;view=rev</a>
+Log:
+The read() function has been split into to for code recycling in the bmrb 
+branch.
+
+The new pack_data() function has been spun off to fill the data pipe and spin 
+containers.
+
+
+Modified:
+    1.3/generic_fns/relax_data.py
+
+Modified: 1.3/generic_fns/relax_data.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/generic_fns/relax_data.py?rev=8925&amp;r1=8924&amp;r2=8925&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/generic_fns/relax_data.py?rev=8925&amp;r1=8924&amp;r2=8925&amp;view=diff</a>
+==============================================================================
+--- 1.3/generic_fns/relax_data.py (original)
++++ 1.3/generic_fns/relax_data.py Fri Mar  6 19:21:27 2009
+@@ -29,7 +29,7 @@
+ 
+ # relax module imports.
+ from data import Relax_data_store; ds = Relax_data_store()
+-from generic_fns.mol_res_spin import exists_mol_res_spin_data, 
+generate_spin_id_data_array, return_spin, spin_index_loop, spin_loop
++from generic_fns.mol_res_spin import create_molecule, create_residue, 
+create_spin, exists_mol_res_spin_data, generate_spin_id, return_spin, 
+spin_index_loop, spin_loop
+ from generic_fns import pipes
+ from generic_fns import value
+ from relax_errors import RelaxError, RelaxNoRiError, RelaxNoSequenceError, 
+RelaxNoSpinError, RelaxRiError
+@@ -519,6 +519,65 @@
+ 
+     # Return the index.
+     return index
++
++
++def pack_data(ri_label, frq_label, frq, values, errors, mol_names=None, 
+res_nums=None, res_names=None, spin_nums=None, spin_names=None, 
+gen_seq=False):
++    &quot;&quot;&quot;Pack the relaxation data into the data pipe and spin containers.
++
++    The values, errors, mol_names, res_nums, res_names, spin_nums, and 
+spin_names arguments must be
++    lists of equal length or None.  Each element i corresponds to a unique 
+spin.
++
++    @param ri_label:        The relaxation data type, ie 'R1', 'R2', or 
+'NOE'.
++    @type ri_label:         str
++    @param frq_label:       The field strength label.
++    @type frq_label:        str
++    @param frq:             The spectrometer proton frequency in Hz.
++    @type frq:              float
++    @keyword mol_names:     The list of molecule names for each spin.
++    @type mol_names:        None or list of str
++    @keyword res_nums:      The list of residue numbers for each spin.
++    @type res_nums:         None or list of str
++    @keyword res_names:     The list of residue names for each spin.
++    @type res_names:        None or list of str
++    @keyword spin_nums:     The list of spin numbers.
++    @type spin_nums:        None or list of str
++    @keyword spin_names:    The list of spin names.
++    @type spin_names:       None or list of str
++    @keyword gen_seq:       A flag which if True will cause the molecule, 
+residue, and spin sequence
++                            data to be generated.
++    @type gen_seq:          bool
++    &quot;&quot;&quot;
++
++    # Get the current data pipe.
++    cdp = pipes.get_pipe()
++
++    # Initialise the global data for the current pipe if necessary.
++    data_init(cdp, global_flag=True)
++
++    # Update the global data.
++    update_data_structures_pipe(ri_label, frq_label, frq)
++
++    # Loop over the spin data.
++    for value, error, mol_name, res_num, res_name, spin_num, spin_name in 
+zip(values, errors, mol_names, res_nums, res_names, spin_nums, spin_names):
++        # Generate the spin identification string.
++        id = generate_spin_id(mol_name=mol_name, res_num=res_num, 
+res_name=res_name, spin_num=spin_num, spin_name=spin_name)
++
++        # Skip all rows where the value or error is None.
++        if value == None or error == None:
++            continue
++
++        # Get the corresponding spin container.
++        spin = return_spin(id)
++        if spin == None:
++            if not gen_seq:
++                raise RelaxNoSpinError, id
++            else:
++                create_molecule(mol_name)
++                create_residue(res_num, res_name, 
+mol_id=generate_spin_id(mol_name=mol_name))
++                create_spin(spin_num, spin_name, 
+res_id=generate_spin_id(mol_name=mol_name, res_num=res_num, 
+res_name=res_name))
++
++        # Update all data structures.
++        update_data_structures_spin(spin, ri_label, frq_label, frq, value, 
+error)
+ 
+ 
+ def read(ri_label=None, frq_label=None, frq=None, file=None, dir=None, 
+file_data=None, mol_name_col=None, res_num_col=0, res_name_col=1, 
+spin_num_col=None, spin_name_col=None, data_col=2, error_col=3, sep=None):
+@@ -556,9 +615,6 @@
+     # Test if the current data pipe exists.
+     pipes.test()
+ 
+-    # Get the current data pipe.
+-    cdp = pipes.get_pipe()
+-
+     # Test if sequence data exists.
+     if not exists_mol_res_spin_data():
+         raise RelaxNoSequenceError
+@@ -611,44 +667,47 @@
+             except ValueError:
+                 raise RelaxError, &quot;The relaxation data in the line &quot; + 
+`file_data[i]` + &quot; is invalid.&quot;
+ 
+-
+-    # Global (non-residue specific) data.
+-    #####################################
+-
+-    # Initialise the global data for the current pipe if necessary.
+-    data_init(cdp, global_flag=True)
+-
+-    # Update the global data.
+-    update_data_structures_pipe(ri_label, frq_label, frq)
+-
+-
+-    # Residue specific data.
+-    ########################
+-
+-    # Loop over the relaxation data.
++    # Loop over the file data to create the data structures for packing.
++    values = []
++    errors = []
++    mol_names = []
++    res_nums = []
++    res_names = []
++    spin_nums = []
++    spin_names = []
+     for i in xrange(len(file_data)):
+         # Skip missing data.
+         if len(file_data[i]) &lt;= min_col_num:
+             continue
+ 
+-        # Generate the spin identification string.
+-        id = generate_spin_id_data_array(data=file_data[i], 
+mol_name_col=mol_name_col, res_num_col=res_num_col, 
+res_name_col=res_name_col, spin_num_col=spin_num_col, 
+spin_name_col=spin_name_col)
++        # Pack the spin ID info.
++        if mol_name_col:
++            mol_names.append(file_data[i][mol_name_col])
++        else:
++            mol_names.append(None)
++        if res_num_col:
++            res_nums.append(file_data[i][res_num_col])
++        else:
++            res_nums.append(None)
++        if res_name_col:
++            res_names.append(file_data[i][res_name_col])
++        else:
++            res_names.append(None)
++        if spin_num_col:
++            spin_nums.append(file_data[i][spin_num_col])
++        else:
++            spin_nums.append(None)
++        if spin_name_col:
++            spin_names.append(file_data[i][spin_name_col])
++        else:
++            spin_names.append(None)
+ 
+         # Convert the data.
+-        value = eval(file_data[i][data_col])
+-        error = eval(file_data[i][error_col])
+-
+-        # Skip all rows where the value or error is None.
+-        if value == None or error == None:
+-            continue
+-
+-        # Get the corresponding spin container.
+-        spin = return_spin(id)
+-        if spin == None:
+-            raise RelaxNoSpinError, id
+-
+-        # Update all data structures.
+-        update_data_structures_spin(spin, ri_label, frq_label, frq, value, 
+error)
++        values.append(eval(file_data[i][data_col]))
++        errors.append(eval(file_data[i][error_col]))
++
++    # Pack the data.
++    pack_data(ri_label, frq_label, frq, values, errors, mol_names, res_nums, 
+res_names, spin_nums, spin_names)
+ 
+ 
+ def return_data_desc(name):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Mar 06 19:40:04 2009</div>  
+</body>
+</html>

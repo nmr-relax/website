@@ -1,0 +1,540 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r5230 &#45; /1.3/specific_fns/model_free/mf_minimise.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Sun, 23 Mar 2008 19:42:35 +0100 -->
+<!--X-Message-Id: E1JdV9O&#45;00025w&#45;Bo@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r5230 - /1.3/specific_fns/model_free/mf_minimise.py -- March 23, 2008 - 19:42</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r5230 - /1.3/specific_fns/model_free/mf_minimise.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00113" class="tabs">Index by Date</a> | <a href="threads.html#00113" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00112.html">Date Prev</a>] [<a href="msg00114.html">Date Next</a>] [<a href="msg00112.html">Thread Prev</a>] [<a href="msg00114.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Sun, 23 Mar 2008 18:42:33 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00113.html">E1JdV9O-00025w-Bo@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on March 23, 2008 - 19:42:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Sun Mar 23 19:42:31 2008
+New Revision: 5230
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=5230&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=5230&amp;view=rev</a>
+Log:
+Updated the model-free disassemble_param_vector() method to the new relax 
+design.
+
+Many model-free optimisation system tests now pass!!!
+
+
+Modified:
+    1.3/specific_fns/model_free/mf_minimise.py
+
+Modified: 1.3/specific_fns/model_free/mf_minimise.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/specific_fns/model_free/mf_minimise.py?rev=5230&amp;r1=5229&amp;r2=5230&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/specific_fns/model_free/mf_minimise.py?rev=5230&amp;r1=5229&amp;r2=5230&amp;view=diff</a>
+==============================================================================
+--- 1.3/specific_fns/model_free/mf_minimise.py (original)
++++ 1.3/specific_fns/model_free/mf_minimise.py Sun Mar 23 19:42:31 2008
+@@ -208,170 +208,188 @@
+                 relax_data_store.res[self.run][i].chi2 = chi2
+ 
+ 
+-    def disassemble_param_vector(self, index=None, sim_index=None):
+-        &quot;&quot;&quot;Function for disassembling the parameter vector.&quot;&quot;&quot;
++    def disassemble_param_vector(self, param_set, param_vector=None, 
+spin=None, spin_id=None, sim_index=None):
++        &quot;&quot;&quot;Disassemble the model-free parameter vector.
++
++        @param param_set:       The model-free model type.  This must be one 
+of 'mf', 'local_tm',
++                                'diff', or 'all'.
++        @type param_set:        str
++        @keyword param_vector:  The model-free parameter vector.
++        @type param_vector:     numpy array
++        @keyword spin:          The spin data container.  If this argument 
+is supplied, then the spin_id
++                                argument will be ignored.
++        @type spin:             SpinContainer instance
++        @keyword spin_id:       The spin identification string.
++        @type spin_id:          str
++        @keyword sim_index:     The optional MC simulation index.
++        @type sim_index:        int
++        @return:                An array of the parameter values of the 
+model-free model.
++        @rtype:                 numpy array
++        &quot;&quot;&quot;
+ 
+         # Initialise.
+         param_index = 0
+ 
++        # Alias the current data pipe.
++        cdp = relax_data_store[relax_data_store.current_pipe]
++
+         # Diffusion tensor parameters of the Monte Carlo simulations.
+-        if sim_index != None and (self.param_set == 'diff' or self.param_set 
+== 'all'):
++        if sim_index != None and (param_set == 'diff' or param_set == 'all'):
+             # Spherical diffusion.
+-            if relax_data_store.diff[self.run].type == 'sphere':
++            if cdp.diff_tensor.type == 'sphere':
+                 # Sim values.
+-                relax_data_store.diff[self.run].tm_sim[sim_index] = 
+self.param_vector[0]
++                cdp.diff_tensor.tm_sim[sim_index] = param_vector[0]
+ 
+                 # Parameter index.
+                 param_index = param_index + 1
+ 
+             # Spheroidal diffusion.
+-            elif relax_data_store.diff[self.run].type == 'spheroid':
++            elif cdp.diff_tensor.type == 'spheroid':
+                 # Sim values.
+-                relax_data_store.diff[self.run].tm_sim[sim_index] = 
+self.param_vector[0]
+-                relax_data_store.diff[self.run].Da_sim[sim_index] = 
+self.param_vector[1]
+-                relax_data_store.diff[self.run].theta_sim[sim_index] = 
+self.param_vector[2]
+-                relax_data_store.diff[self.run].phi_sim[sim_index] = 
+self.param_vector[3]
+-                
+self.relax.generic.diffusion_tensor.fold_angles(run=self.run, 
+sim_index=sim_index)
++                cdp.diff_tensor.tm_sim[sim_index] = param_vector[0]
++                cdp.diff_tensor.Da_sim[sim_index] = param_vector[1]
++                cdp.diff_tensor.theta_sim[sim_index] = param_vector[2]
++                cdp.diff_tensor.phi_sim[sim_index] = param_vector[3]
++                diffusion_tensor.fold_angles(sim_index=sim_index)
+ 
+                 # Parameter index.
+                 param_index = param_index + 4
+ 
+             # Ellipsoidal diffusion.
+-            elif relax_data_store.diff[self.run].type == 'ellipsoid':
++            elif cdp.diff_tensor.type == 'ellipsoid':
+                 # Sim values.
+-                relax_data_store.diff[self.run].tm_sim[sim_index] = 
+self.param_vector[0]
+-                relax_data_store.diff[self.run].Da_sim[sim_index] = 
+self.param_vector[1]
+-                relax_data_store.diff[self.run].Dr_sim[sim_index] = 
+self.param_vector[2]
+-                relax_data_store.diff[self.run].alpha_sim[sim_index] = 
+self.param_vector[3]
+-                relax_data_store.diff[self.run].beta_sim[sim_index] = 
+self.param_vector[4]
+-                relax_data_store.diff[self.run].gamma_sim[sim_index] = 
+self.param_vector[5]
+-                
+self.relax.generic.diffusion_tensor.fold_angles(run=self.run, 
+sim_index=sim_index)
++                cdp.diff_tensor.tm_sim[sim_index] = param_vector[0]
++                cdp.diff_tensor.Da_sim[sim_index] = param_vector[1]
++                cdp.diff_tensor.Dr_sim[sim_index] = param_vector[2]
++                cdp.diff_tensor.alpha_sim[sim_index] = param_vector[3]
++                cdp.diff_tensor.beta_sim[sim_index] = param_vector[4]
++                cdp.diff_tensor.gamma_sim[sim_index] = param_vector[5]
++                diffusion_tensor.fold_angles(sim_index=sim_index)
+ 
+                 # Parameter index.
+                 param_index = param_index + 6
+ 
+         # Diffusion tensor parameters.
+-        elif self.param_set == 'diff' or self.param_set == 'all':
++        elif param_set == 'diff' or param_set == 'all':
+             # Spherical diffusion.
+-            if relax_data_store.diff[self.run].type == 'sphere':
++            if cdp.diff_tensor.type == 'sphere':
+                 # Values.
+-                relax_data_store.diff[self.run].tm = self.param_vector[0]
++                cdp.diff_tensor.tm = param_vector[0]
+ 
+                 # Parameter index.
+                 param_index = param_index + 1
+ 
+             # Spheroidal diffusion.
+-            elif relax_data_store.diff[self.run].type == 'spheroid':
++            elif cdp.diff_tensor.type == 'spheroid':
+                 # Values.
+-                relax_data_store.diff[self.run].tm = self.param_vector[0]
+-                relax_data_store.diff[self.run].Da = self.param_vector[1]
+-                relax_data_store.diff[self.run].theta = self.param_vector[2]
+-                relax_data_store.diff[self.run].phi = self.param_vector[3]
+-                self.relax.generic.diffusion_tensor.fold_angles(run=self.run)
++                cdp.diff_tensor.tm = param_vector[0]
++                cdp.diff_tensor.Da = param_vector[1]
++                cdp.diff_tensor.theta = param_vector[2]
++                cdp.diff_tensor.phi = param_vector[3]
++                diffusion_tensor.fold_angles()
+ 
+                 # Parameter index.
+                 param_index = param_index + 4
+ 
+             # Ellipsoidal diffusion.
+-            elif relax_data_store.diff[self.run].type == 'ellipsoid':
++            elif cdp.diff_tensor.type == 'ellipsoid':
+                 # Values.
+-                relax_data_store.diff[self.run].tm = self.param_vector[0]
+-                relax_data_store.diff[self.run].Da = self.param_vector[1]
+-                relax_data_store.diff[self.run].Dr = self.param_vector[2]
+-                relax_data_store.diff[self.run].alpha = self.param_vector[3]
+-                relax_data_store.diff[self.run].beta = self.param_vector[4]
+-                relax_data_store.diff[self.run].gamma = self.param_vector[5]
+-                self.relax.generic.diffusion_tensor.fold_angles(run=self.run)
++                cdp.diff_tensor.tm = param_vector[0]
++                cdp.diff_tensor.Da = param_vector[1]
++                cdp.diff_tensor.Dr = param_vector[2]
++                cdp.diff_tensor.alpha = param_vector[3]
++                cdp.diff_tensor.beta = param_vector[4]
++                cdp.diff_tensor.gamma = param_vector[5]
++                diffusion_tensor.fold_angles()
+ 
+                 # Parameter index.
+                 param_index = param_index + 6
+ 
+         # Model-free parameters.
+-        if self.param_set != 'diff':
+-            # Loop over all residues.
+-            for i in xrange(len(relax_data_store.res[self.run])):
+-                # Remap the residue data structure.
+-                data = relax_data_store.res[self.run][i]
+-
+-                # Skip deselected residues.
+-                if not data.select:
++        if param_set != 'diff':
++            # The loop.
++            if spin:
++                loop = [spin]
++            else:
++                loop = spin_loop(spin_id)
++
++            # Loop over the spins.
++            for spin in loop:
++                # Skip deselected spins.
++                if not spin.select:
+                     continue
+ 
+-                # Only add parameters for a single residue if index has a 
+value.
+-                if index != None and i != index:
+-                    continue
+-
+                 # Loop over the model-free parameters.
+-                for j in xrange(len(data.params)):
++                for j in xrange(len(spin.params)):
+                     # Local tm.
+-                    if data.params[j] == 'local_tm':
++                    if spin.params[j] == 'local_tm':
+                         if sim_index == None:
+-                            data.local_tm = self.param_vector[param_index]
+-                        else:
+-                            data.local_tm_sim[sim_index] = 
+self.param_vector[param_index]
++                            spin.local_tm = param_vector[param_index]
++                        else:
++                            spin.local_tm_sim[sim_index] = 
+param_vector[param_index]
+ 
+                     # S2.
+-                    elif data.params[j] == 'S2':
++                    elif spin.params[j] == 'S2':
+                         if sim_index == None:
+-                            data.s2 = self.param_vector[param_index]
+-                        else:
+-                            data.s2_sim[sim_index] = 
+self.param_vector[param_index]
++                            spin.s2 = param_vector[param_index]
++                        else:
++                            spin.s2_sim[sim_index] = 
+param_vector[param_index]
+ 
+                     # S2f.
+-                    elif data.params[j] == 'S2f':
++                    elif spin.params[j] == 'S2f':
+                         if sim_index == None:
+-                            data.s2f = self.param_vector[param_index]
+-                        else:
+-                            data.s2f_sim[sim_index] = 
+self.param_vector[param_index]
++                            spin.s2f = param_vector[param_index]
++                        else:
++                            spin.s2f_sim[sim_index] = 
+param_vector[param_index]
+ 
+                     # S2s.
+-                    elif data.params[j] == 'S2s':
++                    elif spin.params[j] == 'S2s':
+                         if sim_index == None:
+-                            data.s2s = self.param_vector[param_index]
+-                        else:
+-                            data.s2s_sim[sim_index] = 
+self.param_vector[param_index]
++                            spin.s2s = param_vector[param_index]
++                        else:
++                            spin.s2s_sim[sim_index] = 
+param_vector[param_index]
+ 
+                     # te.
+-                    elif data.params[j] == 'te':
++                    elif spin.params[j] == 'te':
+                         if sim_index == None:
+-                            data.te = self.param_vector[param_index]
+-                        else:
+-                            data.te_sim[sim_index] = 
+self.param_vector[param_index]
++                            spin.te = param_vector[param_index]
++                        else:
++                            spin.te_sim[sim_index] = 
+param_vector[param_index]
+ 
+                     # tf.
+-                    elif data.params[j] == 'tf':
++                    elif spin.params[j] == 'tf':
+                         if sim_index == None:
+-                            data.tf = self.param_vector[param_index]
+-                        else:
+-                            data.tf_sim[sim_index] = 
+self.param_vector[param_index]
++                            spin.tf = param_vector[param_index]
++                        else:
++                            spin.tf_sim[sim_index] = 
+param_vector[param_index]
+ 
+                     # ts.
+-                    elif data.params[j] == 'ts':
++                    elif spin.params[j] == 'ts':
+                         if sim_index == None:
+-                            data.ts = self.param_vector[param_index]
+-                        else:
+-                            data.ts_sim[sim_index] = 
+self.param_vector[param_index]
++                            spin.ts = param_vector[param_index]
++                        else:
++                            spin.ts_sim[sim_index] = 
+param_vector[param_index]
+ 
+                     # Rex.
+-                    elif data.params[j] == 'Rex':
++                    elif spin.params[j] == 'Rex':
+                         if sim_index == None:
+-                            data.rex = self.param_vector[param_index]
+-                        else:
+-                            data.rex_sim[sim_index] = 
+self.param_vector[param_index]
++                            spin.rex = param_vector[param_index]
++                        else:
++                            spin.rex_sim[sim_index] = 
+param_vector[param_index]
+ 
+                     # r.
+-                    elif data.params[j] == 'r':
++                    elif spin.params[j] == 'r':
+                         if sim_index == None:
+-                            data.r = self.param_vector[param_index]
+-                        else:
+-                            data.r_sim[sim_index] = 
+self.param_vector[param_index]
++                            spin.r = param_vector[param_index]
++                        else:
++                            spin.r_sim[sim_index] = param_vector[param_index]
+ 
+                     # CSA.
+-                    elif data.params[j] == 'CSA':
++                    elif spin.params[j] == 'CSA':
+                         if sim_index == None:
+-                            data.csa = self.param_vector[param_index]
+-                        else:
+-                            data.csa_sim[sim_index] = 
+self.param_vector[param_index]
++                            spin.csa = param_vector[param_index]
++                        else:
++                            spin.csa_sim[sim_index] = 
+param_vector[param_index]
+ 
+                     # Unknown parameter.
+                     else:
+@@ -381,59 +399,58 @@
+                     param_index = param_index + 1
+ 
+         # Calculate all order parameters after unpacking the vector.
+-        if self.param_set != 'diff':
+-            # Loop over all residues.
+-            for i in xrange(len(relax_data_store.res[self.run])):
+-                # Remap the residue data structure.
+-                data = relax_data_store.res[self.run][i]
+-
++        if param_set != 'diff':
++            # The loop.
++            if spin:
++                loop = [spin]
++            else:
++                loop = spin_loop(spin_id)
++
++            # Loop over the spins.
++            for spin in loop:
+                 # Skip deselected residues.
+-                if not data.select:
+-                    continue
+-
+-                # Only add parameters for a single residue if index has a 
+value.
+-                if index != None and i != index:
++                if not spin.select:
+                     continue
+ 
+                 # Normal values.
+                 if sim_index == None:
+                     # S2.
+-                    if 'S2' not in data.params and 'S2f' in data.params and 
+'S2s' in data.params:
+-                        data.s2 = data.s2f * data.s2s
++                    if 'S2' not in spin.params and 'S2f' in spin.params and 
+'S2s' in spin.params:
++                        spin.s2 = spin.s2f * spin.s2s
+ 
+                     # S2f.
+-                    if 'S2f' not in data.params and 'S2' in data.params and 
+'S2s' in data.params:
+-                        if data.s2s == 0.0:
+-                            data.s2f = 1e99
+-                        else:
+-                            data.s2f = data.s2 / data.s2s
++                    if 'S2f' not in spin.params and 'S2' in spin.params and 
+'S2s' in spin.params:
++                        if spin.s2s == 0.0:
++                            spin.s2f = 1e99
++                        else:
++                            spin.s2f = spin.s2 / spin.s2s
+ 
+                     # S2s.
+-                    if 'S2s' not in data.params and 'S2' in data.params and 
+'S2f' in data.params:
+-                        if data.s2f == 0.0:
+-                            data.s2s = 1e99
+-                        else:
+-                            data.s2s = data.s2 / data.s2f
++                    if 'S2s' not in spin.params and 'S2' in spin.params and 
+'S2f' in spin.params:
++                        if spin.s2f == 0.0:
++                            spin.s2s = 1e99
++                        else:
++                            spin.s2s = spin.s2 / spin.s2f
+ 
+                 # Simulation values.
+                 else:
+                     # S2.
+-                    if 'S2' not in data.params and 'S2f' in data.params and 
+'S2s' in data.params:
+-                        data.s2_sim[sim_index] = data.s2f_sim[sim_index] * 
+data.s2s_sim[sim_index]
++                    if 'S2' not in spin.params and 'S2f' in spin.params and 
+'S2s' in spin.params:
++                        spin.s2_sim[sim_index] = spin.s2f_sim[sim_index] * 
+spin.s2s_sim[sim_index]
+ 
+                     # S2f.
+-                    if 'S2f' not in data.params and 'S2' in data.params and 
+'S2s' in data.params:
+-                        if data.s2s_sim[sim_index] == 0.0:
+-                            data.s2f_sim[sim_index] = 1e99
+-                        else:
+-                            data.s2f_sim[sim_index] = data.s2_sim[sim_index] 
+/ data.s2s_sim[sim_index]
++                    if 'S2f' not in spin.params and 'S2' in spin.params and 
+'S2s' in spin.params:
++                        if spin.s2s_sim[sim_index] == 0.0:
++                            spin.s2f_sim[sim_index] = 1e99
++                        else:
++                            spin.s2f_sim[sim_index] = spin.s2_sim[sim_index] 
+/ spin.s2s_sim[sim_index]
+ 
+                     # S2s.
+-                    if 'S2s' not in data.params and 'S2' in data.params and 
+'S2f' in data.params:
+-                        if data.s2f_sim[sim_index] == 0.0:
+-                            data.s2s_sim[sim_index] = 1e99
+-                        else:
+-                            data.s2s_sim[sim_index] = data.s2_sim[sim_index] 
+/ data.s2f_sim[sim_index]
++                    if 'S2s' not in spin.params and 'S2' in spin.params and 
+'S2f' in spin.params:
++                        if spin.s2f_sim[sim_index] == 0.0:
++                            spin.s2s_sim[sim_index] = 1e99
++                        else:
++                            spin.s2s_sim[sim_index] = spin.s2_sim[sim_index] 
+/ spin.s2f_sim[sim_index]
+ 
+ 
+     def grid_search(self, lower=None, upper=None, inc=None, 
+constraints=True, verbosity=1, sim_index=None):
+@@ -983,7 +1000,7 @@
+                 param_vector = dot(scaling_matrix, param_vector)
+ 
+             # Disassemble the parameter vector.
+-            self.disassemble_param_vector(index=index, sim_index=sim_index)
++            self.disassemble_param_vector(param_set, 
+param_vector=param_vector, spin=spin, sim_index=sim_index)
+ 
+             # Monte Carlo minimisation statistics.
+             if sim_index != None:
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Sun Mar 23 20:00:22 2008</div>  
+</body>
+</html>

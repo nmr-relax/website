@@ -1,0 +1,144 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r20458 &#45; /branches/relax_disp/auto_analyses/relax_disp.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 23 Jul 2013 08:22:15 +0200 -->
+<!--X-Message-Id: E1V1VzD&#45;0000Re&#45;AI@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r20458 - /branches/relax_disp/auto_analyses/relax_disp.py -- July 23, 2013 - 08:22</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r20458 - /branches/relax_disp/auto_analyses/relax_disp.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00200" class="tabs">Index by Date</a> | <a href="threads.html#00200" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00199.html">Date Prev</a>] [<a href="msg00201.html">Date Next</a>] [<a href="msg00199.html">Thread Prev</a>] [<a href="msg00201.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 23 Jul 2013 06:22:15 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00200.html">E1V1VzD-0000Re-AI@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on July 23, 2013 - 08:22:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Jul 23 08:22:14 2013
+New Revision: 20458
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=20458&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=20458&amp;view=rev</a>
+Log:
+Fix for the model equivalence setup in the nesting() method of the dispersion 
+auto-analysis.
+
+This is the use of the analytic CR72 model parameters for the numeric models 
+to avoid the grid
+search.
+
+
+Modified:
+    branches/relax_disp/auto_analyses/relax_disp.py
+
+Modified: branches/relax_disp/auto_analyses/relax_disp.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/auto_analyses/relax_disp.py?rev=20458&amp;r1=20457&amp;r2=20458&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_disp/auto_analyses/relax_disp.py?rev=20458&amp;r1=20457&amp;r2=20458&amp;view=diff</a>
+==============================================================================
+--- branches/relax_disp/auto_analyses/relax_disp.py (original)
++++ branches/relax_disp/auto_analyses/relax_disp.py Tue Jul 23 08:22:14 2013
+@@ -164,12 +164,21 @@
+         if model == MODEL_NS_2SITE_STAR_FULL and MODEL_NS_2SITE_STAR in 
+self.models:
+             nested_pipe = MODEL_NS_2SITE_STAR
+ 
++        # Using the analytic solution.
++        analytic = False
++        if model in [MODEL_NS_2SITE_3D, MODEL_NS_2SITE_EXPANDED, 
+MODEL_NS_2SITE_STAR] and MODEL_CR72 in self.models:
++            nested_pipe = MODEL_CR72
++            analytic = True
++
+         # No nesting.
+         if not nested_pipe:
+             return False
+ 
+         # Printout.
+-        print(&quot;Model nesting detected, copying the optimised parameters from 
+the '%s' model rather than performing a grid search.&quot; % nested_pipe)
++        if analytic:
++            print(&quot;Model equivalence detected, copying the optimised 
+parameters from the analytic '%s' model rather than performing a grid 
+search.&quot; % nested_pipe)
++        else:
++            print(&quot;Model nesting detected, copying the optimised parameters 
+from the '%s' model rather than performing a grid search.&quot; % nested_pipe)
+ 
+         # Loop over the spins to copy the parameters.
+         for spin, spin_id in spin_loop(return_id=True, skip_desel=True):
+@@ -178,8 +187,11 @@
+ 
+             # The R20 parameters.
+             if hasattr(nested_spin, 'r2'):
+-                setattr(spin, 'r2a', deepcopy(nested_spin.r2))
+-                setattr(spin, 'r2b', deepcopy(nested_spin.r2))
++                if model in [MODEL_CR72_FULL, MODEL_NS_2SITE_3D_FULL, 
+MODEL_NS_2SITE_STAR_FULL]:
++                    setattr(spin, 'r2a', deepcopy(nested_spin.r2))
++                    setattr(spin, 'r2b', deepcopy(nested_spin.r2))
++                else:
++                    setattr(spin, 'r2', deepcopy(nested_spin.r2))
+ 
+             # All other spin parameters.
+             for param in spin.params:
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Jul 23 09:20:02 2013</div>  
+</body>
+</html>

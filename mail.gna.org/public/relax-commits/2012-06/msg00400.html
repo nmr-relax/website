@@ -1,0 +1,269 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r16955 &#45; /branches/interatomic/generic_fns/interatomic.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 19 Jun 2012 14:12:24 +0200 -->
+<!--X-Message-Id: E1SgxIG&#45;0004FZ&#45;7V@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r16955 - /branches/interatomic/generic_fns/interatomic.py -- June 19, 2012 - 14:12</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r16955 - /branches/interatomic/generic_fns/interatomic.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00400" class="tabs">Index by Date</a> | <a href="threads.html#00400" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00399.html">Date Prev</a>] [<a href="msg00401.html">Date Next</a>] [<a href="msg00399.html">Thread Prev</a>] [<a href="msg00401.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 19 Jun 2012 12:12:24 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00400.html">E1SgxIG-0004FZ-7V@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on June 19, 2012 - 14:12:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Jun 19 14:12:23 2012
+New Revision: 16955
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=16955&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=16955&amp;view=rev</a>
+Log:
+Expanded the functionality of the generic_fns.interatomic module.
+
+The copy() and exists_data() functions have been added to copy all 
+interatomic data from one data
+pipe to another and to check if interatomic data exists within a data pipe 
+respectively.  The
+create_interatom() function now also accepts a 'pipe' argument so that 
+non-current pipes can be
+used.
+
+
+Modified:
+    branches/interatomic/generic_fns/interatomic.py
+
+Modified: branches/interatomic/generic_fns/interatomic.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/interatomic/generic_fns/interatomic.py?rev=16955&amp;r1=16954&amp;r2=16955&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/interatomic/generic_fns/interatomic.py?rev=16955&amp;r1=16954&amp;r2=16955&amp;view=diff</a>
+==============================================================================
+--- branches/interatomic/generic_fns/interatomic.py (original)
++++ branches/interatomic/generic_fns/interatomic.py Tue Jun 19 14:12:23 2012
+@@ -23,34 +23,138 @@
+ # Module docstring.
+ &quot;&quot;&quot;Module for the manipulation of the interatomic data structures in the 
+relax data store.&quot;&quot;&quot;
+ 
++# Python module imports.
++from copy import deepcopy
++from re import search
++
+ # relax module imports.
+ from generic_fns import pipes
+ from generic_fns.mol_res_spin import return_spin
+-from relax_errors import RelaxError
++from relax_errors import RelaxError, RelaxInteratomError, 
+RelaxNoInteratomError
++from relax_io import write_data
+ from relax_warnings import RelaxNoSpinWarning
+ 
+ 
+-def create_interatom(spin_id1=None, spin_id2=None):
++def copy(pipe_from=None, pipe_to=None, verbose=True):
++    &quot;&quot;&quot;Copy the interatomic data from one data pipe to another.
++
++    @keyword pipe_from:         The data pipe to copy the interatomic data 
+from.  This defaults to the current data pipe.
++    @type pipe_from:            str
++    @keyword pipe_to:           The data pipe to copy the interatomic data 
+to.  This defaults to the current data pipe.
++    @type pipe_to:              str
++    @keyword verbose:           A flag which if True will cause info about 
+each spin pair to be printed out.
++    @type verbose:              bool
++    &quot;&quot;&quot;
++
++    # Defaults.
++    if pipe_from == None and pipe_to == None:
++        raise RelaxError(&quot;The pipe_from and pipe_to arguments cannot both be 
+set to None.&quot;)
++    elif pipe_from == None:
++        pipe_from = pipes.cdp_name()
++    elif pipe_to == None:
++        pipe_to = pipes.cdp_name()
++
++    # Test if the pipe_from and pipe_to data pipes exist.
++    pipes.test(pipe_from)
++    pipes.test(pipe_to)
++
++    # Test if pipe_from contains interatomic data.
++    if not exists_data(pipe_from):
++        raise RelaxNoInteratomError
++
++    # Test if pipe_to contains interatomic data.
++    if exists_data(pipe_to):
++        raise RelaxInteratomError
++
++    # Loop over the interatomic data of the pipe_from data pipe.
++    ids = []
++    for interatom in interatomic_loop(pipe=pipe_from):
++        # Create a new container.
++        new_interatom = create_interatom(spin_id1=interatom.spin_id1, 
+spin_id2=interatom.spin_id2, pipe=pipe_to)
++
++        # Duplicate all the objects of the container.
++        for name in dir(interatom):
++            # Skip special objects.
++            if search('^_', name):
++                continue
++
++            # Skip the spin IDs.
++            if name in ['spin_id1', 'spin_id2']:
++                continue
++
++            # Skip class methods.
++            if name in list(interatom.__class__.__dict__.keys()):
++                continue
++
++            # Duplicate all other objects.
++            obj = deepcopy(getattr(interatom, name))
++            setattr(new_interatom, name, obj)
++
++        # Store the IDs for the print out.
++        ids.append([repr(interatom.spin_id1), repr(interatom.spin_id2)])
++
++    # Print out.
++    if verbose:
++        write_data(out=sys.stdout, headings=[&quot;Spin_ID_1&quot;, &quot;Spin_ID_2&quot;], 
+data=ids)
++
++
++def create_interatom(spin_id1=None, spin_id2=None, pipe=None):
+     &quot;&quot;&quot;Create and return the interatomic data container for the two spins.
+ 
+     @keyword spin_id1:  The spin ID string of the first atom.
+     @type spin_id1:     str
+     @keyword spin_id2:  The spin ID string of the first atom.
+     @type spin_id2:     str
++    @keyword pipe:      The data pipe to create the interatomic data 
+container for.  This defaults to the current data pipe if not supplied.
++    @type pipe:         str or None
+     @return:            The newly created interatomic data container.
+     @rtype:             data.interatomic.InteratomContainer instance
+     &quot;&quot;&quot;
+ 
++    # The data pipe.
++    if pipe == None:
++        pipe = pipes.cdp_name()
++
++    # Get the data pipe.
++    dp = pipes.get_pipe(pipe)
++
+     # Check that the spin IDs exist.
+-    spin = return_spin(spin_id1)
++    spin = return_spin(spin_id1, pipe)
+     if spin == None:
+         raise RelaxNoSpinWarning(spin_id1)
+-    spin = return_spin(spin_id2)
++    spin = return_spin(spin_id2, pipe)
+     if spin == None:
+         raise RelaxNoSpinWarning(spin_id2)
+ 
+     # Add and return the data.
+-    return cdp.interatomic.add_item(spin_id1=spin_id1, spin_id2=spin_id2)
++    return dp.interatomic.add_item(spin_id1=spin_id1, spin_id2=spin_id2)
++
++
++def exists_data(pipe=None):
++    &quot;&quot;&quot;Determine if any interatomic data exists.
++
++    @keyword pipe:      The data pipe in which the interatomic data will be 
+checked for.
++    @type pipe:         str
++    @return:            The answer to the question about the existence of 
+data.
++    @rtype:             bool
++    &quot;&quot;&quot;
++
++    # The current data pipe.
++    if pipe == None:
++        pipe = pipes.cdp_name()
++
++    # Test the data pipe.
++    pipes.test(pipe)
++
++    # Get the data pipe.
++    dp = pipes.get_pipe(pipe)
++
++    # The interatomic data structure is empty.
++    if dp.interatomic.is_empty():
++        return False
++
++    # Otherwise.
++    return True
+ 
+ 
+ def interatomic_loop(pipe=None):
+@@ -108,7 +212,7 @@
+     # Single spin.
+     else:
+         for i in range(len(dp.interatomic)):
+-            if dp.interatomic[i].spin_id1 == spin_id1 or  
+dp.interatomic[i].spin_id2 == spin_id1:
++            if dp.interatomic[i].spin_id1 == spin_id1 or 
+dp.interatomic[i].spin_id2 == spin_id1:
+                 interatoms.append(dp.interatomic[i])
+ 
+     # Return the list of containers.
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Jun 19 14:20:02 2012</div>  
+</body>
+</html>

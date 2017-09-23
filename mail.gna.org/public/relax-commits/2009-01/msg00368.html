@@ -1,0 +1,438 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r8593 &#45; /branches/multi_structure/generic_fns/structure/internal.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 22 Jan 2009 15:45:03 +0100 -->
+<!--X-Message-Id: E1LQ0nn&#45;0004to&#45;Fv@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r8593 - /branches/multi_structure/generic_fns/structure/internal.py -- January 22, 2009 - 15:45</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r8593 - /branches/multi_structure/generic_fns/structure/internal.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00368" class="tabs">Index by Date</a> | <a href="threads.html#00368" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00367.html">Date Prev</a>] [<a href="msg00369.html">Date Next</a>] [<a href="msg00367.html">Thread Prev</a>] [<a href="msg00369.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 22 Jan 2009 14:45:03 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00368.html">E1LQ0nn-0004to-Fv@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on January 22, 2009 - 15:45:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Jan 22 15:45:02 2009
+New Revision: 8593
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=8593&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=8593&amp;view=rev</a>
+Log:
+A large number of fixes for the write_pdb() method.
+
+It can now handle the new structural data design.
+
+
+Modified:
+    branches/multi_structure/generic_fns/structure/internal.py
+
+Modified: branches/multi_structure/generic_fns/structure/internal.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/multi_structure/generic_fns/structure/internal.py?rev=8593&amp;r1=8592&amp;r2=8593&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/multi_structure/generic_fns/structure/internal.py?rev=8593&amp;r1=8592&amp;r2=8593&amp;view=diff</a>
+==============================================================================
+--- branches/multi_structure/generic_fns/structure/internal.py (original)
++++ branches/multi_structure/generic_fns/structure/internal.py Thu Jan 22 
+15:45:02 2009
+@@ -632,7 +632,7 @@
+         return True
+ 
+ 
+-    def write_pdb(self, file, struct_index=None):
++    def write_pdb(self, file, model_num=None):
+         &quot;&quot;&quot;Method for the creation of a PDB file from the structural data.
+ 
+         A number of PDB records including HET, HETNAM, FORMUL, HETATM, TER, 
+CONECT, MASTER, and END
+@@ -650,9 +650,9 @@
+ 
+         @param file:            The PDB file object.  This object must be 
+writable.
+         @type file:             file object
+-        @param struct_index:    The index of the structural container to 
+write.  If None, all
+-                                structures will be written.
+-        @type struct_index:     int
++        @keyword model_num:     The model to place into the PDB file.  If 
+not supplied, then all
++                                models will be placed into the file.
++        @type model_num:        None or int
+         &quot;&quot;&quot;
+ 
+         # Validate the structural data.
+@@ -673,6 +673,11 @@
+         file.write(&quot;REMARK  40 CREATED BY RELAX (HTTP://NMR-RELAX.COM)\n&quot;)
+         num_remark = 2
+ 
++        # Determine if model records will be created.
++        model_records = False
++        if model_num == None and self.num_models() &gt; 1:
++            model_records = True
++
+ 
+         ####################
+         # Hetrogen section #
+@@ -682,31 +687,25 @@
+         het_data = []
+         het_data_coll = []
+ 
+-        # Loop over the structures.
+-        for index in xrange(self.num):
+-            # Skip non-matching structures.
+-            if struct_index != None and struct_index != index:
+-                continue
+-
+-            # Alias the structure container.
+-            struct = self.structural_data[index]
+-
++        # Loop over the molecules of the first model.
++        index = 0
++        for mol in self.structural_data[0].mol:
+             # Check the validity of the data.
+-            self.__validate_data_arrays(struct)
+-
+-            # Append an empty array for this structure.
++            self.__validate_data_arrays(mol)
++
++            # Append an empty array for this molecule.
+             het_data.append([])
+ 
+             # Collect the non-standard residue info.
+-            for i in xrange(len(struct.atom_name)):
++            for i in xrange(len(mol.atom_name)):
+                 # Skip non-HETATM records and HETATM records with no residue 
+info.
+-                if struct.pdb_record[i] != 'HETATM' or struct.res_name[i] == 
+None:
++                if mol.pdb_record[i] != 'HETATM' or mol.res_name[i] == None:
+                     continue
+ 
+                 # If the residue is not already stored initialise a new 
+het_data element.
+                 # (residue number, residue name, chain ID, number of atoms, 
+atom count array).
+-                if not het_data[index] or not struct.res_num[i] == 
+het_data[index][-1][0]:
+-                    het_data[index].append([struct.res_num[i], 
+struct.res_name[i], struct.chain_id[i], 0, []])
++                if not het_data[index] or not mol.res_num[i] == 
+het_data[index][-1][0]:
++                    het_data[index].append([mol.res_num[i], mol.res_name[i], 
+mol.chain_id[i], 0, []])
+ 
+                     # Catch missing chain_ids.
+                     if het_data[index][-1][2] == None:
+@@ -718,16 +717,16 @@
+                 # Find if the atom has already a count entry.
+                 entry = False
+                 for j in xrange(len(het_data[index][-1][4])): 
+-                    if struct.element[i] == het_data[index][-1][4][j][0]:
++                    if mol.element[i] == het_data[index][-1][4][j][0]:
+                         entry = True
+ 
+                 # Create a new specific atom count entry.
+                 if not entry:
+-                    het_data[index][-1][4].append([struct.element[i], 0])
++                    het_data[index][-1][4].append([mol.element[i], 0])
+ 
+                 # Increment the specific atom count.
+                 for j in xrange(len(het_data[index][-1][4])): 
+-                    if struct.element[i] == het_data[index][-1][4][j][0]:
++                    if mol.element[i] == het_data[index][-1][4][j][0]:
+                         het_data[index][-1][4][j][1] = 
+het_data[index][-1][4][j][1] + 1
+ 
+             # Create the collective hetrogen info data structure.
+@@ -757,6 +756,9 @@
+                 if not found:
+                     het_data_coll.append(het_data[index][i])
+ 
++            # Increment the molecule index.
++            index = index + 1
++
+ 
+         # The HET records.
+         ##################
+@@ -823,86 +825,84 @@
+         # Coordinate section #
+         ######################
+ 
+-        # Loop over the structures.
+-        for index in xrange(self.num):
+-            # Skip non-matching structures.
+-            if struct_index != None and struct_index != index:
++        # Loop over the models.
++        for model in self.structural_data:
++            # Single model.
++            if model_num and model_num != model.num:
+                 continue
+ 
+-            # Alias the structure container.
+-            struct = self.structural_data[index]
+-
+-
+-            # MODEL record, for multiple structures.
+-            ########################################
+-
+-            if not struct_index and len(self.structural_data) &gt; 1:
++            # MODEL record, for multiple models.
++            ####################################
++
++            if model_records:
+                 # Print out.
+-                print &quot;\nMODEL &quot; + `index+1`
++                print &quot;\nMODEL %s&quot; % model.num
+ 
+                 # Write the model record.
+-                file.write(&quot;%-6s    %4i\n&quot; % ('MODEL', index+1))
++                file.write(&quot;%-6s    %4i\n&quot; % ('MODEL', model.num))
+ 
+ 
+             # Add the atomic coordinate records (ATOM, HETATM, and TER).
+             ############################################################
+ 
+-            # Print out.
+-            print &quot;ATOM, HETATM, TER&quot;
+-
+-            # Loop over the atomic data.
+-            for i in xrange(len(struct.atom_name)):
+-                # Aliases.
+-                atom_num = struct.atom_num[i]
+-                atom_name = struct.atom_name[i]
+-                res_name = struct.res_name[i]
+-                chain_id = struct.chain_id[i]
+-                res_num = struct.res_num[i]
+-                x = struct.x[i]
+-                y = struct.y[i]
+-                z = struct.z[i]
+-                seg_id = struct.seg_id[i]
+-                element = struct.element[i]
+-
+-                # Replace None with ''.
+-                if atom_name == None:
+-                    atom_name = ''
+-                if res_name == None:
+-                    res_name = ''
+-                if chain_id == None:
+-                    chain_id = ''
+-                if res_num == None:
+-                    res_num = ''
+-                if x == None:
+-                    x = ''
+-                if y == None:
+-                    y = ''
+-                if z == None:
+-                    z = ''
+-                if seg_id == None:
+-                    seg_id = ''
+-                if element == None:
+-                    element = ''
+-
+-                # Write the ATOM record.
+-                if struct.pdb_record[i] == 'ATOM':
+-                    file.write(&quot;%-6s%5s %4s%1s%3s %1s%4s%1s   
+%8.3f%8.3f%8.3f%6.2f%6.2f      %4s%2s%2s\n&quot; % ('ATOM', atom_num, atom_name, 
+'', res_name, chain_id, res_num, '', x, y, z, 1.0, 0, seg_id, element, ''))
+-                    num_atom = num_atom + 1
+-
+-                # Write the HETATM record.
+-                if struct.pdb_record[i] == 'HETATM':
+-                    file.write(&quot;%-6s%5s %4s%1s%3s %1s%4s%1s   
+%8.3f%8.3f%8.3f%6.2f%6.2f      %4s%2s%2s\n&quot; % ('HETATM', atom_num, atom_name, 
+'', res_name, chain_id, res_num, '', x, y, z, 1.0, 0, seg_id, element, ''))
+-                    num_hetatm = num_hetatm + 1
+-
+-            # Finish off with the TER record.
+-            file.write(&quot;%-6s%5s      %3s %1s%4s%1s\n&quot; % ('TER', atom_num+1, 
+res_name, chain_id, res_num, ''))
+-            num_ter = num_ter + 1
++            # Loop over the molecules.
++            for mol in model.mol:
++                # Print out.
++                print &quot;ATOM, HETATM, TER&quot;
++
++                # Loop over the atomic data.
++                for i in xrange(len(mol.atom_name)):
++                    # Aliases.
++                    atom_num = mol.atom_num[i]
++                    atom_name = mol.atom_name[i]
++                    res_name = mol.res_name[i]
++                    chain_id = mol.chain_id[i]
++                    res_num = mol.res_num[i]
++                    x = mol.x[i]
++                    y = mol.y[i]
++                    z = mol.z[i]
++                    seg_id = mol.seg_id[i]
++                    element = mol.element[i]
++
++                    # Replace None with ''.
++                    if atom_name == None:
++                        atom_name = ''
++                    if res_name == None:
++                        res_name = ''
++                    if chain_id == None:
++                        chain_id = ''
++                    if res_num == None:
++                        res_num = ''
++                    if x == None:
++                        x = ''
++                    if y == None:
++                        y = ''
++                    if z == None:
++                        z = ''
++                    if seg_id == None:
++                        seg_id = ''
++                    if element == None:
++                        element = ''
++
++                    # Write the ATOM record.
++                    if mol.pdb_record[i] == 'ATOM':
++                        file.write(&quot;%-6s%5s %4s%1s%3s %1s%4s%1s   
+%8.3f%8.3f%8.3f%6.2f%6.2f      %4s%2s%2s\n&quot; % ('ATOM', atom_num, atom_name, 
+'', res_name, chain_id, res_num, '', x, y, z, 1.0, 0, seg_id, element, ''))
++                        num_atom = num_atom + 1
++
++                    # Write the HETATM record.
++                    if mol.pdb_record[i] == 'HETATM':
++                        file.write(&quot;%-6s%5s %4s%1s%3s %1s%4s%1s   
+%8.3f%8.3f%8.3f%6.2f%6.2f      %4s%2s%2s\n&quot; % ('HETATM', atom_num, atom_name, 
+'', res_name, chain_id, res_num, '', x, y, z, 1.0, 0, seg_id, element, ''))
++                        num_hetatm = num_hetatm + 1
++
++                # Finish off with the TER record.
++                file.write(&quot;%-6s%5s      %3s %1s%4s%1s\n&quot; % ('TER', 
+atom_num+1, res_name, chain_id, res_num, ''))
++                num_ter = num_ter + 1
+ 
+ 
+             # ENDMDL record, for multiple structures.
+             ########################################
+ 
+-            if not struct_index and len(self.structural_data) &gt; 1:
++            if model_records:
+                 # Print out.
+                 print &quot;ENDMDL&quot;
+ 
+@@ -910,15 +910,18 @@
+                 file.write(&quot;%-6s\n&quot; % 'ENDMDL')
+ 
+ 
+-            # Create the CONECT records.
+-            ############################
+-
+-            # Print out.
+-            print &quot;CONECT&quot;
+-
+-            for i in xrange(len(struct.atom_name)):
++        # Create the CONECT records.
++        ############################
++
++        # Print out.
++        print &quot;CONECT&quot;
++
++        # Loop over the molecules of the first model.
++        for mol in self.structural_data[0].mol:
++            # Loop over the atoms.
++            for i in xrange(len(mol.atom_name)):
+                 # No bonded atoms, hence no CONECT record is required.
+-                if not len(struct.bonded[i]):
++                if not len(mol.bonded[i]):
+                     continue
+ 
+                 # Initialise some data structures.
+@@ -927,9 +930,9 @@
+                 bonded = ['', '', '', '']
+ 
+                 # Loop over the bonded atoms.
+-                for j in xrange(len(struct.bonded[i])):
++                for j in xrange(len(mol.bonded[i])):
+                     # End of the array, hence create the CONECT record in 
+this iteration.
+-                    if j == len(struct.bonded[i])-1:
++                    if j == len(mol.bonded[i])-1:
+                         flush = True
+ 
+                     # Only four covalently bonded atoms allowed in one 
+CONECT record.
+@@ -937,7 +940,7 @@
+                         flush = True
+ 
+                     # Get the bonded atom index.
+-                    bonded[bonded_index] = struct.bonded[i][j]
++                    bonded[bonded_index] = mol.bonded[i][j]
+ 
+                     # Increment the bonded_index value.
+                     bonded_index = bonded_index + 1
+@@ -947,7 +950,7 @@
+                         # Convert the atom indices to atom numbers.
+                         for k in range(4):
+                             if bonded[k] != '':
+-                                bonded[k] = struct.atom_num[bonded[k]]
++                                bonded[k] = mol.atom_num[bonded[k]]
+ 
+                         # Write the CONECT record.
+                         file.write(&quot;%-6s%5s%5s%5s%5s%5s%5s%5s%5s%5s%5s%5s\n&quot; 
+% ('CONECT', i+1, bonded[0], bonded[1], bonded[2], bonded[3], '', '', '', '', 
+'', ''))
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Jan 22 16:00:04 2009</div>  
+</body>
+</html>

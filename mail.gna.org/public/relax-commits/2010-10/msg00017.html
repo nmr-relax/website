@@ -1,0 +1,339 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r11637 &#45; /branches/bruker_import/generic_fns/spectrum.py -->
+<!--X-From-R13: zvpunry.ovrevNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 11 Oct 2010 03:42:11 +0200 -->
+<!--X-Message-Id: E1P57P1&#45;0003CS&#45;3Q@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r11637 - /branches/bruker_import/generic_fns/spectrum.py -- October 11, 2010 - 03:42</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r11637 - /branches/bruker_import/generic_fns/spectrum.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00017" class="tabs">Index by Date</a> | <a href="threads.html#00017" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00016.html">Date Prev</a>] [<a href="msg00018.html">Date Next</a>] [<a href="msg00016.html">Thread Prev</a>] [<a href="msg00018.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 11 Oct 2010 01:42:11 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00017.html">E1P57P1-0003CS-3Q@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>michael . bieri</strong> on October 11, 2010 - 03:42:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: michaelbieri
+Date: Mon Oct 11 03:42:10 2010
+New Revision: 11637
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=11637&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=11637&amp;view=rev</a>
+Log:
+Function to import BRUKER Protein Dynamic Center project is added.
+
+The import will be converted to a relax formatted parameter file, either as a 
+dummy file or saved at a specified location.
+
+Modified:
+    branches/bruker_import/generic_fns/spectrum.py
+
+Modified: branches/bruker_import/generic_fns/spectrum.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/bruker_import/generic_fns/spectrum.py?rev=11637&amp;r1=11636&amp;r2=11637&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/bruker_import/generic_fns/spectrum.py?rev=11637&amp;r1=11636&amp;r2=11637&amp;view=diff</a>
+==============================================================================
+--- branches/bruker_import/generic_fns/spectrum.py (original)
++++ branches/bruker_import/generic_fns/spectrum.py Mon Oct 11 03:42:10 2010
+@@ -37,6 +37,232 @@
+ from relax_errors import RelaxArgNotNoneError, RelaxError, 
+RelaxImplementError, RelaxNoSequenceError
+ from relax_io import extract_data, read_spin_data, strip
+ from relax_warnings import RelaxWarning, RelaxNoSpinWarning
++
++
++
++class Bruker_import():
++    def __init__(self, dir=None, exp_type=None, file=None, UI='prompt', 
+output_file=None):
++        &quot;&quot;&quot;Function to import Bruker Protein Dynamic Center (PDC) files.
++
++        @param dir:         The directory to save the new file in.
++        @type dir:          str
++        @param file:        The Bruker PDC output file.
++        @type file:         str
++        @param exp_type:    The type of experiment, e.g. NOE, T1 or T2
++        @type exp_type:     str
++        @param UI:          The relax user interface (either 'prompt' or 
+'GUI').
++        @type UI:           str
++        @param output_file: The file to save the imported list.
++        @type output_file:  str
++        &quot;&quot;&quot;
++
++        # Create experiment type
++        self.exp_type = exp_type
++
++        # The output file
++        self.output_file = output_file
++        self.dir = dir
++
++        # The user interface.
++        self.UI = UI
++
++        # Read the file.
++        if file:
++            self.read_file(file)
++        else:
++            raise RelaxError('No file selected.')
++
++        # Collect the entries for the file.
++        self.collect_entries()
++
++        # Create dummy file.
++        self.create_file()
++
++
++    def __str__(self):
++        &quot;&quot;&quot;Function to allow to return a value.&quot;&quot;&quot;
++        return str(self.value)
++
++
++    def collect_entries(self):
++        &quot;&quot;&quot;Function to collect entries for the NOE/R1/R2 relax dummy file.&quot;&quot;&quot;
++
++        # storage for file entries
++        # [ [Mol_name, Res_num, Res_name, Spin_num, value, error], ... ]
++        self.file_entries = []
++
++        # Data flag
++        is_data = False
++
++        # Spin name
++        spinname = 'N'
++
++        # loop over line
++        for line in range(0, len(self.entries)):
++            # Detect the experiment
++            if 'Project:' in self.entries[line][0]:
++                exp_type = ''
++
++                # NOE
++                if 'Dynamic method/Hetero NOE' in self.entries[line][1]:
++                    exp_type = 'NOE'
++                # T1
++                elif 'Dynamic method/T1' in self.entries[line][1]:
++                    exp_type = 'T1'
++                # T2
++                elif 'Dynamic method/T2' in self.entries[line][1]:
++                    exp_type = 'T2'
++
++                # Check agreement of file and user input.
++                if self.exp_type:
++                    if not self.exp_type == exp_type:
++                        raise RelaxError('Selected file is not a 
+'+self.exp_type+'-file.')
++                        return
++
++                # Feedback
++                print &quot;Reading BRUKER PDC &quot;+exp_type+&quot; file.\n&quot;
++
++            # The entries
++            if 'SECTION:' in self.entries[line][0]:
++                # NOE/T1/T2 results
++                if 'results' in self.entries[line][1]:
++                    is_data = True
++                    continue
++
++                # Other entries
++                else:
++                    is_data = False
++
++            # Spin name
++            if 'Labelling:' in self.entries[line][0]:
++                # 15N
++                if 'N' in self.entries[line][0]:
++                    spinname = 'N'
++
++                # 13C
++                if 'C' in self.entries[line][0]:
++                    spinname = 'C'
++
++            # Collect NOE/T1/T2 values
++            if is_data:
++                # Exclued header or blank line.
++                if self.entries[line][0] in ['Peak name', '']:
++                    continue
++
++                # Label
++                label_tmp = self.entries[line][0]
++                label_tmp = label_tmp.replace(' ', '')
++                label_tmp = label_tmp.replace('[', '')
++                label_tmp = label_tmp.replace(']', '')
++
++                # Detect residue number
++                resnum = label_tmp
++                # find start of number
++                start = 0
++                while resnum[start].isdigit()==False: start = start+1
++
++                # find end of number
++                end = start
++                try:
++                    while resnum[end].isdigit()==True: end = end+1
++                # Label ends with number
++                except:
++                    end = end
++
++                # cut out residue number integer
++                resnum = resnum[start:end]
++
++                # Residue name
++                resname = label_tmp[0:start]
++
++                # Spin num
++                spin_no = line
++
++                # The value
++                value_tmp = float(self.entries[line][3])
++
++                # Convert T1/T2 to R1/R2
++                if exp_type in ['T1', 'T2']:
++                    value_tmp = 1.0/value_tmp
++
++                # error
++                error = float(self.entries[line][4])
++
++                # Store file entry
++                self.file_entries.append(['Bruker_PDC_'+exp_type, resnum, 
+resname, spin_no, spinname, value_tmp, error])
++
++
++    def create_file(self):
++        &quot;&quot;&quot;Function to write the file.&quot;&quot;&quot;
++
++        # The Sparky header
++        text = 
+'Mol_name\tRes_num\tRes_name\tSpin_num\tSpin_name\tValue\tError \n'
++
++        for line in range(0, len(self.file_entries)):
++            # Build entries.
++            tmp_text = ''
++            for i in range(0, len(self.file_entries[line])):
++                tmp_text = tmp_text + str(self.file_entries[line][i])+'\t'
++
++            # Add entries.
++            text = text+tmp_text + '\n'
++
++        # Print entries
++        if not self.UI == 'GUI':
++            print text
++
++        # craete output file
++        if self.output_file:
++            if self.dir:
++                file = open(self.dir+sep+self.output_file, 'w')
++            else:
++                file = open(self.output_file, 'w')
++        # create dummy file
++        else:
++            file = DummyFileObject()
++
++        # Write the file
++        file.write(text)
++        file.close()
++
++        # Feedback
++        if self.output_file:
++            if self.dir:
++                print 'Created BRUKER PDC file 
+'+self.dir+sep+self.output_file
++                # The return value
++                self.value = self.dir+sep+self.output_file
++            else:
++                print 'Created BRUKER PDC file '+self.output_file
++                # The return value
++                self.value = self.output_file
++        else:
++            print 'Created BRUKER PDC file.'
++            # Return the dummy file
++            self.value = file
++
++
++    def read_file(self, filename):
++        &quot;&quot;&quot;Function to read the file.&quot;&quot;&quot;
++
++        # Open the file.
++        file = open(filename, 'r')
++
++        # Storage of lines.
++        self.entries = []
++
++        # Loop over line in PDC file
++        for line in file:
++            # Read entries in line
++            entry = line
++            entry = line.strip()
++            entry = entry.split('\t')
++
++            # Add entries to storage
++            self.entries.append(entry)
++
++        # close the file
++        file.close()
++
+ 
+ 
+ def __check_args(spin_id_col=None, mol_name_col=None, res_num_col=None, 
+res_name_col=None, spin_num_col=None, spin_name_col=None, sep=None, 
+spin_id=None):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Oct 15 18:00:02 2010</div>  
+</body>
+</html>

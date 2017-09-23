@@ -1,0 +1,220 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r25259 &#45; in /trunk/target_functions: c_chi2.c c_chi2.h -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 26 Aug 2014 08:58:40 +0200 -->
+<!--X-Message-Id: E1XMAiF&#45;0001Wo&#45;Tz@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r25259 - in /trunk/target_functions: c_chi2.c c_chi2.h -- August 26, 2014 - 08:58</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r25259 - in /trunk/target_functions: c_chi2.c c_chi2.h</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00393" class="tabs">Index by Date</a> | <a href="threads.html#00393" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00392.html">Date Prev</a>] [<a href="msg00394.html">Date Next</a>] [<a href="msg00392.html">Thread Prev</a>] [<a href="msg00394.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 26 Aug 2014 06:58:39 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00393.html">E1XMAiF-0001Wo-Tz@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on August 26, 2014 - 08:58:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Aug 26 08:58:39 2014
+New Revision: 25259
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=25259&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=25259&amp;view=rev</a>
+Log:
+Implemented the chi-squared gradient as a C module for the target functions.
+
+This simply translates the Python code into C to allow any target function C 
+modules to build its
+own gradient function.
+
+
+Modified:
+    trunk/target_functions/c_chi2.c
+    trunk/target_functions/c_chi2.h
+
+Modified: trunk/target_functions/c_chi2.c
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/target_functions/c_chi2.c?rev=25259&amp;r1=25258&amp;r2=25259&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/target_functions/c_chi2.c?rev=25259&amp;r1=25258&amp;r2=25259&amp;view=diff</a>
+==============================================================================
+--- trunk/target_functions/c_chi2.c     (original)
++++ trunk/target_functions/c_chi2.c     Tue Aug 26 08:58:39 2014
+@@ -19,7 +19,9 @@
+ 
+ #include &lt;stdio.h&gt;
+ #include &lt;math.h&gt;
++#include &quot;c_chi2.h&quot;
+ 
++/* Define the function for calculating the square of a number. */
+ #define square(x) (x)*(x)
+ 
+ 
+@@ -27,17 +29,22 @@
+     /* Function to calculate the chi-squared value.
+ 
+     The chi-sqared equation
+-    ~~~~~~~~~~~~~~~~~~~~~~~
+-              _n_
+-              \    (yi - yi()) ** 2
+-    Chi2()  =  &gt;   ----------------
+-              /__    sigma_i ** 2
+-              i=1
++    =======================
++
++    The equation is::
++
++                    _n_
++                    \    (yi - yi(theta)) ** 2
++    chi^2(theta)  =  &gt;   ---------------------
++                    /__      sigma_i ** 2
++                    i=1
+ 
+     where:
+-        yi are the values of the measured data set.
+-        yi() are the values of the back calculated data set.
+-        sigma_i are the values of the error set.
++        - i is the index over data sets.
++        - theta is the parameter vector.
++        - yi are the values of the measured data set.
++        - yi(theta) are the values of the back calculated data set.
++        - sigma_i are the values of the error set.
+ 
+     The chi-squared value is returned.
+     */
+@@ -52,3 +59,54 @@
+ 
+     return chi2;
+ }
++
++
++void dchi2(double dchi2[], double data[], double back_calc_vals[], double 
+back_calc_grad[][MAX_DATA], double errors[], int num_times, int M) {
++    /* Calculate the full chi-squared gradient.
++
++    The chi-squared gradient
++    ========================
++
++    The equation is::
++
++                             _n_
++        dchi^2(theta)        \   / yi - yi(theta)     dyi(theta) \
++        -------------  =  -2  &gt;  | --------------  .  ---------- |
++           dthetaj           /__ \   sigma_i**2        dthetaj   /
++                             i=1
++
++    where
++        - i is the index over data sets.
++        - j is the parameter index of the gradient.
++        - theta is the parameter vector.
++        - yi are the values of the measured data set.
++        - yi(theta) are the values of the back calculated data set.
++        - dyi(theta)/dthetaj are the values of the back calculated gradient 
+for parameter j.
++        - sigma_i are the values of the error set.
++
++
++    @param dchi2:           The chi-squared gradient data structure to place 
+the gradient elements
++                            into.
++    @type dchi2:            numpy rank-1 size M array
++    @param data:            The vector of yi values.
++    @type data:             numpy rank-1 size N array
++    @param back_calc_vals:  The vector of yi(theta) values.
++    @type back_calc_vals:   numpy rank-1 size N array
++    @param back_calc_grad:  The matrix of dyi(theta)/dtheta values.
++    @type back_calc_grad:   numpy rank-2 size MxN array
++    @param errors:          The vector of sigma_i values.
++    @type errors:           numpy rank-1 size N array
++    @param M:               The dimensions of the gradient.
++    @type M:                int
++    */
++
++    /* Declarations. */
++    int i, j;
++
++    /* Calculate the chi-squared gradient. */
++    for (j = 0; j &lt; M; ++j) {
++        for (i = 0; i &lt; num_times; ++i) {
++            dchi2[j] += -2.0 / (errors[i]*errors[i]) * (data[i] - 
+back_calc_vals[i]) * back_calc_grad[j][i];
++        }
++    }
++}
+
+Modified: trunk/target_functions/c_chi2.h
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/target_functions/c_chi2.h?rev=25259&amp;r1=25258&amp;r2=25259&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/target_functions/c_chi2.h?rev=25259&amp;r1=25258&amp;r2=25259&amp;view=diff</a>
+==============================================================================
+--- trunk/target_functions/c_chi2.h     (original)
++++ trunk/target_functions/c_chi2.h     Tue Aug 26 08:58:39 2014
+@@ -21,6 +21,10 @@
+ #ifndef RELAX_C_CHI2 
+ #define RELAX_C_CHI2
+ 
++/* The maximum number of data points */
++#define MAX_DATA 50
++
+ double chi2(double *values, double *sd, double *back_calc, int num_times);
++void dchi2(double dchi2[], double data[], double back_calc_vals[], double 
+back_calc_grad[][MAX_DATA], double errors[], int num_times, int M);
+ 
+ #endif
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Aug 26 09:20:03 2014</div>  
+</body>
+</html>

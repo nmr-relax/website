@@ -1,0 +1,261 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r25268 &#45; in /trunk/target_functions: exponential.c exponential.h relax_fit.c -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 26 Aug 2014 11:07:08 +0200 -->
+<!--X-Message-Id: E1XMCia&#45;0001FG&#45;DK@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r25268 - in /trunk/target_functions: exponential.c exponential.h relax_fit.c -- August 26, 2014 - 11:07</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r25268 - in /trunk/target_functions: exponential.c exponential.h relax_fit.c</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00402" class="tabs">Index by Date</a> | <a href="threads.html#00402" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00401.html">Date Prev</a>] [<a href="msg00403.html">Date Next</a>] [<a href="msg00401.html">Thread Prev</a>] [<a href="msg00403.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 26 Aug 2014 09:07:08 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00402.html">E1XMCia-0001FG-DK@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on August 26, 2014 - 11:07:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Aug 26 11:07:07 2014
+New Revision: 25268
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=25268&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=25268&amp;view=rev</a>
+Log:
+Modified all of the exponential curve functions and gradients in the C target 
+function module.
+
+Instead of passing in the parameter vector, now the I0 and R values are 
+passed in separately.  This
+is for greater code flexibility as the parameter order does not need to be 
+known.
+
+
+Modified:
+    trunk/target_functions/exponential.c
+    trunk/target_functions/exponential.h
+    trunk/target_functions/relax_fit.c
+
+Modified: trunk/target_functions/exponential.c
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/target_functions/exponential.c?rev=25268&amp;r1=25267&amp;r2=25268&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/target_functions/exponential.c?rev=25268&amp;r1=25267&amp;r2=25268&amp;view=diff</a>
+==============================================================================
+--- trunk/target_functions/exponential.c        (original)
++++ trunk/target_functions/exponential.c        Tue Aug 26 11:07:07 2014
+@@ -25,8 +25,12 @@
+ #include &quot;exponential.h&quot;
+ 
+ 
+-void exponential(double *params, double *relax_times, double *back_calc, int 
+num_times) {
+-    /* Function to back calculate the peak intensities.
++void exponential(double I0, double R, double *relax_times, double 
+*back_calc, int num_times) {
++    /* Function to back calculate the intensity values from an exponential.
++     *
++     * The function used is::
++     *
++     *     I = I0 * exp(-R.t)
+     */
+ 
+     /* Declarations */
+@@ -35,18 +39,18 @@
+     /* Loop over the time points */
+     for (i = 0; i &lt; num_times; i++) {
+         /* Zero Rx value */
+-        if (params[0] == 0.0)
+-            back_calc[i] = params[1];
++        if (R == 0.0)
++            back_calc[i] = I0;
+ 
+         /* Back calculate */
+         else
+-            back_calc[i] = params[1] * exp(-relax_times[i] * params[0]);
++            back_calc[i] = I0 * exp(-relax_times[i] * R);
+ 
+     }
+ }
+ 
+-void exponential_dI(double *params, double *relax_times, double 
+back_calc_grad[][MAXTIMES], int num_times) {
+-    /* Calculate the dI partial derivate of the 2-parameter exponential 
+curve.
++void exponential_dI0(double I0, double R, double *relax_times, double 
+back_calc_grad[][MAXTIMES], int num_times) {
++    /* Calculate the dI0 partial derivate of the 2-parameter exponential 
+curve.
+     */
+ 
+     /* Declarations */
+@@ -55,17 +59,17 @@
+     /* Loop over the time points */
+     for (i = 0; i &lt; num_times; i++) {
+         /* Zero Rx value */
+-        if (params[0] == 0.0)
++        if (R == 0.0)
+             back_calc_grad[1][i] = 1.0;
+ 
+         /* The partial derivate */
+         else
+-            back_calc_grad[1][i] = exp(-relax_times[i] * params[0]);
++            back_calc_grad[1][i] = exp(-relax_times[i] * R);
+     }
+ }
+ 
+ 
+-void exponential_dR(double *params, double *relax_times, double 
+back_calc_grad[][MAXTIMES], int num_times) {
++void exponential_dR(double I0, double R, double *relax_times, double 
+back_calc_grad[][MAXTIMES], int num_times) {
+     /* Calculate the dR partial derivate of the 2-parameter exponential 
+curve.
+     */
+ 
+@@ -75,11 +79,11 @@
+     /* Loop over the time points */
+     for (i = 0; i &lt; num_times; i++) {
+         /* Zero Rx value */
+-        if (params[0] == 0.0)
+-            back_calc_grad[0][i] = -params[1] * relax_times[i];
++        if (R == 0.0)
++            back_calc_grad[0][i] = -I0 * relax_times[i];
+ 
+         /* The partial derivate */
+         else
+-            back_calc_grad[0][i] = -params[1] * relax_times[i] * 
+exp(-relax_times[i] * params[0]);
++            back_calc_grad[0][i] = -I0 * relax_times[i] * 
+exp(-relax_times[i] * R);
+     }
+ }
+
+Modified: trunk/target_functions/exponential.h
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/target_functions/exponential.h?rev=25268&amp;r1=25267&amp;r2=25268&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/target_functions/exponential.h?rev=25268&amp;r1=25267&amp;r2=25268&amp;view=diff</a>
+==============================================================================
+--- trunk/target_functions/exponential.h        (original)
++++ trunk/target_functions/exponential.h        Tue Aug 26 11:07:07 2014
+@@ -25,8 +25,8 @@
+ #define MAXTIMES 50
+ 
+ 
+-void exponential(double *params, double *relax_times, double *back_calc, int 
+num_times);
+-void exponential_dI(double *params, double *relax_times, double 
+back_calc_grad[][MAXTIMES], int num_times);
+-void exponential_dR(double *params, double *relax_times, double 
+back_calc_grad[][MAXTIMES], int num_times);
++void exponential(double I0, double R, double *relax_times, double 
+*back_calc, int num_times);
++void exponential_dI0(double I0, double R, double *relax_times, double 
+back_calc_grad[][MAXTIMES], int num_times);
++void exponential_dR(double I0, double R, double *relax_times, double 
+back_calc_grad[][MAXTIMES], int num_times);
+ 
+ #endif
+
+Modified: trunk/target_functions/relax_fit.c
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/target_functions/relax_fit.c?rev=25268&amp;r1=25267&amp;r2=25268&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/target_functions/relax_fit.c?rev=25268&amp;r1=25267&amp;r2=25268&amp;view=diff</a>
+==============================================================================
+--- trunk/target_functions/relax_fit.c  (original)
++++ trunk/target_functions/relax_fit.c  Tue Aug 26 11:07:07 2014
+@@ -108,7 +108,7 @@
+     }
+ 
+     /* Back calculated the peak intensities */
+-    exponential(params, relax_times, back_calc, num_times);
++    exponential(params[1], params[0], relax_times, back_calc, num_times);
+ 
+     /* Calculate and return the chi-squared value */
+     return PyFloat_FromDouble(chi2(values, sd, back_calc, num_times));
+@@ -145,11 +145,11 @@
+     }
+ 
+     /* Back calculated the peak intensities */
+-    exponential(params, relax_times, back_calc, num_times);
++    exponential(params[1], params[0], relax_times, back_calc, num_times);
+ 
+     /* The partial derivates */
+-    exponential_dR(params, relax_times, back_calc_grad, num_times);
+-    exponential_dI(params, relax_times, back_calc_grad, num_times);
++    exponential_dR(params[1], params[0], relax_times, back_calc_grad, 
+num_times);
++    exponential_dI0(params[1], params[0], relax_times, back_calc_grad, 
+num_times);
+ 
+     /* The chi-squared gradient */
+     dchi2(dchi2_vals, values, back_calc, back_calc_grad, sd, num_times, 
+num_params);
+@@ -220,8 +220,8 @@
+     }
+ 
+     /* The partial derivates */
+-    exponential_dR(params, relax_times, back_calc_grad, num_times);
+-    exponential_dI(params, relax_times, back_calc_grad, num_times);
++    exponential_dR(params[1], params[0], relax_times, back_calc_grad, 
+num_times);
++    exponential_dI0(params[1], params[0], relax_times, back_calc_grad, 
+num_times);
+ 
+     /* Convert to a Python list of lists */
+     PyObject *list = PyList_New(0);
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Aug 26 11:20:02 2014</div>  
+</body>
+</html>

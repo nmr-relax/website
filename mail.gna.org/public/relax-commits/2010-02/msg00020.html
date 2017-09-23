@@ -1,0 +1,348 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r10624 &#45; /branches/bieri_gui/gui_bieri/about.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 03 Feb 2010 01:21:52 +0100 -->
+<!--X-Message-Id: E1NcT0C&#45;0000p0&#45;7j@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r10624 - /branches/bieri_gui/gui_bieri/about.py -- February 03, 2010 - 01:21</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r10624 - /branches/bieri_gui/gui_bieri/about.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00020" class="tabs">Index by Date</a> | <a href="threads.html#00020" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00019.html">Date Prev</a>] [<a href="msg00021.html">Date Next</a>] [<a href="msg00019.html">Thread Prev</a>] [<a href="msg00021.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 03 Feb 2010 00:21:52 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00020.html">E1NcT0C-0000p0-7j@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on February 03, 2010 - 01:21:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Feb  3 01:21:51 2010
+New Revision: 10624
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=10624&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=10624&amp;view=rev</a>
+Log:
+Completely redesigned the relax about dialog into its own widget using 
+wx.PaintDC.
+
+This works much better!  Ideas from 
+<a  rel="nofollow" href="http://zetcode.com/wxpython/customwidgets/">http://zetcode.com/wxpython/customwidgets/</a> were used.
+
+
+Modified:
+    branches/bieri_gui/gui_bieri/about.py
+
+Modified: branches/bieri_gui/gui_bieri/about.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/bieri_gui/gui_bieri/about.py?rev=10624&amp;r1=10623&amp;r2=10624&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/bieri_gui/gui_bieri/about.py?rev=10624&amp;r1=10623&amp;r2=10624&amp;view=diff</a>
+==============================================================================
+--- branches/bieri_gui/gui_bieri/about.py (original)
++++ branches/bieri_gui/gui_bieri/about.py Wed Feb  3 01:21:51 2010
+@@ -44,15 +44,16 @@
+ class About_base(wx.Dialog):
+     &quot;&quot;&quot;The about dialog base class.&quot;&quot;&quot;
+ 
+-    # The background colour.
+-    colour = None
++    # The background colour (gradient if second colour is given).
++    colour1 = None
++    colour2 = None
+ 
+     # Dimensions.
+     dim_x = 400
+     dim_y = 100
+ 
+     # Spacer size (px).
+-    spacer_size = 0
++    boarder = 0
+ 
+     def __init__(self, *args, **kwds):
+         &quot;&quot;&quot;Build the dialog.&quot;&quot;&quot;
+@@ -64,66 +65,15 @@
+         super(About_base, self).__init__(*args, **kwds)
+ 
+         # The total size.
+-        self.total_x = self.dim_x + 2*self.spacer_size
+-        self.total_y = self.dim_y + 2*self.spacer_size
++        self.total_x = self.dim_x + 2*self.boarder
++        self.total_y = self.dim_y + 2*self.boarder
+         self.SetMinSize((self.total_x, self.total_y))
+ 
+-        # Set a background.
+-        self.set_background()
+-
+-        # Build the boarder and get the central sizer.
+-        self.sizer = self.build_boarders()
+-
+-        # An array of objects to bind events to.
+-        self.obj_list = [self]
+-
+-        # Build the core.
+-        self.build_core()
++        # Draw everything.
++        self.Bind(wx.EVT_PAINT, self.generate)
+ 
+         # Let the dialog be closable with a left button click.
+-        self.bind()
+-
+-
+-    def bind(self):
+-        &quot;&quot;&quot;Bind the left button click to all objects.&quot;&quot;&quot;
+-
+-        # Loop over the objects.
+-        for obj in self.obj_list:
+-            self.Bind(wx.EVT_LEFT_DOWN, self.close, obj)
+-
+-
+-    def build_boarders(self):
+-        &quot;&quot;&quot;Build the boarder layout and return the central sizer.
+-
+-        @return:    The central sizer object.
+-        @rtype:     wx.BoxSizer instance
+-        &quot;&quot;&quot;
+-
+-        # The horizontal, vertical, and central sizers.
+-        sizer_hori = wx.BoxSizer(wx.HORIZONTAL)
+-        sizer_vert = wx.BoxSizer(wx.VERTICAL)
+-        sizer_cent = wx.BoxSizer(wx.VERTICAL)
+-
+-        # Fix the size of the central sizer.
+-        sizer_cent.SetMinSize((self.dim_x, self.dim_y))
+-
+-        # Fill the dialog with the horizontal sizer.
+-        self.SetSizer(sizer_hori)
+-
+-        # The left and top spacers.
+-        sizer_hori.AddSpacer(self.spacer_size)
+-        sizer_vert.AddSpacer(self.spacer_size)
+-
+-        # Pack the sizers together.
+-        sizer_hori.Add(sizer_vert)
+-        sizer_vert.Add(sizer_cent)
+-
+-        # The right and bottom spacers.
+-        sizer_hori.AddSpacer(self.spacer_size)
+-        sizer_vert.AddSpacer(self.spacer_size)
+-
+-        # Return the central sizer.
+-        return sizer_cent
++        self.Bind(wx.EVT_LEFT_DOWN, self.close)
+ 
+ 
+     def close(self, event):
+@@ -140,12 +90,33 @@
+         event.Skip()
+ 
+ 
++    def generate(self, event):
++        &quot;&quot;&quot;Build the device context, add the background, and build the 
+dialog.
++
++        @param event:   The wx event.
++        @type event:    wx event
++        &quot;&quot;&quot;
++
++        # Create the device context.
++        self.dc = wx.PaintDC(self)
++
++        # Set a background.
++        self.set_background()
++
++        # Build the rest of the about widget.
++        self.build_widget()
++
++
+     def set_background(self):
+         &quot;&quot;&quot;Build a background for the dialog.&quot;&quot;&quot;
+ 
+         # Set a single colour.
+-        if self.colour:
+-            self.SetBackgroundColour(self.colour)
++        if self.colour1 and not self.colour2:
++            self.SetBackgroundColour(self.colour1)
++
++        # A gradient.
++        elif self.colour1 and self.colour2:
++            self.dc.GradientFillLinear((0, 0, self.total_x, self.total_y), 
+self.colour1, self.colour2, wx.SOUTH)
+ 
+ 
+ 
+@@ -153,14 +124,15 @@
+     &quot;&quot;&quot;The about relax dialog.&quot;&quot;&quot;
+ 
+     # The relax background colour.
+-    colour = '#e5feff'
++    colour1 = '#e5feff'
++    colour2 = '#88cbff'
+ 
+     # Dimensions.
+     dim_x = 400
+     dim_y = 600
+ 
+     # Spacer size (px).
+-    spacer_size = 10
++    boarder = 10
+ 
+     def __init__(self, *args, **kwds):
+         &quot;&quot;&quot;Build the dialog.&quot;&quot;&quot;
+@@ -169,49 +141,58 @@
+         super(About_relax, self).__init__(*args, **kwds)
+ 
+ 
+-    def add_relax_logo(self, sizer):
+-        &quot;&quot;&quot;Add the relax logo to the sizer.
+-
+-        @param sizer:   The sizer element to pack the logo into.
+-        @type sizer:    wx.Sizer instance
+-        &quot;&quot;&quot;
+-
+-        # The logo.
+-        logo = wx.StaticBitmap(self, -1, 
+wx.Bitmap(IMAGE_PATH+'ulysses_shadowless_400x168.png', wx.BITMAP_TYPE_ANY))
+-
+-        # Pack the logo into the sizer.
+-        sizer.Add(logo)
+-
+-        # Return the logo.
+-        return logo
+-
+-
+-    def add_title(self, sizer):
+-        &quot;&quot;&quot;Add the relax title (name and version) to the sizer.
+-
+-        @param sizer:   The sizer element to pack the title into.
+-        @type sizer:    wx.Sizer instance
+-        &quot;&quot;&quot;
++    def build_widget(self):
++        &quot;&quot;&quot;Build the about dialog.&quot;&quot;&quot;
++
++        # The relax icon.
++        self.draw_icon()
++
++        # The title.
++        self.draw_title()
++
++        # The description.
++        self.draw_description()
++
++
++    def draw_description(self):
++        &quot;&quot;&quot;Draw the relax description text.&quot;&quot;&quot;
+ 
+         # The text.
+-        title = wx.StaticText(self, -1, 'relax ' + version, style=wx.Centre)
+-
+-        # Pack in the title.
+-        sizer.Add(title)
+-
+-
+-    def build_core(self):
+-        &quot;&quot;&quot;Construct the core of the about dialog.&quot;&quot;&quot;
+-
+-        # Add some vertical spacing.
+-        self.sizer.AddSpacer(30)
+-
+-        # Add the relax name and version.
+-        self.add_title(self.sizer)
++        text = 'Protein dynamics by NMR data analysis'
++
++        # Set the font.
++        font = wx.Font(12, wx.FONTFAMILY_ROMAN, wx.NORMAL, wx.NORMAL)
++        self.dc.SetFont(font)
++
++        # The text extent.
++        x, y = self.dc.GetTextExtent(text)
++
++        # Draw the text.
++        self.dc.DrawText(text, self.boarder + (self.dim_x - x)/2, 250)
++
++
++    def draw_icon(self):
++        &quot;&quot;&quot;Draw the relax icon on the canvas.&quot;&quot;&quot;
+ 
+         # Add the relax logo.
+-        logo = self.add_relax_logo(self.sizer)
+-        self.obj_list.append(logo)
++        
+self.dc.DrawBitmap(wx.Bitmap(IMAGE_PATH+'ulysses_shadowless_400x168.png'), 
+self.boarder, self.boarder+50, True)
++
++
++    def draw_title(self):
++        &quot;&quot;&quot;Draw the relax title with name and version.&quot;&quot;&quot;
++
++        # The text.
++        text = 'relax ' + version
++
++        # Set the font.
++        font = wx.Font(14, wx.FONTFAMILY_ROMAN, wx.NORMAL, wx.NORMAL)
++        self.dc.SetFont(font)
++
++        # The text extent.
++        x, y = self.dc.GetTextExtent(text)
++
++        # Draw the text.
++        self.dc.DrawText(text, self.boarder + (self.dim_x - x)/2, 30)
+ 
+ 
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Feb 03 01:40:02 2010</div>  
+</body>
+</html>

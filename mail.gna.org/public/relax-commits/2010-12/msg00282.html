@@ -1,0 +1,391 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r11982 &#45; /branches/bieri_gui/gui_bieri/about.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 28 Dec 2010 10:21:26 +0100 -->
+<!--X-Message-Id: E1PXVkE&#45;0003Q5&#45;Dz@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r11982 - /branches/bieri_gui/gui_bieri/about.py -- December 28, 2010 - 10:21</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r11982 - /branches/bieri_gui/gui_bieri/about.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00282" class="tabs">Index by Date</a> | <a href="threads.html#00282" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00281.html">Date Prev</a>] [<a href="msg00283.html">Date Next</a>] [<a href="msg00281.html">Thread Prev</a>] [<a href="msg00283.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 28 Dec 2010 09:21:26 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00282.html">E1PXVkE-0003Q5-Dz@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on December 28, 2010 - 10:21:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Dec 28 10:21:24 2010
+New Revision: 11982
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=11982&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=11982&amp;view=rev</a>
+Log:
+The setting of the about window virtual size has been shifted to the 
+virtual_size() method.
+
+
+Modified:
+    branches/bieri_gui/gui_bieri/about.py
+
+Modified: branches/bieri_gui/gui_bieri/about.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/bieri_gui/gui_bieri/about.py?rev=11982&amp;r1=11981&amp;r2=11982&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/bieri_gui/gui_bieri/about.py?rev=11982&amp;r1=11981&amp;r2=11982&amp;view=diff</a>
+==============================================================================
+--- branches/bieri_gui/gui_bieri/about.py (original)
++++ branches/bieri_gui/gui_bieri/about.py Tue Dec 28 10:21:24 2010
+@@ -63,6 +63,9 @@
+         # Create a scrolled window.
+         self.window = wx.ScrolledWindow(self, -1)
+ 
++        # Determine the virtual size of the window.
++        self.virtual_size()
++
+         # Initialise the y-offset variable.
+         self._offset_val = 0
+ 
+@@ -89,6 +92,134 @@
+ 
+     def create_buffered_dc(self):
+         &quot;&quot;&quot;Build the buffered dc containing the window contents.&quot;&quot;&quot;
++
++        # The buffer for buffered drawing.
++        self.buffer = wx.EmptyBitmap(self.virt_x, self.virt_y)
++
++        # Create the device context.
++        self.dc = wx.BufferedDC(None, self.buffer)
++
++        # Set a background.
++        self.set_background()
++
++        # Build the rest of the about widget.
++        self.build_widget()
++
++        # Finish.
++        self.dc.EndDrawing()
++
++
++    def cursor_style(self, event):
++        &quot;&quot;&quot;Dummy method for not changing the mouse cursor!&quot;&quot;&quot;
++
++        # Terminate the event.
++        event.Skip()
++
++
++    def draw_title(self, text, point_size=14, family=wx.FONTFAMILY_ROMAN):
++        &quot;&quot;&quot;Draw the title.&quot;&quot;&quot;
++
++        # Set the font.
++        font = wx.Font(point_size, family, wx.NORMAL, wx.NORMAL)
++        self.dc.SetFont(font)
++
++        # The text extent.
++        x, y = self.dc.GetTextExtent(text)
++
++        # Draw the text, with a spacer.
++        self.dc.DrawText(text, self.border + (self.dim_x - x)/2, 
+self.offset(15))
++
++        # Add the text extent.
++        self.offset(y)
++
++
++    def draw_wrapped_text(self, text, text_size=10, width=69, spacer=10):
++        &quot;&quot;&quot;Generic method for drawing wrapped text in the relax about widget.
++
++        @param text:        The text to wrap and draw.
++        @type text:         str
++        @keyword spacer:    The pixel width of the spacer to place above the 
+text block.
++        @type spacer:       int
++        &quot;&quot;&quot;
++
++        # Set the font.
++        font = wx.Font(text_size, wx.FONTFAMILY_ROMAN, wx.NORMAL, wx.NORMAL)
++        self.dc.SetFont(font)
++
++        # Wrap the text.
++        lines = wrap(text, width)
++
++        # Find the max y extent.
++        max_y = 0
++        for line in lines:
++            x, y = self.dc.GetTextExtent(text)
++            if y &gt; max_y:
++                max_y = y
++
++        # Add a top spacer.
++        self.offset(10)
++
++        # Draw.
++        for line in lines:
++            # Draw the text.
++            self.dc.DrawText(line, self.border, self.offset())
++
++            # Update the offset.
++            self.offset(max_y + 1)
++
++
++    def generate(self, event):
++        &quot;&quot;&quot;Build the device context, add the background, and build the 
+dialog.
++
++        @param event:   The wx event.
++        @type event:    wx event
++        &quot;&quot;&quot;
++
++        # Create the device context.
++        wx.BufferedPaintDC(self.window, self.buffer, wx.BUFFER_VIRTUAL_AREA)
++
++
++    def offset(self, val=0):
++        &quot;&quot;&quot;Shift the y-offset by the given value and return the new offset.
++
++        @keyword val:   The value to add to the offset (can be negative).
++        @type val:      int
++        @return:        The new offset.
++        @rtype:         int
++        &quot;&quot;&quot;
++
++        # Shift.
++        self._offset_val = self._offset_val + val
++
++        # Return.
++        return self._offset_val
++
++
++    def process_click(self, event):
++        &quot;&quot;&quot;Base method which just closes the widget on a click event.
++
++        @param event:   The wx event.
++        @type event:    wx event
++        &quot;&quot;&quot;
++
++        # Close the widget.
++        self.Destroy()
++
++
++    def set_background(self):
++        &quot;&quot;&quot;Build a background for the dialog.&quot;&quot;&quot;
++
++        # Set a single colour.
++        if self.colour1 and not self.colour2:
++            self.SetBackgroundColour(self.colour1)
++
++        # A gradient.
++        elif self.colour1 and self.colour2:
++            self.dc.GradientFillLinear((0, 0, self.virt_x, self.virt_y), 
+self.colour1, self.colour2, wx.SOUTH)
++
++
++    def virtual_size(self):
++        &quot;&quot;&quot;Determine the virtual size of the window.&quot;&quot;&quot;
+ 
+         # Dimensions of the drawing area.
+         if self.max_x:
+@@ -101,135 +232,14 @@
+             y = self.dim_y
+ 
+         # Borders.
+-        x = x + 2*self.border
+-        y = y + 2*self.border
++        self.virt_x = x + 2*self.border
++        self.virt_y = y + 2*self.border
+ 
+         # Set the window virtual size.
+-        self.window.SetVirtualSize((x, y))
+-
+-        # The buffer for buffered drawing.
+-        self.buffer = wx.EmptyBitmap(x, y)
+-
+-        # Create the device context.
+-        self.dc = wx.BufferedDC(None, self.buffer)
+-
+-        # Set a background.
+-        self.set_background()
+-
+-        # Build the rest of the about widget.
+-        self.build_widget()
+-
+-        # Finish.
+-        self.dc.EndDrawing()
+-
+-
+-    def cursor_style(self, event):
+-        &quot;&quot;&quot;Dummy method for not changing the mouse cursor!&quot;&quot;&quot;
+-
+-        # Terminate the event.
+-        event.Skip()
+-
+-
+-    def draw_title(self, text, point_size=14, family=wx.FONTFAMILY_ROMAN):
+-        &quot;&quot;&quot;Draw the title.&quot;&quot;&quot;
+-
+-        # Set the font.
+-        font = wx.Font(point_size, family, wx.NORMAL, wx.NORMAL)
+-        self.dc.SetFont(font)
+-
+-        # The text extent.
+-        x, y = self.dc.GetTextExtent(text)
+-
+-        # Draw the text, with a spacer.
+-        self.dc.DrawText(text, self.border + (self.dim_x - x)/2, 
+self.offset(15))
+-
+-        # Add the text extent.
+-        self.offset(y)
+-
+-
+-    def draw_wrapped_text(self, text, text_size=10, width=69, spacer=10):
+-        &quot;&quot;&quot;Generic method for drawing wrapped text in the relax about widget.
+-
+-        @param text:        The text to wrap and draw.
+-        @type text:         str
+-        @keyword spacer:    The pixel width of the spacer to place above the 
+text block.
+-        @type spacer:       int
+-        &quot;&quot;&quot;
+-
+-        # Set the font.
+-        font = wx.Font(text_size, wx.FONTFAMILY_ROMAN, wx.NORMAL, wx.NORMAL)
+-        self.dc.SetFont(font)
+-
+-        # Wrap the text.
+-        lines = wrap(text, width)
+-
+-        # Find the max y extent.
+-        max_y = 0
+-        for line in lines:
+-            x, y = self.dc.GetTextExtent(text)
+-            if y &gt; max_y:
+-                max_y = y
+-
+-        # Add a top spacer.
+-        self.offset(10)
+-
+-        # Draw.
+-        for line in lines:
+-            # Draw the text.
+-            self.dc.DrawText(line, self.border, self.offset())
+-
+-            # Update the offset.
+-            self.offset(max_y + 1)
+-
+-
+-    def generate(self, event):
+-        &quot;&quot;&quot;Build the device context, add the background, and build the 
+dialog.
+-
+-        @param event:   The wx event.
+-        @type event:    wx event
+-        &quot;&quot;&quot;
+-
+-        # Create the device context.
+-        wx.BufferedPaintDC(self.window, self.buffer, wx.BUFFER_VIRTUAL_AREA)
+-
+-
+-    def offset(self, val=0):
+-        &quot;&quot;&quot;Shift the y-offset by the given value and return the new offset.
+-
+-        @keyword val:   The value to add to the offset (can be negative).
+-        @type val:      int
+-        @return:        The new offset.
+-        @rtype:         int
+-        &quot;&quot;&quot;
+-
+-        # Shift.
+-        self._offset_val = self._offset_val + val
+-
+-        # Return.
+-        return self._offset_val
+-
+-
+-    def process_click(self, event):
+-        &quot;&quot;&quot;Base method which just closes the widget on a click event.
+-
+-        @param event:   The wx event.
+-        @type event:    wx event
+-        &quot;&quot;&quot;
+-
+-        # Close the widget.
+-        self.Destroy()
+-
+-
+-    def set_background(self):
+-        &quot;&quot;&quot;Build a background for the dialog.&quot;&quot;&quot;
+-
+-        # Set a single colour.
+-        if self.colour1 and not self.colour2:
+-            self.SetBackgroundColour(self.colour1)
+-
+-        # A gradient.
+-        elif self.colour1 and self.colour2:
+-            self.dc.GradientFillLinear((0, 0, self.total_x, self.total_y), 
+self.colour1, self.colour2, wx.SOUTH)
++        self.window.SetVirtualSize((self.virt_x, self.virt_y))
++
++        # Add y scrolling, if needed.
++        self.window.SetScrollRate(0,20)
+ 
+ 
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Dec 28 10:40:02 2010</div>  
+</body>
+</html>

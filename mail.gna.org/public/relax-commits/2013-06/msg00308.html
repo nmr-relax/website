@@ -1,0 +1,358 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r20119 &#45; in /trunk: specific_analyses/n_state_model/ target_functions/ -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 14 Jun 2013 16:00:47 +0200 -->
+<!--X-Message-Id: E1UnUYY&#45;0005yl&#45;UA@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r20119 - in /trunk: specific_analyses/n_state_model/ target_functions/ -- June 14, 2013 - 16:00</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r20119 - in /trunk: specific_analyses/n_state_model/ target_functions/</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00308" class="tabs">Index by Date</a> | <a href="threads.html#00308" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00307.html">Date Prev</a>] [<a href="msg00309.html">Date Next</a>] [<a href="msg00307.html">Thread Prev</a>] [<a href="msg00309.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 14 Jun 2013 14:00:46 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00308.html">E1UnUYY-0005yl-UA@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on June 14, 2013 - 16:00:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Jun 14 16:00:46 2013
+New Revision: 20119
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=20119&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=20119&amp;view=rev</a>
+Log:
+Added support for the T = J+D RDC data type to the N-state model target 
+function.
+
+The J couplings are sent into the target function class when the 'T' RDC data 
+type is encountered.
+These measured values are then added to the back-calculated RDC values to 
+produced T(theta) which
+is then compared to T via the chi-squared function.
+
+
+Modified:
+    trunk/specific_analyses/n_state_model/__init__.py
+    trunk/specific_analyses/n_state_model/data.py
+    trunk/target_functions/n_state_model.py
+
+Modified: trunk/specific_analyses/n_state_model/__init__.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/n_state_model/__init__.py?rev=20119&amp;r1=20118&amp;r2=20119&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/n_state_model/__init__.py?rev=20119&amp;r1=20118&amp;r2=20119&amp;view=diff</a>
+==============================================================================
+--- trunk/specific_analyses/n_state_model/__init__.py (original)
++++ trunk/specific_analyses/n_state_model/__init__.py Fri Jun 14 16:00:46 2013
+@@ -56,7 +56,7 @@
+ from pipe_control.structure.mass import centre_of_mass
+ from specific_analyses.api_base import API_base
+ from specific_analyses.api_common import API_common
+-from specific_analyses.n_state_model.data import base_data_types, 
+calc_ave_dist, check_rdcs, num_data_points, opt_tensor, opt_uses_align_data, 
+tensor_loop
++from specific_analyses.n_state_model.data import base_data_types, 
+calc_ave_dist, check_rdcs, num_data_points, opt_tensor, opt_uses_align_data, 
+opt_uses_j_couplings, tensor_loop
+ from specific_analyses.n_state_model.parameters import 
+assemble_param_vector, assemble_scaling_matrix, disassemble_param_vector, 
+linear_constraints, param_model_index, param_num, update_model
+ from target_functions.n_state_model import N_state_opt
+ from target_functions.potential import quad_pot
+@@ -496,6 +496,7 @@
+                                 - vectors, the interatomic vectors.
+                                 - rdc_const, the dipolar constants.
+                                 - absolute, the absolute value flags (as 1's 
+and 0's).
++                                - j_couplings, the J coupling values if the 
+RDC data type is set to T = J+D.
+         @rtype:             tuple of (numpy rank-2 array, numpy rank-2 
+array, numpy rank-2 array, numpy rank-3 array, numpy rank-2 array, numpy 
+rank-2 array)
+         &quot;&quot;&quot;
+ 
+@@ -506,8 +507,9 @@
+         unit_vect = []
+         rdc_const = []
+         absolute = []
+-
+-        # The unit vectors and RDC constants.
++        j_couplings = []
++
++        # The unit vectors, RDC constants, and J couplings.
+         for interatom in interatomic_loop():
+             # Get the spins.
+             spin1 = return_spin(interatom.spin_id1)
+@@ -529,6 +531,10 @@
+ 
+             # Calculate the RDC dipolar constant (in Hertz, and the 3 comes 
+from the alignment tensor), and append it to the list.
+             rdc_const.append(3.0/(2.0*pi) * dipolar_constant(g1, g2, 
+interatom.r))
++
++            # Store the J coupling.
++            if opt_uses_j_couplings():
++                j_couplings.append(interatom.j_coupling)
+ 
+         # Fix the unit vector data structure.
+         num = None
+@@ -581,6 +587,10 @@
+                 if not hasattr(interatom, 'rdc') or not hasattr(interatom, 
+'vector'):
+                     continue
+ 
++                # Check for J couplings if the RDC data type is T = J+D.
++                if cdp.rdc_data_types[align_id] == 'T' and not 
+hasattr(interatom, 'j_coupling'):
++                    continue
++
+                 # Defaults of None.
+                 value = None
+                 error = None
+@@ -640,9 +650,13 @@
+         unit_vect = array(unit_vect, float64)
+         rdc_const = array(rdc_const, float64)
+         absolute = array(absolute, float64)
++        if opt_uses_j_couplings():
++            j_couplings = array(j_couplings, float64)
++        else:
++            j_couplings = None
+ 
+         # Return the data structures.
+-        return rdc, rdc_err, rdc_weight, unit_vect, rdc_const, absolute
++        return rdc, rdc_err, rdc_weight, unit_vect, rdc_const, absolute, 
+j_couplings
+ 
+ 
+     def _minimise_setup_tensors(self, sim_index=None):
+@@ -803,9 +817,9 @@
+             pcs, pcs_err, pcs_weight, temp, frq = 
+self._minimise_setup_pcs(sim_index=sim_index)
+ 
+         # Get the data structures for optimisation using RDCs as base data 
+sets.
+-        rdcs, rdc_err, rdc_weight, rdc_vector, rdc_dj, absolute_rdc = None, 
+None, None, None, None, None
++        rdcs, rdc_err, rdc_weight, rdc_vector, rdc_dj, absolute_rdc, 
+j_couplings = None, None, None, None, None, None, None
+         if 'rdc' in data_types:
+-            rdcs, rdc_err, rdc_weight, rdc_vector, rdc_dj, absolute_rdc = 
+self._minimise_setup_rdcs(sim_index=sim_index)
++            rdcs, rdc_err, rdc_weight, rdc_vector, rdc_dj, absolute_rdc, 
+j_couplings = self._minimise_setup_rdcs(sim_index=sim_index)
+ 
+         # Get the fixed tensors.
+         fixed_tensors = None
+@@ -834,7 +848,7 @@
+                 centre_fixed = cdp.paramag_centre_fixed
+ 
+         # Set up the class instance containing the target function.
+-        model = N_state_opt(model=cdp.model, N=cdp.N, 
+init_params=param_vector, probs=probs, full_tensors=full_tensors, 
+red_data=red_tensor_elem, red_errors=red_tensor_err, 
+full_in_ref_frame=full_in_ref_frame, fixed_tensors=fixed_tensors, pcs=pcs, 
+rdcs=rdcs, pcs_errors=pcs_err, rdc_errors=rdc_err, pcs_weights=pcs_weight, 
+rdc_weights=rdc_weight, rdc_vect=rdc_vector, temp=temp, frq=frq, 
+dip_const=rdc_dj, absolute_rdc=absolute_rdc, atomic_pos=atomic_pos, 
+paramag_centre=paramag_centre, scaling_matrix=scaling_matrix, 
+centre_fixed=centre_fixed)
++        model = N_state_opt(model=cdp.model, N=cdp.N, 
+init_params=param_vector, probs=probs, full_tensors=full_tensors, 
+red_data=red_tensor_elem, red_errors=red_tensor_err, 
+full_in_ref_frame=full_in_ref_frame, fixed_tensors=fixed_tensors, pcs=pcs, 
+rdcs=rdcs, pcs_errors=pcs_err, rdc_errors=rdc_err, j_couplings=j_couplings, 
+pcs_weights=pcs_weight, rdc_weights=rdc_weight, rdc_vect=rdc_vector, 
+temp=temp, frq=frq, dip_const=rdc_dj, absolute_rdc=absolute_rdc, 
+atomic_pos=atomic_pos, paramag_centre=paramag_centre, 
+scaling_matrix=scaling_matrix, centre_fixed=centre_fixed)
+ 
+         # Return the data.
+         return model, param_vector, data_types, scaling_matrix
+
+Modified: trunk/specific_analyses/n_state_model/data.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/n_state_model/data.py?rev=20119&amp;r1=20118&amp;r2=20119&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/n_state_model/data.py?rev=20119&amp;r1=20118&amp;r2=20119&amp;view=diff</a>
+==============================================================================
+--- trunk/specific_analyses/n_state_model/data.py (original)
++++ trunk/specific_analyses/n_state_model/data.py Fri Jun 14 16:00:46 2013
+@@ -151,6 +151,10 @@
+     if not hasattr(interatom, 'rdc'):
+         return False
+ 
++    # Only use interatomic data containers with RDC and J coupling data.
++    if opt_uses_j_couplings() and not hasattr(interatom, 'j_coupling'):
++        return False
++
+     # RDC data exists but the interatomic vectors are missing?
+     if not hasattr(interatom, 'vector'):
+         # Throw a warning.
+@@ -280,6 +284,22 @@
+     return False
+ 
+ 
++def opt_uses_j_couplings():
++    &quot;&quot;&quot;Determine of J couplings are needed for optimisation.
++
++    @return:    True if J couplings are required, False otherwise.
++    @rtype:     bool
++    &quot;&quot;&quot;
++
++    # Loop over the alignments.
++    for align_id in cdp.align_ids:
++        if cdp.rdc_data_types[align_id] == 'T':
++            return True
++
++    # No J values required.
++    return False
++
++
+ def opt_uses_pcs(align_id):
+     &quot;&quot;&quot;Determine if the PCS data for the given alignment ID is needed for 
+optimisation.
+ 
+
+Modified: trunk/target_functions/n_state_model.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/target_functions/n_state_model.py?rev=20119&amp;r1=20118&amp;r2=20119&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/target_functions/n_state_model.py?rev=20119&amp;r1=20118&amp;r2=20119&amp;view=diff</a>
+==============================================================================
+--- trunk/target_functions/n_state_model.py (original)
++++ trunk/target_functions/n_state_model.py Fri Jun 14 16:00:46 2013
+@@ -38,7 +38,7 @@
+ class N_state_opt:
+     &quot;&quot;&quot;Class containing the target function of the optimisation of the 
+N-state model.&quot;&quot;&quot;
+ 
+-    def __init__(self, model=None, N=None, init_params=None, probs=None, 
+full_tensors=None, red_data=None, red_errors=None, full_in_ref_frame=None, 
+fixed_tensors=None, pcs=None, pcs_errors=None, pcs_weights=None, rdcs=None, 
+rdc_errors=None, rdc_weights=None, rdc_vect=None, temp=None, frq=None, 
+dip_const=None, absolute_rdc=None, atomic_pos=None, paramag_centre=None, 
+scaling_matrix=None, centre_fixed=True):
++    def __init__(self, model=None, N=None, init_params=None, probs=None, 
+full_tensors=None, red_data=None, red_errors=None, full_in_ref_frame=None, 
+fixed_tensors=None, pcs=None, pcs_errors=None, pcs_weights=None, rdcs=None, 
+rdc_errors=None, rdc_weights=None, rdc_vect=None, j_couplings=None, 
+temp=None, frq=None, dip_const=None, absolute_rdc=None, atomic_pos=None, 
+paramag_centre=None, scaling_matrix=None, centre_fixed=True):
+         &quot;&quot;&quot;Set up the class instance for optimisation.
+ 
+         The N-state models
+@@ -97,6 +97,7 @@
+             - rdcs, the residual dipolar couplings.
+             - rdc_errors, the optional residual dipolar coupling errors.
+             - rdc_vect, the interatomic vectors.
++            - j_couplings, the J couplings for the case when RDC data is of 
+the type T = J+D.
+             - dip_const, the dipolar constants.
+             - absolute_rdc, the flags specifying whether each RDC is 
+signless.
+ 
+@@ -133,6 +134,8 @@
+         @type rdc_weights:          numpy rank-2 array
+         @keyword rdc_vect:          The unit vector lists for the RDC.  The 
+first index must correspond to the spin pair and the second index to each 
+structure (its size being equal to the number of states).
+         @type rdc_vect:             numpy rank-2 array
++        @keyword j_couplings:       The J couplings list, used when the RDC 
+data is of the type T = J+D.  The number of elements must match the second 
+dimension of the rdcs argument.
++        @type j_couplings:          numpy rank-1 array
+         @keyword temp:              The temperature of each experiment, used 
+for the PCS.
+         @type temp:                 numpy rank-1 array
+         @keyword frq:               The frequency of each alignment, used 
+for the PCS.
+@@ -160,6 +163,7 @@
+         self.dip_vect = rdc_vect
+         self.dip_const = dip_const
+         self.absolute_rdc = absolute_rdc
++        self.j_couplings = j_couplings
+         self.temp = temp
+         self.frq = frq
+         self.atomic_pos = atomic_pos
+@@ -178,6 +182,11 @@
+             self.scaling_flag = True
+         else:
+             self.scaling_flag = False
++
++        # J coupling flag.
++        self.j_flag = True
++        if self.j_couplings == None:
++            self.j_flag = False
+ 
+         # The 2-domain N-state model.
+         if model == '2-domain':
+@@ -668,6 +677,10 @@
+                     if not self.missing_rdc[align_index, j]:
+                         self.rdc_theta[align_index, j] = 
+ave_rdc_tensor(self.dip_const[j], self.dip_vect[j], self.N, 
+self.A[align_index], weights=self.probs, 
+absolute=self.absolute_rdc[align_index, j])
+ 
++                        # Add the J coupling to convert into the 
+back-calculated T = J+D value.
++                        if self.j_flag:
++                            self.rdc_theta[align_index, j] += 
+self.j_couplings[j]
++
+             # The back calculated PCS.
+             if self.pcs_flag[align_index]:
+                 # Loop over the spin systems j.
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Jun 14 17:00:02 2013</div>  
+</body>
+</html>

@@ -1,0 +1,438 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r16606 &#45; in /branches/uf_redesign/docs/latex: fetch_docstrings.py	relax.tex -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Sun, 03 Jun 2012 12:40:28 +0200 -->
+<!--X-Message-Id: E1Sb8EW&#45;0003FT&#45;24@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r16606 - in /branches/uf_redesign/docs/latex: fetch_docstrings.py	relax.tex -- June 03, 2012 - 12:40</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r16606 - in /branches/uf_redesign/docs/latex: fetch_docstrings.py	relax.tex</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00051" class="tabs">Index by Date</a> | <a href="threads.html#00051" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00050.html">Date Prev</a>] [<a href="msg00052.html">Date Next</a>] [<a href="msg00050.html">Thread Prev</a>] [<a href="msg00052.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Sun, 03 Jun 2012 10:40:27 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00051.html">E1Sb8EW-0003FT-24@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on June 03, 2012 - 12:40:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Sun Jun  3 12:40:27 2012
+New Revision: 16606
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=16606&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=16606&amp;view=rev</a>
+Log:
+Complete rewrite of the docs.latex.fetch_docstrings module (accidentally 
+partly committed at r16596).
+
+This is a significant simplification for the creating of the user function 
+documentation within the
+user manual.  Some of the long list of changes include:
+
+- The file docs/latex/fetch_docstrings.py is no longer an executable script 
+and now operates solely
+as a Python module.
+
+- All of the original docstring section parsing code has been eliminated.  
+The searching for user
+functions in the prompt UI namespace has been replaced 
+
+- The new user function definitions are directly used and the documentation 
+for each user function
+section generated via the self.build_*() methods.
+
+- The complicated ascii table parsing and rebuilding into a LaTeX table has 
+been eliminated.
+
+- The self.write_*() methods have been created for building the various 
+sections of the user
+function documentation (paragraphs, verbatim text, prompt examples, lists, 
+itemised lists, and
+tables).
+
+- Tables are no longer duplicated, triplicated, etc.  Instead a reference to 
+the first instance of
+ the table is inserted.  This is a significant space saver, as one of the 
+copies of the multi-page
+X11 colour table is removed.
+
+
+
+
+Modified:
+    branches/uf_redesign/docs/latex/fetch_docstrings.py
+    branches/uf_redesign/docs/latex/relax.tex
+
+Modified: branches/uf_redesign/docs/latex/fetch_docstrings.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/uf_redesign/docs/latex/fetch_docstrings.py?rev=16606&amp;r1=16605&amp;r2=16606&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/uf_redesign/docs/latex/fetch_docstrings.py?rev=16606&amp;r1=16605&amp;r2=16606&amp;view=diff</a>
+==============================================================================
+--- branches/uf_redesign/docs/latex/fetch_docstrings.py (original)
++++ branches/uf_redesign/docs/latex/fetch_docstrings.py Sun Jun  3 12:40:27 
+2012
+@@ -21,9 +21,8 @@
+ 
+###############################################################################
+ 
+ # Python module imports.
+-from inspect import formatargspec, getargspec, getdoc
+ from re import search
+-from string import letters, lowercase, lstrip, punctuation, replace, rstrip, 
+split, upper, whitespace
++from string import letters, lowercase, punctuation, replace, split, upper, 
+whitespace
+ import sys
+ 
+ # Add the path to the relax base directory.
+@@ -32,6 +31,7 @@
+ 
+ # Import the program relax.
+ from user_functions.data import Uf_info; uf_info = Uf_info()
++from user_functions.data import Uf_tables; uf_tables = Uf_tables()
+ 
+ 
+ class Fetch_docstrings:
+@@ -41,6 +41,7 @@
+         # Initialise some variables.
+         self.in_quote = False
+         self.table_count = 1
++        self.uf_table_labels = []
+ 
+         # Set up the words to index.
+         self.index_entries()
+@@ -399,9 +400,6 @@
+ 
+     def latex_formatting(self, string):
+         &quot;&quot;&quot;Function for handling LaTeX maths environments.&quot;&quot;&quot;
+-
+-        # FIXME: delete.
+-        return string
+ 
+         # Angstrom.
+         string = self.safe_replacement(string, 'Angstroms', '\AA')
+@@ -596,33 +594,6 @@
+         return string
+ 
+ 
+-    def num_to_text(self, num):
+-        &quot;&quot;&quot;Convert the number to text.
+-        @param num: The number to convert.
+-        @type num:  int
+-        @return:    The number in the format of 'First', 'Second', 'Third', 
+etc.
+-        @rtype:     str
+-        &quot;&quot;&quot;
+-
+-        # The list.
+-        list = ['First',
+-                'Second',
+-                'Third',
+-                'Fourth',
+-                'Fifth',
+-                'Sixth',
+-                'Seventh',
+-                'Eighth',
+-                'Ninth',
+-                'Tenth',
+-                'Eleventh',
+-                'Twelfth'
+-        ]
+-
+-        # Convert.
+-        return list[num-1]
+-
+-
+     def quotes(self, index):
+         &quot;&quot;&quot;Function for placing quotes within the quote environment.&quot;&quot;&quot;
+ 
+@@ -913,46 +884,69 @@
+         self.file.write(&quot;\n&quot;)
+ 
+ 
+-    def write_table(self, table):
++    def write_table(self, label):
+         &quot;&quot;&quot;Format and write out a table.
+ 
+-        @param table:   The table.
+-        @type table:    list of lists of str
++        @param label:   The unique table label.
++        @type label:    list of lists of str
+         &quot;&quot;&quot;
+ 
++        # Get the table.
++        table = uf_tables.get_table(label)
++
+         # Add a reference.
+-        self.file.write(&quot;Please see Table~\\ref{table%s}.\n\n&quot; % 
+self.table_count)
++        self.file.write(&quot;Please see Table~\\ref{%s} on 
+page~\\pageref{%s}.\n\n&quot; % (label, label))
++
++        # The table already exists, so skip creating it a second time.
++        if label in self.uf_table_labels:
++            return
++        else:
++            self.uf_table_labels.append(label)
+ 
+         # Determine the table wrapping.
+-        col_wrap = self.tabular_wrapping(table)
++        col_wrap = self.tabular_wrapping(table.cells)
+         wrap = sum(col_wrap)
+ 
++        # The number of rows and columns.
++        num_rows = len(table.cells)
++        num_cols = len(table.headings)
++
+         # Start the centred table.
+-        self.file.write(&quot;\\begin{table*}\n&quot;)
+-        self.file.write(&quot;\\begin{scriptsize}\n&quot;)
+-        self.file.write(&quot;\\begin{center}\n&quot;)
++        if table.longtable:
++            # A longtable.
++            self.file.write(&quot;\\onecolumn\n&quot;)
++            self.file.write(&quot;\\begin{scriptsize}\n&quot;)
++            self.file.write(&quot;\\begin{center}\n&quot;)
++            self.file.write(&quot;\\begin{longtable}{%s}\n&quot; % (&quot;l&quot;*num_cols))
++        else:
++            # Normal tables.
++            self.file.write(&quot;\\begin{table*}\n&quot;)
++            self.file.write(&quot;\\begin{scriptsize}\n&quot;)
++            self.file.write(&quot;\\begin{center}\n&quot;)
+ 
+         # A caption.
+-        self.file.write(&quot;\\caption{%s table for the %s user function.}\n&quot; % 
+(self.num_to_text(self.uf_table_count), self.uf_name_latex))
+-
+-        # The number of rows and columns.
+-        num_rows = len(table)
+-        num_cols = len(table[0])
+-
+-        # Start the tabular environment and add the toprule.
+-        if wrap:
+-            self.file.write(&quot;\\begin{tabularx}{\\textwidth}{&quot;)
++        self.file.write(&quot;\\caption[%s]{%s}\n&quot; % (table.caption_short, 
+table.caption))
++
++        # The formatting.
++        if table.longtable:
++            # Start the longtable environment and add the toprule.
++            self.file.write(&quot;\\\\\n&quot;)
++            self.file.write(&quot;\\toprule\n&quot;)
+         else:
+-            self.file.write(&quot;\\begin{tabular}{&quot;)
+-        for i in range(num_cols):
+-            if col_wrap[i]:
+-                text = &quot;X&quot;
++            # Start the tabular environment and add the toprule.
++            if wrap:
++                self.file.write(&quot;\\begin{tabularx}{\\textwidth}{&quot;)
+             else:
+-                text = &quot;l&quot;
+-            self.file.write(text)
+-        self.file.write(&quot;}\n&quot;)
+-        self.file.write(&quot;\\\\[-5pt]&quot;)
+-        self.file.write(&quot;\\toprule\n&quot;)
++                self.file.write(&quot;\\begin{tabular}{&quot;)
++            for i in range(num_cols):
++                if col_wrap[i]:
++                    text = &quot;X&quot;
++                else:
++                    text = &quot;l&quot;
++                self.file.write(text)
++            self.file.write(&quot;}\n&quot;)
++            self.file.write(&quot;\\\\[-5pt]\n&quot;)
++            self.file.write(&quot;\\toprule\n&quot;)
+ 
+         # Generate the LaTeX headings.
+         for j in range(num_cols):
+@@ -961,7 +955,7 @@
+                 self.file.write(' &amp; ')
+ 
+             # The cell contents.
+-            cell = table[0][j]
++            cell = table.headings[j]
+             cell = self.latex_special_chars(cell)
+             cell = self.latex_formatting(cell)
+ 
+@@ -971,11 +965,22 @@
+         # End of the header line.
+         self.file.write(&quot; \\\\\n&quot;)
+ 
+-        # Add the midrule.
+-        self.file.write(&quot;\\midrule\n&quot;)
++        # The central formatting.
++        if table.longtable:
++            self.file.write(&quot;\\midrule\n&quot;)
++            self.file.write(&quot;\\endhead\n\n&quot;)
++            self.file.write(&quot;\\bottomrule\n&quot;)
++            self.file.write(&quot;\\endfoot\n&quot;)
++        else:
++            # Add the midrule.
++            self.file.write(&quot;\\midrule\n&quot;)
++
++        # The label for longtables.
++        if table.longtable:
++            self.file.write(&quot;\\label{%s}\n&quot; % label)
+ 
+         # Loop over the main table lines.
+-        for i in range(1, num_rows):
++        for i in range(num_rows):
+             # Loop over the columns.
+             for j in range(num_cols):
+                 # Column separator.
+@@ -983,7 +988,7 @@
+                     self.file.write(' &amp; ')
+ 
+                 # The cell contents.
+-                cell = table[i][j]
++                cell = table.cells[i][j]
+                 cell = self.latex_special_chars(cell)
+                 cell = self.latex_formatting(cell)
+ 
+@@ -994,16 +999,22 @@
+             self.file.write(&quot; \\\\\n&quot;)
+ 
+         # Terminate.
+-        self.file.write(&quot;\\bottomrule\n&quot;)
+-        self.file.write(&quot;\\\\[-5pt]&quot;)
+-        self.file.write(&quot;\\label{table%s}\n&quot; % self.table_count)
+-        if wrap:
+-            self.file.write(&quot;\\end{tabularx}\n&quot;)
++        if table.longtable:
++            self.file.write(&quot;\\end{longtable}\n&quot;)
++            self.file.write(&quot;\\end{center}\n&quot;)
++            self.file.write(&quot;\\end{scriptsize}\n&quot;)
++            self.file.write(&quot;\\twocolumn\n&quot;)
+         else:
+-            self.file.write(&quot;\\end{tabular}\n&quot;)
+-        self.file.write(&quot;\\end{center}\n&quot;)
+-        self.file.write(&quot;\\end{scriptsize}\n&quot;)
+-        self.file.write(&quot;\\end{table*}\n&quot;)
++            self.file.write(&quot;\\bottomrule\n&quot;)
++            self.file.write(&quot;\\\\[-5pt]\n&quot;)
++            self.file.write(&quot;\\label{%s}\n&quot; % label)
++            if wrap:
++                self.file.write(&quot;\\end{tabularx}\n&quot;)
++            else:
++                self.file.write(&quot;\\end{tabular}\n&quot;)
++            self.file.write(&quot;\\end{center}\n&quot;)
++            self.file.write(&quot;\\end{scriptsize}\n&quot;)
++            self.file.write(&quot;\\end{table*}\n&quot;)
+ 
+         # Increment the table counts.
+         self.table_count += 1
+
+Modified: branches/uf_redesign/docs/latex/relax.tex
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/uf_redesign/docs/latex/relax.tex?rev=16606&amp;r1=16605&amp;r2=16606&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/uf_redesign/docs/latex/relax.tex?rev=16606&amp;r1=16605&amp;r2=16606&amp;view=diff</a>
+==============================================================================
+--- branches/uf_redesign/docs/latex/relax.tex (original)
++++ branches/uf_redesign/docs/latex/relax.tex Sun Jun  3 12:40:27 2012
+@@ -10,9 +10,9 @@
+ \usepackage{makeidx}
+ 
+ % Good looking tables.
+-\usepackage{tabularx}
+ \usepackage{booktabs}
+ \usepackage{longtable}
++\usepackage{tabularx}
+ 
+ % Obliterate those painful LaTeX margins!
+ \usepackage{vmargin}
+@@ -143,7 +143,8 @@
+ % List of Tables.
+ %%%%%%%%%%%%%%%%%
+ 
+-%\listoftables
++\newpage
++\listoftables
+ 
+ 
+ % Abbreviations.
+@@ -196,17 +197,17 @@
+ % The chapters.
+ %%%%%%%%%%%%%%%
+ 
+-%\include{intro}
+-%\include{install}
+-%\include{infrastruct}
+-%\include{noe}
+-%\include{curvefit}
+-%\include{model-free}
+-%\include{jw_mapping}
+-%\include{maths}
+-%\include{develop}
++\include{intro}
++\include{install}
++\include{infrastruct}
++\include{noe}
++\include{curvefit}
++\include{model-free}
++\include{jw_mapping}
++\include{maths}
++\include{develop}
+ \include{functions}
+-%\include{licence}
++\include{licence}
+ 
+ 
+ % End of the main chapters.
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Sun Jun 03 13:00:02 2012</div>  
+</body>
+</html>

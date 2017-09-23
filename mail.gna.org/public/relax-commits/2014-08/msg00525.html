@@ -1,0 +1,299 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r25391 &#45; /trunk/specific_analyses/relax_disp/estimate_r2eff.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 28 Aug 2014 16:49:44 +0200 -->
+<!--X-Message-Id: E1XN11D&#45;00055B&#45;NT@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r25391 - /trunk/specific_analyses/relax_disp/estimate_r2eff.py -- August 28, 2014 - 16:49</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r25391 - /trunk/specific_analyses/relax_disp/estimate_r2eff.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00525" class="tabs">Index by Date</a> | <a href="threads.html#00525" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00524.html">Date Prev</a>] [<a href="msg00526.html">Date Next</a>] [<a href="msg00524.html">Thread Prev</a>] [<a href="msg00526.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 28 Aug 2014 14:49:43 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00525.html">E1XN11D-00055B-NT@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on August 28, 2014 - 16:49:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Thu Aug 28 16:49:43 2014
+New Revision: 25391
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=25391&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=25391&amp;view=rev</a>
+Log:
+Tried to scale the Covariance matrix, as explained here: 
+<a  rel="nofollow" href="http://www.orbitals.com/self/least/least.htm">http://www.orbitals.com/self/least/least.htm</a>.
+
+This does not work better.
+
+Also replaced &quot;errors&quot; to &quot;weights&quot; to the multifit_covar(), to better 
+determine control calculations.
+
+task #7822(<a  rel="nofollow" href="https://gna.org/task/index.php?7822">https://gna.org/task/index.php?7822</a>): Implement user function to 
+estimate R2eff and associated errors for exponential curve fitting.
+
+Modified:
+    trunk/specific_analyses/relax_disp/estimate_r2eff.py
+
+Modified: trunk/specific_analyses/relax_disp/estimate_r2eff.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/relax_disp/estimate_r2eff.py?rev=25391&amp;r1=25390&amp;r2=25391&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/relax_disp/estimate_r2eff.py?rev=25391&amp;r1=25390&amp;r2=25391&amp;view=diff</a>
+==============================================================================
+--- trunk/specific_analyses/relax_disp/estimate_r2eff.py        (original)
++++ trunk/specific_analyses/relax_disp/estimate_r2eff.py        Thu Aug 28 
+16:49:43 2014
+@@ -24,7 +24,7 @@
+ 
+ # Python module imports.
+ from copy import deepcopy
+-from numpy import absolute, any, array, asarray, diag, dot, exp, eye, inf, 
+log, multiply, spacing, sqrt, sum, transpose, zeros
++from numpy import absolute, any, array, asarray, diag, dot, exp, eye, inf, 
+log, multiply, ones, spacing, sqrt, sum, transpose, zeros
+ from numpy.linalg import cond, inv, qr
+ from minfx.generic import generic_minimise
+ from re import match, search
+@@ -134,7 +134,7 @@
+             jacobian_matrix_exp = transpose(asarray( jacobian(param_vector) 
+) )
+ 
+             # Get the co-variance
+-            pcov = multifit_covar(J=jacobian_matrix_exp, errors=errors)
++            pcov = multifit_covar(J=jacobian_matrix_exp, weights=1/errors**2)
+ 
+             # To compute one standard deviation errors on the parameters, 
+take the square root of the diagonal covariance.
+             param_vector_error = sqrt(diag(pcov))
+@@ -175,7 +175,7 @@
+                     print(print_string),
+ 
+ 
+-def multifit_covar(J=None, epsrel=0.0, errors=None, use_weights=True):
++def multifit_covar(J=None, epsrel=0.0, weights=None):
+     &quot;&quot;&quot;This is the implementation of the multifit covariance.
+ 
+     This is inspired from GNU Scientific Library (GSL).
+@@ -184,11 +184,11 @@
+ 
+     The parameter 'epsrel' is used to remove linear-dependent columns when J 
+is rank deficient.
+ 
+-    The weighting matrix 'W', is a square symmetric matrix. For independent 
+measurements, this is a diagonal matrix. Larger values indicate greater 
+significance.  It is formed by multiplying the supplied errors as 1./errors^2 
+with an Identity matrix::
+-
+-        W = I.(1/errors^2)
+-
+-    If 'use_weights' is set to 'False', the errors are set to 1.0.
++    The weighting matrix 'W', is a square symmetric matrix. For independent 
+measurements, this is a diagonal matrix. Larger values indicate greater 
+significance.  It is formed by multiplying and Identity matrix with the 
+supplied weights vector::
++
++        W = I. w
++
++    The weights should normally be supplied as a vector: 1 / errors^2. 
+ 
+     The covariance matrix is given by::
+ 
+@@ -228,10 +228,8 @@
+     @type J:                numpy array
+     @param epsrel:          Any columns of R which satisfy |R_{kk}| &lt;= 
+epsrel |R_{11}| are considered linearly-dependent and are excluded from the 
+covariance matrix, where the corresponding rows and columns of the covariance 
+matrix are set to zero.
+     @type epsrel:           float
+-    @keyword errors:        The standard deviation of the measured intensity 
+values per time point.
+-    @type errors:           numpy array
+-    @keyword use_weights:   If the supplied weights should be used.
+-    @type use_weights:      bool
++    @keyword weigths:       The weigths which to scale with.  Normally 
+submitted as the 1 over standard deviation of the measured intensity values 
+per time point in power 2. weigths = 1 / sd_i^2.
++    @type weigths:          numpy array
+     @return:                The co-variance matrix
+     @rtype:                 square numpy array
+     &quot;&quot;&quot;
+@@ -240,16 +238,10 @@
+     # For independent measurements, this is a diagonal matrix. Larger values 
+indicate greater significance.
+ 
+     # Make a square diagonal matrix.
+-    eye_mat = eye(errors.shape[0])
+-
+-    # Now form the error matrix, with errors down the diagonal.
+-    weights = 1. / errors**2
+-
+-    if use_weights == False:
+-        weights[:] = 1.0
++    eye_mat = eye(weights.shape[0])
+ 
+     # Form weight matrix.
+-    W = multiply(weights, eye_mat)
++    W = multiply(eye_mat, weights)
+ 
+     # The covariance matrix (sometimes referred to as the 
+variance-covariance matrix), Qxx, is defined as:
+     # Qxx = (J^t W J)^(-1)
+@@ -456,11 +448,33 @@
+         @keyword i0:    The initial intensity.
+         @type i0:       float
+         @return:        The function values.
+-        @rtype:         float
++        @rtype:         numpy array
+         &quot;&quot;&quot;
+ 
+         # Calculate.
+         return i0 * exp( -times * r2eff)
++
++
++    def func_exp_residual(self, times=None, r2eff=None, i0=None, 
+values=None):
++        &quot;&quot;&quot;Calculate the residual vector betwen measured values and the 
+function values.
++
++        @keyword times: The time points.
++        @type times:    numpy array
++        @keyword r2eff: The effective transversal relaxation rate.
++        @type r2eff:    float
++        @keyword i0:    The initial intensity.
++        @type i0:       float
++        @param values:  The measured values.
++        @type values:   numpy array
++        @return:        The function values.
++        @rtype:         numpy array
++        &quot;&quot;&quot;
++
++        # Let the vector K be the vector of the residuals. A residual is the 
+difference between the observation and the equation calculated using the 
+initial values.
++        K = values - self.func_exp(times=times, r2eff=r2eff, i0=i0)
++
++        # Return
++        return K
+ 
+ 
+     def func_exp_grad(self, params):
+@@ -919,6 +933,9 @@
+     # Unpack
+     param_vector, chi2, iter_count, f_count, g_count, h_count, warning = 
+results_minfx
+ 
++    # Extract.
++    r2eff, i0 = param_vector
++
+     # Get the Jacobian.
+     if E.c_code:
+         # Calculate the direct exponential Jacobian matrix from C code.
+@@ -942,11 +959,39 @@
+ 
+     # Get the co-variance
+     if E.chi2_jacobian:
+-        use_weights = False
++        weights = ones(E.errors.shape)
+     else:
+-        use_weights = True
+-    
+-    pcov = multifit_covar(J=jacobian_matrix_exp, errors=E.errors, 
+use_weights=use_weights)
++        weights = 1. / E.errors**2
++
++    pcov = multifit_covar(J=jacobian_matrix_exp, weights=weights)
++
++    # Scale the variance?
++    if False:
++        # Make a square diagonal matrix.
++        eye_mat = eye(E.errors.shape[0])
++
++        # Get the residual vector K.
++        K = E.func_exp_residual(times=E.times, r2eff=r2eff, i0=i0, 
+values=E.values)
++
++        weights = 1. / E.errors**2
++
++        # Now form the weights matrix, with errors down the diagonal.
++        W = multiply(weights, eye_mat)
++
++        # N is number of observations.
++        N = len(E.values)
++        # n is number of fitted parameters.
++        n = len(x0)
++        # number of degrees of freedom
++        v = N - n
++
++        # The covariance matrix, Qxx, contains the variance of each unknown 
+and the covariance of each pair of unknowns. 
++        # The quantities in Qxx need to be scaled by a reference variance. 
+This reference variance, S_0**2, is related to the weighting matrix and the 
+residuals.
++        S02 = dot( dot(transpose(K), W), K) / v
++
++        # Scale co-variance.
++        pcov = pcov * S02
++        
+ 
+     # To compute one standard deviation errors on the parameters, take the 
+square root of the diagonal covariance.
+     param_vector_error = sqrt(diag(pcov))
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Aug 28 17:00:02 2014</div>  
+</body>
+</html>

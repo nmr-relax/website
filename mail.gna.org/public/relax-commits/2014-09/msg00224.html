@@ -1,0 +1,313 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r25718 &#45; in /trunk: auto_analyses/relax_disp_repeat_cpmg.py test_suite/system_tests/relax_disp.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 09 Sep 2014 18:18:12 +0200 -->
+<!--X-Message-Id: E1XRO7P&#45;0007U2&#45;Sw@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r25718 - in /trunk: auto_analyses/relax_disp_repeat_cpmg.py test_suite/system_tests/relax_disp.py -- September 09, 2014 - 18:18</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r25718 - in /trunk: auto_analyses/relax_disp_repeat_cpmg.py test_suite/system_tests/relax_disp.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00224" class="tabs">Index by Date</a> | <a href="threads.html#00224" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00223.html">Date Prev</a>] [<a href="msg00225.html">Date Next</a>] [<a href="msg00223.html">Thread Prev</a>] [<a href="msg00225.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 09 Sep 2014 16:18:11 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00224.html">E1XRO7P-0007U2-Sw@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on September 09, 2014 - 18:18:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Tue Sep  9 18:18:11 2014
+New Revision: 25718
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=25718&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=25718&amp;view=rev</a>
+Log:
+For the class of repeated analysis, implemented method to collect peak 
+intensity, and function to plot the correlation.
+
+Task #7826 (<a  rel="nofollow" href="https://gna.org/task/index.php?7826">https://gna.org/task/index.php?7826</a>): Write an python class for 
+the repeated analysis of dispersion data.
+
+Modified:
+    trunk/auto_analyses/relax_disp_repeat_cpmg.py
+    trunk/test_suite/system_tests/relax_disp.py
+
+Modified: trunk/auto_analyses/relax_disp_repeat_cpmg.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/auto_analyses/relax_disp_repeat_cpmg.py?rev=25718&amp;r1=25717&amp;r2=25718&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/auto_analyses/relax_disp_repeat_cpmg.py?rev=25718&amp;r1=25717&amp;r2=25718&amp;view=diff</a>
+==============================================================================
+--- trunk/auto_analyses/relax_disp_repeat_cpmg.py       (original)
++++ trunk/auto_analyses/relax_disp_repeat_cpmg.py       Tue Sep  9 18:18:11 
+2014
+@@ -43,7 +43,7 @@
+ from pipe_control.mol_res_spin import display_spin, generate_spin_string, 
+return_spin, spin_loop
+ from pipe_control import pipes
+ from prompt.interpreter import Interpreter
+-from specific_analyses.relax_disp.data import generate_r20_key, 
+has_exponential_exp_type, is_r1_optimised, loop_exp_frq_offset, 
+loop_exp_frq_offset_point, return_param_key_from_data, spin_loop
++from specific_analyses.relax_disp.data import generate_r20_key, 
+has_exponential_exp_type, is_r1_optimised, loop_exp_frq_offset, 
+loop_exp_frq_offset_point, return_param_key_from_data
+ from specific_analyses.relax_disp.variables import MODEL_NOREX, 
+MODEL_PARAMS, MODEL_R2EFF, PARAMS_R20
+ from status import Status; status = Status()
+ 
+@@ -864,6 +864,116 @@
+         return list_dub_mapping
+ 
+ 
++    def col_int(self, method=None, list_glob_ini=None, selection=None):
++
++        # Loop over the glob ini:
++        res_dic = {}
++        res_dic['method'] = method
++        for glob_ini in list_glob_ini:
++            # Store under glob_ini
++            res_dic[str(glob_ini)] = {}
++
++            # Get the pipe name for peak_intensity values.
++            pipe_name = self.name_pipe(method=method, model='setup', 
+analysis='int', glob_ini=glob_ini)
++
++            # Check if pipe exists, or else calculate.
++            if not pipes.has_pipe(pipe_name):
++                self.set_int(methods=[method], list_glob_ini=[glob_ini])
++
++            if pipes.get_pipe() != pipe_name:
++                self.interpreter.pipe.switch(pipe_name)
++
++            # Results dictionary.
++            res_dic[str(glob_ini)] = {}
++            res_dic[str(glob_ini)]['peak_intensity'] = {}
++            res_dic[str(glob_ini)]['peak_intensity_err'] = {}
++            spin_point_peak_intensity_list = []
++            spin_point_peak_intensity_err_list = []
++
++            # Loop over the spins.
++            for cur_spin, mol_name, resi, resn, spin_id in 
+spin_loop(selection=selection, full_info=True, return_id=True, 
+skip_desel=True):
++                # Make spin dic.
++                res_dic[str(glob_ini)]['peak_intensity'][spin_id] = {}
++                res_dic[str(glob_ini)]['peak_intensity_err'][spin_id] = {}
++
++                # Loop over spectrum_ids.
++                for s_id in cdp.spectrum_ids:
++                    # Check for bad data has skipped peak_intensity points
++                    if s_id in cur_spin.peak_intensity:
++                        peak_intensity_point = cur_spin.peak_intensity[s_id]
++                        peak_intensity_err_point = 
+cur_spin.peak_intensity_err[s_id]
++
++                        
+res_dic[str(glob_ini)]['peak_intensity'][spin_id][s_id] = peak_intensity_point
++                        
+res_dic[str(glob_ini)]['peak_intensity_err'][spin_id][s_id] = 
+peak_intensity_err_point
++                        
+spin_point_peak_intensity_list.append(peak_intensity_point)
++                        
+spin_point_peak_intensity_err_list.append(peak_intensity_err_point)
++
++            res_dic[str(glob_ini)]['peak_intensity_arr'] = 
+asarray(spin_point_peak_intensity_list)
++            res_dic[str(glob_ini)]['peak_intensity_err_arr'] = 
+asarray(spin_point_peak_intensity_err_list)
++
++        return res_dic
++
++
++    def plot_int_corr(self, corr_data, show=False):
++
++        # Define figure.
++        # Nr of columns is number of datasets.
++        nr_cols = len(corr_data)
++        # Nr of rows, is 2. With and without scaling.
++        nr_rows = 2
++
++        # Define figure
++        fig, axises = plt.subplots(nrows=nr_rows, ncols=nr_cols)
++        fig.suptitle('Correlation plot')
++
++        # axises is a tuple with number of elements corresponding to number 
+of rows.
++        # Each sub-tuple contains axis for each column.
++
++        # Loop over the rows.
++        for i, row_axises in enumerate(axises):
++            # Loop over the columns.
++            for j, ax in enumerate(row_axises) :
++                # Extract from lists.
++                data, methods, glob_inis = corr_data[j]
++                data_x, data_y = data
++                method_x, method_y = methods
++                glob_ini_x, glob_ini_y = glob_inis
++
++                x = data_x[str(glob_ini_x)]['peak_intensity_arr']
++                y = data_y[str(glob_ini_y)]['peak_intensity_arr']
++
++                # If row 1.
++                if i == 0:
++                    ax.plot(x, x, '-', label='%s vs. %s' % (method_x, 
+method_x))
++                    ax.plot(x, y, '.', label='%s vs. %s' % (method_y, 
+method_x) )
++
++                    np = len(y)
++                    ax.set_title('Intensity for %s %i vs. %s %i. np=%i' % 
+(method_y, glob_ini_y, method_x, glob_ini_x, np), fontsize=10)
++                    ax.legend(loc='upper left', shadow=True, prop = fontP)
++                    ax.ticklabel_format(style='sci', axis='x', 
+scilimits=(0,0))
++                    ax.ticklabel_format(style='sci', axis='y', 
+scilimits=(0,0))
++                    ax.set_xlabel('Intensity')
++                    ax.set_ylabel('Intensity')
++
++                # Scale intensity
++                if 1 == 1:
++                
++                    x_norm = x / x.max()
++                    y_norm = y / y.max()
++
++                    ax.plot(x_norm, x_norm, '-', label='%s vs. %s' % 
+(method_x, method_x))
++                    ax.plot(x_norm, y_norm, '.', label='%s vs. %s' % 
+(method_y, method_x) )
++
++                    np = len(y_norm)
++                    ax.set_title('Norm. int. for %s %i vs. %s %i. np=%i' % 
+(method_y, glob_ini_y, method_x, glob_ini_x, np), fontsize=10)
++                    ax.legend(loc='upper left', shadow=True, prop = fontP)
++                    ax.set_xlabel('Normalized Intensity')
++                    ax.set_ylabel('Normalized Intensity')
++
++        if show:
++            plt.show()
++
++
+     def col_r2eff(self, method=None, list_glob_ini=None):
+ 
+         # Loop over the glob ini:
+@@ -995,10 +1105,6 @@
+         for method in methods:
+             if method not in r2eff_stat_dic:
+                 continue
+-
+-            if not dep_check.matplotlib_module:
+-                continue
+-
+ 
+             x = r2eff_stat_dic[method]['glob_ini']
+             y = r2eff_stat_dic[method]['r2eff_norm_std']
+
+Modified: trunk/test_suite/system_tests/relax_disp.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/test_suite/system_tests/relax_disp.py?rev=25718&amp;r1=25717&amp;r2=25718&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/test_suite/system_tests/relax_disp.py?rev=25718&amp;r1=25717&amp;r2=25718&amp;view=diff</a>
+==============================================================================
+--- trunk/test_suite/system_tests/relax_disp.py (original)
++++ trunk/test_suite/system_tests/relax_disp.py Tue Sep  9 18:18:11 2014
+@@ -5959,9 +5959,33 @@
+         #methods = ['FT']
+ 
+         # Set the intensity.
+-        #RDR.set_int(methods=methods, list_glob_ini=[128, 126])
+-
++        RDR.set_int(methods=methods, list_glob_ini=[128, 126])
++
++        # Try plot some intensity correlations.
+         if True:
++            # Collect intensity values.
++            # For all spins, ft
++            int_ft_all = RDR.col_int(method='FT', list_glob_ini=[128, 126], 
+selection=None)
++
++            # Now make a spin selection.
++            selection = ':2,3'
++            int_ft_sel = RDR.col_int(method='FT', list_glob_ini=[128, 126], 
+selection=selection)
++            # Print the length of datasets, depending on selection.
++            print( &quot;All spins&quot;, 
+len(int_ft_all['128']['peak_intensity_arr']), &quot;Selection spins&quot;, 
+len(int_ft_sel['128']['peak_intensity_arr']) )
++
++            # For all spins, mdd
++            int_mdd_all = RDR.col_int(method='MDD', list_glob_ini=[128, 
+126], selection=None)
++            int_mdd_sel = RDR.col_int(method='MDD', list_glob_ini=[128, 
+126], selection=selection)
++
++            # Plot correlation of intensity
++            fig1 = [[int_ft_all, int_mdd_all], ['FT', 'MDD'], [128, 128]]
++            fig2 = [[int_ft_sel, int_mdd_sel], ['FT sel', 'MDD sel'], [128, 
+128]]
++            corr_data = [fig1, fig2]
++
++            RDR.plot_int_corr(corr_data=corr_data, show=False)
++
++
++        if False:
+             # Now calculate R2eff.
+             RDR.calc_r2eff(methods=methods, list_glob_ini=[128, 126])
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Sep 09 18:20:03 2014</div>  
+</body>
+</html>

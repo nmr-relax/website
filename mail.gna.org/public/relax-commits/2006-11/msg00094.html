@@ -1,0 +1,185 @@
+<!-- MHonArc v2.6.10 -->
+<!--X-Subject: r2796 &#45; in /branches/tensor_pdb: data.py data/diff_tensor.py data/diff_tensor_auto_objects.py -->
+<!--X-From-R13: rqjneq.qnhiretarNtznvy.pbz -->
+<!--X-Date: Fri, 10 Nov 2006 06:40:31 +0100 -->
+<!--X-Message-Id: E1GiP7O&#45;00087Y&#45;BI@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r2796 - in /branches/tensor_pdb: data.py data/diff_tensor.py data/diff_tensor_auto_objects.py -- November 10, 2006 - 06:40</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r2796 - in /branches/tensor_pdb: data.py data/diff_tensor.py data/diff_tensor_auto_objects.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00094" class="tabs">Index by Date</a> | <a href="threads.html#00094" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00093.html">Date Prev</a>] [<a href="msg00095.html">Date Next</a>] [<a href="msg00093.html">Thread Prev</a>] [<a href="msg00095.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 10 Nov 2006 05:39:57 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00094.html">E1GiP7O-00087Y-BI@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward . dauvergne</strong> on November 10, 2006 - 06:40:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Nov 10 06:39:55 2006
+New Revision: 2796
+
+URL: <a  href="http://svn.gna.org/viewcvs/relax?rev=2796&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=2796&amp;view=rev</a>
+Log:
+Complete redesign of 'self.relax.data.diff': auto-calculated objects updated 
+when params are set.
+
+The previous commits redesigned the 'self.relax.data.diff' code so that when 
+a diffusion tensor
+object (e.g. Diso, tensor, rotation, etc.) which is not one of the standard 
+internal parameters is
+accessed, they would be calculated on the fly.  Therefore if you asked for
+'self.relax.data.diff[run].tensor', it would first be calculated and then 
+returned.  Most of these
+automatically created objects were setup when the program was initialised, 
+although a few were
+returned by the 'self.__getattr__()' function.
+
+However this approach is incredibly slow.  This is especially apparent when 
+each vector of the
+spherical vector distribution for creating the geometric representation of 
+the Brownian rotational
+diffusion tensor is rotated and then extended to the correct length.  The 
+chain of auto-object
+creation by other auto-objects dependant on them together with the large 
+number of accesses to
+'self.relax.data.diff' caused the implementation to take minutes to create 
+the vector distribution.
+
+Therefore I have completely redesigned the code.  Rather than being 
+calculated on the fly, the
+objects are created when parameters are set.  This uses the 
+'self.__setattr__()' function.  All the
+auto-object functions of the file 'data/diff_tensor_auto_objects.py' have 
+been shifted back into the
+diffusion tensor class DiffTensorElement.  They have been renamed to 
+'self._calc_'+obj where obj is
+the calculated object name.  The underscored first character is used by the 
+'Element' base class
+method 'self.__repr__()' to hide the object when printing the contents of 
+'self.relax.data.diff'.
+
+The 'self.__setattr__()' function consists of two parts.  Firstly the 
+'self.relax.data.diff' object
+attribute is set and then the data structures are updated.  Before the 
+attribute is set, it is
+checked to see if it belongs to a list of modifiable attributes.  If it 
+doesn't, a RelaxError is
+thrown saying that the object is not modifiable.  If it is modifiable, it is 
+set using the
+statement:
+    self.__dict__[name] = value
+
+The objects which are currently updated include:
+    Diso (the isotropic diffusion rate),
+    Dpar (the diffusion rate parallel to the unique axis, spheroid only),
+    Dper (the diffusion rate perpendicular to the unique axis, spheroid only),
+    Dx (the diffusion rate parallel to the x-axis, ellipsoid only),
+    Dy (the diffusion rate parallel to the y-axis, ellipsoid only),
+    Dz (the diffusion rate parallel to the z-axis, ellipsoid only),
+    Dratio (the ratio of Dpar and Dper, spheroid only),
+    Dpar_unit (the unit vector parallel to the unique axis, spheroid only),
+    Dx_unit (the unit vector parallel to the x-axis, ellipsoid only),
+    Dy_unit (the unit vector parallel to the y-axis, ellipsoid only),
+    Dz_unit (the unit vector parallel to the z-axis, ellipsoid only),
+    tensor_diag (the diagonalised diffusion tensor),
+    rotation (the rotation matrix),
+    tensor (the diffusion tensor in the PDB frame).
+
+These are all updated using the function 'self._update_object()'.  Dependant 
+on the category (val,
+err, sim) of the object being set by 'self.__setattr__()', this function 
+updates solely the
+value, error, or Monte Carlo simulation objects affected by it.  For 
+efficiency it returns without
+doing anything if the object being set is not within the 'update_if_set' 
+list.  This is a list of
+parameter names that, if modified, the 'target' object would then change.  The
+'self._update_object()' function automatically determines which 
+'self._calc_xxx()' function to use.
+Then to update the 'target', the objects corresponding to the names in the 
+'depends' list are sent
+to the 'self._calc_xxx()' function which then returns the calculated object.  
+If the object being
+set belongs to the Monte Carlo simulation category, then the 
+'self._update_object()' will create an
+array by looping over each simulation calling 'self._calc_xxx()' for each 
+sim.  The updated object
+is then set using the statement:
+
+    self.__dict__[target] = value
+
+In the case of MC simulations, 'value' is replaced with 'sim_values'.
+
+
+Removed:
+    branches/tensor_pdb/data.py
+    branches/tensor_pdb/data/diff_tensor_auto_objects.py
+Modified:
+    branches/tensor_pdb/data/diff_tensor.py
+
+[This mail would be too long, it was shortened to contain the URLs only.]
+
+Modified: branches/tensor_pdb/data/diff_tensor.py
+URL: 
+<a  href="http://svn.gna.org/viewcvs/relax/branches/tensor_pdb/data/diff_tensor.py?rev=2796&amp;r1=2795&amp;r2=2796&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/tensor_pdb/data/diff_tensor.py?rev=2796&amp;r1=2795&amp;r2=2796&amp;view=diff</a>
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Nov 10 07:40:05 2006</div>  
+</body>
+</html>

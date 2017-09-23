@@ -1,0 +1,260 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r17144 &#45; /branches/interatomic/generic_fns/structure/geometric.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 02 Jul 2012 22:09:16 +0200 -->
+<!--X-Message-Id: E1Slmvs&#45;0003mq&#45;Kt@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r17144 - /branches/interatomic/generic_fns/structure/geometric.py -- July 02, 2012 - 22:09</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r17144 - /branches/interatomic/generic_fns/structure/geometric.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00030" class="tabs">Index by Date</a> | <a href="threads.html#00030" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00029.html">Date Prev</a>] [<a href="msg00031.html">Date Next</a>] [<a href="msg00029.html">Thread Prev</a>] [<a href="msg00031.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 02 Jul 2012 20:09:16 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00030.html">E1Slmvs-0003mq-Kt@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on July 02, 2012 - 22:09:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Mon Jul  2 22:09:16 2012
+New Revision: 17144
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=17144&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=17144&amp;view=rev</a>
+Log:
+Converted generic_fns.structure.geometric.create_vector_dist() to the 
+interatomic data design.
+
+
+Modified:
+    branches/interatomic/generic_fns/structure/geometric.py
+
+Modified: branches/interatomic/generic_fns/structure/geometric.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/interatomic/generic_fns/structure/geometric.py?rev=17144&amp;r1=17143&amp;r2=17144&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/interatomic/generic_fns/structure/geometric.py?rev=17144&amp;r1=17143&amp;r2=17144&amp;view=diff</a>
+==============================================================================
+--- branches/interatomic/generic_fns/structure/geometric.py (original)
++++ branches/interatomic/generic_fns/structure/geometric.py Mon Jul  2 
+22:09:16 2012
+@@ -1,6 +1,6 @@
+ 
+###############################################################################
+ #                                                                            
+ #
+-# Copyright (C) 2003-2011 Edward d'Auvergne                                  
+ #
++# Copyright (C) 2003-2012 Edward d'Auvergne                                  
+ #
+ #                                                                            
+ #
+ # This file is part of the program relax.                                    
+ #
+ #                                                                            
+ #
+@@ -28,7 +28,8 @@
+ from warnings import warn
+ 
+ # relax module imports.
+-from generic_fns.mol_res_spin import exists_mol_res_spin_data, spin_loop
++from generic_fns.interatomic import interatomic_loop
++from generic_fns.mol_res_spin import exists_mol_res_spin_data, return_spin, 
+spin_loop
+ from generic_fns import pipes
+ from generic_fns.structure.mass import centre_of_mass
+ from internal import Internal
+@@ -582,12 +583,11 @@
+ 
+ 
+ def create_vector_dist(length=None, symmetry=True, file=None, dir=None, 
+force=False):
+-    &quot;&quot;&quot;Create a PDB representation of the XH vector distribution.
++    &quot;&quot;&quot;Create a PDB representation of the vector distribution.
+ 
+     @param length:      The length to set the vectors to in the PDB file.
+     @type length:       float
+-    @param symmetry:    The symmetry flag which if set will create a second 
+PDB chain 'B' which
+-        is the same as chain 'A' but with the XH vectors reversed.
++    @param symmetry:    The symmetry flag which if set will create a second 
+PDB chain 'B' which is the same as chain 'A' but with the vectors reversed.
+     @type symmetry:     bool
+     @param file:        The name of the PDB file to create.
+     @type file:         str
+@@ -609,10 +609,10 @@
+         raise RelaxNoSequenceError
+ 
+     # Test if unit vectors exist.
+-    vectors = 0
+-    for spin in spin_loop():
+-        if hasattr(spin, 'xh_vect'):
+-            vectors = 1
++    vectors = False
++    for interatom in interatomic_loop():
++        if hasattr(interatom, 'vector'):
++            vectors = True
+             break
+     if not vectors:
+         raise RelaxNoVectorsError
+@@ -645,27 +645,31 @@
+     res_num = res_num + 1
+ 
+ 
+-    # The XH vectors.
+-    #################
+-
+-    # Loop over the spin systems.
+-    for spin, mol_name, res_num, res_name in spin_loop(full_info=True):
++    # The vectors.
++    ##############
++
++    # Loop over the interatomic data containers.
++    for interatom in interatomic_loop():
++        # Get the spins.
++        spin1 = return_spin(interatom.spin_id1)
++        spin2 = return_spin(interatom.spin_id2)
++
+         # Skip deselected spin systems.
+-        if not spin.select:
++        if not spin1.select or not spin2.select:
+             continue
+ 
+-        # Skip spin systems missing the xh_vect structure.
+-        if not hasattr(spin, 'xh_vect'):
++        # Skip containers missing vectors.
++        if not hasattr(interatom, 'vector'):
+             continue
+ 
+         # Scale the vector.
+-        vector = spin.xh_vect * length * 1e10
+-
+-        # Add the central X atom.
+-        mol.atom_add(pdb_record='ATOM', atom_num=atom_num, 
+atom_name=spin.name, res_name=res_name, chain_id='A', res_num=res_num, pos=R, 
+segment_id=None, element=spin.element)
+-
+-        # Add the H atom.
+-        mol.atom_add(pdb_record='ATOM', atom_num=atom_num+1, atom_name='H', 
+res_name=res_name, chain_id='A', res_num=res_num, pos=R+vector, 
+segment_id=None, element='H')
++        vector = interatom.vector * length * 1e10
++
++        # Add the first spin as the central atom.
++        mol.atom_add(pdb_record='ATOM', atom_num=atom_num, 
+atom_name=spin1.name, res_name=spin1._res_name, chain_id='A', 
+res_num=spin1._res_num, pos=R, segment_id=None, element=spin1.element)
++
++        # Add the second spin as the end atom.
++        mol.atom_add(pdb_record='ATOM', atom_num=atom_num+1, 
+atom_name=spin2.name, res_name=spin2._res_name, chain_id='A', 
+res_num=spin2._res_num, pos=R+vector, segment_id=None, element=spin2.element)
+ 
+         # Connect the two atoms.
+         mol.atom_connect(index1=atom_num-1, index2=atom_num)
+@@ -675,24 +679,28 @@
+ 
+     # Symmetry chain.
+     if symmetry:
+-        # Loop over the spin systems.
+-        for spin, mol_name, res_num, res_name in spin_loop(full_info=True):
++        # Loop over the interatomic data containers.
++        for interatom in interatomic_loop():
++            # Get the spins.
++            spin1 = return_spin(interatom.spin_id1)
++            spin2 = return_spin(interatom.spin_id2)
++
+             # Skip deselected spin systems.
+-            if not spin.select:
++            if not spin1.select or not spin2.select:
+                 continue
+ 
+-            # Skip spin systems missing the xh_vect structure.
+-            if not hasattr(spin, 'xh_vect'):
++            # Skip containers missing vectors.
++            if not hasattr(interatom, 'vector'):
+                 continue
+ 
+             # Scale the vector.
+-            vector = spin.xh_vect * length * 1e10
+-
+-            # Add the central X atom.
+-            mol.atom_add(pdb_record='ATOM', atom_num=atom_num, 
+atom_name=spin.name, res_name=res_name, chain_id='B', res_num=res_num, pos=R, 
+segment_id=None, element=spin.element)
+-
+-            # Add the H atom.
+-            mol.atom_add(pdb_record='ATOM', atom_num=atom_num+1, 
+atom_name='H', res_name=res_name, chain_id='B', res_num=res_num, 
+pos=R-vector, segment_id=None, element='H')
++            vector = interatom.vector * length * 1e10
++
++            # Add the first spin as the central atom.
++            mol.atom_add(pdb_record='ATOM', atom_num=atom_num, 
+atom_name=spin1.name, res_name=spin1._res_name, chain_id='B', 
+res_num=spin1._res_num, pos=R, segment_id=None, element=spin1.element)
++
++            # Add the second spin as the end atom.
++            mol.atom_add(pdb_record='ATOM', atom_num=atom_num+1, 
+atom_name=spin2.name, res_name=spin2._res_name, chain_id='B', 
+res_num=spin2._res_num, pos=R-vector, segment_id=None, element=spin2.element)
+ 
+             # Connect the two atoms.
+             mol.atom_connect(index1=atom_num-1, index2=atom_num)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Jul 02 22:20:01 2012</div>  
+</body>
+</html>

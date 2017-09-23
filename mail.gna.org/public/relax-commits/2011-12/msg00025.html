@@ -1,0 +1,295 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r15038 &#45; in /branches/frame_order_testing/maths_fns: frame_order.py	frame_order_matrix_ops.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 06 Dec 2011 18:58:58 +0100 -->
+<!--X-Message-Id: E1RXzIA&#45;0004ZK&#45;Hi@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r15038 - in /branches/frame_order_testing/maths_fns: frame_order.py	frame_order_matrix_ops.py -- December 06, 2011 - 18:58</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r15038 - in /branches/frame_order_testing/maths_fns: frame_order.py	frame_order_matrix_ops.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00025" class="tabs">Index by Date</a> | <a href="threads.html#00025" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00024.html">Date Prev</a>] [<a href="msg00026.html">Date Next</a>] [<a href="msg00024.html">Thread Prev</a>] [<a href="msg00026.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 06 Dec 2011 17:58:58 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00025.html">E1RXzIA-0004ZK-Hi@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on December 06, 2011 - 18:58:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Dec  6 18:58:58 2011
+New Revision: 15038
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=15038&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=15038&amp;view=rev</a>
+Log:
+The frame order rotor model should now be functional with RDC and PCS data 
+together.
+
+
+Modified:
+    branches/frame_order_testing/maths_fns/frame_order.py
+    branches/frame_order_testing/maths_fns/frame_order_matrix_ops.py
+
+Modified: branches/frame_order_testing/maths_fns/frame_order.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_testing/maths_fns/frame_order.py?rev=15038&amp;r1=15037&amp;r2=15038&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_testing/maths_fns/frame_order.py?rev=15038&amp;r1=15037&amp;r2=15038&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_testing/maths_fns/frame_order.py (original)
++++ branches/frame_order_testing/maths_fns/frame_order.py Tue Dec  6 18:58:58 
+2011
+@@ -229,13 +229,13 @@
+                     if self.pcs_flag:
+                         self.pcs_error[i, j] = self.pcs_error[i, j] / 
+sqrt(pcs_weights[i, j])
+ 
+-
+         # The paramagnetic centre vectors and distances.
+         if self.pcs_flag:
+             # Initialise the data structures.
+             self.paramag_unit_vect = zeros(pcs_atoms.shape, float64)
+             self.paramag_dist = zeros(self.num_pcs, float64)
+             self.pcs_const = zeros(self.num_align, float64)
++            self.r_pivot_atom = zeros((self.num_pcs, 3), float64)
+             if self.paramag_centre == None:
+                 self.paramag_centre = zeros(3, float64)
+ 
+@@ -575,6 +575,10 @@
+         RT_eigen = transpose(self.R_eigen)
+         RT_ave = transpose(self.R_ave)
+ 
++        # Pre-calculate all the necessary vectors.
++        if self.pivot_opt:
++            self.calc_vectors(pivot)
++
+         # Loop over each alignment.
+         for i in xrange(self.num_align):
+             # Loop over the RDCs.
+@@ -594,7 +598,7 @@
+                         R_ave = self.R_ave
+ 
+                     # The numerical integration.
+-                    self.pcs_theta[i, j] = 
+pcs_numeric_int_rotor(sigma_max=sigma_max, c=self.pcs_const[i], 
+atom_pos=self.pcs_atoms[j], pivot=pivot, ln_pos=self.paramag_centre, 
+A=self.A_3D[i], R_ave=R_ave, R_eigen=self.R_eigen, RT_eigen=RT_eigen, 
+Ri_prime=self.Ri_prime)
++                    self.pcs_theta[i, j] = 
+pcs_numeric_int_rotor(sigma_max=sigma_max, c=self.pcs_const[i], 
+r_pivot_atom=self.r_pivot_atom[j], r_ln_pivot=self.r_ln_pivot, 
+A=self.A_3D[i], R_ave=R_ave, R_eigen=self.R_eigen, RT_eigen=RT_eigen, 
+Ri_prime=self.Ri_prime)
+ 
+             # Calculate and sum the single alignment chi-squared value (for 
+the RDC).
+             if self.rdc_flag:
+@@ -606,6 +610,22 @@
+ 
+         # Return the chi-squared value.
+         return chi2_sum
++
++
++    def calc_vectors(self, pivot):
++        &quot;&quot;&quot;Calculate the pivot to atom and lanthanide to pivot vectors for 
+the target functions.
++
++        @param pivot:   The pivot point.
++        @type pivot:    numpy rank-1, 3D array
++        &quot;&quot;&quot;
++
++        # The lanthanide to pivot vector.
++        self.r_ln_pivot = pivot - self.paramag_centre
++
++        # The pivot to atom vectors.
++        for j in xrange(self.num_pcs):
++            # The vector.
++            self.r_pivot_atom[j] = self.pcs_atoms[j] - pivot
+ 
+ 
+     def reduce_and_rot(self, ave_pos_alpha=None, ave_pos_beta=None, 
+ave_pos_gamma=None, daeg=None):
+
+Modified: branches/frame_order_testing/maths_fns/frame_order_matrix_ops.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_testing/maths_fns/frame_order_matrix_ops.py?rev=15038&amp;r1=15037&amp;r2=15038&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_testing/maths_fns/frame_order_matrix_ops.py?rev=15038&amp;r1=15037&amp;r2=15038&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_testing/maths_fns/frame_order_matrix_ops.py 
+(original)
++++ branches/frame_order_testing/maths_fns/frame_order_matrix_ops.py Tue Dec  
+6 18:58:58 2011
+@@ -1298,19 +1298,17 @@
+     return 2 - 2*cos(tmax)**3
+ 
+ 
+-def pcs_numeric_int_rotor(sigma_max=None, c=None, atom_pos=None, pivot=None, 
+ln_pos=None, A=None, R_ave=None, R_eigen=None, RT_eigen=None, Ri_prime=None):
++def pcs_numeric_int_rotor(sigma_max=None, c=None, r_pivot_atom=None, 
+r_ln_pivot=None, A=None, R_ave=None, R_eigen=None, RT_eigen=None, 
+Ri_prime=None):
+     &quot;&quot;&quot;Determine the averaged PCS value via numerical integration.
+ 
+     @keyword sigma_max:     The maximum rotor angle.
+     @type sigma_max:        float
+     @keyword c:             The PCS constant (without the interatomic 
+distance and in Angstrom units).
+     @type c:                float
+-    @keyword atom_pos:      The Euclidean position of the atom of interest.
+-    @type atom_pos:         numpy rank-1, 3D array
+-    @keyword pivot:         The Euclidean position of the pivot of the 
+motion.
+-    @type pivot:            numpy rank-1, 3D array
+-    @keyword ln_pos:        The Euclidean position of the lanthanide.
+-    @type ln_pos:           numpy rank-1, 3D array
++    @keyword r_pivot_atom:  The pivot point to atom vector.
++    @type r_pivot_atom:     numpy rank-1, 3D array
++    @keyword r_ln_pivot:    The lanthanide position to pivot point vector.
++    @type r_ln_pivot:       numpy rank-1, 3D array
+     @keyword A:             The full alignment tensor of the non-moving 
+domain.
+     @type A:                numpy rank-2, 3D array
+     @keyword R_ave:         The rotation matrix for rotating from the 
+reference frame to the average position.
+@@ -1333,7 +1331,7 @@
+     Ri_prime[2, 2] = 1.0
+ 
+     # Perform numerical integration.
+-    result = quad(pcs_pivot_motion_rotor, -sigma_max, sigma_max, args=(c, 
+atom_pos, pivot, ln_pos, A, R_ave, R_eigen, RT_eigen, Ri_prime), 
+full_output=1)
++    result = quad(pcs_pivot_motion_rotor, -sigma_max, sigma_max, args=(c, 
+r_pivot_atom, r_ln_pivot, A, R_ave, R_eigen, RT_eigen, Ri_prime), 
+full_output=1)
+ 
+     # The surface area normalisation factor.
+     SA = 2.0 * sigma_max
+@@ -1342,31 +1340,29 @@
+     return result[0] / SA
+ 
+ 
+-def pcs_pivot_motion_rotor(sigma_i, c, pN, pPiv, pLn, A, R_ave, R_eigen, 
+RT_eigen, Ri_prime):
++def pcs_pivot_motion_rotor(sigma_i, c, r_pivot_atom, r_ln_pivot, A, R_ave, 
+R_eigen, RT_eigen, Ri_prime):
+     &quot;&quot;&quot;Calculate the PCS value after a pivoted motion for the rotor model.
+ 
+-    @param sigma_i:     The rotor angle for state i.
+-    @type sigma_i:      float
+-    @param c:           The PCS constant (without the interatomic distance 
+and in Angstrom units).
+-    @type c:            float
+-    @param pN:          The Euclidean position of the atom of interest.
+-    @type pN:           numpy rank-1, 3D array
+-    @param pPiv:        The Euclidean position of the pivot of the motion.
+-    @type pPiv:         numpy rank-1, 3D array
+-    @param pLn:         The Euclidean position of the lanthanide.
+-    @type pLn:          numpy rank-1, 3D array
+-    @param A:           The full alignment tensor of the non-moving domain.
+-    @type A:            numpy rank-2, 3D array
+-    @param R_ave:       The rotation matrix for rotating from the reference 
+frame to the average position.
+-    @type R_ave:        numpy rank-2, 3D array
+-    @param R_eigen:     The eigenframe rotation matrix.
+-    @type R_eigen:      numpy rank-2, 3D array
+-    @param RT_eigen:    The transpose of the eigenframe rotation matrix (for 
+faster calculations).
+-    @type RT_eigen:     numpy rank-2, 3D array
+-    @param Ri_prime:    The empty rotation matrix for the in-frame rotor 
+motion for state i.
+-    @type Ri_prime:     numpy rank-2, 3D array
+-    @return:            The PCS value for the changed position.
+-    @rtype:             float
++    @param sigma_i:         The rotor angle for state i.
++    @type sigma_i:          float
++    @param c:               The PCS constant (without the interatomic 
+distance and in Angstrom units).
++    @type c:                float
++    @param r_pivot_atom:    The pivot point to atom vector.
++    @type r_pivot_atom:     numpy rank-1, 3D array
++    @param r_ln_pivot:      The lanthanide position to pivot point vector.
++    @type r_ln_pivot:       numpy rank-1, 3D array
++    @param A:               The full alignment tensor of the non-moving 
+domain.
++    @type A:                numpy rank-2, 3D array
++    @param R_ave:           The rotation matrix for rotating from the 
+reference frame to the average position.
++    @type R_ave:            numpy rank-2, 3D array
++    @param R_eigen:         The eigenframe rotation matrix.
++    @type R_eigen:          numpy rank-2, 3D array
++    @param RT_eigen:        The transpose of the eigenframe rotation matrix 
+(for faster calculations).
++    @type RT_eigen:         numpy rank-2, 3D array
++    @param Ri_prime:        The empty rotation matrix for the in-frame rotor 
+motion for state i.
++    @type Ri_prime:         numpy rank-2, 3D array
++    @return:                The PCS value for the changed position.
++    @rtype:                 float
+     &quot;&quot;&quot;
+ 
+     # The rotation matrix.
+@@ -1382,7 +1378,7 @@
+     R_i = dot(R_eigen, dot(Ri_prime, dot(RT_eigen, R_ave)))
+ 
+     # Calculate the new vector.
+-    vect = dot(R_i, (pN - pPiv)) - pLn
++    vect = dot(R_i, r_pivot_atom) + r_ln_pivot
+ 
+     # The vector length.
+     length = norm(vect)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Dec 07 11:00:02 2011</div>  
+</body>
+</html>

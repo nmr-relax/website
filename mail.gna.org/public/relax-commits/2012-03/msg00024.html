@@ -1,0 +1,234 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r15439 &#45;	/branches/frame_order_testing/maths_fns/frame_order_matrix_ops.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 06 Mar 2012 12:02:23 +0100 -->
+<!--X-Message-Id: E1S4s9v&#45;0008Gy&#45;7V@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r15439 -	/branches/frame_order_testing/maths_fns/frame_order_matrix_ops.py -- March 06, 2012 - 12:02</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r15439 -	/branches/frame_order_testing/maths_fns/frame_order_matrix_ops.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00024" class="tabs">Index by Date</a> | <a href="threads.html#00024" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00023.html">Date Prev</a>] [<a href="msg00025.html">Date Next</a>] [<a href="msg00023.html">Thread Prev</a>] [<a href="msg00025.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 06 Mar 2012 11:02:23 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00024.html">E1S4s9v-0008Gy-7V@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on March 06, 2012 - 12:02:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Mar  6 12:02:22 2012
+New Revision: 15439
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=15439&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=15439&amp;view=rev</a>
+Log:
+Full implementation of the pseudo-ellipse frame order target function for 
+multi-processor execution.
+
+Unfortunately using 1e5 integration points for the system test, on a dual 
+core machine the average
+time for the different fabrics for 3 different runs are:
+
+    - Uni-processor fabric:         23.297s
+    - Mpi4py fabric with 2 slaves:  23.339s
+
+
+
+Modified:
+    branches/frame_order_testing/maths_fns/frame_order_matrix_ops.py
+
+Modified: branches/frame_order_testing/maths_fns/frame_order_matrix_ops.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_testing/maths_fns/frame_order_matrix_ops.py?rev=15439&amp;r1=15438&amp;r2=15439&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_testing/maths_fns/frame_order_matrix_ops.py?rev=15439&amp;r1=15438&amp;r2=15439&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_testing/maths_fns/frame_order_matrix_ops.py 
+(original)
++++ branches/frame_order_testing/maths_fns/frame_order_matrix_ops.py Tue Mar  
+6 12:02:22 2012
+@@ -27,6 +27,7 @@
+ import dep_check
+ 
+ # Python module imports.
++from copy import deepcopy
+ from math import acos, ceil, cos, pi, sin, sqrt
+ from numpy import cross, dot, inner, sinc, transpose
+ from numpy.linalg import norm
+@@ -1525,11 +1526,18 @@
+     processor_box = Processor_box() 
+     processor = processor_box.processor
+ 
++    # Initialise the data object for the slave results to be stored in.
++    data = Data()
++    data.num_pts = 0
++    data.pcs_theta = pcs_theta
++
+     # Subdivide the points.
+     for block in subdivide(points, processor.processor_size()):
+         # Initialise the slave command and memo.
+-        command = Slave_command_pcs_pseudo_ellipse_qrint(points=block, 
+theta_x=theta_x, theta_y=theta_x, sigma_max=sigma_max, 
+full_in_ref_frame=full_in_ref_frame, r_pivot_atom=r_pivot_atom, 
+r_pivot_atom_rev=r_pivot_atom_rev, r_ln_pivot=r_ln_pivot, A=A, 
+R_eigen=R_eigen, RT_eigen=RT_eigen, Ri_prime=Ri_prime, pcs_theta=pcs_theta, 
+pcs_theta_err=pcs_theta_err, missing_pcs=missing_pcs)
+-        memo = Memo_pcs_pseudo_ellipse_qrint()
++        command = Slave_command_pcs_pseudo_ellipse_qrint(points=block, 
+theta_x=theta_x, theta_y=theta_x, sigma_max=sigma_max, 
+full_in_ref_frame=full_in_ref_frame, r_pivot_atom=r_pivot_atom, 
+r_pivot_atom_rev=r_pivot_atom_rev, r_ln_pivot=r_ln_pivot, A=A, 
+R_eigen=R_eigen, RT_eigen=RT_eigen, Ri_prime=Ri_prime, 
+pcs_theta=deepcopy(pcs_theta), pcs_theta_err=pcs_theta_err, 
+missing_pcs=missing_pcs)
++
++        # Initialise the memo.
++        memo = Memo_pcs_pseudo_ellipse_qrint(data)
+ 
+         # Queue the block.
+         processor.add_to_queue(command, memo)
+@@ -1538,7 +1546,7 @@
+     processor.run_queue()
+ 
+     # Calculate the PCS and error.
+-    num = memo.num_pts
++    num = data.num_pts
+     for i in range(len(pcs_theta)):
+         for j in range(len(pcs_theta[i])):
+             # The average PCS.
+@@ -2458,18 +2466,37 @@
+ 
+ 
+ 
++class Data:
++    &quot;&quot;&quot;A data container stored in the memo objects for use by the 
+Result_command class.&quot;&quot;&quot;
++
++
++
+ class Memo_pcs_pseudo_ellipse_qrint(Memo):
+     &quot;&quot;&quot;The memo object for the quasi-random pseudo-ellipse PCS numerical 
+integration.&quot;&quot;&quot;
+ 
++    def __init__(self, data):
++        &quot;&quot;&quot;Initalise the memo, storing the data container for the 
+result_command.
++
++        @param data:    The data container for use by the result_command.
++        @type data:     class instance
++        &quot;&quot;&quot;
++
++        # Execute the base class __init__() method.
++        super(Memo_pcs_pseudo_ellipse_qrint, self).__init__()
++
++        # Store the arguments.
++        self.data = data
++
+ 
+ 
+ class Result_command_pcs_pseudo_ellipse_qrint(Result_command):
+     &quot;&quot;&quot;The result command for the quasi-random pseudo-ellipse PCS numerical 
+integration.&quot;&quot;&quot;
+ 
+-    def __init__(self, processor, memo_id=None, num_pts=None, 
+completed=True):
++    def __init__(self, processor, memo_id=None, num_pts=None, 
+pcs_theta=None, completed=True):
+         &quot;&quot;&quot;Store all the slave results for processing on the master.
+ 
+-        @param processor:   The 
++        @param processor:   The processor instance.
++        @type processor:    Processor instance
+         &quot;&quot;&quot;
+ 
+         # Execute the base class __init__() method.
+@@ -2478,6 +2505,7 @@
+         # Store the arguments.
+         self.memo_id = memo_id
+         self.num_pts = num_pts
++        self.pcs_theta = pcs_theta
+ 
+ 
+     def run(self, processor, memo):
+@@ -2489,8 +2517,12 @@
+         @type memo:         Memo instance
+         &quot;&quot;&quot;
+ 
+-        # Store the number of points in the memo.
+-        memo.num_pts = self.num_pts
++        # Store the number of points in the data container.
++        memo.data.num_pts += self.num_pts
++
++        # Sum the PCS values.
++        memo.data.pcs_theta += self.pcs_theta
++
+ 
+ 
+ 
+@@ -2581,4 +2613,4 @@
+             num += 1
+ 
+         # Process the results on the master.
+-        
+processor.return_object(Result_command_pcs_pseudo_ellipse_qrint(processor, 
+memo_id=self.memo_id, num_pts=num))
++        
+processor.return_object(Result_command_pcs_pseudo_ellipse_qrint(processor, 
+memo_id=self.memo_id, num_pts=num, pcs_theta=self.pcs_theta))
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Mar 06 14:40:01 2012</div>  
+</body>
+</html>

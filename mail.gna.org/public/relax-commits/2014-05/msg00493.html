@@ -1,0 +1,187 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r23390 &#45; in /branches/frame_order_cleanup: ./ lib/frame_order/matrix_ops.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 23 May 2014 20:08:25 +0200 -->
+<!--X-Message-Id: E1WnttJ&#45;0006rD&#45;MT@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r23390 - in /branches/frame_order_cleanup: ./ lib/frame_order/matrix_ops.py -- May 23, 2014 - 20:08</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r23390 - in /branches/frame_order_cleanup: ./ lib/frame_order/matrix_ops.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00493" class="tabs">Index by Date</a> | <a href="threads.html#00493" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00492.html">Date Prev</a>] [<a href="msg00494.html">Date Next</a>] [<a href="msg00492.html">Thread Prev</a>] [<a href="msg00494.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 23 May 2014 18:08:25 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00493.html">E1WnttJ-0006rD-MT@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on May 23, 2014 - 20:08:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri May 23 20:08:25 2014
+New Revision: 23390
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=23390&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=23390&amp;view=rev</a>
+Log:
+Merged revisions 23389 via svnmerge from 
+svn+ssh://bugman@xxxxxxxxxxx/svn/relax/trunk
+
+........
+  r23389 | bugman | 2014-05-23 19:39:53 +0200 (Fri, 23 May 2014) | 6 lines
+  
+  Small speed up for all the isotropic cone and pseudo-elliptic cone frame 
+order models.
+  
+  The vector length calculation for the numeric PCS integration has been 
+simplified and shifted
+  outside of a loop to take advantage of the speed of numpy.
+........
+
+Modified:
+    branches/frame_order_cleanup/   (props changed)
+    branches/frame_order_cleanup/lib/frame_order/matrix_ops.py
+
+Propchange: branches/frame_order_cleanup/
+------------------------------------------------------------------------------
+--- svnmerge-integrated (original)
++++ svnmerge-integrated Fri May 23 20:08:25 2014
+@@ -1 +1 @@
+-/trunk:1-23385
++/trunk:1-23389
+
+Modified: branches/frame_order_cleanup/lib/frame_order/matrix_ops.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/frame_order/matrix_ops.py?rev=23390&amp;r1=23389&amp;r2=23390&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/frame_order/matrix_ops.py?rev=23390&amp;r1=23389&amp;r2=23390&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/lib/frame_order/matrix_ops.py  (original)
++++ branches/frame_order_cleanup/lib/frame_order/matrix_ops.py  Fri May 23 
+20:08:25 2014
+@@ -23,8 +23,8 @@
+ &quot;&quot;&quot;Module for the handling of Frame Order.&quot;&quot;&quot;
+ 
+ # Python module imports.
+-from math import cos, sin, sqrt
+-from numpy import dot, inner, transpose
++from math import cos, sin
++from numpy import dot, inner, sqrt, transpose
+ 
+ # relax module imports.
+ from lib.linear_algebra.kronecker_product import transpose_23
+@@ -134,12 +134,12 @@
+     rot_vect_rev = transpose(dot(R_i, r_pivot_atom_rev) + r_ln_pivot)
+     rot_vect = transpose(dot(R_i, r_pivot_atom) + r_ln_pivot)
+ 
++    # The vector length (to the 5th power).
++    length_rev = 1.0 / norm(rot_vect_rev, axis=1)**5
++    length = 1.0 / norm(rot_vect, axis=1)**5
++
+     # Loop over the atoms.
+     for j in range(len(r_pivot_atom[0])):
+-        # The vector length (to the 5th power).
+-        length_rev = 1.0 / sqrt(inner(rot_vect_rev[j], rot_vect_rev[j]))**5
+-        length = 1.0 / sqrt(inner(rot_vect[j], rot_vect[j]))**5
+-
+         # Loop over the alignments.
+         for i in range(len(pcs_theta)):
+             # Skip missing data.
+@@ -149,10 +149,10 @@
+             # The projection.
+             if full_in_ref_frame[i]:
+                 proj = dot(rot_vect[j], dot(A[i], rot_vect[j]))
+-                length_i = length
++                length_i = length[j]
+             else:
+                 proj = dot(rot_vect_rev[j], dot(A[i], rot_vect_rev[j]))
+-                length_i = length_rev
++                length_i = length_rev[j]
+ 
+             # The PCS.
+             pcs_theta[i, j] += proj * length_i
+@@ -219,12 +219,12 @@
+     rot_vect_rev = transpose(dot(R_i, r_pivot_atom_rev) + r_ln_pivot)
+     rot_vect = transpose(dot(R_i, r_pivot_atom) + r_ln_pivot)
+ 
++    # The vector length (to the 5th power).
++    length_rev = 1.0 / norm(rot_vect_rev, axis=1)**5
++    length = 1.0 / norm(rot_vect, axis=1)**5
++
+     # Loop over the atoms.
+     for j in range(len(r_pivot_atom[0])):
+-        # The vector length (to the 5th power).
+-        length_rev = 1.0 / sqrt(inner(rot_vect_rev[j], rot_vect_rev[j]))**5
+-        length = 1.0 / sqrt(inner(rot_vect[j], rot_vect[j]))**5
+-
+         # Loop over the alignments.
+         for i in range(len(pcs_theta)):
+             # Skip missing data.
+@@ -234,10 +234,10 @@
+             # The projection.
+             if full_in_ref_frame[i]:
+                 proj = dot(rot_vect[j], dot(A[i], rot_vect[j]))
+-                length_i = length
++                length_i = length[j]
+             else:
+                 proj = dot(rot_vect_rev[j], dot(A[i], rot_vect_rev[j]))
+-                length_i = length_rev
++                length_i = length_rev[j]
+ 
+             # The PCS.
+             pcs_theta[i, j] += proj * length_i
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri May 23 20:20:02 2014</div>  
+</body>
+</html>

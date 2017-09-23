@@ -1,0 +1,299 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r9556 &#45; /1.3/specific_fns/relax_fit.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 22 Sep 2009 14:29:25 +0200 -->
+<!--X-Message-Id: E1Mq4Um&#45;0003MY&#45;SD@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r9556 - /1.3/specific_fns/relax_fit.py -- September 22, 2009 - 14:29</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r9556 - /1.3/specific_fns/relax_fit.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00120" class="tabs">Index by Date</a> | <a href="threads.html#00120" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00119.html">Date Prev</a>] [<a href="msg00121.html">Date Next</a>] [<a href="msg00119.html">Thread Prev</a>] [<a href="msg00121.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 22 Sep 2009 12:29:24 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00120.html">E1Mq4Um-0003MY-SD@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on September 22, 2009 - 14:29:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Sep 22 14:29:24 2009
+New Revision: 9556
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=9556&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=9556&amp;view=rev</a>
+Log:
+Redesigned the relaxation curve fitting grid search for the new design of the 
+minfx grid search.
+
+
+Modified:
+    1.3/specific_fns/relax_fit.py
+
+Modified: 1.3/specific_fns/relax_fit.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/specific_fns/relax_fit.py?rev=9556&amp;r1=9555&amp;r2=9556&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/specific_fns/relax_fit.py?rev=9556&amp;r1=9555&amp;r2=9556&amp;view=diff</a>
+==============================================================================
+--- 1.3/specific_fns/relax_fit.py (original)
++++ 1.3/specific_fns/relax_fit.py Tue Sep 22 14:29:24 2009
+@@ -24,6 +24,8 @@
+ &quot;&quot;&quot;The relaxation curve fitting specific code.&quot;&quot;&quot;
+ 
+ # Python module imports.
++from minfx.generic import generic_minimise
++from minfx.grid import grid
+ from numpy import array, average, dot, float64, identity, zeros
+ from numpy.linalg import inv
+ from re import match, search
+@@ -33,7 +35,6 @@
+ from base_class import Common_functions
+ from generic_fns import pipes
+ from generic_fns.mol_res_spin import exists_mol_res_spin_data, 
+generate_spin_id, return_spin, spin_loop
+-from minfx.generic import generic_minimise
+ from relax_errors import RelaxError, RelaxFuncSetupError, RelaxLenError, 
+RelaxNoModelError, RelaxNoSequenceError
+ 
+ # C modules.
+@@ -440,70 +441,49 @@
+             raise RelaxError(&quot;Cannot run a grid search on a model with zero 
+parameters.&quot;)
+ 
+         # Lower bounds.
+-        if lower != None:
+-            if len(lower) != n:
+-                raise RelaxLenError('lower bounds', n)
++        if lower != None and len(lower) != n:
++            raise RelaxLenError('lower bounds', n)
+ 
+         # Upper bounds.
+-        if upper != None:
+-            if len(upper) != n:
+-                raise RelaxLenError('upper bounds', n)
+-
+-        # Increment.
+-        if isinstance(inc, list):
+-            if len(inc) != n:
+-                raise RelaxLenError('increment', n)
+-            inc = inc
++        if upper != None and len(upper) != n:
++            raise RelaxLenError('upper bounds', n)
++
++        # Increments.
++        if isinstance(inc, list) and len(inc) != n:
++            raise RelaxLenError('increment', n)
+         elif isinstance(inc, int):
+-            temp = []
+-            for j in xrange(n):
+-                temp.append(inc)
+-            inc = temp
++            inc = [inc]*n
+ 
+         # Minimisation options initialisation.
+-        min_options = []
++        default_bounds = False
++        if not lower:
++            lower = []
++            default_bounds = True
++        if not upper:
++            upper = []
+         j = 0
+ 
+         # Loop over the parameters.
+         for i in xrange(len(spin.params)):
+             # Relaxation rate (from 0 to 20 s^-1).
+-            if spin.params[i] == 'Rx':
+-                min_options.append([inc[j], 0.0, 20.0])
++            if spin.params[i] == 'Rx' and default_bounds:
++                lower.append(0.0)
++                upper.append(20.0)
+ 
+             # Intensity
+-            elif search('^I', spin.params[i]):
++            elif search('^I', spin.params[i]) and default_bounds:
+                 # Find the position of the first time point.
+                 pos = cdp.relax_times.index(min(cdp.relax_times))
+ 
+-                # Scaling.
+-                min_options.append([inc[j], 0.0, 
+average(spin.intensities[pos])])
+-
+-            # Increment j.
+-            j = j + 1
+-
+-        # Set the lower and upper bounds if these are supplied.
+-        if lower != None:
+-            for j in xrange(n):
+-                if lower[j] != None:
+-                    min_options[j][1] = lower[j]
+-        if upper != None:
+-            for j in xrange(n):
+-                if upper[j] != None:
+-                    min_options[j][2] = upper[j]
+-
+-        # Test if the grid is too large.
+-        grid_size = 1
+-        for i in xrange(len(min_options)):
+-            grid_size = grid_size * min_options[i][0]
+-        if isinstance(grid_size, long):
+-            raise RelaxError(&quot;A grid search of size &quot; + repr(grid_size) + &quot; 
+is too large.&quot;)
+-
+-        # Diagonal scaling of minimisation options.
+-        for j in xrange(len(min_options)):
+-            min_options[j][1] = min_options[j][1] / scaling_matrix[j, j]
+-            min_options[j][2] = min_options[j][2] / scaling_matrix[j, j]
+-
+-        return grid_size, min_options
++                # Defaults.
++                lower.append(0.0)
++                upper.append(average(spin.intensities[pos]))
++
++            # Parameter scaling.
++            lower[i] = lower[i] / scaling_matrix[i, i]
++            upper[i] = upper[i] / scaling_matrix[i, i]
++
++        return inc, lower, upper
+ 
+ 
+     def linear_constraints(self, spin=None, scaling_matrix=None):
+@@ -642,7 +622,7 @@
+ 
+             # Get the grid search minimisation options.
+             if match('^[Gg]rid', min_algor):
+-                grid_size, min_options = self.grid_search_setup(spin=spin, 
+param_vector=param_vector, lower=lower, upper=upper, inc=inc, 
+scaling_matrix=scaling_matrix)
++                inc, lower, upper = self.grid_search_setup(spin=spin, 
+param_vector=param_vector, lower=lower, upper=upper, inc=inc, 
+scaling_matrix=scaling_matrix)
+ 
+             # Linear constraints.
+             if constraints:
+@@ -660,10 +640,6 @@
+                 string = &quot;Fitting to spin &quot; + repr(spin_id)
+                 print((&quot;\n\n&quot; + string))
+                 print((len(string) * '~'))
+-
+-                # Grid search print out.
+-                if match('^[Gg]rid', min_algor):
+-                    print((&quot;Unconstrained grid search size: &quot; + 
+repr(grid_size) + &quot; (constraints may decrease this size).\n&quot;))
+ 
+ 
+             # Initialise the function to minimise.
+@@ -703,13 +679,37 @@
+             # Minimisation.
+             ###############
+ 
++            # Constrained optimisation.
+             if constraints:
+-                results = generic_minimise(func=func, dfunc=dfunc, 
+d2func=d2func, args=(), x0=param_vector, min_algor=min_algor, 
+min_options=min_options, func_tol=func_tol, grad_tol=grad_tol, 
+maxiter=max_iterations, A=A, b=b, full_output=True, print_flag=verbosity)
++                # Grid search.
++                if search('^[Gg]rid', min_algor):
++                    results = grid(func=func, args=(), num_incs=inc, 
+lower=lower, upper=upper, verbosity=verbosity)
++
++                # Minimisation.
++                else:
++                    results = generic_minimise(func=func, dfunc=dfunc, 
+d2func=d2func, args=(), x0=param_vector, min_algor=min_algor, 
+min_options=min_options, func_tol=func_tol, grad_tol=grad_tol, 
+maxiter=max_iterations, A=A, b=b, full_output=True, print_flag=verbosity)
++
++            # Unconstrained optimisation.
+             else:
+-                results = generic_minimise(func=func, dfunc=dfunc, 
+d2func=d2func, args=(), x0=param_vector, min_algor=min_algor, 
+min_options=min_options, func_tol=func_tol, grad_tol=grad_tol, 
+maxiter=max_iterations, full_output=True, print_flag=verbosity)
++                # Grid search.
++                if search('^[Gg]rid', min_algor):
++                    results = grid(func=target.func, args=(), 
+incs=min_options, verbosity=verbosity)
++
++                # Minimisation.
++                else:
++                    results = generic_minimise(func=func, dfunc=dfunc, 
+d2func=d2func, args=(), x0=param_vector, min_algor=min_algor, 
+min_options=min_options, func_tol=func_tol, grad_tol=grad_tol, 
+maxiter=max_iterations, full_output=True, print_flag=verbosity)
++
++            # Unpack the results.
+             if results == None:
+                 return
+-            param_vector, chi2, iter_count, f_count, g_count, h_count, 
+warning = results
++            if search('^[Gg]rid', min_algor):
++                param_vector, chi2, iter_count = results
++                f_count = iter_count
++                g_count = 0.0
++                h_count = 0.0
++                warning = None
++            else:
++                param_vector, chi2, iter_count, f_count, g_count, h_count, 
+warning = results
+ 
+             # Scaling.
+             if scaling:
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Sep 22 14:40:04 2009</div>  
+</body>
+</html>

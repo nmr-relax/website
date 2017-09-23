@@ -1,0 +1,495 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r27078 &#45; in /trunk: pipe_control/structure/main.py test_suite/system_tests/structure.py user_functions/structure.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 11 Dec 2014 10:50:17 +0100 -->
+<!--X-Message-Id: E1Xz0O0&#45;0007DT&#45;Tk@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r27078 - in /trunk: pipe_control/structure/main.py test_suite/system_tests/structure.py user_functions/structure.py -- December 11, 2014 - 10:50</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r27078 - in /trunk: pipe_control/structure/main.py test_suite/system_tests/structure.py user_functions/structure.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00201" class="tabs">Index by Date</a> | <a href="threads.html#00201" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00200.html">Date Prev</a>] [<a href="msg00202.html">Date Next</a>] [<a href="msg00200.html">Thread Prev</a>] [<a href="msg00202.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 11 Dec 2014 09:50:16 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00201.html">E1Xz0O0-0007DT-Tk@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on December 11, 2014 - 10:50:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Dec 11 10:50:16 2014
+New Revision: 27078
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=27078&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=27078&amp;view=rev</a>
+Log:
+Converted the structure.displacement user function to the new 
+pipes/models/molecules/atom_id design.
+
+This allows the displacements to be calculated between atomic coordinates 
+from different data pipes,
+different structural models, and different molecules.  The user function 
+backend has been hugely
+simplified as it now uses the new 
+pipe_control.structure.main.assemble_coordinates() function.
+
+The Structure.test_displacement system test has been updated for the user 
+function argument changes.
+
+
+Modified:
+    trunk/pipe_control/structure/main.py
+    trunk/test_suite/system_tests/structure.py
+    trunk/user_functions/structure.py
+
+Modified: trunk/pipe_control/structure/main.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/pipe_control/structure/main.py?rev=27078&amp;r1=27077&amp;r2=27078&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/pipe_control/structure/main.py?rev=27078&amp;r1=27077&amp;r2=27078&amp;view=diff</a>
+==============================================================================
+--- trunk/pipe_control/structure/main.py        (original)
++++ trunk/pipe_control/structure/main.py        Thu Dec 11 10:50:16 2014
+@@ -427,106 +427,35 @@
+             del interatom.vector
+ 
+ 
+-def displacement(model_from=None, model_to=None, atom_id=None, 
+molecules=None, centroid=None):
+-    &quot;&quot;&quot;Calculate the rotational and translational displacement between two 
+structural models.
+-
+-    @keyword model_from:        The optional model number for the starting 
+position of the displacement.
+-    @type model_from:           int or None
+-    @keyword model_to:          The optional model number for the ending 
+position of the displacement.
+-    @type model_to:             int or None
+-    @keyword atom_id:           The molecule, residue, and atom identifier 
+string.  This matches the spin ID string format.
+-    @type atom_id:              str or None
+-    @keyword molecules:         The list of molecules to calculate the 
+displacements between.  This overrides the models.
+-    @type molecules:            None or list of str
+-    @keyword centroid:          An alternative position of the centroid, 
+used for studying pivoted systems.
+-    @type centroid:             list of float or numpy rank-1, 3D array
++def displacement(pipes=None, models=None, molecules=None, atom_id=None, 
+centroid=None):
++    &quot;&quot;&quot;Calculate the rotational and translational displacement between 
+structures or models.
++
++    @keyword pipes:     The data pipes to determine the displacements for.
++    @type pipes:        None or list of str
++    @keyword models:    The list of models to determine the displacements 
+for.  The number of elements must match the pipes argument.  If set to None, 
+then all models will be used.
++    @type models:       None or list of lists of int
++    @keyword molecules: The list of molecules to determine the displacements 
+for.  The number of elements must match the pipes argument.
++    @type molecules:    None or list of lists of str
++    @keyword atom_id:   The atom identification string of the coordinates of 
+interest.  This matches the spin ID string format.
++    @type atom_id:      str or None
++    @keyword centroid:  An alternative position of the centroid, used for 
+studying pivoted systems.
++    @type centroid:     list of float or numpy rank-1, 3D array
+     &quot;&quot;&quot;
+ 
+     # Test if the current data pipe exists.
+     check_pipe()
+ 
+-    # Displacements between models.
+-    if molecules == None:
+-        # Convert the model_from and model_to args to lists, is supplied.
+-        if model_from != None:
+-            model_from = [model_from]
+-        if model_to != None:
+-            model_to = [model_to]
+-
+-        # Create a list of all models.
+-        models = []
+-        for model in cdp.structure.model_loop():
+-            models.append(model.num)
+-
+-        # Set model_from or model_to to all models if None.
+-        if model_from == None:
+-            model_from = models
+-        if model_to == None:
+-            model_to = models
+-
+-        # Initialise the data structure.
+-        if not hasattr(cdp.structure, 'displacements'):
+-            cdp.structure.displacements = Displacements()
+-
+-        # The selection object.
+-        selection = cdp.structure.selection(atom_id=atom_id)
+-
+-        # Loop over the starting models.
+-        for i in range(len(model_from)):
+-            # Assemble the atomic coordinates.
+-            coord_from = []
+-            for pos in cdp.structure.atom_loop(selection=selection, 
+model_num=model_from[i], pos_flag=True):
+-                coord_from.append(pos[0])
+-
+-            # Loop over the ending models.
+-            for j in range(len(model_to)):
+-                # Assemble the atomic coordinates.
+-                coord_to = []
+-                for pos in cdp.structure.atom_loop(selection=selection, 
+model_num=model_to[j], pos_flag=True):
+-                    coord_to.append(pos[0])
+-
+-                # Send to the base container for the calculations.
+-                
+cdp.structure.displacements._calculate(model_from=model_from[i], 
+model_to=model_to[j], coord_from=array(coord_from), coord_to=array(coord_to), 
+centroid=centroid)
+-
+-    # Displacements between molecules.
+-    else:
+-        # No models allowed.
+-        if cdp.structure.num_models() &gt; 1:
+-            raise RelaxError(&quot;When calculating the RMSD between different 
+molecules, no models are allowed to be present.&quot;)
+-
+-        # Initialise the data structure.
+-        if not hasattr(cdp.structure, 'displacements'):
+-            cdp.structure.displacements = Displacements()
+-
+-        # The selection object.
+-        selection = cdp.structure.selection(atom_id=atom_id)
+-
+-        # Loop over the starting molecules.
+-        for i in range(len(molecules)):
+-            # Assemble the atomic coordinates.
+-            coord_from = []
+-            for mol_name, pos in 
+cdp.structure.atom_loop(selection=selection, mol_name_flag=True, 
+pos_flag=True):
+-                # No molecule match, so skip.
+-                if mol_name != molecules[i]:
+-                    continue
+-
+-                # Add the coordinate.
+-                coord_from.append(pos[0])
+-
+-            # Loop over the ending molecules.
+-            for j in range(len(molecules)):
+-                # Assemble the atomic coordinates.
+-                coord_to = []
+-                for mol_name, pos in 
+cdp.structure.atom_loop(selection=selection, mol_name_flag=True, 
+pos_flag=True):
+-                    # No molecule match, so skip.
+-                    if mol_name != molecules[j]:
+-                        continue
+-
+-                    # Add the coordinate.
+-                    coord_to.append(pos[0])
+-
+-                # Send to the base container for the calculations.
+-                cdp.structure.displacements._calculate(model_from=i, 
+model_to=j, coord_from=array(coord_from), coord_to=array(coord_to), 
+centroid=centroid)
++    # Assemble the atomic coordinates.
++    coord, ids = assemble_coordinates(pipes=pipes, molecules=molecules, 
+models=models, atom_id=atom_id)
++
++    # Initialise the data structure.
++    if not hasattr(cdp.structure, 'displacments'):
++        cdp.structure.displacements = Displacements()
++
++    # Double loop over all structures, sending the data to the base 
+container for the calculations.
++    for i in range(len(ids)):
++        for j in range(len(ids)):
++            cdp.structure.displacements._calculate(id_from=ids[i], 
+id_to=ids[j], coord_from=coord[i], coord_to=coord[j], centroid=centroid)
+ 
+ 
+ def find_pivot(pipes=None, models=None, molecules=None, atom_id=None, 
+init_pos=None, func_tol=1e-5, box_limit=200):
+
+Modified: trunk/test_suite/system_tests/structure.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/test_suite/system_tests/structure.py?rev=27078&amp;r1=27077&amp;r2=27078&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/test_suite/system_tests/structure.py?rev=27078&amp;r1=27077&amp;r2=27078&amp;view=diff</a>
+==============================================================================
+--- trunk/test_suite/system_tests/structure.py  (original)
++++ trunk/test_suite/system_tests/structure.py  Thu Dec 11 10:50:16 2014
+@@ -2973,7 +2973,7 @@
+         self.interpreter.structure.rotate(R, model=3)
+ 
+         # The data to check.
+-        models = [1, 2]
++        ids = ['model 1, Ap4Aase_res1-12_mol1', 'model 2, 
+Ap4Aase_res1-12_mol1']
+         trans_vect = [
+             [[0.0, 0.0, 0.0],
+              [   2.270857972754659,   -1.811667138656451,    
+1.878400649688508]],
+@@ -2997,18 +2997,18 @@
+ 
+         # Test the results.
+         self.assert_(hasattr(cdp.structure, 'displacements'))
+-        for i in range(len(models)):
+-            for j in range(len(models)):
++        for i in range(len(ids)):
++            for j in range(len(ids)):
+                 # Check the translation.
+-                
+self.assertAlmostEqual(cdp.structure.displacements._translation_distance[models[i]][models[j]],
+ dist[i][j])
++                
+self.assertAlmostEqual(cdp.structure.displacements._translation_distance[ids[i]][ids[j]],
+ dist[i][j])
+                 for k in range(3):
+-                    
+self.assertAlmostEqual(cdp.structure.displacements._translation_vector[models[i]][models[j]][k],
+ trans_vect[i][j][k])
++                    
+self.assertAlmostEqual(cdp.structure.displacements._translation_vector[ids[i]][ids[j]][k],
+ trans_vect[i][j][k])
+ 
+                 # Check the rotation.
+-                
+self.assertAlmostEqual(cdp.structure.displacements._rotation_angle[models[i]][models[j]],
+ angle[i][j])
++                
+self.assertAlmostEqual(cdp.structure.displacements._rotation_angle[ids[i]][ids[j]],
+ angle[i][j])
+                 if rot_axis[i][j] != None:
+                     for k in range(3):
+-                        
+self.assertAlmostEqual(cdp.structure.displacements._rotation_axis[models[i]][models[j]][k],
+ rot_axis[i][j][k])
++                        
+self.assertAlmostEqual(cdp.structure.displacements._rotation_axis[ids[i]][ids[j]][k],
+ rot_axis[i][j][k])
+ 
+         # Save the results.
+         self.tmpfile = mktemp()
+@@ -3022,18 +3022,18 @@
+ 
+         # Test the re-loaded data.
+         self.assert_(hasattr(cdp.structure, 'displacements'))
+-        for i in range(len(models)):
+-            for j in range(len(models)):
++        for i in range(len(ids)):
++            for j in range(len(ids)):
+                 # Check the translation.
+-                
+self.assertAlmostEqual(cdp.structure.displacements._translation_distance[models[i]][models[j]],
+ dist[i][j])
++                
+self.assertAlmostEqual(cdp.structure.displacements._translation_distance[ids[i]][ids[j]],
+ dist[i][j])
+                 for k in range(3):
+-                    
+self.assertAlmostEqual(cdp.structure.displacements._translation_vector[models[i]][models[j]][k],
+ trans_vect[i][j][k])
++                    
+self.assertAlmostEqual(cdp.structure.displacements._translation_vector[ids[i]][ids[j]][k],
+ trans_vect[i][j][k])
+ 
+                 # Check the rotation.
+-                
+self.assertAlmostEqual(cdp.structure.displacements._rotation_angle[models[i]][models[j]],
+ angle[i][j])
++                
+self.assertAlmostEqual(cdp.structure.displacements._rotation_angle[ids[i]][ids[j]],
+ angle[i][j])
+                 if rot_axis[i][j] != None:
+                     for k in range(3):
+-                        
+self.assertAlmostEqual(cdp.structure.displacements._rotation_axis[models[i]][models[j]][k],
+ rot_axis[i][j][k])
++                        
+self.assertAlmostEqual(cdp.structure.displacements._rotation_axis[ids[i]][ids[j]][k],
+ rot_axis[i][j][k])
+ 
+ 
+     def test_displacement_molecules(self):
+
+Modified: trunk/user_functions/structure.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/user_functions/structure.py?rev=27078&amp;r1=27077&amp;r2=27078&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/user_functions/structure.py?rev=27078&amp;r1=27077&amp;r2=27078&amp;view=diff</a>
+==============================================================================
+--- trunk/user_functions/structure.py   (original)
++++ trunk/user_functions/structure.py   Thu Dec 11 10:50:16 2014
+@@ -599,34 +599,36 @@
+ 
+ # The structure.displacement user function.
+ uf = uf_info.add_uf('structure.displacement')
+-uf.title = &quot;Determine the rotational and translational displacement between 
+a set of models.&quot;
++uf.title = &quot;Determine the rotational and translational displacement between 
+a set of models or molecules.&quot;
+ uf.title_short = &quot;Rotational and translational displacement.&quot;
+ uf.add_keyarg(
+-    name = &quot;model_from&quot;,
+-    py_type = &quot;int&quot;,
+-    desc_short = &quot;model from&quot;,
+-    desc = &quot;The optional model number for the starting position of the 
+displacement.&quot;,
+-    can_be_none = True
+-)
+-uf.add_keyarg(
+-    name = &quot;model_to&quot;,
+-    py_type = &quot;int&quot;,
+-    desc_short = &quot;model to&quot;,
+-    desc = &quot;The optional model number for the ending position of the 
+displacement.&quot;,
++    name = &quot;pipes&quot;,
++    py_type = &quot;str_list&quot;,
++    desc_short = &quot;data pipes&quot;,
++    desc = &quot;The data pipes to determine the displacements for.&quot;,
++    wiz_combo_iter = pipe_names,
++    wiz_read_only = False,
++    can_be_none = True
++)
++uf.add_keyarg(
++    name = &quot;models&quot;,
++    py_type = &quot;int_list_of_lists&quot;,
++    desc_short = &quot;model list for each data pipe&quot;,
++    desc = &quot;The list of models for each data pipe to determine the 
+displacements for.  The number of elements must match the pipes argument.  If 
+no models are given, then all will be used.&quot;,
++    can_be_none = True
++)
++uf.add_keyarg(
++    name = &quot;molecules&quot;,
++    py_type = &quot;str_list_of_lists&quot;,
++    desc_short = &quot;molecule list for each data pipe&quot;,
++    desc = &quot;The list of molecules for each data pipe to determine the 
+displacements for.  This allows differently named molecules in the same or 
+different data pipes to be superimposed.  The number of elements must match 
+the pipes argument.  If no molecules are given, then all will be used.&quot;,
+     can_be_none = True
+ )
+ uf.add_keyarg(
+     name = &quot;atom_id&quot;,
+     py_type = &quot;str&quot;,
+     desc_short = &quot;atom identification string&quot;,
+-    desc = &quot;The atom identification string.&quot;,
+-    can_be_none = True
+-)
+-uf.add_keyarg(
+-    name = &quot;molecules&quot;,
+-    py_type = &quot;str_list&quot;,
+-    desc_short = &quot;molecule list&quot;,
+-    desc = &quot;The optional molecule list to perform the displacement 
+calculation on rather than the models.  The displacements will only be 
+calculated for atoms with identical residue name and number and atom name.&quot;,
++    desc = &quot;The atom identification string of the coordinates of interest.&quot;,
+     can_be_none = True
+ )
+ uf.add_keyarg(
+@@ -638,7 +640,7 @@
+ )
+ # Description.
+ uf.desc.append(Desc_container())
+-uf.desc[-1].add_paragraph(&quot;This user function allows the rotational and 
+translational displacement between two models of the same structure to be 
+calculated.  The information will be printed out in various formats and held 
+in the relax data store.  This is directional, so there is a starting and 
+ending position for each displacement.  If the starting and ending models are 
+not specified, then the displacements in all directions between all models 
+will be calculated.&quot;)
++uf.desc[-1].add_paragraph(&quot;This user function allows the rotational and 
+translational displacement between different models or molecules to be 
+calculated.  The information will be printed out in various formats and held 
+in the relax data store.  This is directional, so there is a starting and 
+ending position for each displacement.  Therefore the displacements in all 
+directions between all models and molecules will be calculated.&quot;)
+ uf.desc[-1].add_paragraph(&quot;The atom ID, which uses the same notation as the 
+spin ID strings, can be used to restrict the displacement calculation to 
+certain molecules, residues, or atoms.  This is useful if studying domain 
+motions, secondary structure rearrangements, amino acid side chain rotations, 
+etc.&quot;)
+ uf.desc[-1].add_paragraph(&quot;By supplying the position of the centroid, an 
+alternative position than the standard rigid body centre is used as the focal 
+point of the motion.  The allows, for example, a pivot of a rotational domain 
+motion to be specified.  This is not a formally correct algorithm, all 
+translations will be zero, but does give an indication to the amplitude of 
+the pivoting angle.&quot;)
+ uf.desc[-1].add_paragraph(&quot;If the optional molecules list is supplied, then 
+the displacements will be calculated between the molecules in the list rather 
+than the models.  Therefore no models are allowed to be present in the 
+current data pipe.&quot;)
+@@ -646,13 +648,6 @@
+ uf.desc.append(Desc_container(&quot;Prompt examples&quot;))
+ uf.desc[-1].add_paragraph(&quot;To determine the rotational and translational 
+displacements between all sets of models, type:&quot;)
+ uf.desc[-1].add_prompt(&quot;relax&gt; structure.displacement()&quot;)
+-uf.desc[-1].add_paragraph(&quot;To determine the displacement from model 5 to all 
+other models, type:&quot;)
+-uf.desc[-1].add_prompt(&quot;relax&gt; structure.displacement(model_from=5)&quot;)
+-uf.desc[-1].add_paragraph(&quot;To determine the displacement of all models to 
+model 5, type:&quot;)
+-uf.desc[-1].add_prompt(&quot;relax&gt; structure.displacement(model_to=5)&quot;)
+-uf.desc[-1].add_paragraph(&quot;To determine the displacement of model 2 to model 
+3, type one of:&quot;)
+-uf.desc[-1].add_prompt(&quot;relax&gt; structure.displacement(2, 3)&quot;)
+-uf.desc[-1].add_prompt(&quot;relax&gt; structure.displacement(model_from=2, 
+model_to=3)&quot;)
+ uf.backend = pipe_control.structure.main.displacement
+ uf.menu_text = &quot;displace&amp;ment&quot;
+ uf.wizard_height_desc = 400
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Dec 11 11:00:02 2014</div>  
+</body>
+</html>

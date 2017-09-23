@@ -1,0 +1,385 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r25476 &#45; /trunk/test_suite/shared_data/curve_fitting/numeric_topology/estimate_errors.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Sun, 31 Aug 2014 08:50:00 +0200 -->
+<!--X-Message-Id: E1XNyxb&#45;0001YD&#45;V7@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r25476 - /trunk/test_suite/shared_data/curve_fitting/numeric_topology/estimate_errors.py -- August 31, 2014 - 08:50</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r25476 - /trunk/test_suite/shared_data/curve_fitting/numeric_topology/estimate_errors.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00610" class="tabs">Index by Date</a> | <a href="threads.html#00610" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00609.html">Date Prev</a>] [<a href="msg00611.html">Date Next</a>] [<a href="msg00609.html">Thread Prev</a>] [<a href="msg00611.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Sun, 31 Aug 2014 06:49:59 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00610.html">E1XNyxb-0001YD-V7@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on August 31, 2014 - 08:50:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Sun Aug 31 08:49:59 2014
+New Revision: 25476
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=25476&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=25476&amp;view=rev</a>
+Log:
+Added Jacobian to test script, and now correctly do Simulations, per R2eff 
+points.
+
+task #7822(<a  rel="nofollow" href="https://gna.org/task/index.php?7822">https://gna.org/task/index.php?7822</a>): Implement user function to 
+estimate R2eff and associated errors for exponential curve fitting.
+
+Modified:
+    
+trunk/test_suite/shared_data/curve_fitting/numeric_topology/estimate_errors.py
+
+Modified: 
+trunk/test_suite/shared_data/curve_fitting/numeric_topology/estimate_errors.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/test_suite/shared_data/curve_fitting/numeric_topology/estimate_errors.py?rev=25476&amp;r1=25475&amp;r2=25476&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/test_suite/shared_data/curve_fitting/numeric_topology/estimate_errors.py?rev=25476&amp;r1=25475&amp;r2=25476&amp;view=diff</a>
+==============================================================================
+--- 
+trunk/test_suite/shared_data/curve_fitting/numeric_topology/estimate_errors.py
+      (original)
++++ 
+trunk/test_suite/shared_data/curve_fitting/numeric_topology/estimate_errors.py
+      Sun Aug 31 08:49:59 2014
+@@ -3,13 +3,21 @@
+ 
+ # Python module imports.
+ from minfx.generic import generic_minimise
+-from numpy import array, arange, asarray, diag, dot, exp, eye, float64, log, 
+multiply, ones, sqrt, sum, std, transpose, where
++from numpy import array, arange, asarray, diag, dot, exp, eye, float64, 
+isfinite, log, nan_to_num, multiply, ones, sqrt, sum, std, transpose, where, 
+zeros
+ from numpy.linalg import inv, qr
++from numpy.ma import fix_invalid
+ from random import gauss, sample, randint, randrange
+ from collections import OrderedDict
+ #import pickle
+ import cPickle as pickle
+ 
++# Should warnings be raised to errors?
++raise_warnings = False
++
++if raise_warnings:
++    import warnings
++    warnings.filterwarnings('error')
++
+ # Create and ordered dict, which can be looped over.
+ dic = OrderedDict()
+ 
+@@ -18,13 +26,19 @@
+ I0 = 1000.0
+ params = array([R, I0], float64)
+ 
++# Number if R2eff points
++np = 10
++
+ # Number of simulations.
+-sim = 10000
++sim = 100
+ 
+ # Create number of timepoints. Between 3 and 10 for exponential curve 
+fitting.
+ # Used in random.randint, and includes both end points.
+ nt_min = 3
+ nt_max = 10
++
++# Should we do random number of timepoints?
++do_random_nr_time_points = False
+ 
+ # Produce range with all possible time points.
+ # Draw from this.
+@@ -48,13 +62,26 @@
+ dic['R'] = R
+ dic['I0'] = I0
+ dic['params'] = params
++dic['np'] = np
+ dic['sim'] = sim
+ dic['nt_min'] = nt_min
+ dic['nt_max'] = nt_max
++dic['do_random_nr_time_points'] = do_random_nr_time_points
+ dic['all_times'] = all_times
+ dic['I_err_level'] = I_err_level
+ dic['I_err_std'] = I_err_std
+ dic['all_errors'] = all_errors
++
++# Minfx settings
++#min_algor = 'simplex'
++min_algor = 'BFGS'
++min_options = ()
++
++# Make global counters
++global np_i
++np_i = 0
++global sim_j
++sim_j = 0
+ 
+ ########### Define functions ##################################
+ 
+@@ -126,15 +153,57 @@
+     # Calculate.
+     back_calc = func_exp(params=params, times=times)
+     # Calculate and return the chi-squared value.
+-    return chi2(data=I, back_calc=back_calc, errors=errors)
+-
+-def chi2(data=None, back_calc=None, errors=None):
++    return chi2(data=I, back_calc=back_calc, errors=errors, params=params)
++
++def func_exp_chi2_grad(params=None, times=None, I=None, errors=None):
++    &quot;&quot;&quot;Target function for the gradient (Jacobian matrix) to minfx, for 
+exponential fit .&quot;&quot;&quot;
++
++    # Get the back calc.
++    back_calc = func_exp(params=params, times=times)
++    # Get the Jacobian, with partial derivative, with respect to r2eff and 
+i0.
++    exp_grad = func_exp_grad(params=params, times=times)
++    # Transpose back, to get rows.
++    exp_grad_t = transpose(exp_grad)
++    # n is number of fitted parameters.
++    n = len(params)
++    # Define array to update parameters in.
++    jacobian_chi2_minfx = zeros([n])
++    # Update value elements.
++    dchi2(dchi2=jacobian_chi2_minfx, M=n, data=I, back_calc_vals=back_calc, 
+back_calc_grad=exp_grad_t, errors=errors)
++    # Return Jacobian matrix.
++    return jacobian_chi2_minfx
++
++def chi2(data=None, back_calc=None, errors=None, params=None):
+     &quot;&quot;&quot;Function to calculate the chi-squared value.&quot;&quot;&quot;
+ 
+     # Calculate the chi-squared statistic.
+-    return sum((1.0 / errors * (data - back_calc))**2)
+-
+-def func_exp_grad(params=None, times=None, errors=None):
++    if raise_warnings:
++        try:
++            t_chi2 = sum((1.0 / errors * (data - back_calc))**2)
++        except RuntimeWarning:
++            # Handle if algorithm takes wrong step.
++            #print &quot;Oppps. np=%i, sim=%i, R2=%3.2f, I0=%3.2f&quot; % (np_i, 
+sim_j, params[0], params[1])
++            t_chi2 =  1e100
++    else:
++        t_chi2 = sum((1.0 / errors * (data - back_calc))**2)
++        #fix_invalid(t_chi2, copy=False, fill_value=1e100)
++        #t_chi2 = nan_to_num( t_chi2 )
++        if not isfinite(t_chi2):
++            t_chi2_2 = nan_to_num( t_chi2 )
++            #print &quot;Oppps. np=%i, sim=%i, R2=%3.2f, I0=%3.2f %s %s&quot; % (np_i, 
+sim_j, params[0], params[1], t_chi2, t_chi2_2)
++            t_chi2 = t_chi2_2
++
++    return t_chi2
++
++def dchi2(dchi2, M, data, back_calc_vals, back_calc_grad, errors):
++    &quot;&quot;&quot;Calculate the full chi-squared gradient.&quot;&quot;&quot;
++    # Calculate the chi-squared gradient.
++    grad = -2.0 * dot(1.0 / (errors**2) * (data - back_calc_vals), 
+transpose(back_calc_grad))
++    # Pack the elements.
++    for i in range(M):
++        dchi2[i] = grad[i]
++
++def func_exp_grad(params=None, times=None):
+     &quot;&quot;&quot;The gradient (Jacobian matrix) of func_exp for Co-variance 
+calculation.&quot;&quot;&quot;
+ 
+     # Unpack the parameter values.
+@@ -165,18 +234,33 @@
+     Qxx = dot(inv(R), transpose(Q) )
+     return Qxx
+ 
++def prod_I_errors(I=None, errors=None):
++    I_err = []
++    for j, error in enumerate(errors):
++        I_error = gauss(I[j], error)
++        I_err.append(I_error)
++    # Convert to numpy array.
++    I_err = asarray(I_err)
++    return I_err
++
+ 
+ ########### Do simulations ##################################
+ 
+-# Loop over sims.
+-for i in range(sim):
++# Loop over number of R2eff points.
++for i in range(np):
+     # Create index in dic.
+     dic[i] = OrderedDict()
+-    print(&quot;Simulation number %s&quot;%i)
++    # Assign to global counter
++    np_i = i
+ 
+     # Create random number of timepoints. Between 3 and 10 for exponential 
+curve fitting.
+-    nt = randint(nt_min, nt_max)
++    if do_random_nr_time_points:
++        nt = randint(nt_min, nt_max)
++    else:
++        nt = nt_max
+     dic[i]['nt'] = nt
++
++    print(&quot;R2eff point %s with %i timepoints&quot; % (i, nt))
+ 
+     # Create time array, by drawing from the all time points array.
+     times = asarray( sample(population=all_times, k=nt) )
+@@ -197,13 +281,7 @@
+     dic[i]['I'] = I
+ 
+     # Now produce Intensity with errors.
+-    I_err = []
+-    for j, error in enumerate(errors):
+-        I_error = gauss(I[j], error)
+-        I_err.append(I_error)
+-
+-    # Convert to numpy array.
+-    I_err = asarray(I_err)
++    I_err = prod_I_errors(I=I, errors=errors)
+     dic[i]['I_err'] = I_err
+ 
+     # Now estimate with no weighting.
+@@ -213,8 +291,8 @@
+ 
+     # Now estimate with weighting.
+     R_ew, I0_ew = est_x0_exp_weight(times=times, I=I_err, errors=errors)
+-    dic[i]['R_ew'] = R_e
+-    dic[i]['I0_ew'] = I0_e
++    dic[i]['R_ew'] = R_ew
++    dic[i]['I0_ew'] = I0_ew
+ 
+     # Now estimate errors for parameters.
+     sigma_R = point_r2eff_err(times=times, I=I_err, errors=errors)
+@@ -222,16 +300,15 @@
+ 
+     # Minimisation.
+     args = (times, I_err, errors)
+-    min_algor = 'simplex'
+     x0 = array([R_e, I0_e])
+ 
+-    params_minfx, chi2_minfx, iter_count, f_count, g_count, h_count, warning 
+= generic_minimise(func=func_exp_chi2, args=args, x0=x0, min_algor=min_algor, 
+full_output=True, print_flag=0)
++    params_minfx, chi2_minfx, iter_count, f_count, g_count, h_count, warning 
+= generic_minimise(func=func_exp_chi2, dfunc=func_exp_chi2_grad, args=args, 
+x0=x0, min_algor=min_algor, min_options=min_options, full_output=True, 
+print_flag=0)
+     R_m, I0_m = params_minfx
+     dic[i]['R_m'] = R_m
+     dic[i]['I0_m'] = I0_m
+ 
+     # Estimate errors from Jacobian
+-    jacobian = func_exp_grad(params=params, times=times, errors=errors)
++    jacobian = func_exp_grad(params=params_minfx, times=times)
+     dic[i]['jacobian'] = jacobian
+     weights = 1. / errors**2
+     dic[i]['weights'] = weights
+@@ -239,9 +316,39 @@
+     # Covariance matrix.
+     pcov = multifit_covar(J=jacobian, weights=weights)
+     dic[i]['pcov'] = pcov
+-    sigma_R_p, sigma_I0_p = sqrt(diag(pcov))
+-    dic[i]['sigma_R_p'] = sigma_R_p
+-    dic[i]['sigma_I0_p'] = sigma_I0_p
++    sigma_R_covar, sigma_I0_covar = sqrt(diag(pcov))
++    dic[i]['sigma_R_covar'] = sigma_R_covar
++    dic[i]['sigma_I0_covar'] = sigma_I0_covar
++
++    # Now do Monte Carlo simulations.
++    R_m_sim_l = []
++    I0_m_sim_l = []
++    for j in range(sim):
++        # Create index in dic.
++        # We dont want to store simulations, as they eat to much disk space.
++        #dic[i][j] = OrderedDict()
++        # Assign to global counter.
++        sim_j = j
++
++        # Now produce Simulated intensity with errors.
++        I_err_sim_j = prod_I_errors(I=I_err, errors=errors)
++
++        # Start minimisation.
++        args = (times, I_err_sim_j, errors)
++        x0 = params_minfx
++
++        params_minfx_sim_j, chi2_minfx_sim_j, iter_count, f_count, g_count, 
+h_count, warning = generic_minimise(func=func_exp_chi2, 
+dfunc=func_exp_chi2_grad, args=args, x0=x0, min_algor=min_algor, 
+min_options=min_options, full_output=True, print_flag=0)
++        R_m_sim_j, I0_m_sim_j = params_minfx_sim_j
++        R_m_sim_l.append(R_m_sim_j)
++        I0_m_sim_l.append(I0_m_sim_j)
++        #dic[i][j]['R_m_sim'] = R_m_sim
++        #dic[i][j]['I0_m_sim'] = I0_m_sim
++
++    # Get stats on distribution.
++    sigma_R_sim = std(asarray(R_m_sim_l))
++    sigma_I0_sim = std(asarray(I0_m_sim_l))
++    dic[i]['sigma_R_sim'] = sigma_R_sim
++    dic[i]['sigma_I0_sim'] = sigma_I0_sim
+ 
+ 
+ # Write to pickle.
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Sun Aug 31 09:00:06 2014</div>  
+</body>
+</html>

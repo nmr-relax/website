@@ -1,0 +1,171 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r19654 &#45; /trunk/pipe_control/value.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 03 May 2013 20:10:29 +0200 -->
+<!--X-Message-Id: E1UYKRB&#45;0002Fi&#45;O4@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r19654 - /trunk/pipe_control/value.py -- May 03, 2013 - 20:10</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r19654 - /trunk/pipe_control/value.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00043" class="tabs">Index by Date</a> | <a href="threads.html#00043" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00042.html">Date Prev</a>] [<a href="msg00044.html">Date Next</a>] [<a href="msg00042.html">Thread Prev</a>] [<a href="msg00044.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 03 May 2013 18:10:29 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00043.html">E1UYKRB-0002Fi-O4@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on May 03, 2013 - 20:10:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri May  3 20:10:28 2013
+New Revision: 19654
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=19654&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=19654&amp;view=rev</a>
+Log:
+Bug fix for the value.copy user function.
+
+The user function can now handle parameter errors, and the values are set in 
+the correct data pipe.
+
+
+Modified:
+    trunk/pipe_control/value.py
+
+Modified: trunk/pipe_control/value.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/pipe_control/value.py?rev=19654&amp;r1=19653&amp;r2=19654&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/pipe_control/value.py?rev=19654&amp;r1=19653&amp;r2=19654&amp;view=diff</a>
+==============================================================================
+--- trunk/pipe_control/value.py (original)
++++ trunk/pipe_control/value.py Fri May  3 20:10:28 2013
+@@ -53,6 +53,7 @@
+         pipe_from = pipes.cdp_name()
+     if pipe_to == None:
+         pipe_to = pipes.cdp_name()
++    pipe_orig = pipes.cdp_name()
+ 
+     # The second pipe does not exist.
+     pipes.test(pipe_to)
+@@ -77,16 +78,25 @@
+         if value != None or error != None:
+             raise RelaxValueError(param, pipe_to)
+ 
++    # Switch to the data pipe to copy values to.
++    pipes.switch(pipe_to)
++
+     # Copy the values.
+     for spin, spin_id in spin_loop(pipe=pipe_from, return_id=True):
+         # Get the value and error from pipe_from.
+         value, error = return_value(spin, param)
+ 
+         # Set the values of pipe_to.
+-        set(spin_id=spin_id, val=value, error=error, param=param)
++        if value != None:
++            set(spin_id=spin_id, val=value, param=param, pipe=pipe_to)
++        if error != None:
++            set(spin_id=spin_id, val=error, param=param, pipe=pipe_to, 
+error=True)
+ 
+     # Reset all minimisation statistics.
+     minimise.reset_min_stats(pipe_to)
++
++    # Switch back to the original current data pipe.
++    pipes.switch(pipe_orig)
+ 
+ 
+ def display(param=None, scaling=1.0):
+@@ -343,19 +353,19 @@
+         minimise.reset_min_stats()
+ 
+ 
+-def set(val=None, param=None, error=None, pipe=None, spin_id=None, 
+force=True, reset=True):
++def set(val=None, param=None, pipe=None, spin_id=None, error=False, 
+force=True, reset=True):
+     &quot;&quot;&quot;Set global or spin specific data values.
+ 
+     @keyword val:       The parameter values.
+     @type val:          None or list
+     @keyword param:     The parameter names.
+     @type param:        None, str, or list of str
+-    @keyword error:     The parameter errors.
+-    @type error:        None, number, or list of numbers
+     @keyword pipe:      The data pipe the values should be placed in.
+     @type pipe:         None or str
+     @keyword spin_id:   The spin identification string.
+     @type spin_id:      str
++    @keyword error:     A flag which if True will allow the parameter errors 
+to be set instead of the values.
++    @type error:        bool
+     @keyword force:     A flag forcing the overwriting of current values.
+     @type force:        bool
+     @keyword reset:     A flag which if True will cause all minimisation 
+statistics to be reset.
+@@ -414,7 +424,7 @@
+                 raise RelaxParamSetError(param[i])
+ 
+     # Set the parameter values.
+-    set_param_values(param=param, value=val, spin_id=spin_id, force=force)
++    set_param_values(param=param, value=val, spin_id=spin_id, error=error, 
+force=force)
+ 
+     # Reset all minimisation statistics.
+     if reset:
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri May 03 20:20:04 2013</div>  
+</body>
+</html>

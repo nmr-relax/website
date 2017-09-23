@@ -1,0 +1,200 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r26167 &#45; /trunk/specific_analyses/relax_disp/api.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 06 Oct 2014 17:07:49 +0200 -->
+<!--X-Message-Id: E1Xb9t7&#45;00062O&#45;MY@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r26167 - /trunk/specific_analyses/relax_disp/api.py -- October 06, 2014 - 17:07</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r26167 - /trunk/specific_analyses/relax_disp/api.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00063" class="tabs">Index by Date</a> | <a href="threads.html#00063" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00062.html">Date Prev</a>] [<a href="msg00064.html">Date Next</a>] [<a href="msg00062.html">Thread Prev</a>] [<a href="msg00064.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 06 Oct 2014 15:07:49 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00063.html">E1Xb9t7-00062O-MY@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on October 06, 2014 - 17:07:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Mon Oct  6 17:07:49 2014
+New Revision: 26167
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=26167&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=26167&amp;view=rev</a>
+Log:
+In the dispersion API calculate(), used the API function model_loop() to loop 
+over the clusters instead.
+
+Bug #22754 (<a  rel="nofollow" href="https://gna.org/bugs/index.php?22754">https://gna.org/bugs/index.php?22754</a>): The minimise.calculate() 
+does not calculate chi2 value for clustered residues.
+
+Modified:
+    trunk/specific_analyses/relax_disp/api.py
+
+Modified: trunk/specific_analyses/relax_disp/api.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/relax_disp/api.py?rev=26167&amp;r1=26166&amp;r2=26167&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/relax_disp/api.py?rev=26167&amp;r1=26166&amp;r2=26167&amp;view=diff</a>
+==============================================================================
+--- trunk/specific_analyses/relax_disp/api.py   (original)
++++ trunk/specific_analyses/relax_disp/api.py   Mon Oct  6 17:07:49 2014
+@@ -261,9 +261,6 @@
+         check_mol_res_spin_data()
+         check_model_type()
+ 
+-        # Get the looping list over cluster ids.
+-        cluster_ids, cluster_spin_list, cluster_spin_id_list, 
+cluster_spin_sel_list, clust_contain_spin_id_list = 
+self.loop_cluster_ids(spin_id=spin_id)
+-
+         # Special exponential curve-fitting for the R2eff model.
+         if cdp.model_type == MODEL_R2EFF:
+             calculate_r2eff()
+@@ -273,48 +270,35 @@
+             # 1H MMQ flag.
+             proton_mmq_flag = has_proton_mmq_cpmg()
+ 
+-            # Loop over the cluster ids.
+-            for i, cluster_id in enumerate(cluster_ids):
+-                # Get the spins, ids and if the cluster contains the spin of 
+interest.
+-                cluster_spins = cluster_spin_list[i]
+-                cluster_spin_ids = cluster_spin_id_list[i]
+-                spin_of_interest = clust_contain_spin_id_list[i]
+-
+-                # If spin of interest is present:
+-                if spin_of_interest:
+-                    # If it is a free free spin, then calculate per spin.
+-                    if cluster_id == 'free spins':
+-                        for si, spin in enumerate(cluster_spins):
+-                            cur_spin_id = cluster_spin_ids[si]
+-
+-                            # Skip protons for MMQ data.
+-                            if spin.model in MODEL_LIST_MMQ and spin.isotope 
+== '1H':
+-                                continue
+-
+-                            # Get the attached proton.
+-                            proton = None
+-                            if proton_mmq_flag:
+-                                proton = 
+return_attached_protons(cur_spin_id)[0]
+-
+-                            # The back calculated values.
+-                            back_calc = back_calc_r2eff(spins=[spin], 
+spin_ids=[cur_spin_id], store_chi2=True)
+-
+-                            # Pack the data.
+-                            pack_back_calc_r2eff(spin=spin, 
+spin_id=cur_spin_id, si=0, back_calc=back_calc, 
+proton_mmq_flag=proton_mmq_flag)
+-
+-                    else:
+-                        # The back calculated values.
+-                        back_calc = back_calc_r2eff(spins=cluster_spins, 
+spin_ids=cluster_spin_ids, store_chi2=True)
+-
+-                        # Pack the data.
+-                        for si, spin in enumerate(cluster_spins):
+-                            cur_spin_id = cluster_spin_ids[si]
+-
+-                            # Skip protons for MMQ data.
+-                            if spin.model in MODEL_LIST_MMQ and spin.isotope 
+== '1H':
+-                                continue
+-
+-                            pack_back_calc_r2eff(spin=spin, 
+spin_id=cur_spin_id, si=si, back_calc=back_calc, 
+proton_mmq_flag=proton_mmq_flag)
++            # Loop over the spin blocks.
++            model_index = -1
++            for spin_ids in self.model_loop():
++                # Increment the model index.
++                model_index += 1
++
++                # The spin containers.
++                spins = spin_ids_to_containers(spin_ids)
++
++                # Skip deselected clusters.
++                skip = True
++                for spin in spins:
++                    if spin.select:
++                        skip = False
++                if skip:
++                    continue
++
++                # Get the attached proton.
++                proton = None
++                if proton_mmq_flag:
++                    proton = return_attached_protons(spin_ids)[0]
++
++                # The back calculated values.
++                back_calc = back_calc_r2eff(spins=spins, spin_ids=spin_ids, 
+store_chi2=True)
++
++                # Pack the data.
++                for i, spin in enumerate(spins):
++                    spin_id = spin_ids[i]
++                    pack_back_calc_r2eff(spin=spin, spin_id=spin_id, si=i, 
+back_calc=back_calc, proton_mmq_flag=proton_mmq_flag)
+ 
+ 
+     def constraint_algorithm(self):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Oct 06 17:20:01 2014</div>  
+</body>
+</html>

@@ -1,0 +1,302 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r11660 &#45; /branches/bmrb/specific_fns/model_free/bmrb.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 25 Oct 2010 10:08:53 +0200 -->
+<!--X-Message-Id: E1PAI6v&#45;0006iQ&#45;NU@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r11660 - /branches/bmrb/specific_fns/model_free/bmrb.py -- October 25, 2010 - 10:08</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r11660 - /branches/bmrb/specific_fns/model_free/bmrb.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00040" class="tabs">Index by Date</a> | <a href="threads.html#00040" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00039.html">Date Prev</a>] [<a href="msg00041.html">Date Next</a>] [<a href="msg00039.html">Thread Prev</a>] [<a href="msg00041.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 25 Oct 2010 08:08:53 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00040.html">E1PAI6v-0006iQ-NU@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on October 25, 2010 - 10:08:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Mon Oct 25 10:08:53 2010
+New Revision: 11660
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=11660&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=11660&amp;view=rev</a>
+Log:
+Implemented the reading of model-free and CSA BMRB saveframes from NMR-STAR 
+files.
+
+
+Modified:
+    branches/bmrb/specific_fns/model_free/bmrb.py
+
+Modified: branches/bmrb/specific_fns/model_free/bmrb.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/bmrb/specific_fns/model_free/bmrb.py?rev=11660&amp;r1=11659&amp;r2=11660&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/bmrb/specific_fns/model_free/bmrb.py?rev=11660&amp;r1=11659&amp;r2=11660&amp;view=diff</a>
+==============================================================================
+--- branches/bmrb/specific_fns/model_free/bmrb.py (original)
++++ branches/bmrb/specific_fns/model_free/bmrb.py Mon Oct 25 10:08:53 2010
+@@ -40,6 +40,139 @@
+ class Bmrb:
+     &quot;&quot;&quot;Class containing methods related to BMRB STAR file reading and 
+writing.&quot;&quot;&quot;
+ 
++    def _bmrb_model_map(self, model_name=None, bmrb_name=None):
++        &quot;&quot;&quot;The model-free model name to BMRB name mapping.
++
++        @return:    Either the bmrb_name or model_name corresponding to the 
+given model_name or bmrb_name respectively.  Both args cannot be given.
++        @rtype:     str
++        &quot;&quot;&quot;
++
++        # Check.
++        if model_name != None and bmrb_name != None:
++            raise RelaxError, &quot;Either the model_name or bmrb_name args can 
+be supplied, but not both together.&quot;
++
++        # The relax to BMRB model-free model name map.
++        map = {'m0':  '',
++               'm1':  'S2',
++               'm2':  'S2, te',
++               'm3':  'S2, Rex',
++               'm4':  'S2, te, Rex',
++               'm5':  'S2f, S2, ts',
++               'm6':  'S2f, tf, S2, ts',
++               'm7':  'S2f, S2, ts, Rex',
++               'm8':  'S2f, tf, S2, ts, Rex',
++               'm9':  'Rex',
++               'tm0': 'tm',
++               'tm1': 'tm, S2',
++               'tm2': 'tm, S2, te',
++               'tm3': 'tm, S2, Rex',
++               'tm4': 'tm, S2, te, Rex',
++               'tm5': 'tm, S2f, S2, ts',
++               'tm6': 'tm, S2f, tf, S2, ts',
++               'tm7': 'tm, S2f, S2, ts, Rex',
++               'tm8': 'tm, S2f, tf, S2, ts, Rex',
++               'tm9': 'tm, Rex'
++        }
++
++        # Indicies.
++        if model_name:
++            search_text = model_name
++            search_index = 0
++            return_index = 1
++        else:
++            search_text = bmrb_name
++            search_index = 1
++            return_index = 0
++
++        # Loop over the dictionary.
++        for item in map.items():
++            if item[search_index] == search_text:
++                return item[return_index]
++
++        # Should not be here!
++        if model_name:
++            raise RelaxError(&quot;The model-free model '%s' is unknown.&quot;)
++        else:
++            warn(RelaxWarning(&quot;The BMRB model-free model name '%s' is 
+unknown.&quot;))
++
++
++    def _sf_model_free_read(self, star):
++        &quot;&quot;&quot;Fill the spin containers with the model-free data from the 
+saveframe records.
++
++        @param star:    The NMR-STAR dictionary object.
++        @type star:     NMR_STAR instance
++        &quot;&quot;&quot;
++
++        # Init the list of model-free parameters.
++        mf_params = ['local_tm', 's2', 's2f', 's2s', 'te', 'tf', 'ts', 
+'rex', 'chi2']
++
++        # Get the entities.
++        for data in star.model_free.loop():
++            # Store the keys.
++            keys = data.keys()
++
++            # Global data.
++            if 'global_chi2' in keys:
++                setattr(cdp, 'chi2', data['global_chi2'])
++
++            # Loop over the spins.
++            for i in range(len(data['data_ids'])):
++                # Generate a spin ID.
++                spin_id = 
+mol_res_spin.generate_spin_id(res_num=data['res_nums'][i], 
+spin_name=data['atom_names'][i])
++
++                # Obtain the spin.
++                spin = mol_res_spin.return_spin(spin_id)
++
++                # Loop over and set the model-free parameters.
++                for param in mf_params:
++                    # Set the parameter.
++                    if param in keys:
++                        setattr(spin, param, data[param][i])
++
++                    # Set the error.
++                    param_err = param + '_err'
++                    if param_err in keys:
++                        setattr(spin, param_err, data[param_err][i])
++
++                # The model.
++                model = self._bmrb_model_map(bmrb_name=data['model_fit'][i])
++                setattr(spin, 'model', model)
++
++                # The equation and parameters.
++                equation, params = self._model_map(model)
++                setattr(spin, 'equation', equation)
++                setattr(spin, 'params', params)
++
++                # The element.
++                if'atom_types' in keys:
++                    setattr(spin, 'element', data['atom_types'][i])
++
++                # Heteronucleus type.
++                if'atom_types' in keys and 'isotope' in keys:
++                    setattr(spin, 'heteronuc_type', str(data['isotope'][i]) 
++ data['atom_types'][i])
++
++
++    def _sf_csa_read(self, star):
++        &quot;&quot;&quot;Place the CSA data from the saveframe records into the spin 
+container.
++
++        @param star:    The NMR-STAR dictionary object.
++        @type star:     NMR_STAR instance
++        &quot;&quot;&quot;
++
++        # Get the entities.
++        for data in star.chem_shift_anisotropy.loop():
++            # Loop over the spins.
++            for i in range(len(data['data_ids'])):
++                # Generate a spin ID.
++                spin_id = 
+mol_res_spin.generate_spin_id(res_num=data['res_nums'][i], 
+spin_name=data['atom_names'][i])
++
++                # Obtain the spin.
++                spin = mol_res_spin.return_spin(spin_id)
++
++                # The CSA value (converted from ppm).
++                setattr(spin, 'csa', data['csa'][i] * 1e-6)
++
++
+     def bmrb_read(self, file_path, version='3.1'):
+         &quot;&quot;&quot;Read the model-free results from a BMRB NMR-STAR v3.1 formatted 
+file.
+ 
+@@ -65,6 +198,12 @@
+         # Read the relaxation data saveframes.
+         relax_data.bmrb_read(star)
+ 
++        # Read the model-free data saveframes.
++        self._sf_model_free_read(star)
++
++        # Read the CSA data saveframes.
++        self._sf_csa_read(star)
++
+ 
+     def bmrb_write(self, file_path, version=None):
+         &quot;&quot;&quot;Write the model-free results to a BMRB NMR-STAR v3.1 formatted 
+file.
+@@ -91,29 +230,6 @@
+ 
+         # Rex frq.
+         rex_frq = cdp.frq[0]
+-
+-        # The relax to BMRB model-free model name map.
+-        model_map = {'m0':  '',
+-                     'm1':  'S2',
+-                     'm2':  'S2, te',
+-                     'm3':  'S2, Rex',
+-                     'm4':  'S2, te, Rex',
+-                     'm5':  'S2f, S2, ts',
+-                     'm6':  'S2f, tf, S2, ts',
+-                     'm7':  'S2f, S2, ts, Rex',
+-                     'm8':  'S2f, tf, S2, ts, Rex',
+-                     'm9':  'Rex',
+-                     'tm0': 'tm',
+-                     'tm1': 'tm, S2',
+-                     'tm2': 'tm, S2, te',
+-                     'tm3': 'tm, S2, Rex',
+-                     'tm4': 'tm, S2, te, Rex',
+-                     'tm5': 'tm, S2f, S2, ts',
+-                     'tm6': 'tm, S2f, tf, S2, ts',
+-                     'tm7': 'tm, S2f, S2, ts, Rex',
+-                     'tm8': 'tm, S2f, tf, S2, ts, Rex',
+-                     'tm9': 'tm, Rex'
+-        }
+ 
+         # Initialise the spin specific data lists.
+         mol_name_list = []
+@@ -223,7 +339,7 @@
+             chi2_list.append(spin.chi2)
+ 
+             # Model-free model.
+-            model_list.append(model_map[spin.model])
++            model_list.append(self._bmrb_model_map(model_name=spin.model))
+ 
+         # Convert the molecule names into the entity IDs.
+         entity_ids = zeros(len(mol_name_list), int32)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Oct 25 10:20:01 2010</div>  
+</body>
+</html>

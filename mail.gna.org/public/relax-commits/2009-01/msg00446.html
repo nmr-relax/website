@@ -1,0 +1,236 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r8671 &#45; /branches/ave_noe/generic_fns/mol_res_spin.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 27 Jan 2009 16:14:22 +0100 -->
+<!--X-Message-Id: E1LRpdu&#45;0007pX&#45;Ol@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r8671 - /branches/ave_noe/generic_fns/mol_res_spin.py -- January 27, 2009 - 16:14</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r8671 - /branches/ave_noe/generic_fns/mol_res_spin.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00446" class="tabs">Index by Date</a> | <a href="threads.html#00446" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00445.html">Date Prev</a>] [<a href="msg00447.html">Date Next</a>] [<a href="msg00445.html">Thread Prev</a>] [<a href="msg00447.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 27 Jan 2009 15:14:22 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00446.html">E1LRpdu-0007pX-Ol@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on January 27, 2009 - 16:14:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Jan 27 16:14:22 2009
+New Revision: 8671
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=8671&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=8671&amp;view=rev</a>
+Log:
+Wrote the create_pseudo_spin() and __linear_ave() functions for pseudo-atom 
+support.
+
+
+Modified:
+    branches/ave_noe/generic_fns/mol_res_spin.py
+
+Modified: branches/ave_noe/generic_fns/mol_res_spin.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/ave_noe/generic_fns/mol_res_spin.py?rev=8671&amp;r1=8670&amp;r2=8671&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/ave_noe/generic_fns/mol_res_spin.py?rev=8671&amp;r1=8670&amp;r2=8671&amp;view=diff</a>
+==============================================================================
+--- branches/ave_noe/generic_fns/mol_res_spin.py (original)
++++ branches/ave_noe/generic_fns/mol_res_spin.py Tue Jan 27 16:14:22 2009
+@@ -45,7 +45,7 @@
+ from data.mol_res_spin import MoleculeContainer, ResidueContainer, 
+SpinContainer
+ from generic_fns import pipes
+ from generic_fns import relax_re
+-from relax_errors import RelaxError, RelaxResSelectDisallowError, 
+RelaxSpinSelectDisallowError
++from relax_errors import RelaxError, RelaxNoSpinError, 
+RelaxResSelectDisallowError, RelaxSpinSelectDisallowError
+ from relax_warnings import RelaxWarning
+ 
+ 
+@@ -490,6 +490,46 @@
+ 
+ 
+ 
++def __linear_ave(positions):
++    &quot;&quot;&quot;Perform linear averaging of the atomic positions.
++
++    @param positions:   The atomic positions.  The first index is that of 
+the positions to be
++                        averaged over.  The second, optionally, can be the 
+different models if
++                        present.  The last index is over the x, y, and z 
+coordinates.
++    @type positions:    rank-2 list of floats or rank-3 list of floats
++    @return:            The averaged positions.  Either a single vector or 
+an list of vectors.
++    @rtype:             rank-1 list of floats or rank-2 list of floats
++    &quot;&quot;&quot;
++
++    # Multi-model averaging.
++    multi_model = False
++    if type(positions[0][0]) == list:
++        multi_model = True
++
++    # Convert a rank-2 list into a rank-3 list (avoid code duplication).
++    if not multi_model:
++        for i in range(len(positions)):
++            positions[i] = [positions[i]]
++
++    # Loop over the multiple models.
++    ave = []
++    for model_index in range(len(positions[0])):
++        # Append an empty vector.
++        ave.append([0.0, 0.0, 0.0])
++
++        # Loop over the x, y, and z coordinates.
++        for coord_index in range(3):
++            # Loop over the atomic positions.
++            for atom_index in range(len(positions)):
++                ave[model_index][coord_index] = 
+ave[model_index][coord_index] + 
+positions[atom_index][model_index][coord_index]
++
++            # Average.
++            ave[model_index][coord_index] = ave[model_index][coord_index] / 
+len(positions)
++
++    # Return the averaged positions.
++    return ave
++
++
+ def copy_molecule(pipe_from=None, mol_from=None, pipe_to=None, mol_to=None):
+     &quot;&quot;&quot;Copy the contents of a molecule container to a new molecule.
+ 
+@@ -831,6 +871,69 @@
+ 
+     # Add the residue.
+     mol_to_cont.res.add_item(res_num=res_num, res_name=res_name)
++
++
++def create_pseudo_spin(spin_name=None, spin_num=None, res_id=None, 
+members=None, averaging=None):
++    &quot;&quot;&quot;Add a pseudo-atom spin container into the relax data store.
++    
++    @param spin_name:   The name of the new pseudo-spin.
++    @type spin_name:    str
++    @param spin_num:    The identification number of the new spin.
++    @type spin_num:     int
++    @param res_id:      The molecule and residue identification string.
++    @type res_id:       str
++    &quot;&quot;&quot;
++
++    # Test if the current data pipe exists.
++    pipes.test()
++
++    # Get the current data pipe.
++    cdp = pipes.get_pipe()
++
++    # Split up the selection string.
++    mol_token, res_token, spin_token = tokenise(res_id)
++
++    # Disallow spin selections.
++    if spin_token != None:
++        raise RelaxSpinSelectDisallowError
++
++    # Get the residue container to add the spin to.
++    if res_id:
++        res_to_cont = return_residue(res_id)
++        if res_to_cont == None:
++            raise RelaxError, &quot;The residue in &quot; + `res_id` + &quot; does not 
+exist in the current data pipe.&quot;
++    else:
++        res_to_cont = cdp.mol[0].res[0]
++
++    # Check the averaging technique.
++    if averaging not in ['linear']:
++        raise RelaxError, &quot;The '%s' averaging technique is unknown.&quot; % 
+averaging
++
++    # Get the spin positions.
++    positions = []
++    for atom in members:
++        # Get the spin container.
++        spin = return_spin(atom)
++
++        # Test that the spin exists.
++        if spin == None:
++            raise RelaxNoSpinError, atom
++
++        # Test the position.
++        if not hasattr(spin, 'pos') or not spin.pos:
++            raise RelaxError, &quot;Positional information is not available for 
+the atom '%s'.&quot; % atom
++
++        # Store the position.
++        positions.append(spin.pos)
++
++    # Add the spin.
++    res_to_cont.spin.add_item(spin_num=spin_num, spin_name=spin_name)
++    spin = res_to_cont.spin[-1]
++
++    # Set the pseudo-atom spin container attributes.
++    spin.averaging = averaging
++    if averaging == 'linear':
++        spin.pos = __linear_ave(positions)
+ 
+ 
+ def create_spin(spin_num=None, spin_name=None, res_id=None):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Jan 27 16:20:02 2009</div>  
+</body>
+</html>

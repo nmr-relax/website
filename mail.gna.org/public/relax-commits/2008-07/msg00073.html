@@ -1,0 +1,247 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r6678 &#45; /branches/rdc_analysis/generic_fns/structure/internal.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 04 Jul 2008 17:58:18 +0200 -->
+<!--X-Message-Id: E1KEnft&#45;0004HV&#45;FB@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r6678 - /branches/rdc_analysis/generic_fns/structure/internal.py -- July 04, 2008 - 17:58</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r6678 - /branches/rdc_analysis/generic_fns/structure/internal.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00073" class="tabs">Index by Date</a> | <a href="threads.html#00073" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00072.html">Date Prev</a>] [<a href="msg00074.html">Date Next</a>] [<a href="msg00072.html">Thread Prev</a>] [<a href="msg00074.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 04 Jul 2008 15:58:17 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00073.html">E1KEnft-0004HV-FB@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on July 04, 2008 - 17:58:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Jul  4 17:58:14 2008
+New Revision: 6678
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=6678&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=6678&amp;view=rev</a>
+Log:
+Bug fix for the loading of multiple files.
+
+Each time a new file was loaded, all its atoms would be appended to all other 
+presently loaded
+structures.  This would cause large slow downs of the atom_loop() function, 
+and a few other
+problems.  Now structures are referenced by structure index rather than model 
+number.
+
+
+Modified:
+    branches/rdc_analysis/generic_fns/structure/internal.py
+
+Modified: branches/rdc_analysis/generic_fns/structure/internal.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/rdc_analysis/generic_fns/structure/internal.py?rev=6678&amp;r1=6677&amp;r2=6678&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/rdc_analysis/generic_fns/structure/internal.py?rev=6678&amp;r1=6677&amp;r2=6678&amp;view=diff</a>
+==============================================================================
+--- branches/rdc_analysis/generic_fns/structure/internal.py (original)
++++ branches/rdc_analysis/generic_fns/structure/internal.py Fri Jul  4 
+17:58:14 2008
+@@ -49,34 +49,27 @@
+     id = 'internal'
+ 
+ 
+-    def __fill_object_from_pdb(self, records, model=None):
++    def __fill_object_from_pdb(self, records, struct_index):
+         &quot;&quot;&quot;Method for generating a complete Structure_container object from 
+the given PDB records.
+ 
+-        @param records:     A list of structural PDB records.
+-        @type records:      list of str
+-        @keyword model:     The model to add the data to.  If not supplied 
+and multiple models
+-                            exist, then the data will be added to all models.
+-        @type model:        None or int
+-        &quot;&quot;&quot;
+-
+-        # Loop over the models.
+-        for struct in self.structural_data:
+-            # Skip non-matching models.
+-            if model != None and model != struct.model:
+-                continue
+-
+-            # Loop over the records.
+-            for record in records:
+-                # Parse the record.
+-                record = self.__parse_pdb_record(record)
+-
+-                # Nothing to do.
+-                if not record:
+-                    continue
+-
+-                # Add the atom.
+-                if record[0] == 'ATOM' or record[0] == 'HETATM':
+-                    self.atom_add(pdb_record=record[0], atom_num=record[1], 
+atom_name=record[2], res_name=record[4], chain_id=record[5], 
+res_num=record[6], pos=[record[8], record[9], record[10]], 
+segment_id=record[13], element=record[14], model=model)
++        @param records:         A list of structural PDB records.
++        @type records:          list of str
++        @param struct_index:    The index of the structural container to add 
+the data to.
++        @type struct_index:     int
++        &quot;&quot;&quot;
++
++        # Loop over the records.
++        for record in records:
++            # Parse the record.
++            record = self.__parse_pdb_record(record)
++
++            # Nothing to do.
++            if not record:
++                continue
++
++            # Add the atom.
++            if record[0] == 'ATOM' or record[0] == 'HETATM':
++                self.atom_add(pdb_record=record[0], atom_num=record[1], 
+atom_name=record[2], res_name=record[4], chain_id=record[5], 
+res_num=record[6], pos=[record[8], record[9], record[10]], 
+segment_id=record[13], element=record[14], struct_index=struct_index)
+ 
+ 
+     def __get_chemical_name(self, hetID):
+@@ -297,7 +290,7 @@
+             raise RelaxError, &quot;The structural data is invalid.&quot;
+ 
+ 
+-    def atom_add(self, pdb_record=None, atom_num=None, atom_name=None, 
+res_name=None, chain_id=None, res_num=None, pos=[None, None, None], 
+segment_id=None, element=None, model=None):
++    def atom_add(self, pdb_record=None, atom_num=None, atom_name=None, 
+res_name=None, chain_id=None, res_num=None, pos=[None, None, None], 
+segment_id=None, element=None, struct_index=None):
+         &quot;&quot;&quot;Method for adding an atom to the structural data object.
+ 
+         This method will create the key-value pair for the given atom.
+@@ -321,31 +314,32 @@
+         @type segment_id:       str or None
+         @keyword element:       The element symbol.
+         @type element:          str or None
+-        @keyword model:         The model to add the atom to.  If not 
+supplied and multiple models
+-                                exist, then the atom will be added to all 
+models.
+-        @type model:            None or int
+-        &quot;&quot;&quot;
+-
+-
+-        # Loop over the models.
+-        for struct in self.structural_data:
+-            # Skip non-matching models.
+-            if model != None and model != struct.model:
++        @keyword struct_index:  The index of the structure to add the atom 
+to.  If not supplied and
++                                multiple structures or models are loaded, 
+then the atom will be
++                                added to all structures.
++        @type struct_index:     None or int
++        &quot;&quot;&quot;
++
++
++        # Loop over the structures.
++        for i in xrange(len(self.structural_data)):
++            # Skip non-matching structures.
++            if struct_index != None and struct_index != i:
+                 continue
+ 
+             # Append to all the arrays.
+-            struct.atom_num.append(atom_num)
+-            struct.atom_name.append(atom_name)
+-            struct.bonded.append([])
+-            struct.chain_id.append(chain_id)
+-            struct.element.append(element)
+-            struct.pdb_record.append(pdb_record)
+-            struct.res_name.append(res_name)
+-            struct.res_num.append(res_num)
+-            struct.seg_id.append(segment_id)
+-            struct.x.append(pos[0])
+-            struct.y.append(pos[1])
+-            struct.z.append(pos[2])
++            self.structural_data[i].atom_num.append(atom_num)
++            self.structural_data[i].atom_name.append(atom_name)
++            self.structural_data[i].bonded.append([])
++            self.structural_data[i].chain_id.append(chain_id)
++            self.structural_data[i].element.append(element)
++            self.structural_data[i].pdb_record.append(pdb_record)
++            self.structural_data[i].res_name.append(res_name)
++            self.structural_data[i].res_num.append(res_num)
++            self.structural_data[i].seg_id.append(segment_id)
++            self.structural_data[i].x.append(pos[0])
++            self.structural_data[i].y.append(pos[1])
++            self.structural_data[i].z.append(pos[2])
+ 
+ 
+     def atom_connect(self, index1=None, index2=None, model=None):
+@@ -551,7 +545,7 @@
+             # Initialise and fill the structural data object.
+             self.structural_data.append(Structure_container())
+             self.structural_data[-1].model = model_num
+-            self.__fill_object_from_pdb(records, model_num)
++            self.__fill_object_from_pdb(records, len(self.structural_data)-1)
+ 
+ 
+     def terminate(self, model=None):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Jul 04 18:40:14 2008</div>  
+</body>
+</html>

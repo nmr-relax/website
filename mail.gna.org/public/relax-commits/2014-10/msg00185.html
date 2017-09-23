@@ -1,0 +1,321 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r26289 &#45; /trunk/gui/controller.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 15 Oct 2014 16:56:13 +0200 -->
+<!--X-Message-Id: E1XePzo&#45;0000XS&#45;Vx@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r26289 - /trunk/gui/controller.py -- October 15, 2014 - 16:56</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r26289 - /trunk/gui/controller.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00185" class="tabs">Index by Date</a> | <a href="threads.html#00185" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00184.html">Date Prev</a>] [<a href="msg00186.html">Date Next</a>] [<a href="msg00184.html">Thread Prev</a>] [<a href="msg00186.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 15 Oct 2014 14:56:12 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00185.html">E1XePzo-0000XS-Vx@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on October 15, 2014 - 16:56:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Oct 15 16:56:12 2014
+New Revision: 26289
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=26289&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=26289&amp;view=rev</a>
+Log:
+Complete redesign of the following of text in the relax controller window in 
+the GUI.
+
+The current design for some reason no longer worked very often, and there 
+would be many situations
+where the scrolling to follow the text output would stop and could never be 
+recovered.  Therefore
+this feature has been redesigned.
+
+In the LogCtrl element of the relax controller, which displays the relax 
+output messages, the at_end
+class boolean variable has been introduced.  It defaults to True.  The 
+following events will turn it
+off:  Arrow keys, Home key, End key, Ctrl-Home key, Mouse button clicks, 
+Mouse wheel scrolling,
+Window thumbtrack scrolling (the side scrollbar), finding text, the pop up 
+menu 'Go to start',
+and Select all (menu or Ctrl-A).  It will only be turned on in two cases:  
+The pop up menu 'Go to
+end', and if the caret is on the final line (caused by Ctrl-End, Mouse wheel 
+scrolling, Page Down,
+Down arrow, Window thumbtrack scrolling, etc.).
+
+Three new methods have been introduced to handle certain events:  
+capture_mouse() for mouse button
+clicks, capture_mouse_wheel() for mouse wheel scrolling, and capture_scroll 
+for window thumbtrack
+scrolling.
+
+
+Modified:
+    trunk/gui/controller.py
+
+Modified: trunk/gui/controller.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/gui/controller.py?rev=26289&amp;r1=26288&amp;r2=26289&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/gui/controller.py?rev=26289&amp;r1=26288&amp;r2=26289&amp;view=diff</a>
+==============================================================================
+--- trunk/gui/controller.py     (original)
++++ trunk/gui/controller.py     Wed Oct 15 16:56:12 2014
+@@ -599,6 +599,9 @@
+         # Initialise the base class.
+         super(LogCtrl, self).__init__(parent, id=id, pos=pos, size=size, 
+style=style, name=name)
+ 
++        # Flag for scrolling to the bottom.
++        self.at_end = True
++
+         # Turn on line wrapping.
+         self.SetWrapMode(wx.stc.STC_WRAP_WORD)
+ 
+@@ -652,7 +655,10 @@
+         self.Bind(wx.EVT_FIND_NEXT, self.find)
+         self.Bind(wx.EVT_FIND_CLOSE, self.find_close)
+         self.Bind(wx.EVT_KEY_DOWN, self.capture_keys)
++        self.Bind(wx.EVT_MOUSE_EVENTS, self.capture_mouse)
++        self.Bind(wx.EVT_MOUSEWHEEL, self.capture_mouse_wheel)
+         self.Bind(wx.EVT_RIGHT_DOWN, self.pop_up_menu)
++        self.Bind(wx.EVT_SCROLLWIN_THUMBTRACK, self.capture_scroll)
+         self.Bind(wx.EVT_MENU, self.find_open, id=self.menu_id_find)
+         self.Bind(wx.EVT_MENU, self.on_copy, id=self.menu_id_copy)
+         self.Bind(wx.EVT_MENU, self.on_select_all, 
+id=self.menu_id_select_all)
+@@ -690,10 +696,12 @@
+ 
+         # Allow caret movements (arrow keys, home, end).
+         if event.GetKeyCode() in [312, 313, 314, 315, 316, 317]:
++            self.at_end = False
+             event.Skip()
+ 
+         # Allow scrolling (pg up, pg dn):
+         if event.GetKeyCode() in [366, 367]:
++            self.at_end = False
+             event.Skip()
+ 
+         # Zooming.
+@@ -705,10 +713,62 @@
+             self.on_zoom_in(event)
+ 
+         # Jump to start or end (Ctrl-Home and Ctrl-End).
+-        if event.ControlDown() and event.GetKeyCode() == 316:
++        if event.ControlDown() and event.GetKeyCode() == 313:
+             self.on_goto_start(event)
+-        elif event.ControlDown() and event.GetKeyCode() == 317:
++        elif event.ControlDown() and event.GetKeyCode() == 312:
+             self.on_goto_end(event)
++
++
++    def capture_mouse(self, event):
++        &quot;&quot;&quot;Control the mouse events.
++
++        @param event:   The wx event.
++        @type event:    wx event
++        &quot;&quot;&quot;
++
++        # Stop following the end if a mouse button is clicked.
++        if event.ButtonDown():
++            self.at_end = False
++
++        # Continue with the event.
++        event.Skip()
++
++
++    def capture_mouse_wheel(self, event):
++        &quot;&quot;&quot;Control the mouse wheel events.
++
++        @param event:   The wx event.
++        @type event:    wx event
++        &quot;&quot;&quot;
++
++        # Stop following the end on all events.
++        self.at_end = False
++
++        # Move the caret with the scroll, to prevent following the end.
++        scroll = event.GetLinesPerAction()
++        if event.GetWheelRotation() &gt; 0.0:
++            scroll *= -1
++        self.GotoLine(self.GetCurrentLine() + scroll)
++
++        # Continue with the event.
++        event.Skip()
++
++
++    def capture_scroll(self, event):
++        &quot;&quot;&quot;Control the window scrolling events.
++
++        @param event:   The wx event.
++        @type event:    wx event
++        &quot;&quot;&quot;
++
++        # Stop following the end on all events.
++        self.at_end = False
++
++        # Move the caret with the scroll (at the bottom), to prevent 
+following the end.
++        self.GotoLine(event.GetPosition() + self.LinesOnScreen() - 1)
++
++        # Continue with the event.
++        event.Skip()
+ 
+ 
+     def clear(self):
+@@ -772,8 +832,11 @@
+ 
+         # Found text.
+         else:
+-            # Move to the line.
++            # Make the text visible.
+             self.EnsureCaretVisible()
++
++            # Stop following the end on all events.
++            self.at_end = False
+ 
+ 
+     def find_close(self, event):
+@@ -796,6 +859,9 @@
+         @param event:   The wx event.
+         @type event:    wx event
+         &quot;&quot;&quot;
++
++        # Turn off the end flag.
++        self.at_end = False
+ 
+         # Initialise the dialog if it doesn't exist.
+         if self.find_dlg == None:
+@@ -814,6 +880,9 @@
+         @param event:   The wx event.
+         @type event:    wx event
+         &quot;&quot;&quot;
++
++        # Turn off the end flag.
++        self.at_end = False
+ 
+         # Text has already been set.
+         if self.find_data.GetFindString():
+@@ -936,6 +1005,9 @@
+         @type event:    wx event
+         &quot;&quot;&quot;
+ 
++        # Turn on the end flag.
++        self.at_end = True
++
+         # Go to the end.
+         self.GotoPos(self.GetLength())
+ 
+@@ -947,6 +1019,9 @@
+         @type event:    wx event
+         &quot;&quot;&quot;
+ 
++        # Turn off the end flag.
++        self.at_end = False
++
+         # Go to the start.
+         self.GotoPos(-1)
+ 
+@@ -957,6 +1032,9 @@
+         @param event:   The wx event.
+         @type event:    wx event
+         &quot;&quot;&quot;
++
++        # Turn off the end flag.
++        self.at_end = False
+ 
+         # Select all text in the control.
+         self.SelectAll()
+@@ -1027,17 +1105,16 @@
+     def write(self):
+         &quot;&quot;&quot;Write the text in the log queue to the log control.&quot;&quot;&quot;
+ 
++        # At the end?
++        if self.GetScrollRange(wx.VERTICAL) - self.GetCurrentLine() &lt;= 1:
++            self.at_end = True
++
+         # Get the text.
+         string_list, stream_list = self.get_text()
+ 
+         # Nothing to do.
+         if len(string_list) == 1 and string_list[0] == '':
+             return
+-
+-        # At the end?
+-        at_end = False
+-        if self.GetScrollPos(wx.VERTICAL) == 
+self.GetScrollRange(wx.VERTICAL) - self.LinesOnScreen():
+-            at_end = True
+ 
+         # Turn of the read only state.
+         self.SetReadOnly(False)
+@@ -1073,8 +1150,8 @@
+         self.limit_scrollback()
+ 
+         # Stay at the end.
+-        if at_end:
+-            self.ScrollToLine(self.GetLineCount())
++        if self.at_end:
++            self.DocumentEnd()
+ 
+         # Make the control read only again.
+         self.SetReadOnly(True)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Oct 15 18:00:03 2014</div>  
+</body>
+</html>

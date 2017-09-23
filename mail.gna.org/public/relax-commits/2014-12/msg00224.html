@@ -1,0 +1,285 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r27101 &#45; in /trunk: pipe_control/structure/main.py user_functions/structure.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 11 Dec 2014 19:37:46 +0100 -->
+<!--X-Message-Id: E1Xz8cU&#45;0001EU&#45;Mr@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r27101 - in /trunk: pipe_control/structure/main.py user_functions/structure.py -- December 11, 2014 - 19:37</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r27101 - in /trunk: pipe_control/structure/main.py user_functions/structure.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00224" class="tabs">Index by Date</a> | <a href="threads.html#00224" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00223.html">Date Prev</a>] [<a href="msg00225.html">Date Next</a>] [<a href="msg00223.html">Thread Prev</a>] [<a href="msg00225.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 11 Dec 2014 18:37:46 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00224.html">E1Xz8cU-0001EU-Mr@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on December 11, 2014 - 19:37:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Dec 11 19:37:46 2014
+New Revision: 27101
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=27101&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=27101&amp;view=rev</a>
+Log:
+Added the displace_id argument to the structure.align and 
+structure.superimpose user functions.
+
+This gives both of these user functions finer control over which atoms are 
+translated and rotated by
+the algorithm.  This allows, for example, to align structures based on a set 
+of backbone heavy atoms
+while the protons and side chains are displaced by default.  Or if a domain 
+is aligned, then just
+that domain can be displaced.
+
+
+Modified:
+    trunk/pipe_control/structure/main.py
+    trunk/user_functions/structure.py
+
+Modified: trunk/pipe_control/structure/main.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/pipe_control/structure/main.py?rev=27101&amp;r1=27100&amp;r2=27101&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/pipe_control/structure/main.py?rev=27101&amp;r1=27100&amp;r2=27101&amp;view=diff</a>
+==============================================================================
+--- trunk/pipe_control/structure/main.py        (original)
++++ trunk/pipe_control/structure/main.py        Thu Dec 11 19:37:46 2014
+@@ -106,7 +106,7 @@
+     print(&quot;Created the empty model number %s.&quot; % model_num)
+ 
+ 
+-def align(pipes=None, models=None, molecules=None, atom_id=None, method='fit 
+to mean', centre_type=&quot;centroid&quot;, centroid=None):
++def align(pipes=None, models=None, molecules=None, atom_id=None, 
+displace_id=None, method='fit to mean', centre_type=&quot;centroid&quot;, 
+centroid=None):
+     &quot;&quot;&quot;Superimpose a set of related, but not identical structures.
+ 
+     @keyword pipes:         The data pipes to include in the alignment and 
+superimposition.
+@@ -117,6 +117,8 @@
+     @type molecules:        None or list of str
+     @keyword atom_id:       The molecule, residue, and atom identifier 
+string.  This matches the spin ID string format.
+     @type atom_id:          str or None
++    @keyword displace_id:   The atom ID string for restricting the 
+displacement to a subset of all atoms.  If not set, then all atoms will be 
+translated and rotated.
++    @type displace_id:      str or None
+     @keyword method:        The superimposition method.  It must be one of 
+'fit to mean' or 'fit to first'.
+     @type method:           str
+     @keyword centre_type:   The type of centre to superimpose over.  This 
+can either be the standard centroid superimposition or the CoM could be used 
+instead.
+@@ -151,8 +153,15 @@
+     # Loop over all pipes, models, and molecules.
+     i = 0
+     for pipe_index, model_num, mol_name in structure_loop(pipes=pipes, 
+molecules=molecules, models=models, atom_id=atom_id):
+-        # The atom ID from the molecule name.
+-        id = '#%s' % mol_name
++        # Add the molecule name to the displacement ID if required.
++        id = displace_id
++        if molecules != None:
++            if displace_id == None:
++                id = '#%s' % mol_name
++            elif not search('#', displace_id):
++                id = '#%s' % mol_name
++            else:
++                id = '#%s%s' % (mol_name, displace_id)
+ 
+         # Translate the molecule first (the rotational pivot is defined in 
+the first model).
+         translate(T=T[i], model=model_num, pipe_name=pipes[pipe_index], 
+atom_id=id)
+@@ -1110,7 +1119,7 @@
+         yield pipe_index, model_num, mol_name
+ 
+ 
+-def superimpose(models=None, method='fit to mean', atom_id=None, 
+centre_type=&quot;centroid&quot;, centroid=None):
++def superimpose(models=None, method='fit to mean', atom_id=None, 
+displace_id=None, centre_type=&quot;centroid&quot;, centroid=None):
+     &quot;&quot;&quot;Superimpose a set of structural models.
+ 
+     @keyword models:        The list of models to superimpose.  If set to 
+None, then all models will be used.
+@@ -1119,6 +1128,8 @@
+     @type method:           str
+     @keyword atom_id:       The molecule, residue, and atom identifier 
+string.  This matches the spin ID string format.
+     @type atom_id:          str or None
++    @keyword displace_id:   The atom ID string for restricting the 
+displacement to a subset of all atoms.  If not set, then all atoms will be 
+translated and rotated.
++    @type displace_id:      str or None
+     @keyword centre_type:   The type of centre to superimpose over.  This 
+can either be the standard centroid superimposition or the CoM could be used 
+instead.
+     @type centre_type:      str
+     @keyword centroid:      An alternative position of the centroid to allow 
+for different superpositions, for example of pivot point motions.
+@@ -1151,10 +1162,10 @@
+     # Update to the new coordinates.
+     for i in range(len(models)):
+         # Translate the molecule first (the rotational pivot is defined in 
+the first model).
+-        translate(T=T[i], model=models[i])
++        translate(T=T[i], model=models[i], atom_id=displace_id)
+ 
+         # Rotate the molecule.
+-        rotate(R=R[i], origin=pivot[i], model=models[i])
++        rotate(R=R[i], origin=pivot[i], model=models[i], atom_id=displace_id)
+ 
+ 
+ def translate(T=None, model=None, atom_id=None, pipe_name=None):
+
+Modified: trunk/user_functions/structure.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/user_functions/structure.py?rev=27101&amp;r1=27100&amp;r2=27101&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/user_functions/structure.py?rev=27101&amp;r1=27100&amp;r2=27101&amp;view=diff</a>
+==============================================================================
+--- trunk/user_functions/structure.py   (original)
++++ trunk/user_functions/structure.py   Thu Dec 11 19:37:46 2014
+@@ -46,6 +46,7 @@
+ # Text for the multi-structure paragraph.
+ paragraph_multi_struct = &quot;Support for multiple structures is provided by the 
+data pipes, model numbers and molecule names arguments.  Each data pipe, 
+model and molecule combination will be treated as a separate structure.  As 
+only atomic coordinates with the same residue name and number and atom name 
+will be assembled, structures with slightly different atomic structures can 
+be compared.  If the list of models is not supplied, then all models of all 
+data pipes will be used.  If the optional molecules list is supplied, each 
+molecule in the list will be considered as a separate structure for 
+comparison between each other.&quot;
+ paragraph_atom_id = &quot;The atom ID string, which uses the same notation as the 
+spin ID, can be used to restrict the coordinates compared to a subset of 
+molecules, residues, or atoms.  For example to only use backbone heavy atoms 
+in a protein, set the atom ID to '@N,C,CA,O', assuming those are the names of 
+the atoms in the 3D structural file.&quot;
++paragraph_displace_id = &quot;The displacement ID string, which is similar to the 
+atom ID, gives finer control over which atoms are translated and rotated by 
+the algorithm.  When not set this allows, for example, to align structures 
+based on a set of backbone heavy atoms and the backbone protons and 
+side-chains are displaced by default.  Or if set to the same as the atom ID, 
+if a single domain is aligned, then just that domain will be displaced.&quot;
+ 
+ 
+ # The user function class.
+@@ -195,6 +196,13 @@
+     can_be_none = True
+ )
+ uf.add_keyarg(
++    name = &quot;displace_id&quot;,
++    py_type = &quot;str&quot;,
++    desc_short = &quot;displacement ID string&quot;,
++    desc = &quot;The atom identification string for restricting the displacement 
+to a subset of all atoms.  If not set, then all atoms will be translated and 
+rotated.&quot;,
++    can_be_none = True
++)
++uf.add_keyarg(
+     name = &quot;method&quot;,
+     default = &quot;fit to mean&quot;,
+     py_type = &quot;str&quot;,
+@@ -229,6 +237,7 @@
+ uf.desc[-1].add_paragraph(&quot;By supplying the position of the centroid, an 
+alternative position than the standard rigid body centre is used as the focal 
+point of the superimposition.  The allows, for example, the superimposition 
+about a pivot point.&quot;)
+ uf.desc[-1].add_paragraph(paragraph_multi_struct)
+ uf.desc[-1].add_paragraph(paragraph_atom_id)
++uf.desc[-1].add_paragraph(paragraph_displace_id)
+ # Prompt examples.
+ uf.desc.append(Desc_container(&quot;Prompt examples&quot;))
+ uf.desc[-1].add_paragraph(&quot;To superimpose all sets of models, exactly as in 
+the structure.superimpose user function, type one of:&quot;)
+@@ -1178,6 +1187,13 @@
+     can_be_none = True
+ )
+ uf.add_keyarg(
++    name = &quot;displace_id&quot;,
++    py_type = &quot;str&quot;,
++    desc_short = &quot;displacement ID string&quot;,
++    desc = &quot;The atom identification string for restricting the displacement 
+to a subset of all atoms.  If not set, then all atoms will be translated and 
+rotated.&quot;,
++    can_be_none = True
++)
++uf.add_keyarg(
+     name = &quot;centre_type&quot;,
+     py_type = &quot;str&quot;,
+     default = &quot;centroid&quot;,
+@@ -1201,6 +1217,7 @@
+ uf.desc[-1].add_item_list_element(&quot;'fit to first'&quot;, &quot;This is quicker but is 
+not as accurate for an ensemble description.  The Kabsch algorithm is used to 
+rotate and translate each model to be superimposed onto the first model.&quot;)
+ uf.desc[-1].add_paragraph(&quot;If the list of models is not supplied, then all 
+models will be superimposed.&quot;)
+ uf.desc[-1].add_paragraph(paragraph_atom_id)
++uf.desc[-1].add_paragraph(paragraph_displace_id)
+ uf.desc[-1].add_paragraph(&quot;By supplying the position of the centroid, an 
+alternative position than the standard rigid body centre is used as the focal 
+point of the superimposition.  The allows, for example, the superimposition 
+about a pivot point.&quot;)
+ # Prompt examples.
+ uf.desc.append(Desc_container(&quot;Prompt examples&quot;))
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Dec 11 19:40:02 2014</div>  
+</body>
+</html>

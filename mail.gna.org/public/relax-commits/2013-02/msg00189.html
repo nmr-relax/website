@@ -1,0 +1,161 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r18517 &#45; in /trunk/specific_fns/model_free: macro_base.py main.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 20 Feb 2013 10:13:02 +0100 -->
+<!--X-Message-Id: E1U85ja&#45;0002L9&#45;3f@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r18517 - in /trunk/specific_fns/model_free: macro_base.py main.py -- February 20, 2013 - 10:13</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r18517 - in /trunk/specific_fns/model_free: macro_base.py main.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00189" class="tabs">Index by Date</a> | <a href="threads.html#00189" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00188.html">Date Prev</a>] [<a href="msg00190.html">Date Next</a>] [<a href="msg00188.html">Thread Prev</a>] [<a href="msg00190.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 20 Feb 2013 09:13:02 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00189.html">E1U85ja-0002L9-3f@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on February 20, 2013 - 10:13:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Feb 20 10:13:01 2013
+New Revision: 18517
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=18517&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=18517&amp;view=rev</a>
+Log:
+Added some work-arounds for the model-free specific code for when no 
+relaxation data is present.
+
+This is needed for the Rex scaling, as the ID of the first relaxation data 
+set was being used to
+select the first frequency.  As caught by the 
+Mf.test_bug_20531_molmol_macro_write_relaxfault system
+test, this fails if no relaxation data is present.
+
+
+Modified:
+    trunk/specific_fns/model_free/macro_base.py
+    trunk/specific_fns/model_free/main.py
+
+Modified: trunk/specific_fns/model_free/macro_base.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/specific_fns/model_free/macro_base.py?rev=18517&amp;r1=18516&amp;r2=18517&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/specific_fns/model_free/macro_base.py?rev=18517&amp;r1=18516&amp;r2=18517&amp;view=diff</a>
+==============================================================================
+--- trunk/specific_fns/model_free/macro_base.py (original)
++++ trunk/specific_fns/model_free/macro_base.py Wed Feb 20 10:13:01 2013
+@@ -442,8 +442,18 @@
+     def classic_rex(self, res_num, rex, colour_start, colour_end, 
+colour_list):
+         &quot;&quot;&quot;Function for generating the bond width and colours for 
+correlation times.&quot;&quot;&quot;
+ 
+-        # The Rex value at the first field strength.
+-        rex = rex * (2.0 * pi * cdp.frq[cdp.ri_ids[0]])**2
++        # The 1st spectrometer frequency.
++        if not hasattr(cdp, 'frq'):
++            raise RelaxError(&quot;No spectrometer frequency information is 
+present in the current data pipe.&quot;)
++        if hasattr(cdp, 'ri_ids'):
++            frq = cdp.frq[cdp.ri_ids[0]]
++        else:       # Take the highest frequency, if all else fails.
++            frqs = cdp.frq.values()
++            frqs.sort()
++            frq = frqs[-1]
++
++        # The Rex value.
++        rex = rex * (2.0 * pi * frq)**2
+ 
+         # The bond width (aiming for a width range of 2 to 0 for Rex values 
+of 0 to 25 s^-1).
+         width = 2.0 - 2.0 / (rex/5.0 + 1.0)
+
+Modified: trunk/specific_fns/model_free/main.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/specific_fns/model_free/main.py?rev=18517&amp;r1=18516&amp;r2=18517&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/specific_fns/model_free/main.py?rev=18517&amp;r1=18516&amp;r2=18517&amp;view=diff</a>
+==============================================================================
+--- trunk/specific_fns/model_free/main.py (original)
++++ trunk/specific_fns/model_free/main.py Wed Feb 20 10:13:01 2013
+@@ -521,8 +521,22 @@
+         @rtype:     float
+         &quot;&quot;&quot;
+ 
++        # No frequency info.
++        if not hasattr(cdp, 'frq'):
++            raise RelaxError(&quot;No spectrometer frequency information is 
+present in the current data pipe.&quot;)
++
++        # The 1st spectrometer frequency.
++        if hasattr(cdp, 'ri_ids'):
++            frq = cdp.frq[cdp.ri_ids[0]]
++
++        # Take the highest frequency, if all else fails.
++        else:
++            frqs = cdp.frq.values()
++            frqs.sort()
++            frq = frqs[-1]
++
+         # The factor.
+-        return 1.0 / (2.0 * pi * cdp.frq[cdp.ri_ids[0]])**2
++        return 1.0 / (2.0 * pi * frq)**2
+ 
+ 
+     def _create_model(self, model=None, equation=None, params=None, 
+spin_id=None):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Feb 20 10:20:02 2013</div>  
+</body>
+</html>

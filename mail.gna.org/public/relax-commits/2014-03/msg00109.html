@@ -1,0 +1,319 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r22499 &#45; /trunk/specific_analyses/relax_disp/parameters.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 17 Mar 2014 18:19:02 +0100 -->
+<!--X-Message-Id: E1WPbBm&#45;0002mD&#45;4l@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r22499 - /trunk/specific_analyses/relax_disp/parameters.py -- March 17, 2014 - 18:19</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r22499 - /trunk/specific_analyses/relax_disp/parameters.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00109" class="tabs">Index by Date</a> | <a href="threads.html#00109" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00108.html">Date Prev</a>] [<a href="msg00110.html">Date Next</a>] [<a href="msg00108.html">Thread Prev</a>] [<a href="msg00110.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 17 Mar 2014 17:19:02 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00109.html">E1WPbBm-0002mD-4l@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on March 17, 2014 - 18:19:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Mon Mar 17 18:19:01 2014
+New Revision: 22499
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=22499&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=22499&amp;view=rev</a>
+Log:
+Replaced how a global analysis average results from a previous run to instead 
+take the median.
+
+This is to prevent averaging extreme outliers, and instead take the median of 
+the previous result.
+This was discussed in: 
+<a  rel="nofollow" href="https://mail.gna.org/public/relax-devel/2013-10/msg00009.html">https://mail.gna.org/public/relax-devel/2013-10/msg00009.html</a>.
+
+Modified:
+    trunk/specific_analyses/relax_disp/parameters.py
+
+Modified: trunk/specific_analyses/relax_disp/parameters.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/relax_disp/parameters.py?rev=22499&amp;r1=22498&amp;r2=22499&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/relax_disp/parameters.py?rev=22499&amp;r1=22498&amp;r2=22499&amp;view=diff</a>
+==============================================================================
+--- trunk/specific_analyses/relax_disp/parameters.py    (original)
++++ trunk/specific_analyses/relax_disp/parameters.py    Mon Mar 17 18:19:01 
+2014
+@@ -25,7 +25,7 @@
+ 
+ # Python module imports.
+ from copy import deepcopy
+-from numpy import array, float64, identity, zeros
++from numpy import array, float64, identity, median, zeros
+ import sys
+ 
+ # relax module imports.
+@@ -123,7 +123,8 @@
+ 
+ 
+ def copy(pipe_from=None, pipe_to=None):
+-    &quot;&quot;&quot;Copy dispersion parameters from one data pipe to another, averaging 
+values for clusters.
++    &quot;&quot;&quot;Copy dispersion parameters from one data pipe to another, taking the 
+median of previous values to a start value for clusters.
++    Taking the median prevent averaging extreme outliers.
+ 
+     @param pipe_from:   The data pipe to copy the value from.  This defaults 
+to the current data pipe.
+     @type pipe_from:    str
+@@ -161,23 +162,23 @@
+     for spin_ids in loop_cluster():
+         # Initialise some variables.
+         model = None
+-        pA = 0.0
+-        pB = 0.0
+-        pC = 0.0
+-        kex = 0.0
+-        kex_AB = 0.0
+-        kex_AC = 0.0
+-        kex_BC = 0.0
+-        k_AB = 0.0
+-        kB = 0.0
+-        kC = 0.0
+-        tex = 0.0
++        pA = [0.0]
++        pB = [0.0]
++        pC = [0.0]
++        kex = [0.0]
++        kex_AB = [0.0]
++        kex_AC = [0.0]
++        kex_BC = [0.0]
++        k_AB = [0.0]
++        kB = [0.0]
++        kC = [0.0]
++        tex = [0.0]
+         count = 0
+         spins_from = []
+         spins_to = []
+         selected_cluster = False
+ 
+-        # Loop over the spins, summing the parameters to be averaged.
++        # Loop over the spins, adding parameters to a list, which in the end 
+will be used to find the median.
+         for id in spin_ids:
+             # Get the spins, then store them.
+             spin_from = return_spin(id, pipe=pipe_from)
+@@ -208,27 +209,27 @@
+ 
+             # Sum the source parameters.
+             if 'pA' in spin_from.params:
+-                pA += spin_from.pA
++                pA.append(spin_from.pA)
+             if 'pB' in spin_from.params:
+-                pB += spin_from.pB
++                pB.append(spin_from.pB)
+             if 'pC' in spin_from.params:
+-                pC += spin_from.pC
++                pC.append(spin_from.pC)
+             if 'kex' in spin_from.params:
+-                kex += spin_from.kex
++                kex.append(spin_from.kex)
+             if 'kex_AB' in spin_from.params:
+-                kex_AB += spin_from.kex_AB
++                kex_AB.append(spin_from.kex_AB)
+             if 'kex_AC' in spin_from.params:
+-                kex_AC += spin_from.kex_AC
++                kex_AC.append(spin_from.kex_AC)
+             if 'kex_BC' in spin_from.params:
+-                kex_BC += spin_from.kex_BC
++                kex_BC.append(spin_from.kex_BC)
+             if 'k_AB' in spin_from.params:
+-                k_AB += spin_from.k_AB
++                k_AB.append(spin_from.k_AB)
+             if 'kB' in spin_from.params:
+-                kB += spin_from.kB
++                kB.append(spin_from.kB)
+             if 'kC' in spin_from.params:
+-                kC += spin_from.kC
++                kC.append(spin_from.kC)
+             if 'tex' in spin_from.params:
+-                tex += spin_from.tex
++                tex.append(spin_from.tex)
+ 
+             # Increment the spin count.
+             count += 1
+@@ -237,40 +238,40 @@
+         if not selected_cluster:
+             continue
+ 
+-        # Average parameters.
+-        if pA != 0.0:
+-            pA = pA / count
+-            print(&quot;Averaged pA value:  %.15f&quot; % pA)
+-        if pB != 0.0:
+-            pB = pB / count
+-            print(&quot;Averaged pA value:  %.15f&quot; % pA)
+-        if pC != 0.0:
+-            pC = pC / count
+-            print(&quot;Averaged pC value:  %.15f&quot; % pC)
+-        if kex != 0.0:
+-            kex = kex / count
+-            print(&quot;Averaged kex value: %.15f&quot; % kex)
+-        if kex_AB != 0.0:
+-            kex_AB = kex_AB / count
+-            print(&quot;Averaged k_AB value: %.15f&quot; % kex_AB)
+-        if kex_AC != 0.0:
+-            kex_AC = kex_AC / count
+-            print(&quot;Averaged k_AC value: %.15f&quot; % kex_AC)
+-        if kex_BC != 0.0:
+-            kex_BC = kex_BC / count
+-            print(&quot;Averaged k_BC value: %.15f&quot; % kex_BC)
+-        if k_AB != 0.0:
+-            k_AB = k_AB / count
+-            print(&quot;Averaged k_AB value: %.15f&quot; % k_AB)
+-        if kB != 0.0:
+-            kB = kB / count
+-            print(&quot;Averaged kB value:  %.15f&quot; % kB)
+-        if kC != 0.0:
+-            kC = kC / count
+-            print(&quot;Averaged kC value:  %.15f&quot; % kC)
+-        if tex != 0.0:
+-            tex = tex / count
+-            print(&quot;Averaged tex value: %.15f&quot; % tex)
++        # Take median of parameters.
++        if len(pA) &gt; 1:
++            pA = [median(pA)]
++            print(&quot;Median pA value:  %.15f&quot; % pA[0])
++        if len(pB) &gt; 1:
++            pB = [median(pB)]
++            print(&quot;Median pA value:  %.15f&quot; % pA[0])
++        if len(pC) &gt; 1:
++            pC = [median(pC)]
++            print(&quot;Median pC value:  %.15f&quot; % pC[0])
++        if len(kex) &gt; 1:
++            kex = [median(kex)]
++            print(&quot;Median kex value: %.15f&quot; % kex[0])
++        if len(kex_AB) &gt; 1:
++            kex_AB = [median(kex_AB)]
++            print(&quot;Median k_AB value: %.15f&quot; % kex_AB[0])
++        if len(kex_AC) &gt; 1:
++            kex_AC = [median(kex_AC)]
++            print(&quot;Median k_AC value: %.15f&quot; % kex_AC[0])
++        if len(kex_BC) &gt; 1:
++            kex_BC = [median(kex_BC)]
++            print(&quot;Median k_BC value: %.15f&quot; % kex_BC[0])
++        if len(k_AB) &gt; 1:
++            k_AB = [median(k_AB)]
++            print(&quot;Median k_AB value: %.15f&quot; % k_AB[0])
++        if len(kB) &gt; 1:
++            kB = [median(kB)]
++            print(&quot;Median kB value:  %.15f&quot; % kB[0])
++        if len(kC) &gt; 1:
++            kC = [median(kC)]
++            print(&quot;Median kC value:  %.15f&quot; % kC[0])
++        if len(tex) &gt; 1:
++            tex = [median(tex)]
++            print(&quot;Median tex value: %.15f&quot; % tex[0])
+ 
+         # Loop over the spins, this time copying the parameters.
+         for i in range(len(spin_ids)):
+@@ -290,30 +291,30 @@
+             if 'r2b' in spin_from.params:
+                 spin_to.r2b = deepcopy(spin_from.r2b)
+ 
+-            # The averaged parameters.
++            # The median parameters.
+             if 'pB' in spin_from.params and 'pC' not in spin_from.params:
+-                spin_to.pA = pA
+-                spin_to.pB = pB
+-                spin_to.pC = 1.0 - pA - pB
++                spin_to.pA = pA[0]
++                spin_to.pB = pB[0]
++                spin_to.pC = 1.0 - pA[0] - pB[0]
+             elif 'pA' in spin_from.params:
+-                spin_to.pA = pA
+-                spin_to.pB = 1.0 - pA
++                spin_to.pA = pA[0]
++                spin_to.pB = 1.0 - pA[0]
+             if 'kex' in spin_from.params:
+-                spin_to.kex = kex
++                spin_to.kex = kex[0]
+             if 'kex_AB' in spin_from.params:
+-                spin_to.kex_AB = kex_AB
++                spin_to.kex_AB = kex_AB[0]
+             if 'kex_AC' in spin_from.params:
+-                spin_to.kex_AC = kex_AC
++                spin_to.kex_AC = kex_AC[0]
+             if 'kex_BC' in spin_from.params:
+-                spin_to.kex_BC = kex_BC
++                spin_to.kex_BC = kex_BC[0]
+             if 'k_AB' in spin_from.params:
+-                spin_to.k_AB = k_AB
++                spin_to.k_AB = k_AB[0]
+             if 'kB' in spin_from.params:
+-                spin_to.kB = kB
++                spin_to.kB = kB[0]
+             if 'kC' in spin_from.params:
+-                spin_to.kC = kC
++                spin_to.kC = kC[0]
+             if 'tex' in spin_from.params:
+-                spin_to.tex = tex
++                spin_to.tex = tex[0]
+ 
+             # All other spin specific parameters.
+             for param in spin_from.params:
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Mar 17 19:20:02 2014</div>  
+</body>
+</html>

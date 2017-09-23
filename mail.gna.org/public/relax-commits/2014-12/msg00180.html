@@ -1,0 +1,346 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r27057 &#45; in /trunk: pipe_control/structure/main.py user_functions/structure.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 10 Dec 2014 15:56:46 +0100 -->
+<!--X-Message-Id: E1Xyih4&#45;0007up&#45;O4@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r27057 - in /trunk: pipe_control/structure/main.py user_functions/structure.py -- December 10, 2014 - 15:56</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r27057 - in /trunk: pipe_control/structure/main.py user_functions/structure.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00180" class="tabs">Index by Date</a> | <a href="threads.html#00180" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00179.html">Date Prev</a>] [<a href="msg00181.html">Date Next</a>] [<a href="msg00179.html">Thread Prev</a>] [<a href="msg00181.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 10 Dec 2014 14:56:46 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00180.html">E1Xyih4-0007up-O4@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on December 10, 2014 - 15:56:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Dec 10 15:56:46 2014
+New Revision: 27057
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=27057&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=27057&amp;view=rev</a>
+Log:
+Implemented the new molecules argument for the structure.align user function.
+
+In addition to accepting the new argument, the user function backend has been 
+redesigned for
+flexibility.  The assembly of coordinates and final rotations and 
+translations now consist of three
+loops over desired data pipes, all models, and all molecules.  If the models 
+or molecules arguments
+are supplied, then the models or molecules in the loop which do not match are 
+skipped.  This logic
+simplifies and cleans up the backend.
+
+
+Modified:
+    trunk/pipe_control/structure/main.py
+    trunk/user_functions/structure.py
+
+Modified: trunk/pipe_control/structure/main.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/pipe_control/structure/main.py?rev=27057&amp;r1=27056&amp;r2=27057&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/pipe_control/structure/main.py?rev=27057&amp;r1=27056&amp;r2=27057&amp;view=diff</a>
+==============================================================================
+--- trunk/pipe_control/structure/main.py        (original)
++++ trunk/pipe_control/structure/main.py        Wed Dec 10 15:56:46 2014
+@@ -105,11 +105,13 @@
+     print(&quot;Created the empty model number %s.&quot; % model_num)
+ 
+ 
+-def align(pipes=None, models=None, method='fit to mean', atom_id=None, 
+centre_type=&quot;centroid&quot;, centroid=None):
++def align(pipes=None, molecules=None, models=None, method='fit to mean', 
+atom_id=None, centre_type=&quot;centroid&quot;, centroid=None):
+     &quot;&quot;&quot;Superimpose a set of related, but not identical structures.
+ 
+     @keyword pipes:         The data pipes to include in the alignment and 
+superimposition.
+-    @type pipes:            list of str
++    @type pipes:            None or list of str
++    @keyword molecules:     The molecule names to include in the alignment 
+and superimposition.
++    @type molecules:        None or list of str
+     @keyword models:        The list of models to for each data pipe 
+superimpose.  The number of elements must match the pipes argument.  If set 
+to None, then all models will be used.
+     @type models:           list of lists of int or None
+     @keyword method:        The superimposition method.  It must be one of 
+'fit to mean' or 'fit to first'.
+@@ -135,23 +137,25 @@
+     # The data pipes to use.
+     if pipes == None:
+         pipes = [cdp_name()]
++    num_pipes = len(pipes)
+ 
+     # Checks.
+     for pipe in pipes:
+         check_pipe(pipe)
+ 
+-    # Initialise the models data structure.
+-    if models == None:
+-        models = []
+-        for i in range(len(pipes)):
+-            models.append(None)
++    # Check the models and molecules arguments.
++    if models != None:
++        if len(models) != num_pipes:
++            raise RelaxError(&quot;The %i elements of the models argument does 
+not match the %i data pipes.&quot; % (len(models), num_pipes))
++    if molecules != None:
++        if len(molecules) != num_pipes:
++            raise RelaxError(&quot;The %i elements of the molecules argument does 
+not match the %i data pipes.&quot; % (len(molecules), num_pipes))
+ 
+     # Assemble the atomic coordinates of all structures.
+     print(&quot;Assembling all atomic coordinates:&quot;)
+     atom_ids = []
+     atom_pos = []
+     atom_elem = []
+-    mol_ids = []
+     for pipe_index in range(len(pipes)):
+         # Printout.
+         print(&quot;    Data pipe: %s&quot; % pipes[pipe_index])
+@@ -165,42 +169,51 @@
+         # The selection object.
+         selection = dp.structure.selection(atom_id=atom_id)
+ 
+-        # Create a list of all models for this pipe.
+-        if models[pipe_index] == None:
+-            models[pipe_index] = []
+-            for model in dp.structure.model_loop():
+-                models[pipe_index].append(model.num)
+-
+         # Loop over the models.
+-        for model in models[pipe_index]:
++        for model in dp.structure.model_loop():
++            # No model match.
++            if models != None and model.num not in models[pipe_index]:
++                continue
++
+             # Printout.
+-            print(&quot;        Model: %s&quot; % model)
++            print(&quot;        Model: %s&quot; % model.num)
+ 
+             # Extend the lists.
+-            atom_ids.append([])
+-            atom_pos.append({})
+-            atom_elem.append({})
+-            mol_ids.append([])
++            if molecules == None:
++                atom_ids.append([])
++                atom_pos.append({})
++                atom_elem.append({})
+ 
+             # Add all coordinates and elements.
+-            for mol_name, res_num, res_name, atom_name, elem, pos in 
+dp.structure.atom_loop(selection=selection, model_num=model, 
+mol_name_flag=True, res_num_flag=True, res_name_flag=True, 
+atom_name_flag=True, pos_flag=True, element_flag=True):
++            current_mol = ''
++            for mol_name, res_num, res_name, atom_name, elem, pos in 
+dp.structure.atom_loop(selection=selection, model_num=model.num, 
+mol_name_flag=True, res_num_flag=True, res_name_flag=True, 
+atom_name_flag=True, pos_flag=True, element_flag=True):
++                # No molecule match, so skip.
++                if molecules != None and mol_name not in 
+molecules[pipe_index]:
++                    continue
++
++                # A new molecule.
++                if mol_name != current_mol:
++                    # Printout.
++                    print(&quot;            Molecule: %s&quot; % mol_name)
++
++                    # Change the current molecule name.
++                    current_mol = mol_name
++
++                    # Extend the lists.
++                    if molecules != None:
++                        atom_ids.append([])
++                        atom_pos.append({})
++                        atom_elem.append({})
++
+                 # A unique identifier.
+-                id = &quot;#%s:%s&amp;%s@%s&quot; % (mol_name, res_num, res_name, 
+atom_name)
++                if molecules != None:
++                    id = &quot;:%s&amp;%s@%s&quot; % (res_num, res_name, atom_name)
++                else:
++                    id = &quot;#%s:%s&amp;%s@%s&quot; % (mol_name, res_num, res_name, 
+atom_name)
+ 
+                 atom_ids[-1].append(id)
+                 atom_pos[-1][id] = pos[0]
+                 atom_elem[-1][id] = elem
+-
+-                # Store the molecule name for later checks.
+-                if mol_name not in mol_ids[-1]:
+-                    print(&quot;            Molecule: %s&quot; % mol_name)
+-                    mol_ids[-1].append(mol_name)
+-
+-    # Check for the molecule names.
+-    for mol_name in mol_ids[0]:
+-        for i in range(len(mol_ids)):
+-            if mol_name not in mol_ids[i]:
+-                raise RelaxError(&quot;The molecule name '%s' cannot be found in 
+all data pipes.&quot; % mol_name)
+ 
+     # Set up the structures for the superimposition algorithm.
+     num = len(atom_ids)
+@@ -240,15 +253,48 @@
+     # Update to the new coordinates.
+     i = 0
+     for pipe_index in range(len(pipes)):
+-        for model in models[pipe_index]:
+-            # Translate the molecule first (the rotational pivot is defined 
+in the first model).
+-            translate(T=T[i], model=model, pipe_name=pipes[pipe_index])
+-
+-            # Rotate the molecule.
+-            rotate(R=R[i], origin=pivot[i], model=model, 
+pipe_name=pipes[pipe_index])
+-
+-            # Increment the index.
+-            i += 1
++        # The data pipe object.
++        dp = get_pipe(pipes[pipe_index])
++
++        print(&quot;    Data pipe: %s&quot; % pipes[pipe_index])
++
++        # The selection object.
++        selection = dp.structure.selection(atom_id=atom_id)
++
++        # Loop over the models.
++        for model in dp.structure.model_loop():
++            # No model match.
++            if models != None and model.num not in models[pipe_index]:
++                continue
++
++            print(&quot;        Model: %s&quot; % model.num)
++
++            # Loop over the molecules.
++            current_mol = ''
++            for mol_name in dp.structure.atom_loop(selection=selection, 
+model_num=model.num, mol_name_flag=True):
++                # No molecule match, so skip.
++                if molecules != None and mol_name not in 
+molecules[pipe_index]:
++                    continue
++
++                # A new molecule.
++                if mol_name != current_mol:
++
++                    print(&quot;            Molecule: %s&quot; % mol_name)
++
++                    # Change the current molecule name.
++                    current_mol = mol_name
++
++                    # The atom ID from the molecule name.
++                    id = '#%s' % mol_name
++
++                    # Translate the molecule first (the rotational pivot is 
+defined in the first model).
++                    translate(T=T[i], model=model.num, 
+pipe_name=pipes[pipe_index], atom_id=id)
++
++                    # Rotate the molecule.
++                    rotate(R=R[i], origin=pivot[i], model=model.num, 
+pipe_name=pipes[pipe_index], atom_id=id)
++
++                    # Increment the index.
++                    i += 1
+ 
+ 
+ def connect_atom(index1=None, index2=None):
+
+Modified: trunk/user_functions/structure.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/user_functions/structure.py?rev=27057&amp;r1=27056&amp;r2=27057&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/user_functions/structure.py?rev=27057&amp;r1=27056&amp;r2=27057&amp;view=diff</a>
+==============================================================================
+--- trunk/user_functions/structure.py   (original)
++++ trunk/user_functions/structure.py   Wed Dec 10 15:56:46 2014
+@@ -171,8 +171,15 @@
+ uf.add_keyarg(
+     name = &quot;models&quot;,
+     py_type = &quot;int_list_of_lists&quot;,
+-    desc_short = &quot;model list&quot;,
+-    desc = &quot;The list of models for each data pipe to superimpose.  The 
+number of elements must match the pipes argument.&quot;,
++    desc_short = &quot;model list for each data pipe&quot;,
++    desc = &quot;The list of models for each data pipe to superimpose.  The 
+number of elements must match the pipes argument.  If no models are given, 
+then all will be used.&quot;,
++    can_be_none = True
++)
++uf.add_keyarg(
++    name = &quot;molecules&quot;,
++    py_type = &quot;str_list_of_lists&quot;,
++    desc_short = &quot;molecule list for each data pipe&quot;,
++    desc = &quot;The molecules to include in the alignment and superimposition.  
+This allows differently named molecules in the same or different data pipes 
+to be superimposed.  The number of elements must match the pipes argument.  
+If no molecules are given, then all will be used.&quot;,
+     can_be_none = True
+ )
+ uf.add_keyarg(
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Dec 10 16:40:02 2014</div>  
+</body>
+</html>

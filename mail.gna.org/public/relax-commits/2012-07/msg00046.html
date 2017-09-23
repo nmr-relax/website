@@ -1,0 +1,302 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r17160 &#45; /branches/interatomic/test_suite/gui_tests/model_free.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 03 Jul 2012 18:21:13 +0200 -->
+<!--X-Message-Id: E1Sm5qj&#45;0000Vl&#45;3Z@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r17160 - /branches/interatomic/test_suite/gui_tests/model_free.py -- July 03, 2012 - 18:21</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r17160 - /branches/interatomic/test_suite/gui_tests/model_free.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00046" class="tabs">Index by Date</a> | <a href="threads.html#00046" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00045.html">Date Prev</a>] [<a href="msg00047.html">Date Next</a>] [<a href="msg00045.html">Thread Prev</a>] [<a href="msg00047.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 03 Jul 2012 16:21:13 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00046.html">E1Sm5qj-0000Vl-3Z@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on July 03, 2012 - 18:21:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Jul  3 18:21:12 2012
+New Revision: 17160
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=17160&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=17160&amp;view=rev</a>
+Log:
+Converted the Mf.test_mf_auto_analysis() GUI test to the interatomic data 
+design.
+
+
+Modified:
+    branches/interatomic/test_suite/gui_tests/model_free.py
+
+Modified: branches/interatomic/test_suite/gui_tests/model_free.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/interatomic/test_suite/gui_tests/model_free.py?rev=17160&amp;r1=17159&amp;r2=17160&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/interatomic/test_suite/gui_tests/model_free.py?rev=17160&amp;r1=17159&amp;r2=17160&amp;view=diff</a>
+==============================================================================
+--- branches/interatomic/test_suite/gui_tests/model_free.py (original)
++++ branches/interatomic/test_suite/gui_tests/model_free.py Tue Jul  3 
+18:21:12 2012
+@@ -27,6 +27,7 @@
+ 
+ # relax module imports.
+ from data import Relax_data_store; ds = Relax_data_store()
++from generic_fns.interatomic import interatomic_loop
+ from generic_fns.mol_res_spin import spin_loop
+ from generic_fns.pipes import cdp_name
+ from status import Status; status = Status()
+@@ -77,13 +78,21 @@
+         # Launch the spin viewer window.
+         self.app.gui.show_tree()
+ 
+-        # Run through the spin loading wizard.
++        # Spin loading wizard:  Initialisation.
+         self.app.gui.spin_viewer.load_spins_wizard()
++
++        # Spin loading wizard:  The PDB file.
++        page = self.app.gui.spin_viewer.wizard.get_page(0)
++        page.selection = 'new pdb'
+         self.app.gui.spin_viewer.wizard._go_next()
+-        page = self.app.gui.spin_viewer.wizard.get_page(1)
+-        page.SetValue('file', data_path+'noe.500.out')
++        page = 
+self.app.gui.spin_viewer.wizard.get_page(self.app.gui.spin_viewer.wizard._current_page)
++        page.uf_args['file'].SetValue(str_to_gui(status.install_path + sep + 
+'test_suite' + sep + 'shared_data' + sep + 'model_free' + sep + 'sphere' + 
+sep + 'sphere.pdb'))
+         self.app.gui.spin_viewer.wizard._go_next()
++        interpreter.flush()    # Required because of the asynchronous uf 
+call.
++
++        # Spin loading wizard:  The spin loading.
+         self.app.gui.spin_viewer.wizard._go_next()
++        interpreter.flush()    # Required because of the asynchronous uf 
+call.
+ 
+         # Close the spin viewer window.
+         self.app.gui.spin_viewer.handler_close()
+@@ -103,31 +112,28 @@
+         for i in range(len(data)):
+             self._execute_uf(uf_name='relax_data.read', 
+file=data_path+data[i][0], ri_id=data[i][1], ri_type=data[i][2], 
+frq=data[i][3], mol_name_col=1, res_num_col=2, res_name_col=3, 
+spin_num_col=4, spin_name_col=5, data_col=6, error_col=7)
+ 
+-        # Set the values, using the methods behind the buttons to set up the 
+user functions with default values, and then manually executing the user 
+function.
++        # Dipole-dipole interaction wizard:  Initialisation.
++        analysis.setup_dipole_pair()
++
++        # Dipole-dipole interaction wizard:  The dipole_pair.define, 
+dipole_pair.set_dist, and dipole_pair.unit_vectors user functions.
++        analysis.dipole_wizard._go_next()
++        interpreter.flush()    # Required because of the asynchronous uf 
+call.
++        analysis.dipole_wizard._go_next()
++        interpreter.flush()    # Required because of the asynchronous uf 
+call.
++        analysis.dipole_wizard._go_next()
++        interpreter.flush()    # Required because of the asynchronous uf 
+call.
++
++        # Set up the CSA interaction.
+         analysis.value_set_csa()
+         uf_store['value.set'].wizard._ok()
+         interpreter.flush()    # Required because of the asynchronous uf 
+call.
+-        analysis.value_set_r()
+-        uf_store['value.set'].wizard._ok()
+-        interpreter.flush()    # Required because of the asynchronous uf 
+call.
+-        analysis.value_set_heteronuc_type()
+-        uf_store['value.set'].wizard._ok()
+-        interpreter.flush()    # Required because of the asynchronous uf 
+call.
+-        analysis.value_set_proton_type()
+-        uf_store['value.set'].wizard._ok()
+-        interpreter.flush()    # Required because of the asynchronous uf 
+call.
+-
+-        # The unit vector loading wizard.
+-        analysis.load_unit_vectors()
+-
+-        # The PDB file.
+-        page = analysis.vect_wizard.get_page(0)
+-        page.uf_args['file'].SetValue(str_to_gui(status.install_path + sep + 
+'test_suite' + sep + 'shared_data' + sep + 'model_free' + sep + 'sphere' + 
+sep + 'sphere.pdb'))
+-        analysis.vect_wizard._go_next()
+-        interpreter.flush()    # Required because of the asynchronous uf 
+call.
+-
+-        # The unit vectors.
+-        analysis.vect_wizard._go_next()
++
++        # Set up the nuclear isotopes.
++        analysis.spin_isotope_heteronuc()
++        uf_store['spin.isotope'].wizard._ok()
++        interpreter.flush()    # Required because of the asynchronous uf 
+call.
++        analysis.spin_isotope_proton()
++        uf_store['spin.isotope'].wizard._ok()
+         interpreter.flush()    # Required because of the asynchronous uf 
+call.
+ 
+         # Select only the tm0 and tm1 local tm models.
+@@ -197,11 +203,12 @@
+         self.assertAlmostEqual(cdp.chi2, 4e-19)
+ 
+         # The spin ID info.
+-        mol_names = [&quot;sphere_mol1&quot;] * 9
+-        res_names = [&quot;GLY&quot;] * 9
+-        res_nums = range(1, 10)
+-        spin_names = [&quot;N&quot;] * 9
+-        spin_nums = numpy.array(range(9)) * 2 + 1
++        mol_names = [&quot;sphere_mol1&quot;] * 9*2
++        res_names = [&quot;GLY&quot;] * 9*2
++        res_nums = [val for pair in zip(range(1, 10), range(1, 10)) for val 
+in pair]
++        spin_names = [&quot;N&quot;, &quot;H&quot;] * 9
++        spin_nums = numpy.array(range(9*2)) * 2 + 1
++        spin_nums = range(1, 20)
+ 
+         # Check the spin data.
+         i = 0
+@@ -213,37 +220,47 @@
+             self.assertEqual(spin.name, spin_names[i])
+             self.assertEqual(spin.num,  spin_nums[i])
+ 
+-            # The data.
+-            self.assertEqual(spin.select, True)
+-            self.assertEqual(spin.fixed, False)
+-            self.assertEqual(spin.proton_type, '1H')
+-            self.assertEqual(spin.heteronuc_type, '15N')
+-            self.assertEqual(spin.attached_proton, None)
+-            self.assertAlmostEqual(spin.r, 1.02 * 1e-10)
+-            self.assertAlmostEqual(spin.csa, -172e-6)
+-
+-            # The model-free data.
+-            self.assertEqual(spin.model, 'm2')
+-            self.assertEqual(spin.equation, 'mf_orig')
+-            self.assertEqual(len(spin.params), 2)
+-            self.assertEqual(spin.params[0], 's2')
+-            self.assertEqual(spin.params[1], 'te')
+-            self.assertAlmostEqual(spin.s2, 0.8)
+-            self.assertEqual(spin.s2f, None)
+-            self.assertEqual(spin.s2s, None)
+-            self.assertEqual(spin.local_tm, None)
+-            self.assertAlmostEqual(spin.te, 20e-12)
+-            self.assertEqual(spin.tf, None)
+-            self.assertEqual(spin.ts, None)
+-            self.assertEqual(spin.rex, None)
+-
+-            # The spin minimisation info.
+-            self.assertEqual(spin.chi2, None)
+-            self.assertEqual(spin.iter, None)
+-            self.assertEqual(spin.f_count, None)
+-            self.assertEqual(spin.g_count, None)
+-            self.assertEqual(spin.h_count, None)
+-            self.assertEqual(spin.warning, None)
++            # The 1H spin checks.
++            if i%2:
++                # The data.
++                self.assertEqual(spin.select, False)
++                self.assertEqual(spin.isotope, '1H')
++
++            # The 15N spin checks.
++            else:
++                # The data.
++                self.assertEqual(spin.select, True)
++                self.assertEqual(spin.fixed, False)
++                self.assertEqual(spin.isotope, '15N')
++                self.assertAlmostEqual(spin.csa, -172e-6)
++
++                # The model-free data.
++                self.assertEqual(spin.model, 'm2')
++                self.assertEqual(spin.equation, 'mf_orig')
++                self.assertEqual(len(spin.params), 2)
++                self.assertEqual(spin.params[0], 's2')
++                self.assertEqual(spin.params[1], 'te')
++                self.assertAlmostEqual(spin.s2, 0.8)
++                self.assertEqual(spin.s2f, None)
++                self.assertEqual(spin.s2s, None)
++                self.assertEqual(spin.local_tm, None)
++                self.assertAlmostEqual(spin.te, 20e-12)
++                self.assertEqual(spin.tf, None)
++                self.assertEqual(spin.ts, None)
++                self.assertEqual(spin.rex, None)
++
++                # The spin minimisation info.
++                self.assertEqual(spin.chi2, None)
++                self.assertEqual(spin.iter, None)
++                self.assertEqual(spin.f_count, None)
++                self.assertEqual(spin.g_count, None)
++                self.assertEqual(spin.h_count, None)
++                self.assertEqual(spin.warning, None)
+ 
+             # Increment the index.
+             i += 1
++
++        # Check the interatomic data.
++        i = 0
++        for interatom in interatomic_loop():
++            self.assertAlmostEqual(interatom.r, 1.02 * 1e-10)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Jul 03 20:20:06 2012</div>  
+</body>
+</html>

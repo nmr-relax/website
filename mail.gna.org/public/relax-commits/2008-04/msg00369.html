@@ -1,0 +1,212 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r5611 &#45; /1.3/generic_fns/palmer.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Sun, 13 Apr 2008 11:04:31 +0200 -->
+<!--X-Message-Id: E1Jky8V&#45;00064G&#45;2g@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r5611 - /1.3/generic_fns/palmer.py -- April 13, 2008 - 11:04</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r5611 - /1.3/generic_fns/palmer.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00369" class="tabs">Index by Date</a> | <a href="threads.html#00369" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00368.html">Date Prev</a>] [<a href="msg00370.html">Date Next</a>] [<a href="msg00368.html">Thread Prev</a>] [<a href="msg00370.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Sun, 13 Apr 2008 09:04:30 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00369.html">E1Jky8V-00064G-2g@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on April 13, 2008 - 11:04:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Sun Apr 13 11:04:28 2008
+New Revision: 5611
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=5611&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=5611&amp;view=rev</a>
+Log:
+Fix for bug #11483 (<a  rel="nofollow" href="https://gna.org/bugs/?11483">https://gna.org/bugs/?11483</a>).
+
+The get_mf_data() method has been expanded to handle both Modelfree4 mfout 
+column fusion bugs.  This
+method should now be much more robust for parsing the mfout file.
+
+
+Modified:
+    1.3/generic_fns/palmer.py
+
+Modified: 1.3/generic_fns/palmer.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/generic_fns/palmer.py?rev=5611&amp;r1=5610&amp;r2=5611&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/generic_fns/palmer.py?rev=5611&amp;r1=5610&amp;r2=5611&amp;view=diff</a>
+==============================================================================
+--- 1.3/generic_fns/palmer.py (original)
++++ 1.3/generic_fns/palmer.py Sun Apr 13 11:04:28 2008
+@@ -24,7 +24,7 @@
+ from math import pi
+ from os import F_OK, P_WAIT, access, chdir, chmod, getcwd, listdir, remove, 
+system
+ from re import match, search
+-from string import split
++from string import count, find, split
+ 
+ # UNIX only functions from the os module (Modelfree4 only runs under UNIX 
+anyway).
+ try:
+@@ -608,23 +608,78 @@
+ 
+ 
+     def get_mf_data(self, pos):
+-        &quot;&quot;&quot;Extract the model-free data from the given position of the mfout 
+file.&quot;&quot;&quot;
++        &quot;&quot;&quot;Extract the model-free data from the given position of the mfout 
+file.
++
++        This method is designed to catch a number of bugs in Modelfree4's 
+mfout file.
++
++        The first bug is the presence of a series of '*' characters causing 
+a fusion of two columns.
++        This is handled by splitting by the '*' char and then returning the 
+first element.
++
++        The second bug is when the floating point number is too big to fit 
+into Modelfree4's string
++        format limit of 15.3f.  This results in a results line such as:
++
++        246      10000.00019682363392.000    1          0.000          0.000 
+         0.000          0.000
++
++        This is caught by scanning for two '.' characters in the column, and 
+handled by assuming
++        that every floating point number will have three decimal characters.
++
++        @param pos:     The mfout line position.
++        @type pos:      int
++        @return:        The value and error.
++        @rtype:         tuple of 2 floats
++        &quot;&quot;&quot;
+ 
+         # Split the line up.
+         row = split(self.mfout_lines[pos])
+ 
+-        # Attempt to extract the value and error.
+-        try:
+-            # Catch a series of '*' joining two columns.
+-            val = split(row[1], '*')
+-            err = split(row[4], '*')
+-
+-            # Return the value and error.
+-            return float(val[0]), float(err[0])
+-
+-        # Otherwise, there is no data???
+-        except:
+-            return None, None
++        # The value and error, assuming a bug free mfout file.
++        val = row[1]
++        err = row[4]
++
++        # The Modelfree4 '*' column fusion bug.
++        if search('*', val) or search('*', err):
++            # Split by the '*' character.
++            val_row = split(val, '*')
++            err_row = split(err, '*')
++
++            # The value and error (the first elements).
++            val = val_row[0]
++            err = err_row[0]
++
++        # The Modelfree4 large float column fusion bug.
++        new_row = []
++        fused = False
++        for element in row:
++            # Count the number of '.' characters.
++            num = count(element, '.')
++
++            # Catch two or more '.' characters.
++            if num &gt; 1:
++                # Set the fused flag.
++                fused = True
++
++                # Loop over each fused number.
++                for i in xrange(num):
++                    # Find the index of the first '.'.
++                    index = find(element, '.')
++
++                    # The first number (index + decimal point + 3 decimal 
+chars).
++                    new_row.append(element[0:index+4])
++
++                    # Strip the first number from the element for the next 
+loop iteration.
++                    element = element[index+4:]
++
++            # Otherwise the column element is fine.
++            else:
++                new_row.append(element)
++
++        # Bug has been caught.
++        if fused:
++            val = new_row[1]
++            err = new_row[4]
++
++        # Return the value and error, as floats.
++        return float(val), float(err)
+ 
+ 
+     def line_positions(self):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Sun Apr 13 11:20:16 2008</div>  
+</body>
+</html>

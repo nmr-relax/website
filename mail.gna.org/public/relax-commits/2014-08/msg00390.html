@@ -1,0 +1,267 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r25256 &#45; /trunk/specific_analyses/relax_disp/estimate_r2eff.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 25 Aug 2014 23:00:40 +0200 -->
+<!--X-Message-Id: E1XM1NX&#45;0005uY&#45;WE@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r25256 - /trunk/specific_analyses/relax_disp/estimate_r2eff.py -- August 25, 2014 - 23:00</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r25256 - /trunk/specific_analyses/relax_disp/estimate_r2eff.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00390" class="tabs">Index by Date</a> | <a href="threads.html#00390" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00389.html">Date Prev</a>] [<a href="msg00391.html">Date Next</a>] [<a href="msg00389.html">Thread Prev</a>] [<a href="msg00391.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 25 Aug 2014 21:00:39 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00390.html">E1XM1NX-0005uY-WE@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on August 25, 2014 - 23:00:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Mon Aug 25 23:00:39 2014
+New Revision: 25256
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=25256&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=25256&amp;view=rev</a>
+Log:
+Intermediate step in estimate R2eff module.
+
+It seems that minfx is minimising in a quadratic space because of the power 
+of chi2, while
+the general input to scipy.optimize does not do this.
+
+task #7822(<a  rel="nofollow" href="https://gna.org/task/index.php?7822">https://gna.org/task/index.php?7822</a>): Implement user function to 
+estimate R2eff and associated errors for exponential curve fitting.
+
+Modified:
+    trunk/specific_analyses/relax_disp/estimate_r2eff.py
+
+Modified: trunk/specific_analyses/relax_disp/estimate_r2eff.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/relax_disp/estimate_r2eff.py?rev=25256&amp;r1=25255&amp;r2=25256&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/relax_disp/estimate_r2eff.py?rev=25256&amp;r1=25255&amp;r2=25256&amp;view=diff</a>
+==============================================================================
+--- trunk/specific_analyses/relax_disp/estimate_r2eff.py        (original)
++++ trunk/specific_analyses/relax_disp/estimate_r2eff.py        Mon Aug 25 
+23:00:39 2014
+@@ -44,7 +44,7 @@
+ # Scipy installed.
+ if scipy_module:
+     # Import leastsq.
+-    from scipy.optimize import leastsq
++    from scipy.optimize import fmin_ncg, leastsq
+ 
+ 
+ class Exponential:
+@@ -113,13 +113,13 @@
+             self.b = array([   0., -200.,    0.])
+ 
+         else:
+-            #self.min_algor = 'simplex'
++            self.min_algor = 'simplex'
+ 
+             # Newton does not work.
+             #self.min_algor = 'newton'
+ 
+             # Newton-CG does not work.
+-            self.min_algor = 'Newton-CG'
++            #self.min_algor = 'Newton-CG'
+ 
+             # Also not work.
+             #self.min_algor = 'Steepest descent'
+@@ -231,7 +231,7 @@
+ 
+ 
+     def func_exp_chi2(self, params):
+-        &quot;&quot;&quot;Target function for exponential fit in minfx.
++        &quot;&quot;&quot;Target function for exponential fit in minfx, which return array 
+instead.
+ 
+         @param params:  The vector of parameter values.
+         @type params:   numpy rank-1 float array
+@@ -247,9 +247,11 @@
+         r2eff = params[0]
+         i0 = params[1]
+ 
+-        chi2 = 1.0 * ( -i0 * exp( -r2eff * self.relax_times) + 
+self.values)**2 / self.errors**2
+-
+-        # Calculate and return the chi-squared value.
++        #chi2 = 1.0 * ( -i0 * exp( -r2eff * self.relax_times) + 
+self.values)**2 / self.errors**2
++        #(1.0 / errors * (values - back_calc))**2
++        chi2 = (1.0 / self.errors * (self.values - i0 * exp( 
+-self.relax_times * r2eff) ))**2
++
++        # Calculate and return the chi-squared value as array.
+         return chi2
+ 
+ 
+@@ -367,8 +369,10 @@
+         # Return
+         return weights * (self.calc_exp(times, *params) - intensities)
+ 
+-#scipy.optimize.leastsq
+-def estimate_r2eff(spin_id=None, ftol=1e-15, xtol=1e-15, maxfev=10000000, 
+factor=100.0, method='minfx', verbosity=1):
++# 'minfx'
++# 'scipy.optimize.leastsq'
++# 'scipy.optimize.fmin_ncg'
++def estimate_r2eff(spin_id=None, ftol=1e-15, xtol=1e-15, maxfev=10000000, 
+factor=100.0, method='scipy.optimize.leastsq', verbosity=1):
+     &quot;&quot;&quot;Estimate r2eff and errors by exponential curve fitting with 
+scipy.optimize.leastsq.
+ 
+     scipy.optimize.leastsq is a wrapper around MINPACK's lmdif and lmder 
+algorithms.
+@@ -477,13 +481,19 @@
+             errors = asarray(errors)
+             times = asarray(times)
+ 
++            # Initialise the function to minimise.
++            exp_class.setup(num_params=2, num_times=len(times), 
+values=values, sd=errors, relax_times=times, func_tol=ftol, 
+max_iterations=maxfev, verbosity=verbosity)
++
+             # Get the result based on method.
+             if method == 'scipy.optimize.leastsq':
++                # Acquire results.
+                 results = minimise_leastsq(exp_class=exp_class, 
+scipy_settings=scipy_settings, values=values, errors=errors, times=times)
++
++            elif method == 'scipy.optimize.fmin_ncg':
++                # Acquire results.
++                results = minimise_fmin_cg(exp_class=exp_class, 
+scipy_settings=scipy_settings, values=values, errors=errors, times=times)
++
+             elif method == 'minfx':
+-                # Initialise the function to minimise.
+-                exp_class.setup(num_params=2, num_times=len(times), 
+values=values, sd=errors, relax_times=times, func_tol=ftol, 
+max_iterations=maxfev, verbosity=verbosity)
+-
+                 # Acquire results.
+                 results = minimise_minfx(exp_class=exp_class, values=values, 
+errors=errors, times=times)
+             else:
+@@ -574,9 +584,11 @@
+     absolute_sigma = True
+ 
+     if use_weights:
++        #func = exp_class.func_exp_weighted_general
++        #weights = 1.0 / asarray(errors)
++        #args=(times, values, weights)
+         func = exp_class.func_exp_weighted_general
+-        weights = 1.0 / asarray(errors)
+-        args=(times, values, weights)
++        args=()
+     else:
+         func = exp_class.func_exp_general
+         args=(times, values)
+@@ -645,6 +657,40 @@
+ 
+     # Return, including errors.
+     return results
++
++
++def minimise_fmin_cg(exp_class=None, scipy_settings=None, values=None, 
+errors=None, times=None):
++    &quot;&quot;&quot;Estimate r2eff and errors by exponential curve fitting with 
+scipy.optimize.fmin_ncg.
++
++    @keyword exp_class:         The class instance object, which contains 
+functions to calculate with.
++    @type exp_class:            class
++    @keyword scipy_settings:    The parsed setting to leastsq.  
+scipy_settings = [ftol, xtol, maxfev, factor]
++    @type scipy_settings:       list of float, float, int, float
++    @keyword values:            The measured intensity values per time point.
++    @type values:               numpy array
++    @keyword errors:            The standard deviation of the measured 
+intensity values per time point.
++    @type errors:               numpy array
++    @keyword times:             The time points.
++    @type times:                numpy array
++    @return:                    Packed list with optimised parameter, 
+estimated parameter error, chi2, iter_count, f_count, g_count, h_count, 
+warning
++    @rtype:                     list
++    &quot;&quot;&quot;
++
++    # Check that scipy.optimize.leastsq is available.
++    if not scipy_module:
++        raise RelaxError(&quot;scipy module is not available.&quot;)
++
++    # Unpack settings:
++    ftol, xtol, maxfev, factor = scipy_settings
++
++    # Initial guess for minimisation. Solved by linear least squares.
++    x0 = exp_class.estimate_x0_exp(intensities=values, times=times)
++
++    func = 2
++
++    # fmin_ncg(f, x0, fprime, fhess_p=None, fhess=None, args=(), 
+avextol=1e-05, epsilon=1.4901161193847656e-08, maxiter=None, full_output=0, 
+disp=1, retall=0, callback=None)
++    #fmin_ncg(f=func, x0=x0, args=args, full_output=True, ftol=ftol, 
+xtol=xtol, maxfev=maxfev, factor=factor)
++    #print x0
+ 
+ 
+ def minimise_minfx(exp_class=None, values=None, errors=None, times=None):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Aug 25 23:20:02 2014</div>  
+</body>
+</html>

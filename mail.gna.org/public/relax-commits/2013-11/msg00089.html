@@ -1,0 +1,147 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r21431 &#45; /trunk/specific_analyses/n_state_model/data.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 13 Nov 2013 17:46:19 +0100 -->
+<!--X-Message-Id: E1Vgda7&#45;0006uu&#45;QG@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r21431 - /trunk/specific_analyses/n_state_model/data.py -- November 13, 2013 - 17:46</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r21431 - /trunk/specific_analyses/n_state_model/data.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00089" class="tabs">Index by Date</a> | <a href="threads.html#00089" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00088.html">Date Prev</a>] [<a href="msg00090.html">Date Next</a>] [<a href="msg00088.html">Thread Prev</a>] [<a href="msg00090.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 13 Nov 2013 16:46:19 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00089.html">E1Vgda7-0006uu-QG@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on November 13, 2013 - 17:46:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Nov 13 17:46:19 2013
+New Revision: 21431
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=21431&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=21431&amp;view=rev</a>
+Log:
+The N-state model specific check_rdcs() function now properly handles 
+pseudo-atoms.
+
+
+Modified:
+    trunk/specific_analyses/n_state_model/data.py
+
+Modified: trunk/specific_analyses/n_state_model/data.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/n_state_model/data.py?rev=21431&amp;r1=21430&amp;r2=21431&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/n_state_model/data.py?rev=21431&amp;r1=21430&amp;r2=21431&amp;view=diff</a>
+==============================================================================
+--- trunk/specific_analyses/n_state_model/data.py (original)
++++ trunk/specific_analyses/n_state_model/data.py Wed Nov 13 17:46:19 2013
+@@ -182,8 +182,33 @@
+         raise RelaxSpinTypeError(interatom.spin_id1)
+     if not hasattr(spin2, 'isotope'):
+         raise RelaxSpinTypeError(interatom.spin_id2)
+-    if not hasattr(interatom, 'r'):
+-        raise RelaxNoValueError(&quot;averaged interatomic distance&quot;)
++    if is_pseudoatom(spin1) and is_pseudoatom(spin2):
++        raise RelaxError(&quot;Support for both spins being in a dipole pair 
+being pseudo-atoms is not implemented yet.&quot;)
++
++    # Interatomic distance checking (pseudo-atoms).
++    if is_pseudoatom(spin1) or is_pseudoatom(spin2):
++        # Alias the pseudo and normal atoms.
++        pseudospin = spin1
++        base_spin_id = interatom.spin_id2
++        pseudospin_id = interatom.spin_id1
++        if is_pseudoatom(spin2):
++            pseudospin = spin2
++            base_spin_id = interatom.spin_id1
++            pseudospin_id = interatom.spin_id2
++
++        # Loop over the atoms of the pseudo-atom.
++        for spin, spin_id in pseudoatom_loop(pseudospin, return_id=True):
++            # Get the corresponding interatomic data container.
++            pseudo_interatom = return_interatom(spin_id1=spin_id, 
+spin_id2=base_spin_id)
++
++            # Check.
++            if not hasattr(pseudo_interatom, 'r'):
++                raise RelaxError(&quot;The averaged interatomic distance between 
+spins '%s' and '%s' for the pseudo-atom '%s' has not been set yet.&quot; % 
+(spin_id, base_spin_id, pseudospin_id))
++
++    # Interatomic distance checking (normal atoms).
++    else:
++        if not hasattr(interatom, 'r'):
++            raise RelaxError(&quot;The averaged interatomic distance between 
+spins '%s' and '%s' has not been set yet.&quot; % (interatom.spin_id1, 
+interatom.spin_id2))
+ 
+     # Everything is ok.
+     return True
+@@ -554,7 +579,6 @@
+             pseudo_unit_vect = []
+             pseudo_rdc_const = []
+             for spin, spin_id in pseudoatom_loop(pseudospin, return_id=True):
+-
+                 # Get the corresponding interatomic data container.
+                 pseudo_interatom = return_interatom(spin_id1=spin_id, 
+spin_id2=base_spin_id)
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Nov 13 18:00:01 2013</div>  
+</body>
+</html>

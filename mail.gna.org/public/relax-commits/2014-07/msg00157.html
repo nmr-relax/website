@@ -1,0 +1,206 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r24523 &#45; /branches/frame_order_cleanup/specific_analyses/frame_order/optimisation.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 11 Jul 2014 12:01:21 +0200 -->
+<!--X-Message-Id: E1X5Xdp&#45;00049g&#45;5f@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r24523 - /branches/frame_order_cleanup/specific_analyses/frame_order/optimisation.py -- July 11, 2014 - 12:01</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r24523 - /branches/frame_order_cleanup/specific_analyses/frame_order/optimisation.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00157" class="tabs">Index by Date</a> | <a href="threads.html#00157" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00156.html">Date Prev</a>] [<a href="msg00158.html">Date Next</a>] [<a href="msg00156.html">Thread Prev</a>] [<a href="msg00158.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 11 Jul 2014 10:01:20 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00157.html">E1X5Xdp-00049g-5f@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on July 11, 2014 - 12:01:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Jul 11 12:01:20 2014
+New Revision: 24523
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=24523&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=24523&amp;view=rev</a>
+Log:
+Fixes for the parallelised grid search for the frame order analysis.
+
+A chi-squared value check was added to the Frame_order_result_command.run() 
+method to check if the
+value is lower than the current when the result is returned to the master.  
+Without this check, each
+grid subdivision result will be stored as they are returned rather than 
+storing the results from the
+global minimum of the entire grid search.
+
+
+Modified:
+    branches/frame_order_cleanup/specific_analyses/frame_order/optimisation.py
+
+Modified: 
+branches/frame_order_cleanup/specific_analyses/frame_order/optimisation.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/specific_analyses/frame_order/optimisation.py?rev=24523&amp;r1=24522&amp;r2=24523&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/specific_analyses/frame_order/optimisation.py?rev=24523&amp;r1=24522&amp;r2=24523&amp;view=diff</a>
+==============================================================================
+--- 
+branches/frame_order_cleanup/specific_analyses/frame_order/optimisation.py  
+(original)
++++ 
+branches/frame_order_cleanup/specific_analyses/frame_order/optimisation.py  
+Fri Jul 11 12:01:20 2014
+@@ -706,11 +706,23 @@
+     return param_vector, full_tensors, full_in_ref_frame, rdcs, rdc_err, 
+rdc_weight, rdc_vect, rdc_const, pcs, pcs_err, pcs_weight, atomic_pos, temp, 
+frq, paramag_centre, com, ave_pos_pivot, pivot, pivot_opt
+ 
+ 
+-def unpack_opt_results(results, scaling=False, scaling_matrix=None, 
+sim_index=None):
++def unpack_opt_results(param_vector=None, func=None, iter_count=None, 
+f_count=None, g_count=None, h_count=None, warning=None, scaling=False, 
+scaling_matrix=None, sim_index=None):
+     &quot;&quot;&quot;Unpack and store the Frame Order optimisation results.
+ 
+-    @param results:             The results tuple returned by the minfx 
+generic_minimise() function.
+-    @type results:              tuple
++    @keyword param_vector:      The model-free parameter vector.
++    @type param_vector:         numpy array
++    @keyword func:              The optimised chi-squared value.
++    @type func:                 float
++    @keyword iter_count:        The number of optimisation steps required to 
+find the minimum.
++    @type iter_count:           int
++    @keyword f_count:           The function count.
++    @type f_count:              int
++    @keyword g_count:           The gradient count.
++    @type g_count:              int
++    @keyword h_count:           The Hessian count.
++    @type h_count:              int
++    @keyword warning:           Any optimisation warnings.
++    @type warning:              str or None
+     @keyword scaling:           If True, diagonal scaling is enabled during 
+optimisation to allow the problem to be better conditioned.
+     @type scaling:              bool
+     @keyword scaling_matrix:    The scaling matrix.
+@@ -718,15 +730,6 @@
+     @keyword sim_index:         The index of the simulation to optimise.  
+This should be None for normal optimisation.
+     @type sim_index:            None or int
+      &quot;&quot;&quot;
+-
+-    # Disassemble the results.
+-    if len(results) == 4:    # Grid search.
+-        param_vector, func, iter_count, warning = results
+-        f_count = iter_count
+-        g_count = 0.0
+-        h_count = 0.0
+-    else:
+-        param_vector, func, iter_count, f_count, g_count, h_count, warning = 
+results
+ 
+     # Catch infinite chi-squared values.
+     if isInf(func):
+@@ -1010,8 +1013,32 @@
+         if memo.sim_index != None:
+             print(&quot;Simulation %i&quot; % (memo.sim_index+1))
+ 
++        # Disassemble the results.
++        if len(self.results) == 4:    # Grid search.
++            param_vector, func, iter_count, warning = self.results
++            f_count = iter_count
++            g_count = 0.0
++            h_count = 0.0
++        else:
++            param_vector, func, iter_count, f_count, g_count, h_count, 
+warning = self.results
++
++        # Check if the chi-squared value is lower - required for a 
+parallelised grid search to work.
++        if memo.sim_index == None:
++            if hasattr(cdp, 'chi2') and cdp.chi2 != None:
++                # No improvement, so exit the function.
++                if func &gt; cdp.chi2:
++                    print(&quot;Discarding the optimisation results, the 
+optimised chi-squared value is higher than the current value (%s &gt; %s).&quot; % 
+(func, cdp.chi2))
++                    return
++
++                # New minimum.
++                print(&quot;Storing the optimisation results, the optimised 
+chi-squared value is lower than the current value (%s &lt; %s).&quot; % (func, 
+cdp.chi2))
++
++            # Just print something to avoid user confusion in parallelised 
+grid searches.
++            else:
++                print(&quot;Storing the optimisation results, no optimised values 
+currently exist.&quot;)
++
+         # Unpack the results.
+-        unpack_opt_results(self.results, memo.scaling, memo.scaling_matrix, 
+memo.sim_index)
++        unpack_opt_results(param_vector, func, iter_count, f_count, g_count, 
+h_count, warning, memo.scaling, memo.scaling_matrix, memo.sim_index)
+ 
+         # Store the back-calculated data.
+         store_bc_data(A_5D_bc=self.A_5D_bc, pcs_theta=self.pcs_theta, 
+rdc_theta=self.rdc_theta)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Jul 11 15:40:02 2014</div>  
+</body>
+</html>

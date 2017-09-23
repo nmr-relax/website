@@ -1,0 +1,612 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r19382 &#45; /branches/relax_disp/specific_analyses/relax_disp.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 05 Apr 2013 12:18:09 +0200 -->
+<!--X-Message-Id: E1UO3ij&#45;0002ZR&#45;NN@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r19382 - /branches/relax_disp/specific_analyses/relax_disp.py -- April 05, 2013 - 12:18</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r19382 - /branches/relax_disp/specific_analyses/relax_disp.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00101" class="tabs">Index by Date</a> | <a href="threads.html#00101" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00100.html">Date Prev</a>] [<a href="msg00102.html">Date Next</a>] [<a href="msg00100.html">Thread Prev</a>] [<a href="msg00102.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 05 Apr 2013 10:18:09 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00101.html">E1UO3ij-0002ZR-NN@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on April 05, 2013 - 12:18:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Apr  5 12:18:09 2013
+New Revision: 19382
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=19382&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=19382&amp;view=rev</a>
+Log:
+Activated Monte Carlo simulations for the relaxation dispersion analysis.
+
+This required a bit of work.  The key parts weres renaming _block_loop() to 
+the API method
+model_loop() as that is exactly what the model_loop() method is supposed to 
+do, converting a bunch
+of API common spin-based methods to handle dispersion clustering, and to 
+modify existing methods
+from Seb's original branch to handle the base_data_loop() method.  The 
+following methods have been
+added or modified:
+
+_back_calc():  This method has been modified to handle clustering and the 
+returning of peak intensities
+from only one exponential curve.
+
+_exp_curve_index_from_key():  This new method is used to convert exponential 
+curve key into the
+corresponding index.
+
+_intensity_key():  This new method is for converting an exponential curve key 
+and relaxation time
+into the corresponding intensity key.
+
+create_mc_data():  This method is now functional and handles the data from 
+the base_data_loop() method.
+
+return_error():  This method now handles the data from the base_data_loop() 
+method.
+
+set_selected_sim():  This new method has been modified from the common 
+_set_selected_sim_spin()
+method but modified for the model_loop() method.
+
+sim_pack_data():  This method now handles the data from the base_data_loop() 
+method.
+
+sim_return_param():  This new method has been modified from the common 
+_sim_return_param_spin()
+method to suit the model_loop().
+
+sim_return_selected():  This new method has been modified from the common
+_sim_return_selected_spin() method again to suit the model_loop().
+
+
+Modified:
+    branches/relax_disp/specific_analyses/relax_disp.py
+
+Modified: branches/relax_disp/specific_analyses/relax_disp.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp.py?rev=19382&amp;r1=19381&amp;r2=19382&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp.py?rev=19382&amp;r1=19381&amp;r2=19382&amp;view=diff</a>
+==============================================================================
+--- branches/relax_disp/specific_analyses/relax_disp.py (original)
++++ branches/relax_disp/specific_analyses/relax_disp.py Fri Apr  5 12:18:09 
+2013
+@@ -24,6 +24,7 @@
+ &quot;&quot;&quot;The relaxation dispersion curve fitting specific code.&quot;&quot;&quot;
+ 
+ # Python module imports.
++from copy import deepcopy
+ from minfx.generic import generic_minimise
+ from minfx.grid import grid
+ from numpy import array, average, dot, float64, identity, log, zeros
+@@ -54,15 +55,11 @@
+ 
+         # Place methods into the API.
+         self.data_init = self._data_init_spin
+-        self.model_loop = self._model_loop_spin
+         self.return_conversion_factor = self._return_no_conversion_factor
+         self.return_value = self._return_value_general
+         self.set_error = self._set_error_spin
+         self.set_param_values = self._set_param_values_spin
+-        self.set_selected_sim = self._set_selected_sim_spin
+         self.sim_init_values = self._sim_init_values_spin
+-        self.sim_return_param = self._sim_return_param_spin
+-        self.sim_return_selected = self._sim_return_selected_spin
+ 
+         # Set up the spin parameters.
+         self.PARAMS.add('intensities', scope='spin', py_type=dict, 
+grace_string='\\qPeak intensities\\Q')
+@@ -253,32 +250,29 @@
+         return scaling_matrix
+ 
+ 
+-    def _back_calc(self, spins=None, result_index=None):
+-        &quot;&quot;&quot;Back-calculation of peak intensity for the given CPMG pulse train 
+frequency.
+-
+-        @keyword spins:         The list of spin data containers for the 
+block.
+-        @type spins:            list of SpinContainer instances
+-        @keyword result_index:  The index for the back-calculated data 
+associated to every CPMG or R1rho frequency, as well as every magnetic field 
+frequency.
+-        @type result_index:     int
+-        @return:                The R2eff value associated to every CPMG or 
+R1rho frequency, as well as every magnetic field frequency.
+-        @rtype:                 float
++    def _back_calc(self, spin=None, index=None):
++        &quot;&quot;&quot;Back-calculation of peak intensity for the given spin and 
+exponential curve index.
++
++        @keyword spin:  The specific spin data container.
++        @type spin:     SpinContainer instance
++        @keyword index: The index for the specific exponential curve.
++        @type index:    int
++        @return:        The back-calculated peak intensities for the given 
+exponential curve
++        @rtype:         numpy rank-1 float array
+         &quot;&quot;&quot;
+ 
+         # Create the initial parameter vector.
+-        param_vector = self._assemble_param_vector(spins=spins)
++        param_vector = self._assemble_param_vector(spins=[spin])
+ 
+         # Create a scaling matrix.
+-        scaling_matrix = self._assemble_scaling_matrix(spins=spins, 
+scaling=False)
+-
+-        # The spin count.
+-        spin_num = len(spins)
++        scaling_matrix = self._assemble_scaling_matrix(spins=[spin], 
+scaling=False)
+ 
+         # Initialise the data structures for the target function.
+-        values = zeros((spin_num, cdp.curve_count, cdp.num_time_pts), 
+float64)
+-        errors = zeros((spin_num, cdp.curve_count, cdp.num_time_pts), 
+float64)
++        values = zeros((1, cdp.curve_count, cdp.num_time_pts), float64)
++        errors = zeros((1, cdp.curve_count, cdp.num_time_pts), float64)
+ 
+         # Initialise the relaxation dispersion fit functions.
+-        model = Dispersion(model=cdp.model, 
+num_params=self._param_num(spins=spins), num_spins=spin_num, 
+num_exp_curves=cdp.curve_count, num_times=cdp.num_time_pts, values=values, 
+errors=errors, cpmg_frqs=cdp.cpmg_frqs_list, 
+spin_lock_nu1=cdp.spin_lock_nu1_list, relax_times=cdp.relax_time_list, 
+scaling_matrix=scaling_matrix)
++        model = Dispersion(model=cdp.model, 
+num_params=self._param_num(spins=[spin]), num_spins=1, 
+num_exp_curves=cdp.curve_count, num_times=cdp.num_time_pts, values=values, 
+errors=errors, cpmg_frqs=cdp.cpmg_frqs_list, 
+spin_lock_nu1=cdp.spin_lock_nu1_list, relax_times=cdp.relax_time_list, 
+scaling_matrix=scaling_matrix)
+ 
+         # Make a single function call.  This will cause back calculation and 
+the data will be stored in the class instance.
+         model.func(param_vector)
+@@ -286,25 +280,8 @@
+         # Get the data back.
+         results = model.back_calc
+ 
+-        # Return the correct peak height.
+-        return results
+-
+-
+-    def _block_loop(self):
+-        &quot;&quot;&quot;Loop over the spin groupings for one model applied to multiple 
+spins.
+-
+-        @return:    The list of spins per block will be yielded, as well as 
+the list of spin IDs.
+-        @rtype:     list of SpinContainer instances
+-        &quot;&quot;&quot;
+-
+-        # Loop over the sequence.
+-        for spin, spin_id in spin_loop(return_id=True):
+-            # Skip deselected spins.
+-            if not spin.select:
+-                continue
+-
+-            # Return the spin container as a stop-gap measure.
+-            yield [spin], [spin_id]
++        # Return the correct peak intensity series.
++        return results[0, index]
+ 
+ 
+     def _cpmg_delayT(self, id=None, delayT=None):
+@@ -441,14 +418,14 @@
+                     # Effective transversal relaxation rate.
+                     if spin.params[i] == 'R2eff':
+                         if sim_index != None:
+-                            spin.r2eff_sim[key][sim_index] = 
+param_vector[index]
++                            spin.r2eff_sim[sim_index][key] = 
+param_vector[index]
+                         else:
+                             spin.r2eff[key] = param_vector[index]
+ 
+                     # Initial intensity.
+                     elif spin.params[i] == 'I0':
+                         if sim_index != None:
+-                            spin.i0_sim[key][sim_index] = 
+param_vector[index+1]
++                            spin.i0_sim[sim_index][key] = 
+param_vector[index+1]
+                         else:
+                             spin.i0[key] = param_vector[index+1]
+ 
+@@ -499,6 +476,24 @@
+ 
+             # Increment the parameter index.
+             param_index = param_index + 1
++
++
++    def _exp_curve_index_from_key(self, key):
++        &quot;&quot;&quot;Convert the exponential curve key into the corresponding index.
++
++        @param key: The exponential curve key - either the CPMG frequency or 
+R1rho spin-lock field strength.
++        @type key:  float
++        @return:    The corresponding index.
++        @rtype:     int
++        &quot;&quot;&quot;
++
++        # CPMG data.
++        if cdp.exp_type == 'cpmg':
++            return cdp.cpmg_frqs_list.index(key)
++
++        # R1rho data.
++        else:
++            return cdp.spin_lock_nu1_list.index(key)
+ 
+ 
+     def _exp_curve_loop(self):
+@@ -702,6 +697,47 @@
+         return grid_size, inc, lower_new, upper_new, sparseness
+ 
+ 
++    def _intensity_key(self, exp_key=None, relax_time=None):
++        &quot;&quot;&quot;Return the intensity key corresponding to the given exponential 
+curve key and relaxation time.
++
++        @keyword exp_key:       The CPMG frequency or R1rho spin-lock field 
+strength used as a key to identify each exponential curve.
++        @type exp_key:          float
++        @keyword relax_time:    The time, in seconds, of the relaxation 
+period.
++        @type relax_time:       float
++        &quot;&quot;&quot;
++
++        # Find all keys corresponding to the given relaxation time.
++        time_keys = []
++        for key in cdp.relax_times:
++            if cdp.relax_times[key] == relax_time:
++                time_keys.append(key)
++
++        # Find all keys corresponding to the given exponential key.
++        exp_keys = []
++        if cdp.exp_type == 'cpmg':
++            data = cdp.cpmg_frqs
++        else:
++            data = cdp.spin_lock_nu1
++        for key in data:
++            if data[key] == exp_key:
++                exp_keys.append(key)
++
++        # The common key.
++        common_key = []
++        for key in time_keys:
++            if key in exp_keys:
++                common_key.append(key)
++
++        # Sanity checks.
++        if len(common_key) == 0:
++            raise RelaxError(&quot;No intensity key could be found for the CPMG 
+frequency or R1rho spin-lock field strength of %s and relaxation time period 
+of %s seconds.&quot; % (exp_key, relax_time))
++        if len(common_key) != 1:
++            raise RelaxError(&quot;More than one intensity key %s found for the 
+CPMG frequency or R1rho spin-lock field strength of %s and relaxation time 
+period of %s seconds.&quot; % (common_key, exp_key, relax_time))
++
++        # Return the unique key.
++        return common_key[0]
++
++
+     def _linear_constraints(self, spins=None, scaling_matrix=None):
+         &quot;&quot;&quot;Set up the relaxation dispersion curve fitting linear constraint 
+matrices A and b.
+ 
+@@ -999,40 +1035,23 @@
+     def create_mc_data(self, data_id):
+         &quot;&quot;&quot;Create the Monte Carlo peak intensity data.
+ 
+-        @param data_id: The spin identification string, as yielded by the 
+base_data_loop() generator method.
+-        @type data_id:  str
++        @param data_id: The tuple of the spin container and the exponential 
+curve identifying key, as yielded by the base_data_loop() generator method.
++        @type data_id:  SpinContainer instance and float
+         @return:        The Monte Carlo simulation data.
+         @rtype:         list of floats
+         &quot;&quot;&quot;
+ 
+-        # Initialise the MC data data structure.
+-        mc_data = []
+-
+-        # Get the spin container.
+-        spin = return_spin(data_id)
+-
+-        # Skip deselected spins.
+-        if not spin.select:
+-            return
+-
+-        # Skip spins which have no data.
+-        if not hasattr(spin, 'intensities'):
+-            return
+-
+-        # Test if the model is set.
+-        if not hasattr(spin, 'model') or not spin.model:
+-            raise RelaxNoModelError
+-
+-        # Loop over the spectral time points.
+-        for j in xrange(len(cdp.cpmg_frqs)):
+-            # Back calculate the value.
+-            value = self._back_calc(spin=spin, result_index=j)
+-
+-            # Append the value.
+-            mc_data.append(value)
++        # Unpack the data.
++        spin, key = data_id
++
++        # The exponential curve index.
++        index = self._exp_curve_index_from_key(key)
++
++        # Back calculate the peak intensities.
++        values = self._back_calc(spin=spin, index=index)
+ 
+         # Return the MC data.
+-        return mc_data
++        return values
+ 
+ 
+     def grid_search(self, lower=None, upper=None, inc=None, 
+constraints=True, verbosity=1, sim_index=None):
+@@ -1111,7 +1130,7 @@
+             cdp.spin_lock_nu1_list = []
+ 
+         # Loop over the spin blocks.
+-        for spins, spin_ids in self._block_loop():
++        for spins, spin_ids in self.model_loop():
+             # The spin count.
+             spin_num = len(spins)
+ 
+@@ -1140,7 +1159,7 @@
+                     if sim_index == None:
+                         values[spin_index, curve_index, time_index] = 
+spin.intensities[key]
+                     else:
+-                        values[spin_index, curve_index, time_index] = 
+spin.sim_intensities[sim_index][key]
++                        values[spin_index, curve_index, time_index] = 
+spin.intensity_sim[key][sim_index]
+ 
+                     # The errors.
+                     errors[spin_index, curve_index, time_index] = 
+spin.intensity_err[key]
+@@ -1246,6 +1265,23 @@
+ 
+                     # Warning.
+                     spin.warning = warning
++
++
++    def model_loop(self):
++        &quot;&quot;&quot;Loop over the spin groupings for one model applied to multiple 
+spins.
++
++        @return:    The list of spins per block will be yielded, as well as 
+the list of spin IDs.
++        @rtype:     tuple of list of SpinContainer instances and list of 
+spin IDs
++        &quot;&quot;&quot;
++
++        # Loop over the sequence.
++        for spin, spin_id in spin_loop(return_id=True):
++            # Skip deselected spins.
++            if not spin.select:
++                continue
++
++            # Return the spin container as a stop-gap measure.
++            yield [spin], [spin_id]
+ 
+ 
+     def overfit_deselect(self, data_check=True, verbose=True):
+@@ -1307,38 +1343,104 @@
+     def return_error(self, data_id=None):
+         &quot;&quot;&quot;Return the standard deviation data structure.
+ 
+-        @param data_id: The spin ID string, as yielded by the 
+base_data_loop() generator method.
+-        @type data_id:  str
++        @param data_id: The tuple of the spin container and the exponential 
+curve identifying key, as yielded by the base_data_loop() generator method.
++        @type data_id:  SpinContainer instance and float
+         @return:        The standard deviation data structure.
+         @rtype:         list of float
+         &quot;&quot;&quot;
+ 
+-        # Get the spin container.
+-        spin = return_spin(data_id)
++        # Unpack the data.
++        spin, key = data_id
++
++        # Generate the data structure to return.
++        errors = []
++        for time in cdp.relax_time_list:
++            # Get the intensity key.
++            int_key = self._intensity_key(exp_key=key, relax_time=time)
++
++            # Add the data.
++            errors.append(spin.intensity_err[int_key])
+ 
+         # Return the error list.
+-        return spin.intensity_err
++        return errors
+ 
+ 
+     set_doc = Desc_container(&quot;Relaxation dispersion curve fitting set 
+details&quot;)
+     set_doc.add_paragraph(&quot;Only three parameters can be set for either the 
+slow- or the fast-exchange regime. For the slow-exchange regime, these 
+parameters include the transversal relaxation rate for state A (R2A), the 
+exchange rate from state A to state (kA) and the chemical shift difference 
+between states A and B (dw). For the fast-exchange regime, these include the 
+transversal relaxation rate (R2), the chemical exchange contribution to R2 
+(Rex) and the exchange rate (kex). Setting parameters for a non selected 
+model has no effect.&quot;)
+ 
+ 
++    def set_selected_sim(self, model_info, select_sim):
++        &quot;&quot;&quot;Set the simulation selection flag.
++
++        @param model_info:  The list of spins and spin IDs per cluster 
+originating from model_loop().
++        @type model_info:   tuple of list of SpinContainer instances and 
+list of spin IDs
++        @param select_sim:  The selection flag for the simulations.
++        @type select_sim:   bool
++        &quot;&quot;&quot;
++
++        # Unpack the data.
++        spins, spin_ids = model_info
++
++        # Loop over the spins, storing the structure for each spin.
++        for spin in spins:
++            spin.select_sim = deepcopy(select_sim)
++
++
+     def sim_pack_data(self, data_id, sim_data):
+         &quot;&quot;&quot;Pack the Monte Carlo simulation data.
+ 
+-        @param data_id:     The spin ID string, as yielded by the 
+base_data_loop() generator method.
+-        @type data_id:      str
++        @param data_id:     The tuple of the spin container and the 
+exponential curve identifying key, as yielded by the base_data_loop() 
+generator method.
++        @type data_id:      SpinContainer instance and float
+         @param sim_data:    The Monte Carlo simulation data.
+         @type sim_data:     list of float
+         &quot;&quot;&quot;
+ 
+-        # Get the spin container.
+-        spin = return_spin(data_id)
+-
+-        # Test if the simulation data already exists.
+-        if hasattr(spin, 'sim_intensities'):
+-            raise RelaxError(&quot;Monte Carlo simulation data already exists.&quot;)
+-
+-        # Create the data structure.
+-        spin.sim_intensities = sim_data
++        # Unpack the data.
++        spin, key = data_id
++
++        # Initialise the data structure if needed.
++        if not hasattr(spin, 'intensity_sim'):
++            spin.intensity_sim = {}
++
++        # Loop over each time point.
++        for time_index in range(cdp.num_time_pts):
++            # Get the intensity key.
++            int_key = self._intensity_key(exp_key=key, 
+relax_time=cdp.relax_time_list[time_index])
++
++            # Test if the simulation data point already exists.
++            if int_key in spin.intensity_sim:
++                raise RelaxError(&quot;Monte Carlo simulation data for the key 
+'%s' already exists.&quot; % int_key)
++
++            # Initialise the list.
++            spin.intensity_sim[int_key] = []
++
++            # Loop over the simulations, appending the corresponding data.
++            for i in range(cdp.sim_number):
++                spin.intensity_sim[int_key].append(sim_data[i][time_index])
++
++
++    def sim_return_param(self, model_info, index):
++        &quot;&quot;&quot;Return the array of simulation parameter values.
++
++        @param model_info:  The model information originating from 
+model_loop().
++        @type model_info:   unknown
++        @param index:       The index of the parameter to return the array 
+of values for.
++        @type index:        int
++        @return:            The array of simulation parameter values.
++        @rtype:             list of float
++        &quot;&quot;&quot;
++
++    def sim_return_selected(self, model_info):
++        &quot;&quot;&quot;Return the array of selected simulation flags.
++
++        @param model_info:  The list of spins and spin IDs per cluster 
+originating from model_loop().
++        @type model_info:   tuple of list of SpinContainer instances and 
+list of spin IDs
++        @return:            The array of selected simulation flags.
++        @rtype:             list of int
++        &quot;&quot;&quot;
++
++        # Unpack the data.
++        spins, spin_ids = model_info
++
++        # Return the array from the first spin, as this array will be 
+identical for all spins in the cluster.
++        return spins[0].select_sim
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Apr 05 12:40:01 2013</div>  
+</body>
+</html>

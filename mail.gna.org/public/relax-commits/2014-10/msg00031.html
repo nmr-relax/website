@@ -1,0 +1,317 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r26135 &#45; /trunk/auto_analyses/relax_disp_repeat_cpmg.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 02 Oct 2014 14:08:38 +0200 -->
+<!--X-Message-Id: E1XZfBV&#45;0006gA&#45;T1@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r26135 - /trunk/auto_analyses/relax_disp_repeat_cpmg.py -- October 02, 2014 - 14:08</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r26135 - /trunk/auto_analyses/relax_disp_repeat_cpmg.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00031" class="tabs">Index by Date</a> | <a href="threads.html#00031" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00030.html">Date Prev</a>] [<a href="msg00032.html">Date Next</a>] [<a href="msg00030.html">Thread Prev</a>] [<a href="msg00032.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 02 Oct 2014 12:08:37 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00031.html">E1XZfBV-0006gA-T1@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on October 02, 2014 - 14:08:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Thu Oct  2 14:08:37 2014
+New Revision: 26135
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=26135&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=26135&amp;view=rev</a>
+Log:
+Implemented writing out intensity and error correlations plot.
+
+Task #7826 (<a  rel="nofollow" href="https://gna.org/task/index.php?7826">https://gna.org/task/index.php?7826</a>): Write an python class for 
+the repeated analysis of dispersion data.
+
+Modified:
+    trunk/auto_analyses/relax_disp_repeat_cpmg.py
+
+Modified: trunk/auto_analyses/relax_disp_repeat_cpmg.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/auto_analyses/relax_disp_repeat_cpmg.py?rev=26135&amp;r1=26134&amp;r2=26135&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/auto_analyses/relax_disp_repeat_cpmg.py?rev=26135&amp;r1=26134&amp;r2=26135&amp;view=diff</a>
+==============================================================================
+--- trunk/auto_analyses/relax_disp_repeat_cpmg.py       (original)
++++ trunk/auto_analyses/relax_disp_repeat_cpmg.py       Thu Oct  2 14:08:37 
+2014
+@@ -1041,6 +1041,7 @@
+         # Loop over the glob ini:
+         res_dic = {}
+         res_dic['method'] = method
++        res_dic['selection'] = selection
+         for glob_ini in list_glob_ini:
+             # Get the pipe name for peak_intensity values.
+             pipe_name = self.name_pipe(method=method, model='setup', 
+analysis='int', glob_ini=glob_ini)
+@@ -1083,7 +1084,7 @@
+         return res_dic
+ 
+ 
+-    def plot_int_corr(self, corr_data, show=False):
++    def plot_int_corr(self, corr_data, show=False, write_stats=False):
+ 
+         # Define figure.
+         # Nr of columns is number of datasets.
+@@ -1097,6 +1098,9 @@
+ 
+         # axises is a tuple with number of elements corresponding to number 
+of rows.
+         # Each sub-tuple contains axis for each column.
++
++        # For writing out stats.
++        data_dic = OrderedDict()
+ 
+         # Loop over the rows.
+         for i, row_axises in enumerate(axises):
+@@ -1110,12 +1114,17 @@
+ 
+                 x = data_x[str(glob_ini_x)]['peak_intensity_arr']
+                 x_err = data_x[str(glob_ini_x)]['peak_intensity_err_arr']
++                np = len(x)
+ 
+                 y = data_y[str(glob_ini_y)]['peak_intensity_arr']
+                 y_err = data_y[str(glob_ini_y)]['peak_intensity_err_arr']
+ 
+                 # If row 1.
+                 if i == 0:
++                    # Add to data dic.
++                    method_xy_NI = &quot;int_%s%s_%s%s&quot; % (method_x, glob_ini_x, 
+method_y, glob_ini_y)
++                    data_dic[method_xy_NI] = []
++
+                     ax.plot(x, x, 'o', label='%s vs. %s' % (method_x, 
+method_x))
+                     ax.plot(x, y, '.', label='%s vs. %s' % (method_y, 
+method_x) )
+ 
+@@ -1127,6 +1136,22 @@
+                     ax.set_xlabel(r'$I$')
+                     ax.set_ylabel(r'$I$')
+ 
++                    # Calculate straight line.
++                    # Linear a, with no intercept.
++                    a = sum(x * y) / sum(x**2)
++                    min_x = min(x)
++                    max_x =  max(x)
++                    step_x = (max_x - min_x) / np
++                    x_arange = arange(min_x, max_x, step_x)
++                    y_arange = a * x_arange
++
++                    # Add to data.
++                    for k, x_k in enumerate(x):
++                        y_k = y[k]
++                        x_arange_k = x_arange[k]
++                        y_arange_k = y_arange[k]
++                        data_dic[method_xy_NI].append([&quot;%3.5f&quot;%x_k, 
+&quot;%3.5f&quot;%y_k, &quot;%3.5f&quot;%x_arange_k, &quot;%3.5f&quot;%y_arange_k])
++
+                 # Scale intensity
+                 if i == 1:
+ 
+@@ -1145,6 +1170,9 @@
+ 
+                 # Error.
+                 if i == 2:
++                    # Add to data dic.
++                    method_xy_NI = &quot;int_err_%s%s_%s%s&quot; % (method_x, 
+glob_ini_x, method_y, glob_ini_y)
++                    data_dic[method_xy_NI] = []
+ 
+                     ax.plot(x_err, x_err, 'o', label='%s vs. %s' % 
+(method_x, method_x))
+                     ax.plot(x_err, y_err, '.', label='%s vs. %s' % 
+(method_y, method_x))
+@@ -1155,6 +1183,22 @@
+                     ax.set_xlabel(r'$\sigma(I)$')
+                     ax.set_ylabel(r'$\sigma(I)$')
+ 
++                    # Calculate straight line.
++                    # Linear a, with no intercept.
++                    a = sum(x_err * y_err) / sum(x_err**2)
++                    min_x = min(x_err)
++                    max_x =  max(x_err)
++                    step_x = (max_x - min_x) / np
++                    x_err_arange = arange(min_x, max_x, step_x)
++                    y_err_arange = a * x_arange
++
++                    # Add to data.
++                    for k, x_err_k in enumerate(x_err):
++                        y_err_k = y_err[k]
++                        x_err_arange_k = x_err_arange[k]
++                        y_err_arange_k = y_err_arange[k]
++                        data_dic[method_xy_NI].append([&quot;%3.5f&quot;%x_err_k, 
+&quot;%3.5f&quot;%y_err_k, &quot;%3.5f&quot;%x_err_arange_k, &quot;%3.5f&quot;%y_err_arange_k])
++
+ 
+                 # Intensity to error.
+                 if i == 3:
+@@ -1172,6 +1216,96 @@
+                     ax.set_ylabel(r'$I/\sigma(I)$')
+ 
+             plt.tight_layout()
++
++        # Loop over columns for writing data.
++        # Write to file.
++        if write_stats:
++            # Re-order the data.
++            headings_all = []
++            method_xy_NI_all = []
++            # Loop over the columns.
++            for j in range(nr_cols):
++                headings_j = []
++                method_xy_NI_j = []
++                # Loop over rows
++                for i in range(nr_rows):
++                    # Extract from lists.
++                    data, methods, glob_inis = corr_data[j]
++                    method_x, method_y = methods
++                    glob_ini_x, glob_ini_y = glob_inis
++
++                    # If row 1.
++                    if i == 0:
++                        # Add to headings.
++                        method_x_NI = &quot;int_%s%s&quot; % (method_x, glob_ini_x)
++                        method_y_NI = &quot;int_%s%s&quot; % (method_y, glob_ini_y)
++                        method_x_NI_lin = &quot;int_lin_%s%s&quot; % (method_x, 
+glob_ini_x)
++                        method_y_NI_lin = &quot;int_lin_%s%s&quot; % (method_y, 
+glob_ini_y)
++                        headings_j = headings_j + [method_x_NI, method_y_NI, 
+method_x_NI_lin, method_y_NI_lin]
++
++                        method_xy_NI = &quot;int_%s%s_%s%s&quot; % (method_x, 
+glob_ini_x, method_y, glob_ini_y)
++                        method_xy_NI_j.append(method_xy_NI)
++
++                    # Error.
++                    if i == 2:
++                        # Add to headings
++                        method_x_NI = &quot;int_err_%s%s&quot; % (method_x, glob_ini_x)
++                        method_y_NI = &quot;int_err_%s%s&quot; % (method_y, glob_ini_y)
++                        method_x_NI_lin = &quot;int_err_lin_%s%s&quot; % (method_x, 
+glob_ini_x)
++                        method_y_NI_lin = &quot;int_err_lin_%s%s&quot; % (method_y, 
+glob_ini_y)
++                        headings_j = headings_j + [method_x_NI, method_y_NI, 
+method_x_NI_lin, method_y_NI_lin]
++
++                        method_xy_NI = &quot;int_err_%s%s_%s%s&quot; % (method_x, 
+glob_ini_x, method_y, glob_ini_y)
++                        method_xy_NI_j.append(method_xy_NI)
++
++                headings_all.append(headings_j)
++                method_xy_NI_all.append(method_xy_NI_j)
++
++            # Loop over the columns.
++            for j, headings_j in enumerate(headings_all):
++                method_xy_NI_j = method_xy_NI_all[j]
++
++                data_w = []
++                data_int = data_dic[method_xy_NI_j[0]]
++                data_int_err = data_dic[method_xy_NI_j[1]]
++
++                for k, data_int_k in enumerate(data_int):
++                    data_int_err_k = data_int_err[k]
++                    data_w.append(data_int_k + data_int_err_k)
++
++                # Define file name.
++                data, methods, glob_inis = corr_data[j]
++                data_x, data_y = data
++                method_x, method_y = methods
++                glob_ini_x, glob_ini_y = glob_inis
++                np = len(data_int)
++
++                # Get the spin selection for correlation.
++                selection = data_x['selection']
++
++                file_name_ini = 'int_corr_%s_%s_%s_%s_NP_%i' % (method_x, 
+glob_ini_x, method_y, glob_ini_y, np)
++                if selection == None:
++                    file_name_ini = file_name_ini + '_all'
++                else:
++                    file_name_ini = file_name_ini + '_sel'
++
++                file_name = file_name_ini + '.txt'
++                path = self.results_dir
++
++                # save figure
++                # Write png.
++                png_file_name = file_name_ini + '.png'
++                png_file_path = get_file_path(file_name=png_file_name, 
+dir=path)
++                plt.savefig(png_file_path, bbox_inches='tight')
++
++                # Write file
++                file_obj, file_path = open_write_file(file_name=file_name, 
+dir=path, force=True, compress_type=0, verbosity=1, return_path=True)
++
++                # Write data.
++                write_data(out=file_obj, headings=headings_j, data=data_w)
++
++                # Close file.
++                file_obj.close()
+ 
+         if show:
+             plt.show()
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Oct 02 14:20:02 2014</div>  
+</body>
+</html>

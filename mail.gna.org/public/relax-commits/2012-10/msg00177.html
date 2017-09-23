@@ -1,0 +1,262 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r17798 &#45; in /trunk: generic_fns/reset.py gui/controller.py	gui/relax_gui.py test_suite/gui_tests/base_classes.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 12 Oct 2012 11:48:23 +0200 -->
+<!--X-Message-Id: E1TMbqx&#45;0003Ok&#45;9u@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r17798 - in /trunk: generic_fns/reset.py gui/controller.py	gui/relax_gui.py test_suite/gui_tests/base_classes.py -- October 12, 2012 - 11:48</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r17798 - in /trunk: generic_fns/reset.py gui/controller.py	gui/relax_gui.py test_suite/gui_tests/base_classes.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00177" class="tabs">Index by Date</a> | <a href="threads.html#00177" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00176.html">Date Prev</a>] [<a href="msg00178.html">Date Next</a>] [<a href="msg00176.html">Thread Prev</a>] [<a href="msg00178.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 12 Oct 2012 09:48:23 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00177.html">E1TMbqx-0003Ok-9u@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on October 12, 2012 - 11:48:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Oct 12 11:48:22 2012
+New Revision: 17798
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=17798&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=17798&amp;view=rev</a>
+Log:
+Redesigned the reset user function backend.
+
+This now no only clears out the relax data store, but it also resets the GUI 
+if present.  Some of
+the reset code comes from the tearDown() method of the GUI tests.  All 
+windows but the main GUI
+window are closed and the relax controller gauges are set to zero and the log 
+window text cleared.
+
+These changes should allow GUI tests after an error or failure to pass, 
+something which is currently
+problematic.
+
+
+Modified:
+    trunk/generic_fns/reset.py
+    trunk/gui/controller.py
+    trunk/gui/relax_gui.py
+    trunk/test_suite/gui_tests/base_classes.py
+
+Modified: trunk/generic_fns/reset.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/generic_fns/reset.py?rev=17798&amp;r1=17797&amp;r2=17798&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/generic_fns/reset.py?rev=17798&amp;r1=17797&amp;r2=17798&amp;view=diff</a>
+==============================================================================
+--- trunk/generic_fns/reset.py (original)
++++ trunk/generic_fns/reset.py Fri Oct 12 11:48:22 2012
+@@ -19,6 +19,13 @@
+ #                                                                            
+ #
+ 
+###############################################################################
+ 
++# Dependencies.
++import dep_check
++
++# Python module imports.
++if dep_check.wx_module:
++    import wx
++
+ # relax module imports.
+ from data import Relax_data_store; ds = Relax_data_store()
+ 
+@@ -28,3 +35,15 @@
+ 
+     # Run the relax data storage object reset method.
+     ds.__reset__()
++
++    # Clean up and reset the GUI.
++    if dep_check.wx_module:
++        # The wx application.
++        app = wx.GetApp()
++
++        # Nothing to do.
++        if app == None or not hasattr(app, 'gui'):
++            return
++
++        # Call the GUI reset.
++        app.gui.reset()
+
+Modified: trunk/gui/controller.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/gui/controller.py?rev=17798&amp;r1=17797&amp;r2=17798&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/gui/controller.py?rev=17798&amp;r1=17797&amp;r2=17798&amp;view=diff</a>
+==============================================================================
+--- trunk/gui/controller.py (original)
++++ trunk/gui/controller.py Fri Oct 12 11:48:22 2012
+@@ -335,6 +335,30 @@
+             self.update_gauge()
+ 
+ 
++    def reset(self):
++        &quot;&quot;&quot;Reset the relax controller to its initial state.&quot;&quot;&quot;
++
++        # Stop the timer.
++        if self.timer.IsRunning():
++            self.timer.Stop()
++
++        # Reset the Rx gauges.
++        if hasattr(self, 'mc_gauge_rx'):
++            wx.CallAfter(self.mc_gauge_rx.SetValue, 0)
++
++        # Reset the model-free gauges.
++        if hasattr(self, 'mc_gauge_mf'):
++            wx.CallAfter(self.mc_gauge_mf.SetValue, 0)
++        if hasattr(self, 'progress_gauge_mf'):
++            wx.CallAfter(self.progress_gauge_mf.SetValue, 0)
++
++        # Reset the main gauge.
++        wx.CallAfter(self.main_gauge.SetValue, 0)
++
++        # Clear the log.
++        wx.CallAfter(self.log_panel.clear)
++
++
+     def setup_frame(self):
+         &quot;&quot;&quot;Set up the relax controller frame.
+         @return:    The sizer object.
+@@ -692,6 +716,19 @@
+             self.on_goto_end(event)
+ 
+ 
++    def clear(self):
++        &quot;&quot;&quot;Remove all text from the log.&quot;&quot;&quot;
++
++        # Turn of the read only state.
++        self.SetReadOnly(False)
++
++        # Remove all text.
++        self.ClearAll()
++
++        # Make the control read only again.
++        self.SetReadOnly(True)
++
++
+     def find(self, event):
+         &quot;&quot;&quot;Find the text in the log control.
+ 
+
+Modified: trunk/gui/relax_gui.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/gui/relax_gui.py?rev=17798&amp;r1=17797&amp;r2=17798&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/gui/relax_gui.py?rev=17798&amp;r1=17797&amp;r2=17798&amp;view=diff</a>
+==============================================================================
+--- trunk/gui/relax_gui.py (original)
++++ trunk/gui/relax_gui.py Fri Oct 12 11:48:22 2012
+@@ -513,6 +513,26 @@
+         open_file(file)
+ 
+ 
++    def reset(self):
++        &quot;&quot;&quot;Reset the GUI.&quot;&quot;&quot;
++
++        # Close some GUI windows, if open.
++        windows = ['pipe_editor', 'relax_prompt', 'results_viewer', 
+'spin_viewer']
++        for window in windows:
++            if hasattr(self, window):
++                # Get the object.
++                win_obj = getattr(self, window)
++
++                # Close the window.
++                win_obj.Close()
++
++        # Flush all wx events to make sure the GUI is ready for the next 
+test.
++        wx.Yield()
++
++        # Reset the relax controller.
++        self.controller.reset()
++
++
+     def run_test_suite(self, event=None, categories=['system', 'unit', 
+'gui']):
+         &quot;&quot;&quot;Execute the full test suite.
+ 
+
+Modified: trunk/test_suite/gui_tests/base_classes.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/test_suite/gui_tests/base_classes.py?rev=17798&amp;r1=17797&amp;r2=17798&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/test_suite/gui_tests/base_classes.py?rev=17798&amp;r1=17797&amp;r2=17798&amp;view=diff</a>
+==============================================================================
+--- trunk/test_suite/gui_tests/base_classes.py (original)
++++ trunk/test_suite/gui_tests/base_classes.py Fri Oct 12 11:48:22 2012
+@@ -241,16 +241,3 @@
+ 
+         # Reset relax.
+         reset()
+-
+-        # Close some GUI windows, if open.
+-        windows = ['pipe_editor', 'relax_prompt', 'results_viewer', 
+'spin_viewer']
+-        for window in windows:
+-            if hasattr(self.app.gui, window):
+-                # Get the object.
+-                win_obj = getattr(self.app.gui, window)
+-
+-                # Close the window.
+-                win_obj.Close()
+-
+-        # Flush all wx events to make sure the GUI is ready for the next 
+test.
+-        wx.Yield()
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Oct 15 10:40:02 2012</div>  
+</body>
+</html>

@@ -1,0 +1,337 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r27504 &#45; /trunk/devel_scripts/memory_leak_test_GUI_uf.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 04 Feb 2015 11:15:49 +0100 -->
+<!--X-Message-Id: E1YIwzs&#45;0000Sm&#45;VH@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r27504 - /trunk/devel_scripts/memory_leak_test_GUI_uf.py -- February 04, 2015 - 11:15</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r27504 - /trunk/devel_scripts/memory_leak_test_GUI_uf.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00069" class="tabs">Index by Date</a> | <a href="threads.html#00069" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00068.html">Date Prev</a>] [<a href="msg00070.html">Date Next</a>] [<a href="msg00068.html">Thread Prev</a>] [<a href="msg00070.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 04 Feb 2015 10:15:48 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00069.html">E1YIwzs-0000Sm-VH@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on February 04, 2015 - 11:15:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Feb  4 11:15:48 2015
+New Revision: 27504
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=27504&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=27504&amp;view=rev</a>
+Log:
+Created the memory_leak_test_GUI_uf.py development script.
+
+This is to help in tracking down memory leaks in the relax GUI user 
+functions.  Instead of using a
+debugging Python version and guppy (wxPython doesn't seem to work with 
+these), the pympler Python
+package and its muppy module is used to produce a memory usage printout.
+
+
+Added:
+    trunk/devel_scripts/memory_leak_test_GUI_uf.py
+      - copied, changed from r27503, 
+trunk/devel_scripts/memory_leak_test_relax_fit.py
+
+Copied: trunk/devel_scripts/memory_leak_test_GUI_uf.py (from r27503, 
+trunk/devel_scripts/memory_leak_test_relax_fit.py)
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/devel_scripts/memory_leak_test_GUI_uf.py?p2=trunk/devel_scripts/memory_leak_test_GUI_uf.py&amp;p1=trunk/devel_scripts/memory_leak_test_relax_fit.py&amp;r1=27503&amp;r2=27504&amp;rev=27504&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/devel_scripts/memory_leak_test_GUI_uf.py?p2=trunk/devel_scripts/memory_leak_test_GUI_uf.py&amp;p1=trunk/devel_scripts/memory_leak_test_relax_fit.py&amp;r1=27503&amp;r2=27504&amp;rev=27504&amp;view=diff</a>
+==============================================================================
+--- trunk/devel_scripts/memory_leak_test_relax_fit.py   (original)
++++ trunk/devel_scripts/memory_leak_test_GUI_uf.py      Wed Feb  4 11:15:48 
+2015
+@@ -21,33 +21,171 @@
+ 
+ &quot;&quot;&quot;Script for relaxation curve fitting.
+ 
+-Run with a debugging compiled version of Python, eg:
+-
+-/data/python/pydebug/bin/python relax 
+devel_scripts/memory_leak_test_relax_fit.py
+-
+-and build the C module with:
+-
+-gcc -o target_functions/c_chi2.os -c 
+-I/data/python/pydebug/include/python2.7/ -fPIC target_functions/c_chi2.c
+-gcc -o target_functions/exponential.os -c 
+-I/data/python/pydebug/include/python2.7/ -fPIC target_functions/exponential.c
+-gcc -o target_functions/exponential_inv.os -c 
+-I/data/python/pydebug/include/python2.7/ -fPIC 
+target_functions/exponential_inv.c
+-gcc -o target_functions/exponential_sat.os -c 
+-I/data/python/pydebug/include/python2.7/ -fPIC 
+target_functions/exponential_sat.c
+-gcc -o target_functions/relax_fit.os -c 
+-I/data/python/pydebug/include/python2.7/ -fPIC target_functions/relax_fit.c
+-gcc -o target_functions/relax_fit.so -shared target_functions/c_chi2.os 
+target_functions/exponential.os target_functions/exponential_inv.os 
+target_functions/exponential_sat.os target_functions/relax_fit.os
++Run with a normal version of Python, i.e. a debugging version is not needed, 
+with:
++
++/data/python/bin/python relax devel_scripts/memory_leak_test_relax_fit.py
+ &quot;&quot;&quot;
+-
+ 
+ # Python module imports.
+ from os import sep
++from pympler import muppy
+ import sys
+-
+-# Check.
+-if not hasattr(sys, 'gettotalrefcount'):
+-    print(&quot;This is not a debugging compiled version of Python, quitting!&quot;)
+-    sys.exit()
++import wx
+ 
+ # relax module imports.
+ from data_store import Relax_data_store; ds = Relax_data_store()
++from gui import relax_gui
++from gui.controller import Controller
++from gui.fonts import font
++from gui.interpreter import Interpreter
++from gui.uf_objects import Uf_storage; uf_store = Uf_storage()
++from lib.errors import RelaxError
+ from status import Status; status = Status()
++from user_functions.data import Uf_info; uf_info = Uf_info()
++
++
++
++class Controller:
++    &quot;&quot;&quot;Dummy relax controller.&quot;&quot;&quot;
++
++    def __init__(self):
++        self.log_panel = Log_panel()
++
++
++
++class Log_panel:
++    &quot;&quot;&quot;Dummy relax controller log panel.&quot;&quot;&quot;
++
++    def on_goto_end(self, arg1):
++        &quot;&quot;&quot;Dummy function.&quot;&quot;&quot;
++
++
++
++class Testing_frame(wx.Frame):
++    &quot;&quot;&quot;Testing frame.&quot;&quot;&quot;
++
++    def __init__(self, parent, title):
++        &quot;&quot;&quot;Set up a minimal relax GUI.&quot;&quot;&quot;
++
++        # Initialise the frame.
++        wx.Frame.__init__(self, parent, title=title, size=(200,100))
++
++        # Set up a pseudo-relax GUI.
++        app = wx.GetApp()
++        app.gui = self
++
++        # Set up some standard interface-wide fonts.
++        font.setup()
++
++        # Initialise the special interpreter thread object.
++        self.interpreter = Interpreter()
++
++        # Build the controller, but don't show it.
++        self.controller = Controller()
++
++        self.test()
++        self.Show(True)
++
++
++    def _execute_uf(self, *args, **kargs):
++        &quot;&quot;&quot;Execute the given user function.
++
++        @keyword uf_name:   The name of the user function.
++        @type uf_name:      str
++        &quot;&quot;&quot;
++
++        # Checks.
++        if 'uf_name' not in kargs:
++            raise RelaxError(&quot;The user function name argument 'uf_name' has 
+not been supplied.&quot;)
++
++        # Process the user function name.
++        uf_name = kargs.pop('uf_name')
++
++        # Get the user function data object.
++        uf_data = uf_info.get_uf(uf_name)
++
++        # Convert the args into keyword args.
++        for i in range(len(args)):
++            # The keyword name for this arg.
++            name = uf_data.kargs[i]['name']
++
++            # Check.
++            if name in kargs:
++                raise RelaxError(&quot;The argument '%s' clashes with the %s 
+keyword argument of '%s'.&quot; % (arg[i], name, kargs[name]))
++
++            # Set the keyword arg.
++            kargs[name] = args[i]
++
++        # Add the keyword args not supplied, using the default value.
++        for i in range(len(uf_data.kargs)):
++            # Alias.
++            arg = uf_data.kargs[i]
++
++            # Already set.
++            if arg['name'] in kargs:
++                continue
++
++            # Set the default.
++            kargs[arg['name']] = arg['default']
++
++        # Merge the file and directory args, as needed.
++        for i in range(len(uf_data.kargs)):
++            # Alias.
++            arg = uf_data.kargs[i]
++
++            # File selection and associated directory arg.
++            if arg['arg_type'] == 'dir' and arg['name'] in kargs:
++                # Find the associated file selection arg name.
++                for j in range(len(uf_data.kargs)):
++                    if uf_data.kargs[j]['arg_type'] == 'file sel':
++                        file_sel_name = uf_data.kargs[j]['name']
++
++                # Prepend the directory to the file, if needed and supplied.
++                if file_sel_name in kargs and kargs[arg['name']]:
++                    kargs[file_sel_name] = kargs[arg['name']] + sep + 
+kargs[file_sel_name]
++
++                # Remove the directory argument.
++                kargs.pop(arg['name'])
++
++        # The user function object.
++        uf = uf_store[uf_name]
++
++        # Force synchronous operation of the user functions.
++        status.gui_uf_force_sync = True
++
++        # Call the GUI user function object with all keyword args, but do 
+not execute the wizard.
++        uf(wx_wizard_run=False, **kargs)
++
++        # Execute the user function, by mimicking a click on 'ok'.
++        uf.wizard._ok()
++
++        # Restore the synchronous or asynchronous operation of the user 
+functions so the GUI can return to normal.
++        status.gui_uf_force_sync = False
++
++        # Destroy the user function object.
++        uf.Destroy()
++
++
++    def show_controller(self, arg1):
++        &quot;&quot;&quot;Dummy function.&quot;&quot;&quot;
++
++
++    def test(self):
++        &quot;&quot;&quot;Run the tests.&quot;&quot;&quot;
++
++        # Minimise via the GUI user function.
++        file = open('muppy_log', 'w')
++        for i in range(10000):
++            self._execute_uf(uf_name='minimise.execute', 
+min_algor='simplex', constraints=False)
++            if not i % 100:
++                file.write(&quot;Iteration %i\n&quot; % i)
++                file.write(&quot;Muppy heap:\n%s\n\n\n&quot;)
++                for line in 
+muppy.summary.format_(muppy.summary.summarize(muppy.get_objects())):
++                    file.write(&quot;%s\n&quot; % line)
++                file.write(&quot;\n\n\n&quot;)
++                file.flush()
++
++        print(&quot;Finished :)&quot;)
+ 
+ 
+ # Missing intensity type (allow this script to run outside of the system 
+test framework).
+@@ -131,17 +269,8 @@
+ # Grid search.
+ minimise.grid_search(inc=11)
+ 
+-# Minimise.
+-from guppy import hpy
+-file = open('guppy_log', 'w')
+-for i in range(10000):
+-    minimise.execute('simplex', constraints=False)
+-    if not i % 100:
+-        file.write(&quot;Iteration %i\n&quot; % i)
+-        file.write(&quot;Reference counts:\n%s\n\n&quot; % sys.gettotalrefcount())
+-        h = hpy()
+-        file.write(&quot;Guppy heap:\n%s\n\n\n&quot; % h.heap())
+-        file.flush()
+-
+-
+-print(&quot;Finished :)&quot;)
++# Set up the GUI.
++app = wx.App(False)
++frame = Testing_frame(None, &quot;GUI memory test&quot;)
++frame.Show(True)
++app.MainLoop()
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Feb 04 11:40:02 2015</div>  
+</body>
+</html>

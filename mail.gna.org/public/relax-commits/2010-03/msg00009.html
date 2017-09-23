@@ -1,0 +1,245 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r10958 &#45; /1.3/generic_fns/structure/geometric.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 09 Mar 2010 19:23:47 +0100 -->
+<!--X-Message-Id: E1Np45r&#45;0000tC&#45;5f@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r10958 - /1.3/generic_fns/structure/geometric.py -- March 09, 2010 - 19:23</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r10958 - /1.3/generic_fns/structure/geometric.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00009" class="tabs">Index by Date</a> | <a href="threads.html#00009" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00008.html">Date Prev</a>] [<a href="msg00010.html">Date Next</a>] [<a href="msg00008.html">Thread Prev</a>] [<a href="msg00010.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 09 Mar 2010 18:23:47 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00009.html">E1Np45r-0000tC-5f@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on March 09, 2010 - 19:23:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Mar  9 19:23:46 2010
+New Revision: 10958
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=10958&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=10958&amp;view=rev</a>
+Log:
+Shifted the calculation of the uniform sphere point positions into 
+angles_uniform().
+
+This removes this replicated code from various functions, allowing for more 
+flexibility.
+
+
+Modified:
+    1.3/generic_fns/structure/geometric.py
+
+Modified: 1.3/generic_fns/structure/geometric.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/generic_fns/structure/geometric.py?rev=10958&amp;r1=10957&amp;r2=10958&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/generic_fns/structure/geometric.py?rev=10958&amp;r1=10957&amp;r2=10958&amp;view=diff</a>
+==============================================================================
+--- 1.3/generic_fns/structure/geometric.py (original)
++++ 1.3/generic_fns/structure/geometric.py Tue Mar  9 19:23:46 2010
+@@ -38,6 +38,37 @@
+ 
+ 
+ 
++def angles_uniform(inc=None):
++    &quot;&quot;&quot;Determine the spherical angles for a uniform sphere point 
+distribution.
++
++    @keyword inc:   The number of increments in the distribution.
++    @type inc:      int
++    @return:        The phi angle array and the theta angle array.
++    @rtype:         array of float, array of float
++    &quot;&quot;&quot;
++    # Generate the increment values of u.
++    u = zeros(inc, float64)
++    val = 1.0 / float(inc)
++    for i in xrange(inc):
++        u[i] = float(i) * val
++
++    # Generate the increment values of v.
++    v = zeros(inc/2+2, float64)
++    val = 1.0 / float(inc/2)
++    for i in xrange(1, inc/2+1):
++        v[i] = float(i-1) * val + val/2.0
++    v[-1] = 1.0
++
++    # Generate the distribution of spherical angles theta.
++    theta = 2.0 * pi * u
++
++    # Generate the distribution of spherical angles phi.
++    phi = arccos(2.0 * v - 1.0)
++
++    # Return the angle arrays.
++    return phi, theta
++
++
+ def autoscale_tensor(method='mass'):
+     &quot;&quot;&quot;Automatically determine an appropriate scaling factor for display of 
+the diffusion tensor.
+ 
+@@ -487,7 +518,10 @@
+ 
+     # Get the uniform vector distribution.
+     print(&quot;    Creating the uniform vector distribution.&quot;)
+-    vectors, theta, phi = uniform_vect_dist_spherical_angles(inc=inc)
++    vectors = uniform_vect_dist_spherical_angles(inc=inc)
++
++    # Get the polar and azimuthal angles for the distribution.
++    phi, theta = angles_uniform(inc)
+ 
+     # Init the arrays for stitching together.
+     edge = zeros(len(theta))
+@@ -686,7 +720,7 @@
+             return names[i] + repr(atom_num - lims[i])
+ 
+ 
+-def stitch_cone_to_edge(mol=None, cone_start=None, edge_start=None, 
+max_angle=None, inc=None):
++def stitch_cone_to_edge(mol=None, cone_start=None, edge_start=None, 
+max_angle=None, inc=None, debug=False):
+     &quot;&quot;&quot;Function for stitching the cone dome to its edge, in the PDB 
+representations.
+ 
+     @keyword mol:           The molecule container.
+@@ -702,15 +736,8 @@
+     @type inc:              int
+     &quot;&quot;&quot;
+ 
+-    # Generate the increment values of v.
+-    v = zeros(inc/2+2, float64)
+-    val = 1.0 / float(inc/2)
+-    for i in xrange(1, inc/2+1):
+-        v[i] = float(i-1) * val + val/2.0
+-    v[-1] = 1.0
+-
+-    # Generate the distribution of spherical angles phi.
+-    phi = arccos(2.0 * v - 1.0)
++    # Get the polar and azimuthal angles for the distribution.
++    phi, theta = angles_uniform(inc)
+ 
+     # Loop over the angles and find the minimum latitudinal index.
+     for j_min in xrange(len(phi)):
+@@ -751,12 +778,12 @@
+         vector  =  | sin(theta) * sin(phi) |.
+                    |      cos(phi)         |
+ 
+-    The vectors of this distribution generate both longitudinal and 
+latitudinal lines.  The arrays of angle distributions of theta and phi are 
+also returned.
++    The vectors of this distribution generate both longitudinal and 
+latitudinal lines.
+ 
+ 
+     @keyword inc:   The number of increments in the distribution.
+     @type inc:      int
+-    @return:        The distribution of vectors on a sphere, the theta angle 
+array, and the phi angle array.
++    @return:        The distribution of vectors on a sphere.
+     @rtype:         list of rank-1, 3D numpy arrays, array of float, array 
+of float
+     &quot;&quot;&quot;
+ 
+@@ -764,32 +791,16 @@
+     if inc%2:
+         raise RelaxError(&quot;The increment value of &quot; + repr(inc) + &quot; must be 
+an even number.&quot;)
+ 
+-    # Generate the increment values of u.
+-    u = zeros(inc, float64)
+-    val = 1.0 / float(inc)
+-    for i in xrange(inc):
+-        u[i] = float(i) * val
+-
+-    # Generate the increment values of v.
+-    v = zeros(inc/2+2, float64)
+-    val = 1.0 / float(inc/2)
+-    for i in xrange(1, inc/2+1):
+-        v[i] = float(i-1) * val + val/2.0
+-    v[-1] = 1.0
+-
+-    # Generate the distribution of spherical angles theta.
+-    theta = 2.0 * pi * u
+-
+-    # Generate the distribution of spherical angles phi.
+-    phi = arccos(2.0 * v - 1.0)
++    # Get the polar and azimuthal angles for the distribution.
++    phi, theta = angles_uniform(inc)
+ 
+     # Initialise array of the distribution of vectors.
+     vectors = []
+ 
+     # Loop over the longitudinal lines.
+-    for j in xrange(len(v)):
++    for j in xrange(len(phi)):
+         # Loop over the latitudinal lines.
+-        for i in xrange(len(u)):
++        for i in xrange(len(theta)):
+             # X coordinate.
+             x = cos(theta[i]) * sin(phi[j])
+ 
+@@ -803,4 +814,4 @@
+             vectors.append(array([x, y, z], float64))
+ 
+     # Return the array of vectors and angles.
+-    return vectors, theta, phi
++    return vectors
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Mar 10 01:20:02 2010</div>  
+</body>
+</html>

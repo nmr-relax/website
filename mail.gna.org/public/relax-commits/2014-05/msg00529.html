@@ -1,0 +1,356 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r23426 &#45; /branches/disp_speed/test_suite/unit_tests/_lib/_dispersion/test_m61.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 26 May 2014 16:27:30 +0200 -->
+<!--X-Message-Id: E1WovsA&#45;00071T&#45;Ji@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r23426 - /branches/disp_speed/test_suite/unit_tests/_lib/_dispersion/test_m61.py -- May 26, 2014 - 16:27</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r23426 - /branches/disp_speed/test_suite/unit_tests/_lib/_dispersion/test_m61.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00529" class="tabs">Index by Date</a> | <a href="threads.html#00529" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00528.html">Date Prev</a>] [<a href="msg00530.html">Date Next</a>] [<a href="msg00528.html">Thread Prev</a>] [<a href="msg00530.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 26 May 2014 14:27:30 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00529.html">E1WovsA-00071T-Ji@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on May 26, 2014 - 16:27:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Mon May 26 16:27:30 2014
+New Revision: 23426
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=23426&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=23426&amp;view=rev</a>
+Log:
+Added 8 unit tests demonstrating edge case 'no Rex' failures of the model 
+'M61'.
+
+This follows from the ideas in the post 
+<a  rel="nofollow" href="http://article.gmane.org/gmane.science.nmr.relax.devel/5858">http://article.gmane.org/gmane.science.nmr.relax.devel/5858</a>.
+This is related to: task #7793: (<a  rel="nofollow" href="https://gna.org/task/?7793">https://gna.org/task/?7793</a>) Speed-up of 
+dispersion models.
+
+This is to implement catching of math domain errors, before they occur.
+
+These tests cover all parameter value combinations which result in no 
+exchange:
+
+    - dw = 0.0,
+    - pA = 1.0,
+    - kex = 0.0,
+    - dw = 0.0 and pA = 1.0,
+    - dw = 0.0 and kex = 0.0,
+    - pA = 1.0 and kex = 0.0,
+    - dw = 0.0, pA = 1.0, and kex = 0.0.
+    - kex = 1e20,
+
+Modified:
+    branches/disp_speed/test_suite/unit_tests/_lib/_dispersion/test_m61.py
+
+Modified: 
+branches/disp_speed/test_suite/unit_tests/_lib/_dispersion/test_m61.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/disp_speed/test_suite/unit_tests/_lib/_dispersion/test_m61.py?rev=23426&amp;r1=23425&amp;r2=23426&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/disp_speed/test_suite/unit_tests/_lib/_dispersion/test_m61.py?rev=23426&amp;r1=23425&amp;r2=23426&amp;view=diff</a>
+==============================================================================
+--- branches/disp_speed/test_suite/unit_tests/_lib/_dispersion/test_m61.py    
+  (original)
++++ branches/disp_speed/test_suite/unit_tests/_lib/_dispersion/test_m61.py    
+  Mon May 26 16:27:30 2014
+@@ -25,54 +25,71 @@
+ from unittest import TestCase
+ 
+ # relax module imports.
+-from lib.dispersion.lm63 import r2eff_LM63
++from lib.dispersion.m61 import r1rho_M61
+ 
+ 
+-class Test_lm63(TestCase):
+-    &quot;&quot;&quot;Unit tests for the lib.dispersion.lm63 relax module.&quot;&quot;&quot;
++class Test_m61(TestCase):
++    &quot;&quot;&quot;Unit tests for the lib.dispersion.m61 relax module.&quot;&quot;&quot;
+ 
+     def setUp(self):
+         &quot;&quot;&quot;Set up for all unit tests.&quot;&quot;&quot;
+ 
+         # Default parameter values.
+-        self.r20 = 2.0
++
++
++        # The R1rho_prime parameter value (R1rho with no exchange).
++        self.r1rho_prime = 2.5
++        # Population of ground state.
+         self.pA = 0.9
++        # The chemical exchange difference between states A and B in ppm.
+         self.dw = 0.5
+-        self.kex = 100.0
++        self.kex = 1000.0
++        # The R1 relaxation rates.
++        self.r1 = 1.0
++        # The spin-lock field strengths in Hertz.
++        self.spin_lock_nu1 = array([ 1000., 1500., 2000., 2500., 3000., 
+3500., 4000., 4500., 5000., 5500., 6000.])
++        # The rotating frame tilt angles for each dispersion point.
++        self.theta = array([1.5707963267948966, 1.5707963267948966, 
+1.5707963267948966, 1.5707963267948966, 1.5707963267948966, 
+1.5707963267948966, 1.5707963267948966, 1.5707963267948966, 
+1.5707963267948966, 1.5707963267948966, 1.5707963267948966])
+ 
+         # The spin Larmor frequencies.
+         self.sfrq = 599.8908617*1E6
+ 
+         # Required data structures.
+-        self.num_points = 3
+-        self.cpmg_frqs = array([[2.5, 1.25, 0.83]], float64)
+-        self.R2eff = zeros(3, float64)
++        self.num_points = 11
+ 
+ 
+-    def calc_r2eff(self):
+-        &quot;&quot;&quot;Calculate and check the R2eff values.&quot;&quot;&quot;
++    def calc_r1rho(self):
++        &quot;&quot;&quot;Calculate and check the R1rho values.&quot;&quot;&quot;
+ 
+         # Parameter conversions.
+-        phi_ex_scaled = self.param_conversion(pA=self.pA, dw=self.dw, 
+sfrq=self.sfrq)
++        phi_ex_scaled, spin_lock_omega1_squared = 
+self.param_conversion(pA=self.pA, dw=self.dw, sfrq=self.sfrq, 
+spin_lock_nu1=self.spin_lock_nu1)
+ 
+-        # Calculate the R2eff values.
+-        R2eff = r2eff_LM63(r20=self.r20, phi_ex=phi_ex_scaled, kex=self.kex, 
+cpmg_frqs=self.cpmg_frqs, num_points=self.num_points)
+-        # Check all R2eff values.
+-        for i in range(self.num_points):
+-            self.assertAlmostEqual(R2eff[i], self.r20)
++        # Calculate the R1rho values.
++        R1rho = r1rho_M61(r1rho_prime=self.r1rho_prime, 
+phi_ex=phi_ex_scaled, kex=self.kex, 
+spin_lock_fields2=spin_lock_omega1_squared, num_points=self.num_points)
+ 
+ 
+-    def param_conversion(self, pA=None, dw=None, sfrq=None):
++        # Check all R1rho values.
++        if self.kex &gt; 1.e5:
++            for i in range(self.num_points):
++                self.assertAlmostEqual(R1rho[i], self.r1rho_prime, 2)
++        else:
++            for i in range(self.num_points):
++                self.assertAlmostEqual(R1rho[i], self.r1rho_prime)
++
++
++    def param_conversion(self, pA=None, dw=None, sfrq=None, 
+spin_lock_nu1=None):
+         &quot;&quot;&quot;Convert the parameters.
+ 
+-        @keyword pA:    The population of state A.
+-        @type pA:       float
+-        @keyword dw:    The chemical exchange difference between states A 
+and B in ppm.
+-        @type dw:       float
+-        @keyword sfrq:  The spin Larmor frequencies in Hz.
+-        @type sfrq:     float
+-        @return:        The parameters phi_ex_scaled
+-        @rtype:         float
++        @keyword pA:            The population of state A.
++        @type pA:               float
++        @keyword dw:            The chemical exchange difference between 
+states A and B in ppm.
++        @type dw:               float
++        @keyword sfrq:          The spin Larmor frequencies in Hz.
++        @type sfrq:             float
++        @keyword spin_lock_nu1: The spin-lock field strengths in Hertz. 
++        @type spin_lock_nu1:    float
++        @return:                The parameters {phi_ex_scaled, k_BA}.
++        @rtype:                 tuple of float
+         &quot;&quot;&quot;
+ 
+         # Calculate pB.
+@@ -87,79 +104,92 @@
+         # Convert phi_ex from ppm^2 to (rad/s)^2.
+         phi_ex_scaled = phi_ex * frqs**2
+ 
++        # The R1rho spin-lock field strengths squared (in rad^2.s^-2).
++        spin_lock_omega1_squared = (2. * pi * spin_lock_nu1)**2
++
+         # Return all values.
+-        return phi_ex_scaled
++        return phi_ex_scaled, spin_lock_omega1_squared
+ 
+ 
+-    def test_lm63_no_rex1(self):
+-        &quot;&quot;&quot;Test the r2eff_lm63() function for no exchange when dw = 0.0.&quot;&quot;&quot;
++    def test_m61_no_rex1(self):
++        &quot;&quot;&quot;Test the r1rho_m61() function for no exchange when dw = 0.0.&quot;&quot;&quot;
+ 
+         # Parameter reset.
+         self.dw = 0.0
+ 
+-        # Calculate and check the R2eff values.
+-        self.calc_r2eff()
++        # Calculate and check the R1rho values.
++        self.calc_r1rho()
+ 
+ 
+-    def test_lm63_no_rex2(self):
+-        &quot;&quot;&quot;Test the r2eff_lm63() function for no exchange when pA = 1.0.&quot;&quot;&quot;
++    def test_m61_no_rex2(self):
++        &quot;&quot;&quot;Test the r1rho_m61() function for no exchange when pA = 1.0.&quot;&quot;&quot;
+ 
+         # Parameter reset.
+         self.pA = 1.0
+ 
+-        # Calculate and check the R2eff values.
+-        self.calc_r2eff()
++        # Calculate and check the R1rho values.
++        self.calc_r1rho()
+ 
+ 
+-    def test_lm63_no_rex3(self):
+-        &quot;&quot;&quot;Test the r2eff_lm63() function for no exchange when kex = 0.0.&quot;&quot;&quot;
++    def test_m61_no_rex3(self):
++        &quot;&quot;&quot;Test the r1rho_m61() function for no exchange when kex = 0.0.&quot;&quot;&quot;
+ 
+         # Parameter reset.
+         self.kex = 0.0
+ 
+-        # Calculate and check the R2eff values.
+-        self.calc_r2eff()
++        # Calculate and check the R1rho values.
++        self.calc_r1rho()
+ 
+ 
+-    def test_lm63_no_rex4(self):
+-        &quot;&quot;&quot;Test the r2eff_lm63() function for no exchange when dw = 0.0 and 
+pA = 1.0.&quot;&quot;&quot;
++    def test_m61_no_rex4(self):
++        &quot;&quot;&quot;Test the r1rho_m61() function for no exchange when dw = 0.0 and 
+pA = 1.0.&quot;&quot;&quot;
+ 
+         # Parameter reset.
+         self.pA = 1.0
+         self.dw = 0.0
+ 
+-        # Calculate and check the R2eff values.
+-        self.calc_r2eff()
++        # Calculate and check the R1rho values.
++        self.calc_r1rho()
+ 
+ 
+-    def test_lm63_no_rex5(self):
+-        &quot;&quot;&quot;Test the r2eff_lm63() function for no exchange when dw = 0.0 and 
+kex = 0.0.&quot;&quot;&quot;
++    def test_m61_no_rex5(self):
++        &quot;&quot;&quot;Test the r1rho_m61() function for no exchange when dw = 0.0 and 
+kex = 0.0.&quot;&quot;&quot;
+ 
+         # Parameter reset.
+         self.dw = 0.0
+         self.kex = 0.0
+ 
+-        # Calculate and check the R2eff values.
+-        self.calc_r2eff()
++        # Calculate and check the R1rho values.
++        self.calc_r1rho()
+ 
+ 
+-    def test_lm63_no_rex6(self):
+-        &quot;&quot;&quot;Test the r2eff_lm63() function for no exchange when pA = 1.0 and 
+kex = 0.0.&quot;&quot;&quot;
++    def test_m61_no_rex6(self):
++        &quot;&quot;&quot;Test the r1rho_m61() function for no exchange when pA = 1.0 and 
+kex = 0.0.&quot;&quot;&quot;
+ 
+         # Parameter reset.
+         self.pA = 1.0
+         self.kex = 0.0
+ 
+-        # Calculate and check the R2eff values.
+-        self.calc_r2eff()
++        # Calculate and check the R1rho values.
++        self.calc_r1rho()
+ 
+ 
+-    def test_lm63_no_rex7(self):
+-        &quot;&quot;&quot;Test the r2eff_lm63() function for no exchange when dw = 0.0, pA 
+= 1.0, and kex = 0.0.&quot;&quot;&quot;
++    def test_m61_no_rex7(self):
++        &quot;&quot;&quot;Test the r1rho_m61() function for no exchange when dw = 0.0, pA = 
+1.0, and kex = 0.0.&quot;&quot;&quot;
+ 
+         # Parameter reset.
+         self.dw = 0.0
+         self.kex = 0.0
+ 
++        # Calculate and check the R1rho values.
++        self.calc_r1rho()
++
++
++    def test_m61_no_rex8(self):
++        &quot;&quot;&quot;Test the r1rho_m61() function for no exchange when kex = 1e20.&quot;&quot;&quot;
++
++        # Parameter reset.
++        self.kex = 1e20
++
+         # Calculate and check the R2eff values.
+-        self.calc_r2eff()
++        self.calc_r1rho()
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon May 26 17:20:02 2014</div>  
+</body>
+</html>

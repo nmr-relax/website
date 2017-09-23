@@ -1,0 +1,204 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r7621 &#45; /1.3/generic_fns/palmer.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Sat, 11 Oct 2008 23:21:06 +0200 -->
+<!--X-Message-Id: E1Kolta&#45;0000hq&#45;GT@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r7621 - /1.3/generic_fns/palmer.py -- October 11, 2008 - 23:21</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r7621 - /1.3/generic_fns/palmer.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00150" class="tabs">Index by Date</a> | <a href="threads.html#00150" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00149.html">Date Prev</a>] [<a href="msg00151.html">Date Next</a>] [<a href="msg00149.html">Thread Prev</a>] [<a href="msg00151.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Sat, 11 Oct 2008 21:21:06 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00150.html">E1Kolta-0000hq-GT@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on October 11, 2008 - 23:21:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Sat Oct 11 23:21:05 2008
+New Revision: 7621
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=7621&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=7621&amp;view=rev</a>
+Log:
+Converted create_mfin() to the new design.
+
+
+Modified:
+    1.3/generic_fns/palmer.py
+
+Modified: 1.3/generic_fns/palmer.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/generic_fns/palmer.py?rev=7621&amp;r1=7620&amp;r2=7621&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/generic_fns/palmer.py?rev=7621&amp;r1=7620&amp;r2=7621&amp;view=diff</a>
+==============================================================================
+--- 1.3/generic_fns/palmer.py (original)
++++ 1.3/generic_fns/palmer.py Sat Oct 11 23:21:05 2008
+@@ -124,7 +124,7 @@
+ 
+     # The 'mfin' file.
+     mfin = open_write_file('mfin', dir, force)
+-    create_mfin(mfin)
++    create_mfin(mfin, diff_search=diff_search, sims=sims, sim_type=sim_type, 
+trim=trim, num_frq=num_frq, frq=frq)
+     mfin.close()
+ 
+     # Open the 'mfdata', 'mfmodel', and 'mfpar' files.
+@@ -214,28 +214,50 @@
+     return written
+ 
+ 
+-def create_mfin(file):
+-    &quot;&quot;&quot;Create the Modelfree4 input file 'mfin'.&quot;&quot;&quot;
++def create_mfin(file, diff_search=None, sims=None, sim_type=None, trim=None, 
+num_frq=None, frq=None):
++    &quot;&quot;&quot;Create the Modelfree4 input file 'mfin'.
++
++    @param file:            The writable file object.
++    @type file:             file object
++    @keyword diff_search:   The diffusion tensor search algorithm (see the 
+Modelfree4 manual for
++                            details).
++    @type diff_search:      str
++    @keyword sims:          The number of Monte Carlo simulations to perform.
++    @type sims:             int
++    @keyword sim_type:      The type of simulation to perform (see the 
+Modelfree4 manual for
++                            details).
++    @type sim_type:         str
++    @keyword trim:          Trimming of the Monte Carlo simulations (see the 
+Modelfree4 manual for
++                            details).
++    @type trim:             int
++    @keyword num_frq:       The number of spectrometer frequencies 
+relaxation data was collected at.
++    @type num_frq:          int
++    @keyword frq:           The spectrometer frequencies.
++    @type frq:              list of float
++    &quot;&quot;&quot;
++
++    # Alias the current data pipe.
++    cdp = pipes.get_pipe()
+ 
+     # Set the diffusion tensor specific values.
+     if cdp.diff_tensor.type == 'sphere':
+         diff = 'isotropic'
+         algorithm = 'brent'
+-        tm = cdp.diff.tm / 1e-9
++        tm = cdp.diff_tensor.tm / 1e-9
+         dratio = 1
+         theta = 0
+         phi = 0
+     elif cdp.diff_tensor.type == 'spheroid':
+         diff = 'axial'
+         algorithm = 'powell'
+-        tm = cdp.diff.tm / 1e-9
+-        dratio = cdp.diff.Dratio
+-        theta = cdp.diff.theta * 360.0 / (2.0 * pi)
+-        phi = cdp.diff.phi * 360.0 / (2.0 * pi)
++        tm = cdp.diff_tensor.tm / 1e-9
++        dratio = cdp.diff_tensor.Dratio
++        theta = cdp.diff_tensor.theta * 360.0 / (2.0 * pi)
++        phi = cdp.diff_tensor.phi * 360.0 / (2.0 * pi)
+     elif cdp.diff_tensor.type == 'ellipsoid':
+         diff = 'anisotropic'
+         algorithm = 'powell'
+-        tm = cdp.diff.tm / 1e-9
++        tm = cdp.diff_tensor.tm / 1e-9
+         dratio = 0
+         theta = 0
+         phi = 0
+@@ -246,15 +268,15 @@
+     file.write(&quot;search          grid\n\n&quot;)
+ 
+     # Diffusion type.
+-    if cdp.diff.fixed:
++    if cdp.diff_tensor.fixed:
+         algorithm = 'fix'
+ 
+-    file.write(&quot;diffusion       &quot; + diff + &quot; &quot; + self.diff_search + &quot;\n\n&quot;)
++    file.write(&quot;diffusion       &quot; + diff + &quot; &quot; + diff_search + &quot;\n\n&quot;)
+     file.write(&quot;algorithm       &quot; + algorithm + &quot;\n\n&quot;)
+ 
+     # Monte Carlo simulations.
+-    if self.sims:
+-        file.write(&quot;simulations     &quot; + self.sim_type + &quot;    &quot; + `self.sims` 
++ &quot;       &quot; + `self.trim` + &quot;\n\n&quot;)
++    if sims:
++        file.write(&quot;simulations     &quot; + sim_type + &quot;    &quot; + `sims` + &quot;       
+&quot; + `trim` + &quot;\n\n&quot;)
+     else:
+         file.write(&quot;simulations     none\n\n&quot;)
+ 
+@@ -262,9 +284,9 @@
+     file.write(&quot;selection       &quot; + selection + &quot;\n\n&quot;)
+     file.write(&quot;sim_algorithm   &quot; + algorithm + &quot;\n\n&quot;)
+ 
+-    file.write(&quot;fields          &quot; + `self.num_frq`)
+-    for frq in self.frq:
+-        file.write(&quot;  &quot; + `frq*1e-6`)
++    file.write(&quot;fields          &quot; + `num_frq`)
++    for val in frq:
++        file.write(&quot;  &quot; + `val*1e-6`)
+     file.write(&quot;\n&quot;)
+ 
+     # tm.
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Sat Oct 11 23:40:02 2008</div>  
+</body>
+</html>

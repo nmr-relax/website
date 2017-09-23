@@ -1,0 +1,152 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r26450 &#45; /branches/frame_order_cleanup/target_functions/frame_order.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 07 Nov 2014 16:44:39 +0100 -->
+<!--X-Message-Id: E1XmliJ&#45;0003Nq&#45;99@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r26450 - /branches/frame_order_cleanup/target_functions/frame_order.py -- November 07, 2014 - 16:44</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r26450 - /branches/frame_order_cleanup/target_functions/frame_order.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00054" class="tabs">Index by Date</a> | <a href="threads.html#00054" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00053.html">Date Prev</a>] [<a href="msg00055.html">Date Next</a>] [<a href="msg00053.html">Thread Prev</a>] [<a href="msg00055.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 07 Nov 2014 15:44:39 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00054.html">E1XmliJ-0003Nq-99@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on November 07, 2014 - 16:44:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Nov  7 16:44:37 2014
+New Revision: 26450
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=26450&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=26450&amp;view=rev</a>
+Log:
+Reverted r24463 as this is needed to conserve memory, especially for a large 
+number of Sobol' points.
+
+The command used was:
+svn merge -r24463:r24462 .
+
+.....
+  r24463 | bugman | 2014-07-05 19:06:09 +0200 (Sat, 05 Jul 2014) | 9 lines
+  Changed paths:
+     M /branches/frame_order_cleanup/target_functions/frame_order.py
+  
+  Converted all frame order target function data structures to float64.
+  
+  This affects the vector data structures used for the PCS numeric 
+integration.  The float32
+  structures added for speed do not actually increase the speed.  For the 
+double rotor model, 10
+  target function calls took the pcs_pivot_motion_double_rotor() function 
+44.936 seconds using float32
+  and 44.105 seconds using all float64.  The cumulative time is also longer.  
+This must be because
+  other parts are float64, and therefore type conversions are happening 
+during target function calls.
+.....
+
+
+Modified:
+    branches/frame_order_cleanup/target_functions/frame_order.py
+
+Modified: branches/frame_order_cleanup/target_functions/frame_order.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/target_functions/frame_order.py?rev=26450&amp;r1=26449&amp;r2=26450&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/target_functions/frame_order.py?rev=26450&amp;r1=26449&amp;r2=26450&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/target_functions/frame_order.py        
+(original)
++++ branches/frame_order_cleanup/target_functions/frame_order.py        Fri 
+Nov  7 16:44:37 2014
+@@ -25,7 +25,7 @@
+ # Python module imports.
+ from copy import deepcopy
+ from math import acos, cos, pi, sin, sqrt
+-from numpy import add, array, dot, float64, ones, outer, subtract, swapaxes, 
+transpose, uint8, zeros
++from numpy import add, array, dot, float32, float64, ones, outer, subtract, 
+transpose, uint8, zeros
+ 
+ # relax module imports.
+ from extern.sobol.sobol_lib import i4_sobol_generate
+@@ -281,8 +281,8 @@
+             self.paramag_unit_vect = zeros(atomic_pos.shape, float64)
+             self.paramag_dist = zeros(self.num_spins, float64)
+             self.pcs_const = zeros((self.num_align, self.num_spins), float64)
+-            self.r_pivot_atom = zeros((self.num_spins, 3), float64)
+-            self.r_pivot_atom_rev = zeros((self.num_spins, 3), float64)
++            self.r_pivot_atom = zeros((self.num_spins, 3), float32)
++            self.r_pivot_atom_rev = zeros((self.num_spins, 3), float32)
+             self.r_ln_pivot = self.pivot - self.paramag_centre
+ 
+             # Set up the paramagnetic constant (without the interatomic 
+distance and in Angstrom units).
+@@ -2030,7 +2030,7 @@
+         # Initialise.
+         sobol_data.model = self.model
+         sobol_data.total_num = total_num
+-        sobol_data.sobol_angles = zeros((m, total_num), float64)
++        sobol_data.sobol_angles = zeros((m, total_num), float32)
+         sobol_data.Ri_prime = zeros((total_num, 3, 3), float64)
+         sobol_data.Ri2_prime = zeros((total_num, 3, 3), float64)
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Nov 07 17:00:03 2014</div>  
+</body>
+</html>

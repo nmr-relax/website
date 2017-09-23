@@ -1,0 +1,139 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r20126 &#45; /trunk/pipe_control/rdc.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 14 Jun 2013 18:07:45 +0200 -->
+<!--X-Message-Id: E1UnWXR&#45;0005hz&#45;1C@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r20126 - /trunk/pipe_control/rdc.py -- June 14, 2013 - 18:07</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r20126 - /trunk/pipe_control/rdc.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00315" class="tabs">Index by Date</a> | <a href="threads.html#00315" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00314.html">Date Prev</a>] [<a href="msg00316.html">Date Next</a>] [<a href="msg00314.html">Thread Prev</a>] [<a href="msg00316.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 14 Jun 2013 16:07:45 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00315.html">E1UnWXR-0005hz-1C@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on June 14, 2013 - 18:07:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Jun 14 18:07:44 2013
+New Revision: 20126
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=20126&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=20126&amp;view=rev</a>
+Log:
+Fix for the pipe_control.rdc.q_factors() for T = J+D type data.
+
+The Q factor normalisation was incorrect, as the J coupling should be 
+subtracted from T first.
+
+
+Modified:
+    trunk/pipe_control/rdc.py
+
+Modified: trunk/pipe_control/rdc.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/pipe_control/rdc.py?rev=20126&amp;r1=20125&amp;r2=20126&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/pipe_control/rdc.py?rev=20126&amp;r1=20125&amp;r2=20126&amp;view=diff</a>
+==============================================================================
+--- trunk/pipe_control/rdc.py (original)
++++ trunk/pipe_control/rdc.py Fri Jun 14 18:07:44 2013
+@@ -39,7 +39,7 @@
+ from pipe_control.mol_res_spin import exists_mol_res_spin_data, return_spin
+ from lib.alignment.rdc import ave_rdc_tensor
+ from lib.physical_constants import dipolar_constant, 
+return_gyromagnetic_ratio
+-from lib.errors import RelaxError, RelaxNoAlignError, RelaxNoRDCError, 
+RelaxNoSequenceError, RelaxSpinTypeError
++from lib.errors import RelaxError, RelaxNoAlignError, RelaxNoJError, 
+RelaxNoRDCError, RelaxNoSequenceError, RelaxSpinTypeError
+ from lib.io import extract_data, open_write_file, strip, write_data
+ from lib.warnings import RelaxWarning
+ 
+@@ -468,6 +468,11 @@
+                 rdc_data = True
+             if hasattr(interatom, 'rdc_bc') and align_id in interatom.rdc_bc:
+                 rdc_bc_data = True
++            j_flag = True
++            if align_id in cdp.rdc_data_types and 
+cdp.rdc_data_types[align_id] == 'T':
++                j_flag = True
++                if not hasattr(interatom, 'j_coupling'):
++                    raise RelaxNoJError
+ 
+             # Skip containers without RDC data.
+             if not hasattr(interatom, 'rdc') or not hasattr(interatom, 
+'rdc_bc') or not align_id in interatom.rdc or interatom.rdc[align_id] == None 
+or not align_id in interatom.rdc_bc or interatom.rdc_bc[align_id] == None:
+@@ -481,7 +486,10 @@
+             sse = sse + (interatom.rdc[align_id] - 
+interatom.rdc_bc[align_id])**2
+ 
+             # Sum the RDCs squared (for one type of normalisation).
+-            D2_sum = D2_sum + interatom.rdc[align_id]**2
++            if j_flag:
++                D2_sum = D2_sum + (interatom.rdc[align_id] - 
+interatom.j_coupling)**2
++            else:
++                D2_sum = D2_sum + interatom.rdc[align_id]**2
+ 
+             # Gyromagnetic ratios.
+             g1 = return_gyromagnetic_ratio(spin1.isotope)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Jun 14 18:20:02 2013</div>  
+</body>
+</html>

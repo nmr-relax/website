@@ -1,0 +1,154 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r22292 &#45; /trunk/specific_analyses/relax_disp/disp_data.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 24 Feb 2014 17:06:35 +0100 -->
+<!--X-Message-Id: E1WHy39&#45;00069w&#45;MW@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r22292 - /trunk/specific_analyses/relax_disp/disp_data.py -- February 24, 2014 - 17:06</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r22292 - /trunk/specific_analyses/relax_disp/disp_data.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00184" class="tabs">Index by Date</a> | <a href="threads.html#00184" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00183.html">Date Prev</a>] [<a href="msg00185.html">Date Next</a>] [<a href="msg00183.html">Thread Prev</a>] [<a href="msg00185.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 24 Feb 2014 16:06:35 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00184.html">E1WHy39-00069w-MW@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on February 24, 2014 - 17:06:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Mon Feb 24 17:06:35 2014
+New Revision: 22292
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=22292&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=22292&amp;view=rev</a>
+Log:
+Expanded the loop_time function to optional take the offset and dispersion 
+point as input for restricting looping.
+
+Regarding bug #21665, (<a  rel="nofollow" href="https://gna.org/bugs/?21665">https://gna.org/bugs/?21665</a>) - Running a CPMG analysis 
+with two fields at two delay times.
+
+This is implemented as suggested in: 
+<a  rel="nofollow" href="https://mail.gna.org/public/relax-devel/2014-02/msg00143.html">https://mail.gna.org/public/relax-devel/2014-02/msg00143.html</a>
+
+Modified:
+    trunk/specific_analyses/relax_disp/disp_data.py
+
+Modified: trunk/specific_analyses/relax_disp/disp_data.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/relax_disp/disp_data.py?rev=22292&amp;r1=22291&amp;r2=22292&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/relax_disp/disp_data.py?rev=22292&amp;r1=22291&amp;r2=22292&amp;view=diff</a>
+==============================================================================
+--- trunk/specific_analyses/relax_disp/disp_data.py (original)
++++ trunk/specific_analyses/relax_disp/disp_data.py Mon Feb 24 17:06:35 2014
+@@ -1281,13 +1281,17 @@
+         yield id
+ 
+ 
+-def loop_time(exp_type=None, frq=None, return_indices=False):
++def loop_time(exp_type=None, frq=None, offset=None, point=None, 
+return_indices=False):
+     &quot;&quot;&quot;Generator method for looping over the relaxation times.
+ 
+     @keyword exp_type:          The experiment type.
+     @type exp_type:             str
+     @keyword frq:               The spectrometer frequency in Hz.
+     @type frq:                  float
++    @keyword offset:            The spin-lock or hard pulse offset value in 
+ppm.
++    @type offset:               None or float
++    @keyword point:             The dispersion point data (either the 
+spin-lock field strength in Hz or the nu_CPMG frequency in Hz).
++    @type point:                float
+     @keyword return_indices:    A flag which if True will cause the 
+relaxation time index to be returned as well.
+     @type return_indices:       bool
+     @return:                    The relaxation time.
+@@ -1310,6 +1314,25 @@
+                 # Skip non-matching spectrometer frequencies.
+                 if frq != None and hasattr(cdp, 'spectrometer_frq') and 
+cdp.spectrometer_frq[id] != frq:
+                     continue
++
++                # Skip non-matching offsets.
++                if offset != None and hasattr(cdp, 'spin_lock_offset') and 
+cdp.spin_lock_offset[id] != offset:
++                    continue
++
++                # The dispersion point filter.
++                if point != None:
++                    # No experiment type set.
++                    if not hasattr(cdp, 'exp_type') or id not in 
+cdp.exp_type:
++                        continue
++
++                    # The experiment type.
++                    exp_type = cdp.exp_type[id]
++
++                    # The CPMG dispersion data.
++                    if exp_type in EXP_TYPE_LIST_CPMG:
++                        # No dispersion point data set.
++                        if not hasattr(cdp, 'cpmg_frqs') or id not in 
+cdp.cpmg_frqs:
++                            continue
+ 
+                 if time != cdp.relax_times[id]:
+                     continue
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Feb 24 17:20:02 2014</div>  
+</body>
+</html>

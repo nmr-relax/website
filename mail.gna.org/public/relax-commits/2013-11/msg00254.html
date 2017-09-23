@@ -1,0 +1,166 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r21596 &#45; /branches/relax_disp/target_functions/relax_disp.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 22 Nov 2013 11:10:50 +0100 -->
+<!--X-Message-Id: E1VjnhJ&#45;0001HM&#45;VX@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r21596 - /branches/relax_disp/target_functions/relax_disp.py -- November 22, 2013 - 11:10</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r21596 - /branches/relax_disp/target_functions/relax_disp.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00254" class="tabs">Index by Date</a> | <a href="threads.html#00254" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00253.html">Date Prev</a>] [<a href="msg00255.html">Date Next</a>] [<a href="msg00253.html">Thread Prev</a>] [<a href="msg00255.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 22 Nov 2013 10:10:49 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00254.html">E1VjnhJ-0001HM-VX@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on November 22, 2013 - 11:10:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Nov 22 11:10:49 2013
+New Revision: 21596
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=21596&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=21596&amp;view=rev</a>
+Log:
+General improvement for the optimisation of many target functions.
+
+For those models which use the tau_CPMG value, this is now recalculated.  
+This means that if a user
+inputs truncated nu_CPMG values, these are corrected when calculating 
+tau_CPMG so that full precision
+values will be used for the optimisation.
+
+
+Modified:
+    branches/relax_disp/target_functions/relax_disp.py
+
+Modified: branches/relax_disp/target_functions/relax_disp.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/target_functions/relax_disp.py?rev=21596&amp;r1=21595&amp;r2=21596&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_disp/target_functions/relax_disp.py?rev=21596&amp;r1=21595&amp;r2=21596&amp;view=diff</a>
+==============================================================================
+--- branches/relax_disp/target_functions/relax_disp.py (original)
++++ branches/relax_disp/target_functions/relax_disp.py Fri Nov 22 11:10:49 
+2013
+@@ -220,18 +220,7 @@
+         if model in [MODEL_NS_R1RHO_2SITE]:
+             self.M0 = zeros(6, float64)
+ 
+-        # Some other data structures for the analytical and numerical 
+solutions.
+-        if model in [MODEL_MQ_CR72, MODEL_MMQ_2SITE, MODEL_NS_CPMG_2SITE_3D, 
+MODEL_NS_CPMG_2SITE_3D_FULL, MODEL_NS_CPMG_2SITE_EXPANDED, 
+MODEL_NS_CPMG_2SITE_STAR, MODEL_NS_CPMG_2SITE_STAR_FULL, MODEL_TSMFK01]:
+-            # The tau_cpmg times.
+-            self.tau_cpmg = []
+-            for exp_type_index in range(len(values)):
+-                self.tau_cpmg.append([])
+-                for frq_index in range(len(values[exp_type_index][0])):
+-                    
+self.tau_cpmg[exp_type_index].append(zeros(self.num_disp_points[exp_type_index][frq_index],
+ float64))
+-                    for i in 
+range(self.num_disp_points[exp_type_index][frq_index]):
+-                        self.tau_cpmg[exp_type_index][frq_index][i] = 0.25 / 
+self.cpmg_frqs[exp_type_index][frq_index][i]
+-
+-        # Some other data structures for the numerical solutions.
++        # The number of CPMG blocks.
+         if model in MODEL_LIST_CPMG_NUM:
+             # The matrix exponential power array.
+             self.power = []
+@@ -242,13 +231,23 @@
+                     for i in 
+range(self.num_disp_points[exp_type_index][frq_index]):
+                         self.power[exp_type_index][frq_index][i] = 
+int(round(self.cpmg_frqs[exp_type_index][frq_index][i] * 
+self.relax_times[exp_type_index][frq_index]))
+ 
+-        # The strange n definition of Korzhnev.
++        # The n value.
+         if model == MODEL_MMQ_2SITE:
+             self.n = []
+             for exp_type_index in range(len(values)):
+                 self.n.append([])
+                 for frq_index in range(len(values[exp_type_index][0])):
+                     self.n[exp_type_index].append(2 * 
+self.power[exp_type_index][frq_index])
++
++        # The tau_cpmg times - recalculated to avoid any user induced 
+truncation in the input files.
++        if model in [MODEL_MQ_CR72, MODEL_MMQ_2SITE, MODEL_NS_CPMG_2SITE_3D, 
+MODEL_NS_CPMG_2SITE_3D_FULL, MODEL_NS_CPMG_2SITE_EXPANDED, 
+MODEL_NS_CPMG_2SITE_STAR, MODEL_NS_CPMG_2SITE_STAR_FULL, MODEL_TSMFK01]:
++            self.tau_cpmg = []
++            for exp_type_index in range(len(values)):
++                self.tau_cpmg.append([])
++                for frq_index in range(len(values[exp_type_index][0])):
++                    
+self.tau_cpmg[exp_type_index].append(zeros(self.num_disp_points[exp_type_index][frq_index],
+ float64))
++                    for i in 
+range(self.num_disp_points[exp_type_index][frq_index]):
++                        self.tau_cpmg[exp_type_index][frq_index][i] = 0.25 * 
+self.relax_times[exp_type_index][frq_index] / 
+self.power[exp_type_index][frq_index][i]
+ 
+         # Convert the spin-lock data to rad.s^-1.
+         if spin_lock_nu1 != None:
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Nov 22 11:20:02 2013</div>  
+</body>
+</html>

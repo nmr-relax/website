@@ -1,0 +1,287 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r14519 &#45; in /1.3/gui: interpreter.py relax_gui.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 30 Aug 2011 13:13:42 +0200 -->
+<!--X-Message-Id: E1QyMGE&#45;0006VT&#45;Ej@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r14519 - in /1.3/gui: interpreter.py relax_gui.py -- August 30, 2011 - 13:13</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r14519 - in /1.3/gui: interpreter.py relax_gui.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00499" class="tabs">Index by Date</a> | <a href="threads.html#00499" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00498.html">Date Prev</a>] [<a href="msg00500.html">Date Next</a>] [<a href="msg00498.html">Thread Prev</a>] [<a href="msg00500.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 30 Aug 2011 11:13:42 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00499.html">E1QyMGE-0006VT-Ej@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on August 30, 2011 - 13:13:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Aug 30 13:13:41 2011
+New Revision: 14519
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=14519&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=14519&amp;view=rev</a>
+Log:
+Redesigned the GUI interpreter object so that the thread is a separate object.
+
+This is to allow both synchronous and asynchronous calls to the interpreter 
+in the future.
+
+
+Modified:
+    1.3/gui/interpreter.py
+    1.3/gui/relax_gui.py
+
+Modified: 1.3/gui/interpreter.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/gui/interpreter.py?rev=14519&amp;r1=14518&amp;r2=14519&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/gui/interpreter.py?rev=14519&amp;r1=14518&amp;r2=14519&amp;view=diff</a>
+==============================================================================
+--- 1.3/gui/interpreter.py (original)
++++ 1.3/gui/interpreter.py Tue Aug 30 13:13:41 2011
+@@ -42,28 +42,20 @@
+ from gui.errors import gui_raise
+ 
+ 
+-class Interpreter(Thread):
++class Interpreter:
+     &quot;&quot;&quot;The threaded interpreter.&quot;&quot;&quot;
+ 
+     def __init__(self):
+         &quot;&quot;&quot;Initialise the object.&quot;&quot;&quot;
+-
+-        # Set up the thread object.
+-        Thread.__init__(self)
+-
+-        # Set the thread to be daemonic so that relax can exit.
+-        self.daemon = True
+-
+-        # Create a queue object for the user function calls.
+-        self._queue = Queue()
+ 
+         # Load a copy of the relax interpreter.
+         self._interpreter = interpreter.Interpreter(show_script=False, 
+quit=False, raise_relax_error=True)
+         self._interpreter.populate_self()
+         self._interpreter.on(verbose=False)
+ 
+-        # A flag for exiting the thread.
+-        self._exit = False
++        # Start the interpreter thread for asynchronous operations.
++        self._interpreter_thread = Interpreter_thread()
++        self._interpreter_thread.start()
+ 
+ 
+     def _get_uf(self, uf):
+@@ -95,6 +87,83 @@
+ 
+ 
+     def empty(self):
++        &quot;&quot;&quot;Determine if the interpreter thread queue is empty.
++
++        This is a wrapper method for the thread method.
++        &quot;&quot;&quot;
++
++        # Return the queue empty state.
++        return self._interpreter_thread.empty()
++
++
++    def exit(self):
++        &quot;&quot;&quot;Cause the thread to exit once all currently queued user functions 
+are processed.
++
++        This is a wrapper method for the thread method.
++        &quot;&quot;&quot;
++
++        # Call the thread's method.
++        return self._interpreter_thread.exit()
++
++
++    def flush(self):
++        &quot;&quot;&quot;Return only once the queue is empty.
++
++        This is a wrapper method for the interpreter thread.
++        &quot;&quot;&quot;
++
++        # Call the thread's method.
++        self._interpreter_thread.flush()
++
++
++    def join(self):
++        &quot;&quot;&quot;Wrapper method for the Queue.join() method.&quot;&quot;&quot;
++
++        # Call the thread's method.
++        self._interpreter_thread.join()
++
++
++    def queue(self, uf, *args, **kwds):
++        &quot;&quot;&quot;Queue up a user function.
++
++        This is a wrapper method for the interpreter thread.
++
++        @param uf:      The user function as a string.
++        @type uf:       str
++        @param args:    The user function arguments.
++        @type args:     any arguments
++        @param kwds:    The user function keyword arguments.
++        @type kwds:     any keyword arguments
++        &quot;&quot;&quot;
++
++        # Get the user function.
++        fn = self._get_uf(uf)
++
++        # Call the thread's method.
++        self._interpreter_thread.queue(fn, *args, **kwds)
++
++
++
++class Interpreter_thread(Thread):
++    &quot;&quot;&quot;The threaded interpreter.&quot;&quot;&quot;
++
++    def __init__(self):
++        &quot;&quot;&quot;Initialise the object.&quot;&quot;&quot;
++
++        # Set up the thread object.
++        Thread.__init__(self)
++
++        # Set the thread to be daemonic so that relax can exit.
++        self.daemon = True
++
++        # Create a queue object for the user function calls.
++        self._queue = Queue()
++
++        # A flag for exiting the thread.
++        self._exit = False
++
++
++    def empty(self):
+         &quot;&quot;&quot;Wrapper method for the Queue.empty() method.&quot;&quot;&quot;
+ 
+         # Return the queue empty state.
+@@ -102,7 +171,7 @@
+ 
+ 
+     def exit(self):
+-        &quot;&quot;&quot;Cause the thread to exit once the currently running user function 
+is complete.&quot;&quot;&quot;
++        &quot;&quot;&quot;Cause the thread to exit once all currently queued user functions 
+are processed.&quot;&quot;&quot;
+ 
+         # First set the flag.
+         self._exit = True
+@@ -126,11 +195,11 @@
+         self._queue.join()
+ 
+ 
+-    def queue(self, uf, *args, **kwds):
++    def queue(self, fn, *args, **kwds):
+         &quot;&quot;&quot;Queue up a user function.&quot;&quot;&quot;
+ 
+         # Place the user function and its args onto the queue.
+-        self._queue.put([uf, args, kwds])
++        self._queue.put([fn, args, kwds])
+ 
+ 
+     def run(self):
+@@ -139,10 +208,10 @@
+         # Loop until told to exit.
+         while not self._exit:
+             # Get the user function from the queue.
+-            uf, args, kwds = self._queue.get()
++            fn, args, kwds = self._queue.get()
+ 
+             # No user function.
+-            if uf == None:
++            if fn == None:
+                 continue
+ 
+             # Execution lock.
+@@ -150,10 +219,6 @@
+ 
+             # Execute the user function, catching errors.
+             try:
+-                # Get the user function.
+-                fn = self._get_uf(uf)
+-
+-                # Apply the user function.
+                 apply(fn, args, kwds)
+ 
+             # Catch all RelaxErrors.
+@@ -169,4 +234,3 @@
+             # Release the lock.
+             finally:
+                 status.exec_lock.release()
+-
+
+Modified: 1.3/gui/relax_gui.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/gui/relax_gui.py?rev=14519&amp;r1=14518&amp;r2=14519&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/gui/relax_gui.py?rev=14519&amp;r1=14518&amp;r2=14519&amp;view=diff</a>
+==============================================================================
+--- 1.3/gui/relax_gui.py (original)
++++ 1.3/gui/relax_gui.py Tue Aug 30 13:13:41 2011
+@@ -140,7 +140,6 @@
+ 
+         # Initialise the special interpreter thread object.
+         self.interpreter = Interpreter()
+-        self.interpreter.start()
+ 
+         # Run a script.
+         if script:
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Aug 30 13:40:02 2011</div>  
+</body>
+</html>

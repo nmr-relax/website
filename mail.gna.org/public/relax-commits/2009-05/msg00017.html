@@ -1,0 +1,193 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r9053 &#45; /1.3/specific_fns/hybrid.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 12 May 2009 11:28:50 +0200 -->
+<!--X-Message-Id: E1M3oI6&#45;0003Ir&#45;5o@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r9053 - /1.3/specific_fns/hybrid.py -- May 12, 2009 - 11:28</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r9053 - /1.3/specific_fns/hybrid.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00017" class="tabs">Index by Date</a> | <a href="threads.html#00017" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00016.html">Date Prev</a>] [<a href="msg00018.html">Date Next</a>] [<a href="msg00016.html">Thread Prev</a>] [<a href="msg00018.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 12 May 2009 09:28:50 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00017.html">E1M3oI6-0003Ir-5o@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on May 12, 2009 - 11:28:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue May 12 11:28:49 2009
+New Revision: 9053
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=9053&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=9053&amp;view=rev</a>
+Log:
+Converted the hybridise() method to the 1.3 line design.
+
+
+Modified:
+    1.3/specific_fns/hybrid.py
+
+Modified: 1.3/specific_fns/hybrid.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/specific_fns/hybrid.py?rev=9053&amp;r1=9052&amp;r2=9053&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/specific_fns/hybrid.py?rev=9053&amp;r1=9052&amp;r2=9053&amp;view=diff</a>
+==============================================================================
+--- 1.3/specific_fns/hybrid.py (original)
++++ 1.3/specific_fns/hybrid.py Tue May 12 11:28:49 2009
+@@ -1,6 +1,6 @@
+ 
+###############################################################################
+ #                                                                            
+ #
+-# Copyright (C) 2006-2008 Edward d'Auvergne                                  
+ #
++# Copyright (C) 2006-2009 Edward d'Auvergne                                  
+ #
+ #                                                                            
+ #
+ # This file is part of the program relax.                                    
+ #
+ #                                                                            
+ #
+@@ -23,6 +23,8 @@
+ # relax module imports.
+ from data import Relax_data_store; ds = Relax_data_store()
+ from generic_fns import pipes
++from generic_fns.mol_res_spin import exists_mol_res_spin_data
++from generic_fns.sequence import compare_sequence
+ from relax_errors import RelaxError, RelaxNoSequenceError, RelaxPipeError, 
+RelaxSequenceError
+ 
+ 
+@@ -49,42 +51,43 @@
+         ds.hybrid_pipes[new_run] = ds.hybrid_pipes[old_run]
+ 
+ 
+-    def hybridise(self, hybrid=None, runs=None):
+-        &quot;&quot;&quot;Function for creating the hybrid run.&quot;&quot;&quot;
++    def hybridise(self, hybrid=None, pipe_list=None):
++        &quot;&quot;&quot;Create the hybrid data pipe.
+ 
+-        # Test if the hybrid run already exists.
+-        if hybrid in ds.run_names:
++        @keyword hybrid:    The name of the new hybrid data pipe.
++        @type hybrid:       str
++        @keyword pipe_list: The list of data pipes that the hybrid is 
+composed of.
++        @type pipe_list:    list of str
++        &quot;&quot;&quot;
++
++        # Test if the hybrid data pipe already exists.
++        if hybrid in pipes.pipe_names():
+             raise RelaxPipeError, hybrid
+ 
+-        # Loop over the runs to be hybridised.
+-        for run in runs:
+-            # Test if the current pipe exists.
++        # Loop over the pipes to be hybridised.
++        for pipe in pipe_list:
++            # Switch to the data pipe.
++            pipes.switch(pipe)
++
++            # Test if the pipe exists.
+             pipes.test()
+ 
+             # Test if sequence data is loaded.
+-            if not ds.res.has_key(run):
+-                raise RelaxNoSequenceError, run
++            if not exists_mol_res_spin_data():
++                raise RelaxNoSequenceError
+ 
+-        # Check the sequence.
+-        for i in xrange(len(ds.res[runs[0]])):
+-            # Reassign the data structure.
+-            data1 = ds.res[runs[0]][i]
++        # Check that the sequence data matches in all pipes.
++        for i in range(1, len(pipe_list)):
++            compare_sequence(pipe_list[0], pipe_list[1])
+ 
+-            # Loop over the rest of the runs.
+-            for run in runs[1:]:
+-                # Reassign the data structure.
+-                data2 = ds.res[run][i]
++        # Create the data pipe.
++        pipes.create(pipe_name=hybrid, pipe_type='hybrid')
+ 
+-                # Test if the sequence is the same.
+-                if data1.name != data2.name or data1.num != data2.num:
+-                    raise RelaxError, &quot;The residues '&quot; + data1.name + &quot; &quot; + 
+`data1.num` + &quot;' of the run &quot; + `runs[0]` + &quot; and '&quot; + data2.name + &quot; &quot; + 
+`data2.num` + &quot;' of the run &quot; + `run` + &quot; are not the same.&quot;
++        # Alias the current data pipe.
++        cdp = pipes.get_pipe()
+ 
+-        # Add the run and type to the runs list.
+-        ds.run_names.append(hybrid)
+-        ds.run_types.append('hybrid')
+-
+-        # Create the data structure of the runs which form the hybrid.
+-        ds.hybrid_pipes[hybrid] = runs
++        # Store the pipe list forming the hybrid.
++        cdp.hybrid_pipes = pipe_list
+ 
+ 
+     def model_statistics(self, run=None, instance=None, global_stats=None):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue May 12 11:40:01 2009</div>  
+</body>
+</html>

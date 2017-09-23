@@ -1,0 +1,468 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: Re: Status ideas for the relax controller. -->
+<!--X-From-R13: "Sqjneq q'Ohiretar" <rqjneqNaze&#45;erynk.pbz> -->
+<!--X-Date: Tue, 02 Feb 2010 00:18:49 +0100 -->
+<!--X-Message-Id: 7f080ed11002011518m5c49bd42t7748f119267bc756@mail.gmail.com -->
+<!--X-Content-Type: text/plain -->
+<!--X-Reference: 7f080ed11001290610q2f18b460qa1fd289489c1904d@mail.gmail.com -->
+<!--X-Reference: 4B6645C6.6040104@gmx.ch -->
+<!--X-Reference: 7f080ed11002011142m3761bb4eqaaace2413b0ca72b@mail.gmail.com -->
+<!--X-Reference: 4B675230.3020000@gmx.ch -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>Re: Status ideas for the relax controller. -- February 02, 2010 - 00:18</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />Re: Status ideas for the relax controller.</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00003" class="tabs">Index by Date</a> | <a href="threads.html#00003" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00002.html">Date Prev</a>] [<a href="msg00004.html">Date Next</a>] [<a href="msg00002.html">Thread Prev</a>] [<a href="msg00004.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: Michael Bieri &lt;michael.bieri@xxxxxx&gt;</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 2 Feb 2010 00:18:02 +0100</li>
+<li class="menuitem">
+<em>Cc</em>: relax-devel@xxxxxxx</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00003.html">7f080ed11002011518m5c49bd42t7748f119267bc756@mail.gmail.com</a>&gt;</li>
+<li class="menuitem">
+<em>References</em>: &lt;7f080ed11001290610q2f18b460qa1fd289489c1904d@xxxxxxxxxxxxxx&gt;	&lt;4B6645C6.6040104@xxxxxx&gt;	&lt;7f080ed11002011142m3761bb4eqaaace2413b0ca72b@xxxxxxxxxxxxxx&gt;	&lt;4B675230.3020000@xxxxxx&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>Edward d'Auvergne</strong> on February 02, 2010 - 00:18:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Hi,
+
+Unfortunately, although this is still the easy solution, it has the
+problems of not keeping a clean code separation.  Code separation is
+an important concept for a massive program like relax - the prompt and
+script user interface code stays in 'prompt/', the analysis specific
+code says in 'specific_fns/', the relax data store in 'data/', the GUI
+in 'gui_bieri/'.  Each part talks to each other part, but they
+interact through function calls.  One part asks for something from
+some other part, and then that other part returns it.  It is like a
+handshake.  There is no intrusion of the prompt UI concepts into the
+rest of relax, otherwise this would be fatal for your GUI.  And vice
+versa.  Without this clean separation the program will fall apart, and
+I will no longer be able to manage it.
+
+What we need here is for 2 parts to talk to each other.  Specifically
+information flow from the 'auto_analyses' package to the GUI.  The GUI
+does not need to send tentacles into the code of other packages to get
+this information.  We can set up a way of having this information flow
+without 'hacking' the code.  The 'auto_analyses' classes can provide
+this easily.  For example in the GUI to get the dAuvergne_protocol
+info, you would first initialise it like:
+
+self.status = dAuvergne_protocol(....)
+
+with all the standard args.  This will place the status object in
+reach of the relax controller.  The status information would be in
+things like:
+
+self.status.user_fn   # The text description of the currently
+executing user function.
+self.status.iteration    # The current iteration number.
+self.status.mc_num    # The current Monte Carlo simulation number.
+
+
+For the relax controller, this will be located at:
+
+self.gui.analysis_frames[self.hardcoded_index_mf].status
+
+though we need to first pass the GUI class object into this controller
+to get at this info.  Then there would be a method added to the relax
+controller which is executed in the __init__() method.  The controller
+must be run in a thread though.  The method would have an infinite
+loop:
+
+# Alias the model-free status.
+self.mf_status = self.gui.analysis_frames[self.hardcoded_index_mf].status
+
+# Infinite loop.
+while True:
+    # Sleep to prevent the relax controller from looping too fast.
+    time.sleep(0.05)
+
+    # Update the status in the controller.
+    wx.WhatEver.SetValue(self.mf_status.user_fn)
+
+The relax controller can then decide what to do with the information -
+i.e. how to convert the user function calls to a percentage, or MC
+sims to a percentage, etc.
+
+
+This is how the code should be set up.  There are other designs for
+this information flow that do not break the clear code separation
+within relax, but this is the first and simplest I can think of.  This
+is a quite advanced programming concept, but I hope you can understand
+the importance to relax of keeping the code of such a high standard.
+This will benefit the GUI code in the end as well by having a much
+more manageable code base throughout relax.
+
+Cheers,
+
+Edward
+
+
+
+
+
+On 1 February 2010 23:14, Michael Bieri &lt;michael.bieri@xxxxxx&gt; wrote:
+</pre><blockquote class="blockquote"><pre style="margin: 0em;">Hi Edward
+
+What do you think if we include some parameters in the auto analysis
+methods?
+
+In the dauvergne_protocol.py for example:
+change:
+
+class dAuvergne_protocol:
+   def __init__(self, diff_model=None, mf_models=['m0', 'm1', 'm2',
+'m3', 'm4', 'm5', 'm6', 'm7', 'm8', 'm9'], local_tm_models=['tm0',
+'tm1', 'tm2', 'tm3', 'tm4', 'tm5', 'tm6', 'tm7', 'tm8', 'tm9'],
+pdb_file=None, seq_args=None, het_name=None, relax_data=None,
+unres=None, exclude=None, bond_length=None, csa=None, hetnuc=None,
+proton='1H', grid_inc=11, min_algor='newton', mc_num=500, user_fns=None,
+conv_loop=True):
+
+to:
+
+class dAuvergne_protocol:
+   def __init__(self, diff_model=None, mf_models=['m0', 'm1', 'm2',
+'m3', 'm4', 'm5', 'm6', 'm7', 'm8', 'm9'], local_tm_models=['tm0',
+'tm1', 'tm2', 'tm3', 'tm4', 'tm5', 'tm6', 'tm7', 'tm8', 'tm9'],
+pdb_file=None, seq_args=None, het_name=None, relax_data=None,
+unres=None, exclude=None, bond_length=None, csa=None, hetnuc=None,
+proton='1H', grid_inc=11, min_algor='newton', mc_num=500, user_fns=None,
+conv_loop=True, ui = 'prompt'):
+
+The added parameter ui has several options: prompt, gui and html.
+
+According to this variable, different modules are loaded in addition,
+such as:
+
+if ui == 'gui':
+   import wx
+   import relaxGUI modules (controller)
+
+and then we can update the progress bar.
+
+I can start coding this. If it is ok for you. I am a bit concerned that
+we will get a mess if we both manipulate the code in parallel.
+
+The same has to be done for the auto_noe and auto_rx scripts, which will
+be placed in the auto_analysis folder.
+
+Cheers
+Michael
+
+
+
+Edward d'Auvergne schrieb:
+</pre><blockquote class="blockquote"><pre style="margin: 0em;">On 1 February 2010 04:08, Michael Bieri &lt;michael.bieri@xxxxxx&gt; wrote:
+
+</pre><blockquote class="blockquote"><pre style="margin: 0em;">Hi Edward
+
+Oh my god, you made a lot of changes! I am now trying to understand this
+way of programming. But respect, there is a lot of smart stuff in it!
+
+</pre></blockquote><pre style="margin: 0em;">
+
+Most are invisible on the surface though ;)  But, yes, there are a lot
+of core changes.  I did this to get model-free up and running, by
+having the data in the relax data store and then passing this through
+the clean API separating the GUI from the calculation code - the
+dAuvergne_protocol class.  But many changes are only to one small part
+of the code, I have made many of these to show you a good way to
+design the code.  By studying these, you should be able to advance the
+GUI at a much quicker rate and the changes give you more power to
+control the GUI.
+
+For example to pack a new R1 analysis frame into some wx object
+(notebook, box, etc), first import:
+
+from analyses.auto_r1 import Auto_r1
+
+add it to the list of analysis frames (this dynamic adding won't work
+quite yet):
+
+self.analysis_frames.append(Auto_r1(self, object))
+
+and it will be added to the object.  I would like to clean this up
+more after the NOE code is out of relax_gui.  Currently a
+notbook.AddPage() command is necessary to see this frame.  The idea is
+to be more dynamic, to allow a menu entry 'File -&gt; New analysis' to
+bring up the analysis selection window
+(<a  rel="nofollow" href="https://gna.org/task/?6847#comment33">https://gna.org/task/?6847#comment33</a>), to allow chemists to easily
+add a new frame for the N-state model, to all me to add a new frame
+for the frame order theory, etc.
+
+There is one easy starting point for learning these new changes - the
+automatic NOE calculation frame.  I have made the copy
+'analysis/auto_noe.py'.  If you like, you can have a go at this.  The
+first commit would be the deletion of all the non-NOE code.  Then
+mimic what happened with the changes to auto_rx_base.py (r10526
+onwards, <a  rel="nofollow" href="https://mail.gna.org/public/relax-commits/2010-01/threads.html">https://mail.gna.org/public/relax-commits/2010-01/threads.html</a>).
+ This will show how to have a clean code separation between different
+parts of the GUI.
+
+
+
+</pre><blockquote class="blockquote"><pre style="margin: 0em;">I try to get along.
+
+</pre></blockquote><pre style="margin: 0em;">
+
+If you have any questions, please don't hesitate to ask.
+
+
+
+</pre><blockquote class="blockquote"><pre style="margin: 0em;">So you basically made the calculations (execution)
+independent from the log window.
+
+</pre></blockquote><pre style="margin: 0em;">
+
+This is logical.  Anyway, you had made the calculation part
+independent already by launching it in a thread.  If you close a
+window, the calculation should not terminate.  And this allows the
+user to keep using relax.  The point of this would be to not have to
+wait to calculate the R2 while the R1 is running.
+
+
+
+</pre><blockquote class="blockquote"><pre style="margin: 0em;">So it can be opened and closed anytime.
+
+</pre></blockquote><pre style="margin: 0em;">
+
+</pre><blockquote class="blockquote"><pre style="margin: 0em;">From the progress bar and the cancel button, and the discussions, this
+</pre></blockquote><pre style="margin: 0em;">is a lot more than just a log window.  It can control the relax
+calculations.  So to be able to access it at any time, and close it,
+would be useful.
+
+
+
+</pre><blockquote class="blockquote"><pre style="margin: 0em;">I also like the dAuvergne protocol. This honours you as it should be.
+
+</pre></blockquote><pre style="margin: 0em;">
+
+The user will not see this though, it's completely behind the GUI and
+is part of an API.  It just identifies it as what it is, and the
+separation into it's own class prevents the protocol from being broken
+by accident by other parts of relax (i.e. the GUI or user scripts).
+
+
+
+</pre><blockquote class="blockquote"><pre style="margin: 0em;">But I think we should make a copy for the gui, so the progress bar can
+get updated.
+
+</pre></blockquote><pre style="margin: 0em;">
+
+This is not good coding style!  One should never make a copy.  This is
+why the rhombic CS tensor and multi-dipole branch will never be
+accepted into the main line - there the duplication has happened 6
+times or more.  If new functionality is needed, this is added to the
+original.  Then the other parts of the program which use this common
+code base can also benefit.  Duplicating the code is the quickest and
+easiest for a developer to have something operational.  But it is not
+maintainable, it is a nightmare to keep syncronised with changes in
+the original, and it is a nightmare for debugging.  Code duplication
+is just not acceptable.
+
+
+
+</pre><blockquote class="blockquote"><pre style="margin: 0em;">Just add some wx.CallAfter(blabla for progres bar).
+
+</pre></blockquote><pre style="margin: 0em;">
+
+This is one way, the easiest, but not the best as it breaks the clean
+code separation that is necessary in large programs.  Another way is
+for the relax controller to run in a thread, continually checking the
+progress by reading the data from the progress container I suggested.
+Just a few timer waits, read the variables, and update the window as
+needed.
+
+
+
+</pre><blockquote class="blockquote"><pre style="margin: 0em;">I think
+we should limit the amout of iterations to 30.
+
+</pre></blockquote><pre style="margin: 0em;">
+
+This can be added to dAuvergne_protocol as a new keyword argument,
+something like 'max_protocol_iter'.  The termination then occurs
+behind the API.  This is not a GUI concept but part of the calculation
+code.
+
+
+
+</pre><blockquote class="blockquote"><pre style="margin: 0em;">Then we can update the
+progress bar accordingly. This is especially relevant for the full
+automatic analysis.
+
+</pre></blockquote><pre style="margin: 0em;">
+
+For this, a lot more information can be given that is specific to this
+analysis.  I.e. the iteration number for the automatic model-free
+protocol.  The relax controller could be made to be different for
+different analyses, and include separate MC simulation progress bars,
+etc.  Just ideas for the future.
+
+
+
+</pre><blockquote class="blockquote"><pre style="margin: 0em;">For 'manual' auto-local tm calculation, the progress
+bar could jump in 1/9 steps, so the user can see which model is
+calculated (has to be adapted to the selected models).
+
+</pre></blockquote><pre style="margin: 0em;">
+
+What about 2 progress bars for this?  One for the model, and one for
+the number of spins completed?  All this information can be put into
+the progress container by dAuvergne_protocol to be then read by the
+relax controller.
+
+
+
+</pre><blockquote class="blockquote"><pre style="margin: 0em;">For the remaining
+models (m1-m5), we could set the progress bar to 100% after 30
+iterations. If it converges earlier, it could jump. What do you think
+about this? This would improve the feedback of the gui enormous.
+
+</pre></blockquote><pre style="margin: 0em;">
+
+Information about the iteration position would be very useful to have!
+ The relax controller could be made very powerful in this way -
+progress bars, status bars, log, etc.  It is a good idea though.  I'm
+just wondering if there is another way to show this?  Maybe print the
+iteration number as well?
+
+
+
+</pre><blockquote class="blockquote"><pre style="margin: 0em;">A minor remark. I would suggest to use smaller images for the rx ad,
+remove and refresh buttons. Maybe 16x16 would still be ok. I would like
+to keep the gui clean. Even just simple '+' and '-' would be nicer.
+
+</pre></blockquote><pre style="margin: 0em;">
+
+For this I just kept your original 60 pixel width.  It could be made
+smaller though, they are quite big.  The idea for bitmaps is that
+almost all buttons in computer programs come with pictures.  The text
+is often optional now.  Look at the buttons at the top of any program.
+ Which program's design are you following for your design?  We
+shouldn't be reinventing the GUI wheel here.
+
+
+
+</pre><blockquote class="blockquote"><pre style="margin: 0em;">All the data handling is very impressive. I still have to fully
+understand this (line by line).
+
+</pre></blockquote><pre style="margin: 0em;">
+
+Again, if you have any questions, don't hesitate.  This is quite a
+different concept.
+
+
+
+</pre><blockquote class="blockquote"><pre style="margin: 0em;">I will play around with the version I have at the moment and try to add
+some new features. But I think we are on the good way of having a
+version 1.00 ready.
+
+</pre></blockquote><pre style="margin: 0em;">
+
+It is close.  Is the version you have r10605 or higher?  Do you have
+the model-free calculations running?  If you have any patches, please
+specify the revision number ('svn info').
+
+I think there are a few more things to fix, as the NOE, R1, and R2
+calculations are not running through the relax controller.  I have
+removed the R1 and R2 calculation code (again this is code
+duplication) and I will provide the resources to have this running
+from a module in 'auto_analyses'.  A good way to think of this is as
+follows, just put yourself in the shoes of the person in the future
+developing the web interface for relax.  They would like to do exactly
+what you are doing, but with HTML and scripting.  How can they then
+access and use the progress information?  If it is tied into your GUI
+code, they cannot.  That is why you put this type of code into
+reusable modules which are not part of the GUI.  The GUI only provides
+input and feedback to the user, nothing else.  If you need to modify
+the relax code base to provide new features to the GUI, then the relax
+code base should be directly modified!
+
+Cheers,
+
+Edward
+
+
+</pre></blockquote><pre style="margin: 0em;">
+
+_______________________________________________
+relax (<a  rel="nofollow" href="http://nmr-relax.com">http://nmr-relax.com</a>)
+
+This is the relax-devel mailing list
+relax-devel@xxxxxxx
+
+To unsubscribe from this list, get a password
+reminder, or change your subscription options,
+visit the list information page at
+<a  rel="nofollow" href="https://mail.gna.org/listinfo/relax-devel">https://mail.gna.org/listinfo/relax-devel</a>
+
+</pre></blockquote><pre style="margin: 0em;">
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<ul><li><strong>References</strong>:
+<ul>
+<li><strong><a name="00000" href="msg00000.html">Re: Status ideas for the relax controller.</a></strong>
+<ul><li><em>From:</em> Michael Bieri</li></ul></li>
+<li><strong><a name="00001" href="msg00001.html">Re: Status ideas for the relax controller.</a></strong>
+<ul><li><em>From:</em> Edward d'Auvergne</li></ul></li>
+<li><strong><a name="00002" href="msg00002.html">Re: Status ideas for the relax controller.</a></strong>
+<ul><li><em>From:</em> Michael Bieri</li></ul></li>
+</ul></li></ul>
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Feb 02 22:20:12 2010</div>  
+</body>
+</html>

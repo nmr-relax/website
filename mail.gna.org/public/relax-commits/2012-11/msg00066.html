@@ -1,0 +1,159 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r18005 &#45; /branches/frame_order_testing/auto_analyses/frame_order.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 20 Nov 2012 09:35:38 +0100 -->
+<!--X-Message-Id: E1TajIw&#45;0001Jr&#45;Ia@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r18005 - /branches/frame_order_testing/auto_analyses/frame_order.py -- November 20, 2012 - 09:35</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r18005 - /branches/frame_order_testing/auto_analyses/frame_order.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00066" class="tabs">Index by Date</a> | <a href="threads.html#00066" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00065.html">Date Prev</a>] [<a href="msg00067.html">Date Next</a>] [<a href="msg00065.html">Thread Prev</a>] [<a href="msg00067.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 20 Nov 2012 08:35:38 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00066.html">E1TajIw-0001Jr-Ia@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on November 20, 2012 - 09:35:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Nov 20 09:35:37 2012
+New Revision: 18005
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=18005&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=18005&amp;view=rev</a>
+Log:
+The function tolerance for optimisation can now be set in the frame order 
+auto-analysis.
+
+As the numerical integration using Sobol' points is not very accurate, an 
+function tolerance of
+1e-25 makes no sense.  Especially in the first steps with extremely low 
+precision.  This change
+allows the optimisation to be significantly speed up.
+
+
+Modified:
+    branches/frame_order_testing/auto_analyses/frame_order.py
+
+Modified: branches/frame_order_testing/auto_analyses/frame_order.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_testing/auto_analyses/frame_order.py?rev=18005&amp;r1=18004&amp;r2=18005&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_testing/auto_analyses/frame_order.py?rev=18005&amp;r1=18004&amp;r2=18005&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_testing/auto_analyses/frame_order.py (original)
++++ branches/frame_order_testing/auto_analyses/frame_order.py Tue Nov 20 
+09:35:37 2012
+@@ -42,7 +42,7 @@
+ 
+ 
+ class Frame_order_analysis:
+-    def __init__(self, data_pipe_full=None, data_pipe_subset=None, 
+pipe_bundle=None, results_dir=None, grid_inc=11, grid_inc_rigid=21, 
+min_algor='simplex', num_int_pts_grid=50, num_int_pts_subset=[20, 100], 
+num_int_pts_full=[100, 1000, 200000], mc_sim_num=500):
++    def __init__(self, data_pipe_full=None, data_pipe_subset=None, 
+pipe_bundle=None, results_dir=None, grid_inc=11, grid_inc_rigid=21, 
+min_algor='simplex', num_int_pts_grid=50, num_int_pts_subset=[20, 100], 
+func_tol_subset=[1e-2, 1e-2], num_int_pts_full=[100, 1000, 200000], 
+func_tol_full=[1e-2, 1e-3, 1e-4], mc_sim_num=500):
+         &quot;&quot;&quot;Perform the full frame order analysis.
+ 
+         @param data_pipe_full:      The name of the data pipe containing all 
+of the RDC and PCS data.
+@@ -75,7 +75,9 @@
+         self.min_algor = min_algor
+         self.num_int_pts_grid = num_int_pts_grid
+         self.num_int_pts_subset = num_int_pts_subset
++        self.func_tol_subset = func_tol_subset
+         self.num_int_pts_full = num_int_pts_full
++        self.func_tol_full = func_tol_full
+         self.mc_sim_num = mc_sim_num
+ 
+         # A dictionary of the data pipe names.
+@@ -280,17 +282,17 @@
+             self.interpreter.grid_search(inc=incs, constraints=False)
+ 
+             # Minimise (for the PCS data subset and full RDC set).
+-            for num in self.num_int_pts_subset:
+-                self.interpreter.frame_order.num_int_pts(num=num)
+-                self.interpreter.minimise(self.min_algor, constraints=False)
++            for i in range(len(self.num_int_pts_subset)):
++                
+self.interpreter.frame_order.num_int_pts(num=self.num_int_pts_subset[i])
++                self.interpreter.minimise(self.min_algor, 
+func_tol=self.func_tol_subset[i], constraints=False)
+ 
+             # Copy the PCS data.
+             self.interpreter.pcs.copy(pipe_from=self.data_pipe_full, 
+pipe_to=self.models[model])
+ 
+             # Minimise (for the full data set).
+-            for num in self.num_int_pts_full:
+-                self.interpreter.frame_order.num_int_pts(num=num)
+-                self.interpreter.minimise(self.min_algor, constraints=False)
++            for i in range(len(self.num_int_pts_full)):
++                
+self.interpreter.frame_order.num_int_pts(num=self.num_int_pts_full[i])
++                self.interpreter.minimise(self.min_algor, 
+func_tol=self.func_tol_full[i], constraints=False)
+ 
+             # Results printout.
+             self.print_results()
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Nov 20 10:00:01 2012</div>  
+</body>
+</html>

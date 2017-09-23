@@ -1,0 +1,189 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r22417 &#45; /trunk/info.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 06 Mar 2014 17:51:42 +0100 -->
+<!--X-Message-Id: E1WLbWH&#45;0007p6&#45;RO@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r22417 - /trunk/info.py -- March 06, 2014 - 17:51</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r22417 - /trunk/info.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00027" class="tabs">Index by Date</a> | <a href="threads.html#00027" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00026.html">Date Prev</a>] [<a href="msg00028.html">Date Next</a>] [<a href="msg00026.html">Thread Prev</a>] [<a href="msg00028.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 06 Mar 2014 16:51:41 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00027.html">E1WLbWH-0007p6-RO@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on March 06, 2014 - 17:51:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Mar  6 17:51:41 2014
+New Revision: 22417
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=22417&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=22417&amp;view=rev</a>
+Log:
+The relax information printout, from &quot;relax -i&quot; for example, now includes 
+detailed CPU information.
+
+This uses operating system specific commands to obtain this information which 
+is not available from
+the platform Python module.
+
+
+Modified:
+    trunk/info.py
+
+Modified: trunk/info.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/info.py?rev=22417&amp;r1=22416&amp;r2=22417&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/info.py?rev=22417&amp;r1=22416&amp;r2=22417&amp;view=diff</a>
+==============================================================================
+--- trunk/info.py       (original)
++++ trunk/info.py       Thu Mar  6 17:51:41 2014
+@@ -36,11 +36,12 @@
+     from ctypes import Structure
+ else:
+     Structure = object
+-from os import environ, waitpid
++from os import environ, pathsep, waitpid
+ import platform
+-PIPE, Popen = None, None
++from re import sub
++check_output, PIPE, Popen = None, None, None
+ if dep_check.subprocess_module:
+-    from subprocess import PIPE, Popen
++    from subprocess import check_output, PIPE, Popen
+ import sys
+ from textwrap import wrap
+ 
+@@ -516,6 +517,60 @@
+         return text
+ 
+ 
++    def processor_name(self):
++        &quot;&quot;&quot;Return a string for the processor name.
++
++        @return:    The processor name, in much more detail than 
+platform.processor().
++        @rtype:     str
++        &quot;&quot;&quot;
++
++        # No subprocess module.
++        if not dep_check.subprocess_module:
++            return &quot;&quot;
++
++        # The system.
++        system = platform.system()
++
++        # Linux systems.
++        if system == 'Linux':
++            # The command to run.
++            command = &quot;cat /proc/cpuinfo&quot;
++
++            # Execute the command.
++            cpuinfo = check_output(command, shell=True).strip()
++            lines = cpuinfo.splitlines()
++
++            # Loop over the lines, returning the first model name with the 
+leading &quot;model name  :&quot; text stripped.
++            for line in lines:
++                if &quot;model name&quot; in line:
++                    # Convert the text.
++                    name = sub(&quot;.*model name.*:&quot;, &quot;&quot;, line, 1)
++                    name = name.strip()
++
++                    # Return the name.
++                    return name
++
++        # Windows systems.
++        if system == 'Windows' or system == 'Microsoft':
++            return platform.processor()
++
++        # Mac OS X systems.
++        if system == 'Darwin':
++            # Add the 'sysctl' path to the environment (if needed).
++            environ['PATH'] += pathsep + '/usr/sbin'
++
++            # The command to run.
++            command = &quot;sysctl -n machdep.cpu.brand_string&quot;
++
++            # Execute the command in a fail safe way, return the result or 
+nothing.
++            try:
++                return check_output(command).strip()
++            except:
++                return &quot;&quot;
++
++        # Unknown.
++        return &quot;&quot;
++
+ 
+     def ram_info(self, format=&quot;    %-25s%s\n&quot;):
+         &quot;&quot;&quot;Return a string for printing to STDOUT with info from the Python 
+packages used by relax.
+@@ -641,6 +696,7 @@
+             text = text + (format % (&quot;Machine: &quot;, platform.machine()))
+         if hasattr(platform, 'processor'):
+             text = text + (format % (&quot;Processor: &quot;, platform.processor()))
++        text = text + (format % (&quot;Processor name: &quot;, self.processor_name()))
+         text = text + (format % (&quot;Endianness: &quot;, sys.byteorder))
+         text = text + self.ram_info(format=format2)
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Mar 06 18:20:02 2014</div>  
+</body>
+</html>

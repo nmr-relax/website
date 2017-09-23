@@ -1,0 +1,309 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r11328 &#45; /1.3/maths_fns/frame_order.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 21 Jul 2010 13:38:29 +0200 -->
+<!--X-Message-Id: E1ObXd7&#45;0001m9&#45;N6@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r11328 - /1.3/maths_fns/frame_order.py -- July 21, 2010 - 13:38</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r11328 - /1.3/maths_fns/frame_order.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00059" class="tabs">Index by Date</a> | <a href="threads.html#00059" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00058.html">Date Prev</a>] [<a href="msg00060.html">Date Next</a>] [<a href="msg00058.html">Thread Prev</a>] [<a href="msg00060.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 21 Jul 2010 11:38:29 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00059.html">E1ObXd7-0001m9-N6@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on July 21, 2010 - 13:38:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Jul 21 13:38:29 2010
+New Revision: 11328
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=11328&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=11328&amp;view=rev</a>
+Log:
+Created the func_pseudo_ellipse() optimisation target fn. for the 
+pseudo-elliptic cone model.
+
+The structure of the Frame_order class has been simplified for handling 
+multiple frame order models.
+
+
+Modified:
+    1.3/maths_fns/frame_order.py
+
+Modified: 1.3/maths_fns/frame_order.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/maths_fns/frame_order.py?rev=11328&amp;r1=11327&amp;r2=11328&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/maths_fns/frame_order.py?rev=11328&amp;r1=11327&amp;r2=11328&amp;view=diff</a>
+==============================================================================
+--- 1.3/maths_fns/frame_order.py (original)
++++ 1.3/maths_fns/frame_order.py Wed Jul 21 13:38:29 2010
+@@ -31,7 +31,7 @@
+ from generic_fns.frame_order import print_frame_order_2nd_degree
+ from maths_fns.alignment_tensor import to_5D, to_tensor
+ from maths_fns.chi2 import chi2
+-from maths_fns.frame_order_matrix_ops import compile_2nd_matrix_iso_cone, 
+reduce_alignment_tensor
++from maths_fns.frame_order_matrix_ops import compile_2nd_matrix_iso_cone, 
+compile_2nd_matrix_pseudo_ellipse, reduce_alignment_tensor
+ from maths_fns.rotation_matrix import euler_to_R_zyz as euler_to_R
+ from relax_errors import RelaxError
+ 
+@@ -65,65 +65,63 @@
+         # Store the initial parameter (as a copy).
+         self.params = deepcopy(init_params)
+ 
++        # Store the agrs.
++        self.model = model
++        self.full_tensors = full_tensors
++        self.red_tensors = red_tensors
++        self.red_errors = red_errors
++        self.full_in_ref_frame = full_in_ref_frame
++
++        # Mix up.
++        if full_tensors != None and frame_order_2nd != None:
++            raise RelaxError(&quot;Tensors and Frame Order matrices cannot be 
+supplied together.&quot;)
++        if full_tensors == None and frame_order_2nd == None:
++            raise RelaxError(&quot;The arguments have been incorrectly supplied, 
+cannot determine the optimisation mode.&quot;)
++
++        # Tensor setup.
++        if full_tensors != None:
++            self.__init_tensors()
++
+         # The rigid model.
+         if model == 'rigid':
+-            # Tensor optimisation.
+-            self.__init_tensors(full_tensors, red_tensors, red_errors, 
+full_in_ref_frame)
+-
+             # Alias the target function.
+             self.func = self.func_rigid
+ 
+         # Isotropic cone model.
+         if model == 'iso cone':
+-            # Mix up.
+-            if full_tensors != None and frame_order_2nd != None:
+-                raise RelaxError(&quot;Tensors and Frame Order matrices cannot be 
+supplied together.&quot;)
+-
+-            # Tensor setup.
+-            if full_tensors != None:
+-                self.__init_tensors(full_tensors, red_tensors, red_errors, 
+full_in_ref_frame)
+-
+             # Optimisation to the 2nd degree Frame Order matrix components 
+directly.
+-            elif frame_order_2nd != None:
++            if frame_order_2nd != None:
+                 self.__init_iso_cone_elements(frame_order_2nd)
+-
+-            # Badly supplied arguments.
+-            else:
+-                raise RelaxError(&quot;The arguments have been incorrectly 
+supplied, cannot determine the optimisation mode.&quot;)
+ 
+             # The cone axis storage and molecular frame z-axis.
+             self.cone_axis = zeros(3, float64)
+             self.z_axis = array([0, 0, 1], float64)
+ 
+-
+-    def __init_tensors(self, full_tensors, red_tensors, red_errors, 
+full_in_ref_frame):
+-        &quot;&quot;&quot;Set up isotropic cone optimisation against the alignment tensor 
+data.
+-
+-        @keyword full_tensors:      An array of the {Sxx, Syy, Sxy, Sxz, 
+Syz} values for all full alignment tensors.  The format is [Sxx1, Syy1, Sxy1, 
+Sxz1, Syz1, Sxx2, Syy2, Sxy2, Sxz2, Syz2, ..., Sxxn, Syyn, Sxyn, Sxzn, Syzn].
+-        @type full_tensors:         numpy nx5D, rank-1 float64 array
+-        @keyword red_tensors:       An array of the {Sxx, Syy, Sxy, Sxz, 
+Syz} values for all reduced tensors.  The array format is the same as for 
+full_tensors.
+-        @type red_tensors:          numpy nx5D, rank-1 float64 array
+-        @keyword red_errors:        An array of the {Sxx, Syy, Sxy, Sxz, 
+Syz} errors for all reduced tensors.  The array format is the same as for 
+full_tensors.
+-        @type red_errors:           numpy nx5D, rank-1 float64 array
+-        &quot;&quot;&quot;
++            # Alias the target function.
++            self.func = self.func_iso_cone
++
++        # Pseudo-ellipse cone model.
++        elif model == 'pseudo-ellipse':
++            # Alias the target function.
++            self.func = self.func_pseudo_ellipse
++
++
++    def __init_tensors(self):
++        &quot;&quot;&quot;Set up isotropic cone optimisation against the alignment tensor 
+data.&quot;&quot;&quot;
+ 
+         # Some checks.
+-        if full_tensors == None or not len(full_tensors):
+-            raise RelaxError(&quot;The full_tensors argument &quot; + 
+repr(full_tensors) + &quot; must be supplied.&quot;)
+-        if red_tensors == None or not len(red_tensors):
+-            raise RelaxError(&quot;The red_tensors argument &quot; + repr(red_tensors) 
++ &quot; must be supplied.&quot;)
+-        if red_errors == None or not len(red_errors):
+-            raise RelaxError(&quot;The red_errors argument &quot; + repr(red_errors) + 
+&quot; must be supplied.&quot;)
+-        if full_in_ref_frame == None or not len(full_in_ref_frame):
+-            raise RelaxError(&quot;The full_in_ref_frame argument &quot; + 
+repr(full_in_ref_frame) + &quot; must be supplied.&quot;)
++        if self.full_tensors == None or not len(self.full_tensors):
++            raise RelaxError(&quot;The full_tensors argument &quot; + 
+repr(self.full_tensors) + &quot; must be supplied.&quot;)
++        if self.red_tensors == None or not len(self.red_tensors):
++            raise RelaxError(&quot;The red_tensors argument &quot; + 
+repr(self.red_tensors) + &quot; must be supplied.&quot;)
++        if self.red_errors == None or not len(self.red_errors):
++            raise RelaxError(&quot;The red_errors argument &quot; + 
+repr(self.red_errors) + &quot; must be supplied.&quot;)
++        if self.full_in_ref_frame == None or not len(self.full_in_ref_frame):
++            raise RelaxError(&quot;The full_in_ref_frame argument &quot; + 
+repr(self.full_in_ref_frame) + &quot; must be supplied.&quot;)
+ 
+         # Tensor set up.
+-        self.num_tensors = len(full_tensors) / 5
+-        self.full_tensors = full_tensors
+-        self.red_tensors = red_tensors
+-        self.red_errors = red_errors
++        self.num_tensors = len(self.full_tensors) / 5
+         self.red_tensors_bc = zeros(self.num_tensors*5, float64)
+-        self.full_in_ref_frame = full_in_ref_frame
+ 
+         # The rotation to the Frame Order eigenframe.
+         self.rot = zeros((3, 3), float64)
+@@ -131,9 +129,6 @@
+ 
+         # Initialise the Frame Order matrices.
+         self.frame_order_2nd = zeros((9, 9), float64)
+-
+-        # Alias the target function.
+-        self.func = self.func_iso_cone
+ 
+ 
+     def __init_iso_cone_elements(self, frame_order_2nd):
+@@ -288,3 +283,48 @@
+ 
+         # Return the chi2 value.
+         return val
++
++
++    def func_pseudo_ellipse(self, params):
++        &quot;&quot;&quot;Target function for pseudo-elliptic cone model optimisation using 
+alignment tensors.
++
++        @param params:  The vector of parameter values {alpha, beta, gamma, 
+eigen_alpha, eigen_beta, eigen_gamma, cone_theta_x, cone_theta_y, 
+cone_sigma_max} where the first 3 are the average position rotation Euler 
+angles, the next 3 are the Euler angles defining the eigenframe, and the last 
+3 are the pseudo-elliptic cone geometric parameters.
++        @type params:   list of float
++        @return:        The chi-squared or SSE value.
++        @rtype:         float
++        &quot;&quot;&quot;
++
++        # Unpack the parameters.
++        alpha, beta, gamma, eigen_alpha, eigen_beta, eigen_gamma, 
+cone_theta_x, cone_theta_y, cone_sigma_max = params
++
++        # Generate the 2nd degree Frame Order super matrix.
++        self.frame_order_2nd = 
+compile_2nd_matrix_pseudo_ellipse(self.frame_order_2nd, self.rot, 
+eigen_alpha, eigen_beta, eigen_gamma, cone_theta_x, cone_theta_y, 
+cone_sigma_max)
++
++        # Average position rotation.
++        euler_to_R(alpha, beta, gamma, self.rot)
++
++        # Back calculate the reduced tensors.
++        for i in range(self.num_tensors):
++            # Tensor indices.
++            index1 = i*5
++            index2 = i*5+5
++
++            # Reduce the tensor.
++            reduce_alignment_tensor(self.frame_order_2nd, 
+self.full_tensors[index1:index2], self.red_tensors_bc[index1:index2])
++
++            # Convert the tensor to 3D, rank-2 form.
++            to_tensor(self.tensor_3D, self.red_tensors_bc[index1:index2])
++
++            # Rotate the tensor (normal R.X.RT rotation).
++            if self.full_in_ref_frame[i]:
++                self.tensor_3D = dot(self.rot, dot(self.tensor_3D, 
+transpose(self.rot)))
++
++            # Rotate the tensor (inverse RT.X.R rotation).
++            else:
++                self.tensor_3D = dot(transpose(self.rot), 
+dot(self.tensor_3D, self.rot))
++
++            # Convert the tensor back to 5D, rank-1 form.
++            to_5D(self.red_tensors_bc[index1:index2], self.tensor_3D)
++
++        # Return the chi-squared value.
++        return chi2(self.red_tensors, self.red_tensors_bc, self.red_errors)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Jul 21 14:00:02 2010</div>  
+</body>
+</html>

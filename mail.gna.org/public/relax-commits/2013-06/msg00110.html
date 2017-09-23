@@ -1,0 +1,309 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r19921 &#45; in /branches/relax_disp: ./ pipe_control/spectrum.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 06 Jun 2013 20:41:16 +0200 -->
+<!--X-Message-Id: E1Ukf7c&#45;0003qY&#45;4z@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r19921 - in /branches/relax_disp: ./ pipe_control/spectrum.py -- June 06, 2013 - 20:41</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r19921 - in /branches/relax_disp: ./ pipe_control/spectrum.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00110" class="tabs">Index by Date</a> | <a href="threads.html#00110" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00109.html">Date Prev</a>] [<a href="msg00111.html">Date Next</a>] [<a href="msg00109.html">Thread Prev</a>] [<a href="msg00111.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 06 Jun 2013 18:41:16 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00110.html">E1Ukf7c-0003qY-4z@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on June 06, 2013 - 20:41:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Jun  6 20:41:15 2013
+New Revision: 19921
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=19921&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=19921&amp;view=rev</a>
+Log:
+Merged revisions 19920 via svnmerge from 
+svn+ssh://bugman@xxxxxxxxxxx/svn/relax/trunk
+
+........
+  r19920 | bugman | 2013-06-06 20:41:01 +0200 (Thu, 06 Jun 2013) | 9 lines
+  
+  Fix for bug #20873 (<a  rel="nofollow" href="http://gna.org/bugs/?20873">http://gna.org/bugs/?20873</a>).
+  
+  This was reported by Troels E. Linnet (<a  rel="nofollow" href="http://gna.org/users/tlinnet">http://gna.org/users/tlinnet</a>).
+  
+  The ability to load multiple peak intensities from a single generic 
+formatted file has been
+  correctly implemented.  This involves added checks to make sure that the 
+user supplies reasonable
+  arguments and to then loop over the intensity column argument.
+........
+
+Modified:
+    branches/relax_disp/   (props changed)
+    branches/relax_disp/pipe_control/spectrum.py
+
+Propchange: branches/relax_disp/
+------------------------------------------------------------------------------
+--- svnmerge-integrated (original)
++++ svnmerge-integrated Thu Jun  6 20:41:15 2013
+@@ -1,1 +1,1 @@
+-/trunk:1-19918
++/trunk:1-19920
+
+Modified: branches/relax_disp/pipe_control/spectrum.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/pipe_control/spectrum.py?rev=19921&amp;r1=19920&amp;r2=19921&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_disp/pipe_control/spectrum.py?rev=19921&amp;r1=19920&amp;r2=19921&amp;view=diff</a>
+==============================================================================
+--- branches/relax_disp/pipe_control/spectrum.py (original)
++++ branches/relax_disp/pipe_control/spectrum.py Thu Jun  6 20:41:15 2013
+@@ -498,7 +498,7 @@
+     @keyword spin_num_col:  The column containing the spin number 
+information (used by the generic intensity file format).  If supplied, 
+spin_id_col must be None.
+     @type spin_num_col:     int or None
+     @keyword data_col:      The column containing the peak intensities.
+-    @type data_col:         int
++    @type data_col:         int or list of int
+     @keyword sep:           The column separator which, if None, defaults to 
+whitespace.
+     @type sep:              str or None
+     @keyword spin_id:       The spin ID string used to restrict data loading 
+to a subset of all spins.
+@@ -515,21 +515,38 @@
+     # Strip the data.
+     file_data = strip(file_data)
+ 
+-    # Loop over the data.
++    # Convert the the data_col argument to a list if needed.
++    if not isinstance(data_col, list):
++        data_col = [data_col]
++
++    # Loop over the data columns.
+     data = []
+-    for values in read_spin_data(file_data=file_data, 
+spin_id_col=spin_id_col, mol_name_col=mol_name_col, res_num_col=res_num_col, 
+res_name_col=res_name_col, spin_num_col=spin_num_col, 
+spin_name_col=spin_name_col, data_col=data_col, sep=sep, spin_id=spin_id):
+-        # Check the values.
+-        if len(values) != 6:
+-            raise RelaxError(&quot;The molecule name, residue number and name, 
+spin number and name, and value columns could not be found in the data %s.&quot; % 
+repr(values))
+-
+-        # Unpack.
+-        mol_name, res_num, res_name, spin_num, spin_name, value = values
+-
+-        # Create the unique spin ID.
+-        id = generate_spin_id_unique(mol_name=mol_name, res_num=res_num, 
+res_name=res_name, spin_num=spin_num, spin_name=spin_name)
+-
+-        # Store the necessary data.
+-        data.append([None, None, id, value, id])
++    for i in range(len(data_col)):
++        # Loop over the data.
++        row_index = 0
++        for values in read_spin_data(file_data=file_data, 
+spin_id_col=spin_id_col, mol_name_col=mol_name_col, res_num_col=res_num_col, 
+res_name_col=res_name_col, spin_num_col=spin_num_col, 
+spin_name_col=spin_name_col, data_col=data_col[i], sep=sep, spin_id=spin_id):
++            # Check the values.
++            if len(values) != 6:
++                raise RelaxError(&quot;The molecule name, residue number and 
+name, spin number and name, and value columns could not be found in the data 
+%s.&quot; % repr(values))
++
++            # Unpack.
++            mol_name, res_num, res_name, spin_num, spin_name, value = values
++
++            # Create the unique spin ID.
++            id = generate_spin_id_unique(mol_name=mol_name, res_num=res_num, 
+res_name=res_name, spin_num=spin_num, spin_name=spin_name)
++
++            # Store the necessary data.
++            if i == 0:
++                # Convert the value to a list if multiple columns are 
+present.
++                if len(data_col) &gt; 1:
++                    data.append([None, None, id, [value], id])
++                else:
++                    data.append([None, None, id, value, id])
++            else:
++                data[row_index][3].append(value)
++
++            # Go to the next row.
++            row_index += 1
+ 
+     # Return the data.
+     return data
+@@ -607,6 +624,14 @@
+         # Print out.
+         print(&quot;Generic formatted data file.\n&quot;)
+ 
++        # Checks.
++        if isinstance(spectrum_id, list) and not isinstance(int_col, list):
++            raise RelaxError(&quot;If a list of spectrum IDs is supplied, the 
+intensity column argument must also be a list of equal length.&quot;)
++        if not isinstance(spectrum_id, list) and isinstance(int_col, list):
++            raise RelaxError(&quot;If a list of intensity columns is supplied, 
+the spectrum ID argument must also be a list of equal length.&quot;)
++        if isinstance(spectrum_id, list) and len(spectrum_id) != 
+len(int_col):
++            raise RelaxError(&quot;The spectrum ID list %s has a different number 
+of elements to the intensity column list %s.&quot; % (spectrum_id, int_col))
++
+         # Extract the data.
+         intensity_data = intensity_generic(file_data=file_data, 
+spin_id_col=spin_id_col, mol_name_col=mol_name_col, res_num_col=res_num_col, 
+res_name_col=res_name_col, spin_num_col=spin_num_col, 
+spin_name_col=spin_name_col, data_col=int_col, sep=sep, spin_id=spin_id)
+ 
+@@ -675,41 +700,49 @@
+         # Extract the data.
+         H_name, X_name, spin_id, intensity, line = intensity_data[i]
+ 
+-        # Sanity check.
+-        if intensity == 0.0:
+-            warn(RelaxWarning(&quot;A peak intensity of zero has been encountered 
+for the spin '%s' - this could be fatal later on.&quot; % spin_id))
+-
+-        # Skip data.
+-        if (X_name and X_name != heteronuc) or (H_name and H_name != proton):
+-            warn(RelaxWarning(&quot;Proton and heteronucleus names do not match, 
+skipping the data %s.&quot; % line))
+-            continue
+-
+-        # Get the spin container.
+-        spin = return_spin(spin_id)
+-        if not spin:
+-            warn(RelaxNoSpinWarning(spin_id))
+-            continue
+-
+-        # Skip deselected spins.
+-        if not spin.select:
+-            continue
+-
+-        # Initialise.
+-        if not hasattr(spin, 'intensities'):
+-            spin.intensities = {}
+-
+-        # Intensity scaling.
+-        if ncproc != None:
+-            intensity = intensity / float(2**ncproc)
+-
+-        # Add the data.
+-        spin.intensities[spectrum_id] = intensity
+-
+-        # Switch the flag.
+-        data_flag = True
+-
+-        # Append the data for printing out.
+-        data.append([spin_id, repr(intensity)])
++        # Convert the intensity data and spectrum IDs to lists if needed.
++        if not isinstance(intensity, list):
++            intensity = [intensity]
++        if not isinstance(spectrum_id, list):
++            spectrum_id = [spectrum_id]
++
++        # Loop over the data.
++        for i in range(len(intensity)):
++            # Sanity check.
++            if intensity[i] == 0.0:
++                warn(RelaxWarning(&quot;A peak intensity of zero has been 
+encountered for the spin '%s' - this could be fatal later on.&quot; % spin_id))
++
++            # Skip data.
++            if (X_name and X_name != heteronuc) or (H_name and H_name != 
+proton):
++                warn(RelaxWarning(&quot;Proton and heteronucleus names do not 
+match, skipping the data %s.&quot; % line))
++                continue
++
++            # Get the spin container.
++            spin = return_spin(spin_id)
++            if not spin:
++                warn(RelaxNoSpinWarning(spin_id))
++                continue
++
++            # Skip deselected spins.
++            if not spin.select:
++                continue
++
++            # Initialise.
++            if not hasattr(spin, 'intensities'):
++                spin.intensities = {}
++
++            # Intensity scaling.
++            if ncproc != None:
++                intensity[i] = intensity[i] / float(2**ncproc)
++
++            # Add the data.
++            spin.intensities[spectrum_id[i]] = intensity[i]
++
++            # Switch the flag.
++            data_flag = True
++
++            # Append the data for printing out.
++            data.append([spin_id, repr(intensity[i])])
+ 
+     # No data.
+     if not data_flag:
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Jun 06 21:00:02 2013</div>  
+</body>
+</html>

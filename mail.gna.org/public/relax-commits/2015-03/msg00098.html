@@ -1,0 +1,162 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r27820 &#45; /trunk/devel_scripts/memory_management/GUI_uf_align_tensor_init.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 17 Mar 2015 12:21:59 +0100 -->
+<!--X-Message-Id: E1YXpZP&#45;00055R&#45;75@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r27820 - /trunk/devel_scripts/memory_management/GUI_uf_align_tensor_init.py -- March 17, 2015 - 12:21</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r27820 - /trunk/devel_scripts/memory_management/GUI_uf_align_tensor_init.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00098" class="tabs">Index by Date</a> | <a href="threads.html#00098" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00097.html">Date Prev</a>] [<a href="msg00099.html">Date Next</a>] [<a href="msg00097.html">Thread Prev</a>] [<a href="msg00099.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 17 Mar 2015 11:21:59 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00098.html">E1YXpZP-00055R-75@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on March 17, 2015 - 12:21:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Mar 17 12:21:57 2015
+New Revision: 27820
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=27820&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=27820&amp;view=rev</a>
+Log:
+Created a GUI memory management debugging script for the align_tensor.init 
+user function.
+
+This repetitively calls the reset, pipe.create and align_tensor.init user 
+functions, and opening the
+GUI element for setting alignment tensor elements (the Sequence window).  The 
+pympler muppy_log file
+shows no memory leaks for these user functions on Linux systems.
+
+
+Added:
+    trunk/devel_scripts/memory_management/GUI_uf_align_tensor_init.py
+      - copied, changed from r27818, 
+trunk/devel_scripts/memory_management/GUI_uf_time.py
+
+Copied: trunk/devel_scripts/memory_management/GUI_uf_align_tensor_init.py 
+(from r27818, trunk/devel_scripts/memory_management/GUI_uf_time.py)
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/devel_scripts/memory_management/GUI_uf_align_tensor_init.py?p2=trunk/devel_scripts/memory_management/GUI_uf_align_tensor_init.py&amp;p1=trunk/devel_scripts/memory_management/GUI_uf_time.py&amp;r1=27818&amp;r2=27820&amp;rev=27820&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/devel_scripts/memory_management/GUI_uf_align_tensor_init.py?p2=trunk/devel_scripts/memory_management/GUI_uf_align_tensor_init.py&amp;p1=trunk/devel_scripts/memory_management/GUI_uf_time.py&amp;r1=27818&amp;r2=27820&amp;rev=27820&amp;view=diff</a>
+==============================================================================
+--- trunk/devel_scripts/memory_management/GUI_uf_time.py        (original)
++++ trunk/devel_scripts/memory_management/GUI_uf_align_tensor_init.py   Tue 
+Mar 17 12:21:57 2015
+@@ -24,6 +24,11 @@
+ # Python module imports.
+ import wx
+ 
++# relax module imports.
++from gui.string_conv import float_to_gui, str_to_gui
++from gui.uf_objects import Uf_storage; uf_store = Uf_storage()
++
++
+ # Base module imports.
+ from GUI_base import Testing_frame
+ 
+@@ -34,10 +39,37 @@
+     def test(self):
+         &quot;&quot;&quot;Run the test.&quot;&quot;&quot;
+ 
+-        # Repetitive calling of the time user function.
++        # Get the App.
++        app = wx.GetApp()
++
++        # Repetitive calling of the align_tensor.init user function.
+         for i in self.muppy_loop():
+-            self._execute_uf(uf_name='time')
++            # First reset relax.
++            self._execute_uf(uf_name='reset')
+ 
++            # Set up a data pipe.
++            self._execute_uf(uf_name='pipe.create', pipe_name='GUI uf test', 
+pipe_type='N-state')
++
++            # Open the align_tensor.init user function window.
++            uf = uf_store['align_tensor.init']
++            uf._sync = True
++            uf.create_wizard(parent=app.gui)
++
++            # Set the parameters.
++            uf.page.uf_args['params'].SetValue(str_to_gui('(0.00000, 
+-0.00017, 0.00016, 0.00060, -0.00019)'))
++            uf.page.uf_args['params'].selection_win_show()
++            
+uf.page.uf_args['params'].sel_win.sequence.SetStringItem(index=0, col=1, 
+label=float_to_gui(0.00037))
++            uf.page.uf_args['params'].selection_win_data()
++
++            # Set up the other tensor data.
++            uf.page.uf_args['tensor'].SetValue(str_to_gui('Dy'))
++            uf.page.uf_args['align_id'].SetValue(str_to_gui('Dy'))
++
++            # Execute.
++            uf.wizard._go_next(None)
++
++            # Destroy the user function object.
++            uf.Destroy()
+ 
+ 
+ # Set up and execute the GUI.
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Mar 27 14:40:02 2015</div>  
+</body>
+</html>

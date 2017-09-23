@@ -1,0 +1,528 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r12900 &#45; in /1.3/gui: components/spectrum.py relax_gui.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 08 Jun 2011 20:44:30 +0200 -->
+<!--X-Message-Id: E1QUNjx&#45;0003yl&#45;SI@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r12900 - in /1.3/gui: components/spectrum.py relax_gui.py -- June 08, 2011 - 20:44</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r12900 - in /1.3/gui: components/spectrum.py relax_gui.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00067" class="tabs">Index by Date</a> | <a href="threads.html#00067" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00066.html">Date Prev</a>] [<a href="msg00068.html">Date Next</a>] [<a href="msg00066.html">Thread Prev</a>] [<a href="msg00068.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 08 Jun 2011 18:44:29 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00067.html">E1QUNjx-0003yl-SI@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on June 08, 2011 - 20:44:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Jun  8 20:44:28 2011
+New Revision: 12900
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=12900&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=12900&amp;view=rev</a>
+Log:
+Implemented the delay time TextCtrl and added the number of cycles column to 
+the Rx peak list grid.
+
+This implements what was discussed in 
+<a  rel="nofollow" href="https://mail.gna.org/public/relax-devel/2011-06/msg00036.html">https://mail.gna.org/public/relax-devel/2011-06/msg00036.html</a>
+(Message-id: &lt;BANLkTi=8v-S=rO4NBcFVrxHorWaq34J5Jw@xxxxxxxxxxxxxx&gt;).
+
+This is a big change.  The changing of the number of cycles values or the 
+delay time automatically
+updates the relaxation times.  These times are now read only cells.  And the 
++, +VD, and +VC buttons
+are gone as they are no longer needed.
+
+
+Modified:
+    1.3/gui/components/spectrum.py
+    1.3/gui/relax_gui.py
+
+Modified: 1.3/gui/components/spectrum.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/gui/components/spectrum.py?rev=12900&amp;r1=12899&amp;r2=12900&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/gui/components/spectrum.py?rev=12900&amp;r1=12899&amp;r2=12900&amp;view=diff</a>
+==============================================================================
+--- 1.3/gui/components/spectrum.py (original)
++++ 1.3/gui/components/spectrum.py Wed Jun  8 20:44:28 2011
+@@ -39,6 +39,166 @@
+ from gui import paths
+ 
+ 
++class Delay_num_cell_editor(wx.grid.PyGridCellEditor):
++    &quot;&quot;&quot;Custom GridCellEditor for the number of delays grid cells.
++
++    Changing these cells will update the relaxation delay times.
++    &quot;&quot;&quot;
++
++    def __init__(self, min=None, max=None, parent=None):
++        &quot;&quot;&quot;Initialise the class.
++        
++        @keyword min:       The minimum value for wx.SpinCtrl.
++        @type min:          None or int
++        @keyword max:       The maximum value for wx.SpinCtrl.
++        @type max:          None or int
++        @keyword parent:    The parent wx object.
++        @type parent:       wx object
++        &quot;&quot;&quot;
++
++        # Store the args.
++        self.min = min
++        self.max = max
++        self.parent = parent
++
++        # Initialise the base class.
++        super(Delay_num_cell_editor, self).__init__()
++
++        # A flag for a resetting event.
++        self.reset = False
++
++
++    def BeginEdit(self, row, col, grid):
++        &quot;&quot;&quot;Start the editing.
++
++        @param row:     The row index.
++        @type row:      int
++        @param col:     The column index.
++        @type col:      int
++        @param grid:    The grid GUI element.
++        @type grid:     wx.grid.Grid instance.
++        &quot;&quot;&quot;
++
++        # The previous value.
++        self.prev_val = grid.GetTable().GetValue(row, col)
++
++        # Set the starting value.
++        self.cell.SetValueString(self.prev_val)
++
++        # Set the focus to the cell.
++        self.cell.SetFocus()
++
++
++    def Clone(self):
++        &quot;&quot;&quot;Create and return a new class instance.&quot;&quot;&quot;
++
++        # Initialise and return the class.
++        return Delay_num_cell_editor(self.min, self.max)
++
++
++    def Create(self, parent, id, evtHandler):
++        &quot;&quot;&quot;Create the control for the cell.
++
++        @param parent:      The parent wx object.
++        @type parent:       wx object
++        @param id:          The ID number.
++        @type id:           int
++        @param evtHandler:  The event handler function.
++        @type evtHandler:   func
++        &quot;&quot;&quot;
++
++        # Set the cell to be a spin control.
++        self.cell = wx.SpinCtrl(parent, id, &quot;&quot;, min=self.min, max=self.max)
++        self.SetControl(self.cell)
++
++        # Handle the event handler.
++        if evtHandler:
++            self.cell.PushEventHandler(evtHandler)
++
++
++    def EndEdit(self, row, col, grid):
++        &quot;&quot;&quot;End the editing.
++
++        @param row:     The row index.
++        @type row:      int
++        @param col:     The column index.
++        @type col:      int
++        @param grid:    The grid GUI element.
++        @type grid:     wx.grid.Grid instance.
++        &quot;&quot;&quot;
++
++        # A reset.
++        if self.reset:
++            # Reset the reset flag.
++            self.reset = False
++
++            # No starting value, so do nothing.
++            if self.prev_val == '':
++                return False
++
++        # The new value.
++        value = self.cell.GetValue()
++
++        # No change.
++        if value == self.prev_val:
++            return False
++
++        # Set the value in the table.
++        grid.GetTable().SetValue(row, col, str(value))
++
++        # The delay cycle time.
++        time = self.parent.delay_time.GetValue()
++
++        # No times to update.
++        if time == '':
++            # A change occurred.
++            return True
++
++        # Update the relaxation delay time.
++        delay_time = float(time) * float(value)
++        grid.GetTable().SetValue(row, col+1, str(delay_time))
++
++        # A change occurred.
++        return True
++
++
++
++    def Reset(self):
++        &quot;&quot;&quot;Reset the cell to the previous value.&quot;&quot;&quot;
++
++        # Set the previous value.
++        self.cell.SetValueString(self.prev_val)
++
++        # Set a flag for EndEdit to catch a reset.
++        self.reset = True
++
++
++    def StartingKey(self, event):
++        &quot;&quot;&quot;Catch the starting key stroke to add the value to the cell.
++
++        @param event:   The wx event.
++        @type event:    wx event
++        &quot;&quot;&quot;
++
++        # The value.
++        key = event.GetKeyCode()
++
++        # Acceptable integers.
++        if key &gt;= 49 and key &lt;= 57:
++            # The number.
++            num = int(chr(key))
++
++            # Set the value.
++            self.cell.SetValue(num)
++
++            # Set the insertion point to the end.
++            self.cell.SetSelection(1,1)
++
++        # Skip everything else.
++        else:
++            event.Skip()
++
++
+ 
+ class Peak_intensity:
+     &quot;&quot;&quot;The peak list selection class.&quot;&quot;&quot;
+@@ -77,11 +237,14 @@
+         # Add peak list selection header.
+         self.add_header(box)
+ 
++        # Add the cycle delay time element.
++        self.add_cycle_delay(box)
++
+         # A sizer for the buttons and grid.
+         sizer = wx.BoxSizer(wx.HORIZONTAL)
+ 
+         # Add the buttons.
+-        self.add_buttons(sizer)
++        #self.add_buttons(sizer)
+ 
+         # Add the grid.
+         self.add_grid(sizer)
+@@ -131,12 +294,39 @@
+             button_sizer.Add(self.vc_time, 0, 0 ,0)
+ 
+             # Action of Button
+-            self.gui.Bind(wx.EVT_BUTTON, lambda evt, vc=True: 
+self.load_delay(evt, vc), add_vc)
++            self.gui.Bind(wx.EVT_BUTTON, lambda event, vc=True: 
+self.load_delay(event, vc), add_vc)
+ 
+         # Pack buttons
+         sizer.Add(button_sizer, 0, 0, 0)
+ 
+ 
++    def add_cycle_delay(self, box):
++        &quot;&quot;&quot;Create and add the cycle delay time GUI element to the given box.
++
++        @param box:     The box element to pack the cycle delay time GUI 
+element into.
++        @type box:      wx.BoxSizer instance
++        &quot;&quot;&quot;
++
++        # Horizontal packing for this element.
++        sizer = wx.BoxSizer(wx.HORIZONTAL)
++
++        # The label.
++        label = wx.StaticText(self.parent, -1, &quot;Single delay cycle time 
+[s]&quot;, style=wx.ALIGN_RIGHT)
++        label.SetMinSize((230, 17))
++        sizer.Add(label, 0, 
+wx.LEFT|wx.ALIGN_CENTER_VERTICAL|wx.ADJUST_MINSIZE, 0)
++
++        # The text input field.
++        self.delay_time = wx.TextCtrl(self.parent, -1)
++        self.delay_time.SetMinSize((350, 27))
++        sizer.Add(self.delay_time, 0, 
+wx.ALIGN_CENTER_VERTICAL|wx.ADJUST_MINSIZE, 0)
++
++        # Bind the change of contents.
++        self.delay_time.Bind(wx.EVT_KEY_UP, self.change_delay)
++
++        # Add the element to the box.
++        box.Add(sizer, 0, wx.EXPAND|wx.SHAPED, 0)
++
++
+     def add_grid(self, sizer):
+         &quot;&quot;&quot;Add the grid for the peak list files and delay times.
+ 
+@@ -144,17 +334,30 @@
+         @type box:      wx.BoxSizer instance
+         &quot;&quot;&quot;
+ 
+-        # Grid of peak list file names and relaxation time
++        # Grid of peak list file names and relaxation time.
+         self.grid = wx.grid.Grid(self.parent, -1, size=(1, 230))
+ 
+-        # Create entries
+-        self.grid.CreateGrid(self.num_rows, 2)
+-
+-        # Create headers
++        # Create entries.
++        self.grid.CreateGrid(self.num_rows, 3)
++
++        # Create headers.
+         self.grid.SetColLabelValue(0, &quot;%s peak list&quot; % self.label)
+-        self.grid.SetColSize(0, 370)
+-        self.grid.SetColLabelValue(1, &quot;Relaxation delay [s]&quot;)
+-        self.grid.SetColSize(1, 160)
++        self.grid.SetColLabelValue(1, &quot;No. of cycles&quot;)
++        self.grid.SetColLabelValue(2, &quot;Relaxation delay [s]&quot;)
++
++        # Set the sizes.
++        self.grid.SetRowLabelSize(40)
++        self.grid.SetColSize(0, 320)
++        self.grid.SetColSize(1, 140)
++        self.grid.SetColSize(2, 160)
++
++        # Column properties.
++        for i in range(self.grid.GetNumberRows()):
++            # Set the editor for the number of cycles column.
++            self.grid.SetCellEditor(i, 1, Delay_num_cell_editor(1, 200, 
+self))
++
++            # Make the relaxation delay column read only.
++            self.grid.SetReadOnly(i, 2)
+ 
+         # Bind some events.
+         self.grid.GetGridWindow().Bind(wx.EVT_LEFT_DCLICK, 
+self.event_left_dclick)
+@@ -184,6 +387,34 @@
+         box.Add(sizer, 0, wx.ADJUST_MINSIZE, 0)
+ 
+ 
++    def change_delay(self, event):
++        &quot;&quot;&quot;Handle updates to the delay time.
++
++        @param event:   The wx event.
++        @type event:    wx event
++        &quot;&quot;&quot;
++
++        # The key.
++        key = event.GetKeyCode()
++
++        # Allowed keys.
++        allowed = []
++        allowed += [8]    # Backspace.
++        allowed += [46]    # Full stop.
++        allowed += [48, 49, 50, 51, 52, 53, 54, 55, 56, 57]    # Numbers.
++        allowed += [127]    # Delete.
++
++        # Disallowed values, so do nothing.
++        if key not in allowed:
++            return
++
++        # Normal event handling.
++        event.Skip()
++
++        # Update the grid.
++        self.update_grid()
++
++
+     def event_left_dclick(self, event):
+         &quot;&quot;&quot;Handle the left mouse double click.
+ 
+@@ -231,6 +462,9 @@
+             for cell in cells:
+                 # Set to the empty string.
+                 self.grid.SetCellValue(cell[0], cell[1], '')
++
++            # Update the grid.
++            self.update_grid()
+ 
+         # Skip the event to allow for normal operation.
+         event.Skip()
+@@ -371,7 +605,7 @@
+         &quot;&quot;&quot;
+ 
+         # VD
+-        
++
+         # VC time is not a number
+         if vc:
+             try:
+@@ -460,29 +694,73 @@
+ 
+         # The peak lists and relaxation times.
+         if upload:
++            # The delay time.
++            self.data.delay_time = str(self.delay_time.GetString(0, 
+self.delay_time.GetLastPosition()))
++
++            # Loop over the rows.
+             for i in range(self.num_rows):
+                 # The cell data.
+                 file_name = str(self.grid.GetCellValue(i, 0))
+-                relax_time = str(self.grid.GetCellValue(i, 1))
++                ncyc = str(self.grid.GetCellValue(i, 1))
++                relax_time = str(self.grid.GetCellValue(i, 2))
+ 
+                 # No data, so stop.
+-                if file_name == '' and relax_time == '':
++                if file_name == '' and ncyc == '':
+                     break
+ 
+                 # New row needed.
+                 if i &gt;= len(self.data.file_list):
+                     self.data.file_list.append('')
++                if i &gt;= len(self.data.ncyc):
++                    self.data.ncyc.append('')
+                 if i &gt;= len(self.data.relax_times):
+                     self.data.relax_times.append('')
+ 
+                 # Set the file name and relaxation time.
+                 self.data.file_list[i] = file_name
++                self.data.ncyc[i] = ncyc
+                 self.data.relax_times[i] = relax_time
+ 
+         else:
++            # The delay time.
++            if hasattr(self.data, 'delay_time'):
++                self.delay_time.SetValue(self.data.delay_time)
++
++            # Loop over the rows.
+             for i in range(len(self.data.file_list)):
+                 # The file name.
+-                self.grid.SetCellValue(i, 0, str(self.data.file_list[i]))
++                if hasattr(self.data, 'file_list'):
++                    self.grid.SetCellValue(i, 0, str(self.data.file_list[i]))
++
++                # The number of cycles.
++                if hasattr(self.data, 'ncyc'):
++                    self.grid.SetCellValue(i, 1, str(self.data.ncyc[i]))
+ 
+                 # The relaxation time.
+-                self.grid.SetCellValue(i, 1, str(self.data.relax_times[i]))
++                if hasattr(self.data, 'relax_times'):
++                    self.grid.SetCellValue(i, 2, 
+str(self.data.relax_times[i]))
++
++            # Update the grid.
++            self.update_grid()
++
++
++    def update_grid(self):
++        &quot;&quot;&quot;Update the grid, changing the relaxation delay times as needed.&quot;&quot;&quot;
++
++        # The time value.
++        time = self.delay_time.GetString(0, 
+self.delay_time.GetLastPosition())
++        if time != '':
++            time = float(time)
++
++        # Loop over the rows.
++        for i in range(self.grid.GetNumberRows()):
++            # The number of cycles.
++            ncyc = self.grid.GetCellValue(i, 1)
++
++            # No time or no cycles, so set the value to nothing.
++            if time == '' or ncyc == '':
++                self.grid.SetCellValue(i, 2, '')
++
++            # Update the relaxation time.
++            else:
++                self.grid.SetCellValue(i, 2, str(int(ncyc) * time))
+
+Modified: 1.3/gui/relax_gui.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/gui/relax_gui.py?rev=12900&amp;r1=12899&amp;r2=12900&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/gui/relax_gui.py?rev=12900&amp;r1=12899&amp;r2=12900&amp;view=diff</a>
+==============================================================================
+--- 1.3/gui/relax_gui.py (original)
++++ 1.3/gui/relax_gui.py Wed Jun  8 20:44:28 2011
+@@ -456,6 +456,7 @@
+             ds.relax_gui.analyses[-1].frq = nmrfreq[i]
+             ds.relax_gui.analyses[-1].num = 0
+             ds.relax_gui.analyses[-1].file_list = []
++            ds.relax_gui.analyses[-1].ncyc = []
+             ds.relax_gui.analyses[-1].relax_times = []
+ 
+         # Initialise all the source and save directories.
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Jun 08 21:00:02 2011</div>  
+</body>
+</html>

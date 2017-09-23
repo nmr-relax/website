@@ -1,0 +1,363 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r23728 &#45; /branches/disp_spin_speed/test_suite/shared_data/dispersion/profiling/profiling_cr72.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Sun, 08 Jun 2014 13:14:35 +0200 -->
+<!--X-Message-Id: E1Wtb3b&#45;0007q4&#45;8A@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r23728 - /branches/disp_spin_speed/test_suite/shared_data/dispersion/profiling/profiling_cr72.py -- June 08, 2014 - 13:14</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r23728 - /branches/disp_spin_speed/test_suite/shared_data/dispersion/profiling/profiling_cr72.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00115" class="tabs">Index by Date</a> | <a href="threads.html#00115" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00114.html">Date Prev</a>] [<a href="msg00116.html">Date Next</a>] [<a href="msg00114.html">Thread Prev</a>] [<a href="msg00116.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Sun, 08 Jun 2014 11:14:35 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00115.html">E1Wtb3b-0007q4-8A@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on June 08, 2014 - 13:14:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Sun Jun  8 13:14:34 2014
+New Revision: 23728
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=23728&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=23728&amp;view=rev</a>
+Log:
+Modified profiling script to calculate correct values when setting up R2eff 
+values.
+
+This is to test, that the return of chi2 gets zero.
+
+Task #7807 (<a  rel="nofollow" href="https://gna.org/task/index.php?7807">https://gna.org/task/index.php?7807</a>): Speed-up of dispersion 
+models for Clustered analysis.
+
+Modified:
+    
+branches/disp_spin_speed/test_suite/shared_data/dispersion/profiling/profiling_cr72.py
+
+Modified: 
+branches/disp_spin_speed/test_suite/shared_data/dispersion/profiling/profiling_cr72.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/disp_spin_speed/test_suite/shared_data/dispersion/profiling/profiling_cr72.py?rev=23728&amp;r1=23727&amp;r2=23728&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/disp_spin_speed/test_suite/shared_data/dispersion/profiling/profiling_cr72.py?rev=23728&amp;r1=23727&amp;r2=23728&amp;view=diff</a>
+==============================================================================
+--- 
+branches/disp_spin_speed/test_suite/shared_data/dispersion/profiling/profiling_cr72.py
+      (original)
++++ 
+branches/disp_spin_speed/test_suite/shared_data/dispersion/profiling/profiling_cr72.py
+      Sun Jun  8 13:14:34 2014
+@@ -25,6 +25,7 @@
+ import cProfile
+ from os import getcwd, path
+ from numpy import array, arange, asarray, int32, float64, ones, pi, zeros
++import numpy as np
+ import pstats
+ import sys
+ import tempfile
+@@ -44,6 +45,8 @@
+ 
+ # relax module imports.
+ from lib.physical_constants import g1H, g15N
++from lib.dispersion.cr72 import r2eff_CR72
++from target_functions.chi2 import chi2
+ from target_functions.relax_disp import Dispersion
+ from specific_analyses.relax_disp.variables import EXP_TYPE_CPMG_SQ, 
+MODEL_B14_FULL, MODEL_CR72, MODEL_CR72_FULL, MODEL_NS_CPMG_2SITE_3D_FULL, 
+MODEL_NS_CPMG_2SITE_STAR_FULL
+ 
+@@ -91,7 +94,7 @@
+     Class Profile inherits the Dispersion container class object.
+     &quot;&quot;&quot;
+ 
+-    def __init__(self, num_spins=1, model=None):
++    def __init__(self, num_spins=1, model=None, r2=None, r2a=None, r2b=None, 
+dw=None, pA=None, kex=None, spins_params=None):
+         &quot;&quot;&quot;
+         Special method __init__() is called first (acts as Constructor).
+         It brings in data from outside the class like the variable num_spins.
+@@ -100,6 +103,25 @@
+         the name self is used by convention.  Assigning num_spins to 
+self.num_spins allows it
+         to be passed to all methods within the class.  Think of self as a 
+carrier,
+         or if you want impress folks call it target instance object.
++
++        @keyword num_spins:     Number of spins in the cluster.
++        @type num_spins:        integer
++        @keyword model:         The dispersion model to instantiate the 
+Dispersion class with.
++        @type model:            string
++        @keyword r2:            The transversal relaxation rate.
++        @type r2:               float
++        @keyword r2a:           The transversal relaxation rate for state A 
+in the absence of exchange.
++        @type r2a:              float
++        @keyword r2b:           The transversal relaxation rate for state B 
+in the absence of exchange.
++        @type r2b:              float
++        @keyword dw:            The chemical exchange difference between 
+states A and B in ppm.
++        @type dw:               float
++        @keyword pA:            The population of state A.
++        @type pA:               float
++        @keyword kex:           The rate of exchange.
++        @type kex:              float
++        @keyword spins_params:  List of parameter strings used in dispersion 
+model.
++        @type spins_params:     array of strings
+         &quot;&quot;&quot;
+ 
+         # Define parameters
+@@ -114,16 +136,23 @@
+         # Required data structures.
+         self.relax_times = self.fields / (100 * 100. *1E6 )
+         self.ncycs = []
++        self.points = []
++        self.value = []
++        self.error = []
+         for i in range(len(self.fields)):
+-            inp = arange(2, 1000. * self.relax_times[i], 4)
+-            self.ncycs.append(inp)
+-            print(&quot;sfrq: &quot;, self.fields[i], &quot;number of cpmg frq&quot;, len(inp))
+-        self.ncycs = asarray(self.ncycs)
+-
+-        self.points = self.ncycs / self.relax_times
+-
+-        self.value = self.points * 1.1
+-        self.error = self.value * 0.1
++            ncyc = arange(2, 1000. * self.relax_times[i], 4)
++            #ncyc = arange(2, 42, 2)
++            self.ncycs.append(ncyc)
++            print(&quot;sfrq: &quot;, self.fields[i], &quot;number of cpmg frq&quot;, len(ncyc), 
+ncyc)
++
++            cpmg_point = ncyc / self.relax_times[i]
++
++            self.points.append(list(cpmg_point))
++            self.value.append([2.0]*len(cpmg_point))
++            self.error.append([1.0]*len(cpmg_point))
++
++        # Assemble param vector.
++        self.params = self.assemble_param_vector(r2=r2, r2a=r2a, r2b=r2b, 
+dw=dw, pA=pA, kex=kex, spins_params=spins_params)
+ 
+         # Make nested list arrays of data. And return them.
+         values, errors, cpmg_frqs, missing, frqs, exp_types, relax_times, 
+offsets = self.return_r2eff_arrays()
+@@ -138,6 +167,24 @@
+         @return:    The numpy array structures of the R2eff/R1rho values, 
+errors, missing data, and corresponding Larmor frequencies.  For each 
+structure, the first dimension corresponds to the experiment types, the 
+second the spins of a spin block, the third to the spectrometer field 
+strength, and the fourth is the dispersion points.  For the Larmor frequency 
+structure, the fourth dimension is omitted.  For R1rho-type data, an offset 
+dimension is inserted between the spectrometer field strength and the 
+dispersion points.
+         @rtype:         lists of numpy float arrays, lists of numpy float 
+arrays, lists of numpy float arrays, numpy rank-2 int array
+         &quot;&quot;&quot;
++
++        # Unpack the parameter values.
++        # Initialise the post spin parameter indices.
++        end_index = []
++        # The spin and frequency dependent R2 parameters.
++        end_index.append(len(self.exp_type) * self.num_spins * 
+len(self.fields))
++        if self.model in [MODEL_B14_FULL, MODEL_CR72_FULL, 
+MODEL_NS_CPMG_2SITE_3D_FULL, MODEL_NS_CPMG_2SITE_STAR_FULL]:
++            end_index.append(2 * len(self.exp_type) * self.num_spins * 
+len(self.fields))
++        # The spin and dependent parameters (phi_ex, dw, padw2).
++        end_index.append(end_index[-1] + self.num_spins)
++
++        # Unpack the parameter values.
++        R20 = self.params[:end_index[1]].reshape(self.num_spins*2, 
+len(self.fields))
++        R20A = R20[::2].flatten()
++        R20B = R20[1::2].flatten()
++        dw = self.params[end_index[1]:end_index[2]]
++        pA = self.params[end_index[2]]
++        kex = self.params[end_index[2]+1]
+ 
+         # Initialise the data structures for the target function.
+         exp_types = []
+@@ -201,19 +248,33 @@
+ 
+                 for mi in range(len(self.fields)):
+                     frq = self.fields[mi]
++
++                    cpmg_frqs[ei][mi][oi] = self.points[mi]
++                    #print len(self.points[mi]), self.points[mi]
++
+                     for oi in range(len(self.offset)):
+                         for di in range(len(self.points[mi])):
+                             # The Larmor frequency for this spin (and that 
+of an attached proton for the MMQ models) and field strength (in MHz*2pi to 
+speed up the ppm to rad/s conversion).
+                             frqs[ei][si][mi] = 2.0 * pi * frq / g1H * g15N * 
+1e-6
+ 
+-                            cpmg_frqs[ei][mi][oi] = self.points[mi]
+-
+                             missing[ei][si][mi][oi].append(0)
+ 
++                            # Calculate how the value should be, so chi2 
+gets zero.
++                            # The R20 index.
++                            r20_index = mi + si*len(self.fields)
++                            # Convert dw from ppm to rad/s.
++                            dw_frq = dw[si] * frqs[ei][si][mi]
++                            r20a=R20A[r20_index]
++                            r20b=R20B[r20_index]
++                            back_calc = array([0.0])
++                            r2eff_CR72(r20a=r20a, r20b=r20b, pA=pA, 
+dw=dw_frq, kex=kex, cpmg_frqs=cpmg_frqs[ei][mi][oi][di], back_calc=back_calc, 
+num_points=1)
++
+                             # Values
+-                            values[ei][si][mi][oi].append(self.value[mi][di])
++                            
+#values[ei][si][mi][oi].append(self.value[mi][di])
++                            values[ei][si][mi][oi].append(back_calc[0])
+                             # The errors.
+                             errors[ei][si][mi][oi].append(self.error[mi][di])
++                            #print self.value[mi][di], self.error[mi][di]
+ 
+                             # The relaxation times.
+                             # Found.
+@@ -234,7 +295,6 @@
+                         values[ei][si][mi][oi] = 
+array(values[ei][si][mi][oi], float64)
+                         errors[ei][si][mi][oi] = 
+array(errors[ei][si][mi][oi], float64)
+                         missing[ei][si][mi][oi] = 
+array(missing[ei][si][mi][oi], int32)
+-
+ 
+         # Return the structures.
+         return values, errors, cpmg_frqs, missing, frqs, exp_types, 
+relax_times, offsets
+@@ -365,14 +425,11 @@
+     &quot;&quot;&quot;
+ 
+     # Instantiate class
+-    C1 = Profile(num_spins=num_spins, model=model)
+-
+-    # Assemble the parameter list.
+-    params = C1.assemble_param_vector(r2a=5.0, r2b=10.0, dw=3.0, pA=0.9, 
+kex=1000.0, spins_params=['r2a', 'r2b', 'dw', 'pA', 'kex'])
++    C1 = Profile(num_spins=num_spins, model=model, r2a=5.0, r2b=10.0, 
+dw=3.0, pA=0.9, kex=1000.0, spins_params=['r2a', 'r2b', 'dw', 'pA', 'kex'])
+ 
+     # Repeat the function call, to simulate minimisation.
+     for i in xrange(iter):
+-        chi2 = C1.calc(params)
++        chi2 = C1.calc(C1.params)
+     print(&quot;chi2 single:&quot;, chi2)
+ 
+ 
+@@ -390,14 +447,11 @@
+     &quot;&quot;&quot;
+ 
+     # Instantiate class
+-    C1 = Profile(num_spins=num_spins, model=model)
+-
+-    # Assemble the parameter list.
+-    params = C1.assemble_param_vector(r2a=5.0, r2b=10.0, dw=3.0, pA=0.9, 
+kex=1000.0, spins_params=['r2a', 'r2b', 'dw', 'pA', 'kex'])
++    C1 = Profile(num_spins=num_spins, model=model, r2a=5.0, r2b=10.0, 
+dw=3.0, pA=0.9, kex=1000.0, spins_params=['r2a', 'r2b', 'dw', 'pA', 'kex'])
+ 
+     # Repeat the function call, to simulate minimisation.
+     for i in xrange(iter):
+-        chi2 = C1.calc(params)
++        chi2 = C1.calc(C1.params)
+     print(&quot;chi2 cluster:&quot;, chi2)
+ 
+ 
+@@ -406,14 +460,14 @@
+     main()
+ 
+ def test_reshape():
+-    C1 = Profile(num_spins=2, model=MODEL_CR72_FULL)
++    C1 = Profile(num_spins=1, model=MODEL_CR72_FULL, r2a=5.0, r2b=10.0, 
+dw=3.0, pA=0.9, kex=1000.0, spins_params=['r2a', 'r2b', 'dw', 'pA', 'kex'])
+     end_index = C1.model.end_index
+     #print(&quot;end_index:&quot;, end_index)
+     num_spins = C1.model.num_spins
+     #print(&quot;num_spins:&quot;, num_spins)
+     num_frq = C1.model.num_frq
+     #print(&quot;num_frq:&quot;, num_frq)
+-    params = C1.assemble_param_vector(r2a=5.0, r2b=10.0, dw=3.0, pA=0.9, 
+kex=1000.0, spins_params=['r2a', 'r2b', 'dw', 'pA', 'kex'])
++    params = C1.params
+     #print(&quot;params&quot;, params)
+ 
+     R20 = params[:end_index[1]].reshape(num_spins*2, num_frq)
+@@ -435,8 +489,6 @@
+             r20b=R20B[r20_index]
+             print(&quot;r20a&quot;, r20a, &quot;r20b&quot;, r20b)
+ 
+-    values = array(C1.model.values)
+-    values = array(values)
+     model = C1.calc(params)
+     print(model)
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Sun Jun 08 13:20:03 2014</div>  
+</body>
+</html>

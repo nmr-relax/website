@@ -1,0 +1,622 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r24368 &#45; in /branches/frame_order_cleanup/specific_analyses/frame_order: geometric.py uf.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 01 Jul 2014 11:40:22 +0200 -->
+<!--X-Message-Id: E1X1uY2&#45;0006s7&#45;1A@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r24368 - in /branches/frame_order_cleanup/specific_analyses/frame_order: geometric.py uf.py -- July 01, 2014 - 11:40</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r24368 - in /branches/frame_order_cleanup/specific_analyses/frame_order: geometric.py uf.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00002" class="tabs">Index by Date</a> | <a href="threads.html#00002" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00001.html">Date Prev</a>] [<a href="msg00003.html">Date Next</a>] [<a href="msg00001.html">Thread Prev</a>] [<a href="msg00003.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 01 Jul 2014 09:40:21 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00002.html">E1X1uY2-0006s7-1A@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on July 01, 2014 - 11:40:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Jul  1 11:40:21 2014
+New Revision: 24368
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=24368&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=24368&amp;view=rev</a>
+Log:
+Refactored the frame order geometric motional representation code.
+
+The code of the 
+specific_analyses.frame_order.geometric.create_geometric_rep() function has 
+been
+spun out into 3 new functions: add_rotors(), add_axes(), and add_cones().  
+This is to better isolate
+the various elements to allow for better control.  Each function now adds the 
+atoms for its
+geometric representation to a separate molecule called 'axes' or 'cones'.  
+The add_rotors() does not
+create a molecule as the lib.structure.represent.rotor.rotor_pdb() function 
+creates its own.  As
+part of the rafactorisation, the neg_cone flag has been eliminated.
+
+
+Modified:
+    branches/frame_order_cleanup/specific_analyses/frame_order/geometric.py
+    branches/frame_order_cleanup/specific_analyses/frame_order/uf.py
+
+Modified: 
+branches/frame_order_cleanup/specific_analyses/frame_order/geometric.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/specific_analyses/frame_order/geometric.py?rev=24368&amp;r1=24367&amp;r2=24368&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/specific_analyses/frame_order/geometric.py?rev=24368&amp;r1=24367&amp;r2=24368&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/specific_analyses/frame_order/geometric.py   
+  (original)
++++ branches/frame_order_cleanup/specific_analyses/frame_order/geometric.py   
+  Tue Jul  1 11:40:21 2014
+@@ -43,6 +43,190 @@
+ from specific_analyses.frame_order.data import domain_moving, generate_pivot
+ 
+ 
++def add_axes(structure=None, size=None):
++    &quot;&quot;&quot;Add the axis system for the current frame order model to the 
+structural object.
++
++    @keyword structure: The internal structural object to add the rotor 
+objects to.
++    @type structure:    lib.structure.internal.object.Internal instance
++    @keyword size:      The size of the geometric object in Angstroms.
++    @type size:         float
++    &quot;&quot;&quot;
++
++    # The pivot point.
++    pivot = generate_pivot(order=1)
++
++    # Create the molecule.
++    structure.add_molecule(name='axes')
++
++    # Alias the molecules.
++    mol = structure.get_molecule('axes', model=1)
++    mol_neg = None
++    if structure.num_models() == 2:
++        mol_neg = structure.get_molecule('axes', model=2)
++
++    # The inversion matrix.
++    inv_mat = -eye(3)
++
++    # Add the pivot point.
++    structure.add_atom(mol_name=cdp.model, pdb_record='HETATM', atom_num=1, 
+atom_name='R', res_name='PIV', res_num=1, pos=pivot, element='C')
++
++    # The spherical angles.
++    if cdp.model in ['iso cone', 'free rotor', 'iso cone, torsionless', 'iso 
+cone, free rotor', 'rotor']:
++        # Print out.
++        print(&quot;\nGenerating the z-axis system.&quot;)
++
++        # The axis.
++        if cdp.model in ['rotor', 'free rotor']:
++            axis = create_rotor_axis_alpha(alpha=cdp.axis_alpha, 
+pivot=pivot, point=com)
++        else:
++            axis = create_rotor_axis_spherical(theta=cdp.axis_theta, 
+phi=cdp.axis_phi)
++        print((&quot;Central axis: %s.&quot; % axis))
++
++        # Rotations and inversions.
++        axis_pos = axis
++        axis_neg = dot(inv_mat, axis)
++
++        # Simulation central axis.
++        axis_sim_pos = None
++        axis_sim_neg = None
++        if hasattr(cdp, 'sim_number'):
++            # Init.
++            axis_sim = zeros((cdp.sim_number, 3), float64)
++
++            # Fill the structure.
++            for i in range(cdp.sim_number):
++                if cdp.model in ['rotor', 'free rotor']:
++                    axis_sim[i] = 
+create_rotor_axis_alpha(alpha=cdp.axis_alpha_sim[i], pivot=pivot, point=com)
++                else:
++                    axis_sim[i] = 
+create_rotor_axis_spherical(theta=cdp.axis_theta_sim[i], 
+phi=cdp.axis_phi_sim[i])
++
++            # Inversion.
++            axis_sim_pos = axis_sim
++            axis_sim_neg = transpose(dot(inv_mat, transpose(axis_sim_pos)))
++
++        # Generate the axis vectors.
++        print(&quot;\nGenerating the axis vectors.&quot;)
++        res_num = generate_vector_residues(mol=mol, vector=axis_pos, 
+atom_name='z-ax', res_name_vect='AXE', sim_vectors=axis_sim_pos, res_num=2, 
+origin=pivot, scale=size)
++
++        # The negative.
++        if mol_neg != None:
++            res_num = generate_vector_residues(mol=mol_neg, vector=axis_neg, 
+atom_name='z-ax', res_name_vect='AXE', sim_vectors=axis_sim_neg, res_num=2, 
+origin=pivot, scale=size)
++
++    # The full axis system.
++    else:
++        # Print out.
++        print(&quot;\nGenerating the full axis system.&quot;)
++
++        # The axis system.
++        axes = zeros((3, 3), float64)
++        euler_to_R_zyz(cdp.eigen_alpha, cdp.eigen_beta, cdp.eigen_gamma, 
+axes)
++        print((&quot;Axis system:\n%s&quot; % axes))
++
++        # Rotations and inversions.
++        axes_pos = axes
++        axes_neg = dot(inv_mat, axes)
++
++        # Simulations
++        axes_sim_pos = None
++        axes_sim_neg = None
++        if hasattr(cdp, 'sim_number'):
++            # Init.
++            axes_sim_pos = zeros((cdp.sim_number, 3, 3), float64)
++            axes_sim_neg = zeros((cdp.sim_number, 3, 3), float64)
++
++            # Fill the structure.
++            for i in range(cdp.sim_number):
++                # The positive system.
++                euler_to_R_zyz(cdp.eigen_alpha_sim[i], 
+cdp.eigen_beta_sim[i], cdp.eigen_gamma_sim[i], axes_sim_pos[i])
++
++                # The negative system.
++                euler_to_R_zyz(cdp.eigen_alpha_sim[i], 
+cdp.eigen_beta_sim[i], cdp.eigen_gamma_sim[i], axes_sim_neg[i])
++                axes_sim_neg[i] = dot(inv_mat, axes_sim_neg[i])
++
++        # Generate the axis vectors.
++        print(&quot;\nGenerating the axis vectors.&quot;)
++        label = ['x', 'y', 'z']
++        for j in range(len(label)):
++            # The simulation data.
++            axis_sim_pos = None
++            axis_sim_neg = None
++            if hasattr(cdp, 'sim_number'):
++                axis_sim_pos = axes_sim_pos[:,:, j]
++                axis_sim_neg = axes_sim_neg[:,:, j]
++
++            # The vectors.
++            res_num = generate_vector_residues(mol=mol, vector=axes_pos[:, 
+j], atom_name='%s-ax'%label[j], res_name_vect='AXE', 
+sim_vectors=axis_sim_pos, res_num=2, origin=pivot, scale=size)
++            if mol_neg != None:
++                res_num = generate_vector_residues(mol=mol_neg, 
+vector=axes_neg[:, j], atom_name='%s-ax'%label[j], res_name_vect='AXE', 
+sim_vectors=axis_sim_neg, res_num=2, origin=pivot, scale=size)
++
++
++def add_cones(structure=None, size=None, inc=None):
++    &quot;&quot;&quot;Add the cone geometric object for the current frame order model to 
+the structural object.
++
++    @keyword structure: The internal structural object to add the rotor 
+objects to.
++    @type structure:    lib.structure.internal.object.Internal instance
++    @keyword size:      The size of the geometric object in Angstroms.
++    @type size:         float
++    @keyword inc:       The number of increments for the filling of the cone 
+objects.
++    @type inc:          int
++    &quot;&quot;&quot;
++
++    # Create the molecule.
++    structure.add_molecule(name='cones')
++
++    # Alias the molecules.
++    mol = structure.get_molecule('cone', model=1)
++    mol_neg = None
++    if structure.num_models() == 2:
++        mol_neg = structure.get_molecule('cone', model=2)
++
++    # The 1st pivot point.
++    pivot = generate_pivot(order=1)
++
++    # The inversion matrix.
++    inv_mat = -eye(3)
++
++    # The axis.
++    if cdp.model in ['rotor', 'free rotor']:
++        axis = create_rotor_axis_alpha(alpha=cdp.axis_alpha, pivot=pivot, 
+point=com)
++    else:
++        axis = create_rotor_axis_spherical(theta=cdp.axis_theta, 
+phi=cdp.axis_phi)
++    print((&quot;Central axis: %s.&quot; % axis))
++
++    # The rotation matrix (rotation from the z-axis to the cone axis).
++    if cdp.model not in ['iso cone', 'iso cone, torsionless', 'iso cone, 
+free rotor']:
++        R = axes
++    else:
++        R = zeros((3, 3), float64)
++        two_vect_to_R(array([0, 0, 1], float64), axis, R)
++
++    # Average position rotation.
++    R_pos = R
++    R_neg = dot(inv_mat, R)
++
++    # The pseudo-ellipse cone object.
++    if cdp.model in ['pseudo-ellipse', 'pseudo-ellipse, torsionless', 
+'pseudo-ellipse, free rotor']:
++        cone_obj = Pseudo_elliptic(cdp.cone_theta_x, cdp.cone_theta_y)
++
++    # The isotropic cone object.
++    else:
++        # The angle.
++        if hasattr(cdp, 'cone_theta'):
++            cone_theta = cdp.cone_theta
++        elif hasattr(cdp, 'cone_s1'):
++            cone_theta = order_parameters.iso_cone_S_to_theta(cdp.cone_s1)
++
++        # The object.
++        cone_obj = Iso_cone(cone_theta)
++
++    # Create the positive and negative cones.
++    cone(mol=mol, cone_obj=cone_obj, start_res=1, apex=pivot, R=R_pos, 
+inc=inc, distribution='regular', axis_flag=False)
++
++    # The negative.
++    if mol_neg != None:
++        cone(mol=mol_neg, cone_obj=cone_obj, start_res=1, apex=pivot, 
+R=R_neg, inc=inc, distribution='regular', axis_flag=False)
++
++
+ def add_rotors(structure=None):
+     &quot;&quot;&quot;Add all rotor objects for the current frame order model to the 
+structural object.
+ 
+@@ -189,7 +373,7 @@
+     subsection(file=sys.stdout, text=&quot;Creating a PDB file of a distribution 
+of positions coving the full dynamics of the moving domain.&quot;)
+ 
+ 
+-def create_geometric_rep(format='PDB', file=None, dir=None, size=30.0, 
+inc=36, force=False, neg_cone=True):
++def create_geometric_rep(format='PDB', file=None, dir=None, size=30.0, 
+inc=36, force=False):
+     &quot;&quot;&quot;Create a PDB file containing a geometric object representing the 
+frame order dynamics.
+ 
+     @keyword format:    The format for outputting the geometric 
+representation.  Currently only the 'PDB' format is supported.
+@@ -204,193 +388,30 @@
+     @type inc:          int
+     @keyword force:     Flag which if set to True will cause any 
+pre-existing file to be overwritten.
+     @type force:        bool
+-    @keyword neg_cone:  A flag which if True will cause the negative cone to 
+be added to the representation.  This is ignored for the rotor models.
+-    @type neg_cone:     bool
+     &quot;&quot;&quot;
+ 
+     # Printout.
+     subsection(file=sys.stdout, text=&quot;Creating a PDB file containing a 
+geometric object representing the frame order dynamics.&quot;)
+ 
+-    # Monte Carlo simulation flag.
+-    sim = False
+-    num_sim = 0
+-    if hasattr(cdp, 'sim_number'):
+-        sim = True
+-        num_sim = cdp.sim_number
+-
+-    # The inversion matrix.
+-    inv_mat = -eye(3)
+-
+     # Create the structural object.
+     structure = Internal()
+ 
+-    # Create model for the positive and negative images.
+-    if cdp.model in ['rotor', 'free rotor']:
+-        neg_cone = False
++    # Create model for the positive and negative images, and alias the 
+molecules.
+     model = structure.add_model(model=1)
+-    model_num = 1
+-    if neg_cone:
++    if cdp.model not in ['rotor', 'free rotor', 'double rotor']:
+         model_neg = structure.add_model(model=2)
+-        model_num = 2
+-
+-    # The pivot point.
+-    pivot = generate_pivot(order=1)
+ 
+     # Add all rotor objects.
+     add_rotors(structure=structure)
+ 
+-    # Create the molecule.
+-    structure.add_molecule(name='rest')
+-
+-    # Alias the molecules.
+-    mol = model.mol[0]
+-    if neg_cone:
+-        mol_neg = model_neg.mol[0]
+-
+-
+-    # The pivot point.
+-    ##################
+-
+-    # Add the pivot point.
+-    structure.add_atom(mol_name=cdp.model, pdb_record='HETATM', atom_num=1, 
+atom_name='R', res_name='PIV', res_num=1, pos=pivot, element='C')
+-
+-
+-    # The axes.
+-    ###########
+-
+-    # The spherical angles.
+-    if cdp.model in ['iso cone', 'free rotor', 'iso cone, torsionless', 'iso 
+cone, free rotor', 'rotor']:
+-        # Print out.
+-        print(&quot;\nGenerating the z-axis system.&quot;)
+-
+-        # The axis.
+-        if cdp.model in ['rotor', 'free rotor']:
+-            axis = create_rotor_axis_alpha(alpha=cdp.axis_alpha, 
+pivot=pivot, point=com)
+-        else:
+-            axis = create_rotor_axis_spherical(theta=cdp.axis_theta, 
+phi=cdp.axis_phi)
+-        print((&quot;Central axis: %s.&quot; % axis))
+-
+-        # Rotations and inversions.
+-        axis_pos = axis
+-        axis_neg = dot(inv_mat, axis)
+-
+-        # Simulation central axis.
+-        axis_sim_pos = None
+-        axis_sim_neg = None
+-        if sim:
+-            # Init.
+-            axis_sim = zeros((cdp.sim_number, 3), float64)
+-
+-            # Fill the structure.
+-            for i in range(cdp.sim_number):
+-                if cdp.model in ['rotor', 'free rotor']:
+-                    axis_sim[i] = 
+create_rotor_axis_alpha(alpha=cdp.axis_alpha_sim[i], pivot=pivot, point=com)
+-                else:
+-                    axis_sim[i] = 
+create_rotor_axis_spherical(theta=cdp.axis_theta_sim[i], 
+phi=cdp.axis_phi_sim[i])
+-
+-            # Inversion.
+-            axis_sim_pos = axis_sim
+-            axis_sim_neg = transpose(dot(inv_mat, transpose(axis_sim_pos)))
+-
+-        # Generate the axis vectors.
+-        print(&quot;\nGenerating the axis vectors.&quot;)
+-        res_num = generate_vector_residues(mol=mol, vector=axis_pos, 
+atom_name='z-ax', res_name_vect='AXE', sim_vectors=axis_sim_pos, res_num=2, 
+origin=pivot, scale=size)
+-
+-        # The negative.
+-        if neg_cone:
+-            res_num = generate_vector_residues(mol=mol_neg, vector=axis_neg, 
+atom_name='z-ax', res_name_vect='AXE', sim_vectors=axis_sim_neg, res_num=2, 
+origin=pivot, scale=size)
+-
+-    # The full axis system.
+-    else:
+-        # Print out.
+-        print(&quot;\nGenerating the full axis system.&quot;)
+-
+-        # The axis system.
+-        axes = zeros((3, 3), float64)
+-        euler_to_R_zyz(cdp.eigen_alpha, cdp.eigen_beta, cdp.eigen_gamma, 
+axes)
+-        print((&quot;Axis system:\n%s&quot; % axes))
+-
+-        # Rotations and inversions.
+-        axes_pos = axes
+-        axes_neg = dot(inv_mat, axes)
+-
+-        # Simulations
+-        axes_sim_pos = None
+-        axes_sim_neg = None
+-        if sim:
+-            # Init.
+-            axes_sim_pos = zeros((cdp.sim_number, 3, 3), float64)
+-            axes_sim_neg = zeros((cdp.sim_number, 3, 3), float64)
+-
+-            # Fill the structure.
+-            for i in range(cdp.sim_number):
+-                # The positive system.
+-                euler_to_R_zyz(cdp.eigen_alpha_sim[i], 
+cdp.eigen_beta_sim[i], cdp.eigen_gamma_sim[i], axes_sim_pos[i])
+-
+-                # The negative system.
+-                euler_to_R_zyz(cdp.eigen_alpha_sim[i], 
+cdp.eigen_beta_sim[i], cdp.eigen_gamma_sim[i], axes_sim_neg[i])
+-                axes_sim_neg[i] = dot(inv_mat, axes_sim_neg[i])
+-
+-        # Generate the axis vectors.
+-        print(&quot;\nGenerating the axis vectors.&quot;)
+-        label = ['x', 'y', 'z']
+-        for j in range(len(label)):
+-            # The simulation data.
+-            axis_sim_pos = None
+-            axis_sim_neg = None
+-            if sim:
+-                axis_sim_pos = axes_sim_pos[:,:, j]
+-                axis_sim_neg = axes_sim_neg[:,:, j]
+-
+-            # The vectors.
+-            res_num = generate_vector_residues(mol=mol, vector=axes_pos[:, 
+j], atom_name='%s-ax'%label[j], res_name_vect='AXE', 
+sim_vectors=axis_sim_pos, res_num=2, origin=pivot, scale=size)
+-            if neg_cone:
+-                res_num = generate_vector_residues(mol=mol_neg, 
+vector=axes_neg[:, j], atom_name='%s-ax'%label[j], res_name_vect='AXE', 
+sim_vectors=axis_sim_neg, res_num=2, origin=pivot, scale=size)
+-
+-
+-    # The cone object.
+-    ##################
+-
+-    # Skip models missing a cone.
++    # Add the axis systems.
++    add_axes(structure=structure, size=size)
++
++    # Add the cone objects.
+     if cdp.model not in ['rotor', 'free rotor', 'double rotor']:
+-        # The rotation matrix (rotation from the z-axis to the cone axis).
+-        if cdp.model not in ['iso cone', 'iso cone, torsionless', 'iso cone, 
+free rotor']:
+-            R = axes
+-        else:
+-            R = zeros((3, 3), float64)
+-            two_vect_to_R(array([0, 0, 1], float64), axis, R)
+-
+-        # Average position rotation.
+-        R_pos = R
+-        R_neg = dot(inv_mat, R)
+-
+-        # The pseudo-ellipse cone object.
+-        if cdp.model in ['pseudo-ellipse', 'pseudo-ellipse, torsionless', 
+'pseudo-ellipse, free rotor']:
+-            cone_obj = Pseudo_elliptic(cdp.cone_theta_x, cdp.cone_theta_y)
+-
+-        # The isotropic cone object.
+-        else:
+-            # The angle.
+-            if hasattr(cdp, 'cone_theta'):
+-                cone_theta = cdp.cone_theta
+-            elif hasattr(cdp, 'cone_s1'):
+-                cone_theta = 
+order_parameters.iso_cone_S_to_theta(cdp.cone_s1)
+-
+-            # The object.
+-            cone_obj = Iso_cone(cone_theta)
+-
+-        # Create the positive and negative cones.
+-        cone(mol=mol, cone_obj=cone_obj, start_res=mol.res_num[-1]+1, 
+apex=pivot, R=R_pos, inc=inc, distribution='regular', axis_flag=False)
+-
+-        # The negative.
+-        if neg_cone:
+-            cone(mol=mol_neg, cone_obj=cone_obj, 
+start_res=mol_neg.res_num[-1]+1, apex=pivot, R=R_neg, inc=inc, 
+distribution='regular', axis_flag=False)
+-
++        add_cones(structure=structure, size=size, inc=inc)
+ 
+     # Create the PDB file.
+-    ######################
+-
+-    # Output to PDB format.
+     if format == 'PDB':
+         pdb_file = open_write_file(file, dir, force=force)
+         structure.write_pdb(pdb_file)
+
+Modified: branches/frame_order_cleanup/specific_analyses/frame_order/uf.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/specific_analyses/frame_order/uf.py?rev=24368&amp;r1=24367&amp;r2=24368&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/specific_analyses/frame_order/uf.py?rev=24368&amp;r1=24367&amp;r2=24368&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/specific_analyses/frame_order/uf.py    
+(original)
++++ branches/frame_order_cleanup/specific_analyses/frame_order/uf.py    Tue 
+Jul  1 11:40:21 2014
+@@ -53,7 +53,7 @@
+     cdp.num_int_pts = num
+ 
+ 
+-def pdb_model(ave_pos_file=&quot;ave_pos.pdb&quot;, rep_file=&quot;frame_order.pdb&quot;, 
+dist_file=&quot;domain_distribution.pdb&quot;, dir=None, size=30.0, inc=36, 
+force=False, neg_cone=True):
++def pdb_model(ave_pos_file=&quot;ave_pos.pdb&quot;, rep_file=&quot;frame_order.pdb&quot;, 
+dist_file=&quot;domain_distribution.pdb&quot;, dir=None, size=30.0, inc=36, 
+force=False):
+     &quot;&quot;&quot;Create 3 different PDB files for representing the frame order 
+dynamics of the system.
+ 
+     @keyword ave_pos_file:  The name of the file for the average molecule 
+structure.
+@@ -70,8 +70,6 @@
+     @type inc:              int
+     @keyword force:         Flag which if set to True will cause any 
+pre-existing file to be overwritten.
+     @type force:            bool
+-    @keyword neg_cone:      A flag which if True will cause the negative 
+cone to be added to the representation.
+-    @type neg_cone:         bool
+     &quot;&quot;&quot;
+ 
+     # Check that at least one PDB file name is given.
+@@ -91,7 +89,7 @@
+ 
+     # Create the geometric representation.
+     if rep_file:
+-        create_geometric_rep(file=rep_file, dir=dir, size=size, inc=inc, 
+force=force, neg_cone=neg_cone)
++        create_geometric_rep(file=rep_file, dir=dir, size=size, inc=inc, 
+force=force)
+ 
+     # Create the distribution.
+     if dist_file:
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Jul 01 12:00:02 2014</div>  
+</body>
+</html>

@@ -1,0 +1,160 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r15601 &#45; /1.3/multi/mpi4py_processor.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 22 Mar 2012 10:34:36 +0100 -->
+<!--X-Message-Id: E1SAePk&#45;0007yx&#45;5R@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r15601 - /1.3/multi/mpi4py_processor.py -- March 22, 2012 - 10:34</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r15601 - /1.3/multi/mpi4py_processor.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00186" class="tabs">Index by Date</a> | <a href="threads.html#00186" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00185.html">Date Prev</a>] [<a href="msg00187.html">Date Next</a>] [<a href="msg00185.html">Thread Prev</a>] [<a href="msg00187.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 22 Mar 2012 09:34:36 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00186.html">E1SAePk-0007yx-5R@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on March 22, 2012 - 10:34:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Mar 22 10:34:35 2012
+New Revision: 15601
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=15601&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=15601&amp;view=rev</a>
+Log:
+Shifted the mpi4py processor module functions broadcast_command() and 
+ditch_all_results() into the class.
+
+These have been turned into private methods.
+
+
+Modified:
+    1.3/multi/mpi4py_processor.py
+
+Modified: 1.3/multi/mpi4py_processor.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/multi/mpi4py_processor.py?rev=15601&amp;r1=15600&amp;r2=15601&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/multi/mpi4py_processor.py?rev=15601&amp;r1=15600&amp;r2=15601&amp;view=diff</a>
+==============================================================================
+--- 1.3/multi/mpi4py_processor.py (original)
++++ 1.3/multi/mpi4py_processor.py Thu Mar 22 10:34:35 2012
+@@ -42,22 +42,6 @@
+ from multi.multi_processor_base import Multi_processor, 
+Too_few_slaves_exception
+ 
+ 
+-
+-def broadcast_command(command):
+-    for i in range(1, MPI.COMM_WORLD.size):
+-        if i != 0:
+-            MPI.COMM_WORLD.send(obj=command, dest=i)
+-
+-
+-def ditch_all_results():
+-    for i in range(1, MPI.COMM_WORLD.size):
+-        if i != 0:
+-            while True:
+-                result = MPI.COMM_WORLD.recv(source=i)
+-                if result.completed:
+-                    break
+-
+-
+ class Mpi4py_processor(Multi_processor):
+     &quot;&quot;&quot;The mpi4py multi-processor class.&quot;&quot;&quot;
+ 
+@@ -81,6 +65,22 @@
+ 
+         # Initialise a flag for determining if we are in the run() method or 
+not.
+         self.in_main_loop = False
++
++
++    def _broadcast_command(self, command):
++        for i in range(1, MPI.COMM_WORLD.size):
++            if i != 0:
++                MPI.COMM_WORLD.send(obj=command, dest=i)
++
++
++    def _ditch_all_results(self):
++        for i in range(1, MPI.COMM_WORLD.size):
++            if i != 0:
++                while True:
++                    result = MPI.COMM_WORLD.recv(source=i)
++                    if result.completed:
++                        break
++
+ 
+ 
+     def abort(self):
+@@ -140,10 +140,10 @@
+             # Slave clean up.
+             if MPI.Is_initialized() and not MPI.Is_finalized() and 
+MPI.COMM_WORLD.rank == 0:
+                 # Send the exit command to all slaves.
+-                broadcast_command(Exit_command())
++                self._broadcast_command(Exit_command())
+ 
+                 # Dump all results.
+-                ditch_all_results()
++                self._ditch_all_results()
+ 
+             # Exit the program with the given status.
+             sys.exit(status)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Mar 22 10:40:02 2012</div>  
+</body>
+</html>

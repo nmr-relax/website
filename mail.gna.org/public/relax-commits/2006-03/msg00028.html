@@ -1,0 +1,476 @@
+<!-- MHonArc v2.6.10 -->
+<!--X-Subject: r2396 &#45; in /branches/auto_select: ./ generic_fns/ specific_fns/ -->
+<!--X-From-R13: p.n.znpenvyqNyrrqf.np.hx -->
+<!--X-Date: Thu, 16 Mar 2006 18:11:32 +0100 -->
+<!--X-Message-Id: E1FJw01&#45;0004mt&#45;3r@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r2396 - in /branches/auto_select: ./ generic_fns/ specific_fns/ -- March 16, 2006 - 18:11</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r2396 - in /branches/auto_select: ./ generic_fns/ specific_fns/</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00028" class="tabs">Index by Date</a> | <a href="threads.html#00028" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00027.html">Date Prev</a>] [<a href="msg00029.html">Date Next</a>] [<a href="msg00027.html">Thread Prev</a>] [<a href="msg00029.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 16 Mar 2006 17:10:56 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00028.html">E1FJw01-0004mt-3r@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>c . a . macraild</strong> on March 16, 2006 - 18:11:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: macraild
+Date: Thu Mar 16 18:10:55 2006
+New Revision: 2396
+
+URL: <a  href="http://svn.gna.org/viewcvs/relax?rev=2396&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=2396&amp;view=rev</a>
+Log:
+Some further fixes to the auto_select fuctionallity. Adds support for
+other run types and fixes problem loading relax_fit data
+
+Modified:
+    branches/auto_select/data.py
+    branches/auto_select/generic_fns/intensity.py
+    branches/auto_select/generic_fns/selection.py
+    branches/auto_select/generic_fns/sequence.py
+    branches/auto_select/specific_fns/relax_data.py
+    branches/auto_select/specific_fns/relax_fit.py
+
+Modified: branches/auto_select/data.py
+URL: 
+<a  href="http://svn.gna.org/viewcvs/relax/branches/auto_select/data.py?rev=2396&amp;r1=2395&amp;r2=2396&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/auto_select/data.py?rev=2396&amp;r1=2395&amp;r2=2396&amp;view=diff</a>
+==============================================================================
+--- branches/auto_select/data.py (original)
++++ branches/auto_select/data.py Thu Mar 16 18:10:55 2006
+@@ -46,7 +46,7 @@
+         self.diff = SpecificData()
+ 
+         # The residue specific data.
+-        self.res = Residue()
++        self.res = Residue(self)
+ 
+         # The name of the runs.
+         self.run_names = []
+@@ -138,8 +138,11 @@
+ ########################
+ 
+ class Residue(DictType):
+-    def __init__(self):
++    def __init__(self, global_data):
+         &quot;&quot;&quot;Class containing all the residue specific data.&quot;&quot;&quot;
++
++        # Store the global data
++        self.__global_data__ = global_data
+ 
+ 
+     def __repr__(self):
+@@ -162,12 +165,18 @@
+     def add_list(self, key):
+         &quot;&quot;&quot;Function for adding an empty container to the dictionary.&quot;&quot;&quot;
+ 
+-        self[key] = ResidueList()
++        self[key] = ResidueList(key, self.__global_data__)
+ 
+ 
+ class ResidueList(ListType):
+-    def __init__(self):
++    def __init__(self, key, global_data):
+         &quot;&quot;&quot;Empty data container for residue specific data.&quot;&quot;&quot;
++
++        # Store the key
++        self.__key__ = key
++
++        # Store the global data
++        self.__global_data__ = global_data
+ 
+ 
+     def __repr__(self):
+@@ -182,35 +191,72 @@
+     def add_item(self):
+         &quot;&quot;&quot;Function for appending an empty container to the list.&quot;&quot;&quot;
+ 
+-        self.append(ResidueElement())
++        self.append(ResidueElement(self.__key__, self.__global_data__))
+ 
+ 
+ class ResidueElement(object):
+-    def __init__(self):
++    def __init__(self, key, global_data):
+         &quot;&quot;&quot;Empty container for residue specific data for a single residue.&quot;&quot;&quot;
+ 
+-        self.userSelect = 1
+-
+-
+-    def autoSelect(self):
+-        &quot;&quot;&quot;Function to automatically deselect residues lacking relax_data&quot;&quot;&quot;
+-
+-        if not hasattr(self, 'relax_data'):
+-            return 0
+-
+-        if hasattr(self, 'params'):
+-            if len(self.params) &lt; len(self.relax_data):
+-                return 0
+-
+-        return 1
++        # Store the key
++        self.__key__ = key
++
++        # Store the global data
++        self.__global_data__ = global_data
++
++        self.user_select = 1
++
++
++    def auto_select(self):
++        &quot;&quot;&quot;Function to automatically deselect residues lacking sufficient 
+data&quot;&quot;&quot;
++
++        # Get the run type
++        run_type_list = self.__global_data__.run_types
++        run_names = self.__global_data__.run_names
++        run_type = run_type_list[run_names.index(self.__key__)]
++
++        # Check for sufficient data for mf or jw run type
++        if run_type == 'mf' or run_type == 'jw':
++            if not hasattr(self, 'relax_data'):
++                return 0
++            
++            # Require 3 or more data points
++            if len(self.relax_data) &lt; 3:
++                return 0
++
++            # and require at least as many data points as params to prevent 
++            # under-fitting
++            if hasattr(self, 'params'):
++                if len(self.params) &lt; len(self.relax_data):
++                    return 0
++
++            return 1
++
++        # Check for sufficient data for relax_fit run_type
++        elif run_type == 'relax_fit':
++            if not hasattr(self, 'intensities'):
++                return 0
++            
++            # Require 3 or more data points
++            if len(self.intensities) &lt; 3:
++                return 0
++            return 1
++
++        # Check for sufficient data for noe run_type
++        elif run_type == 'noe':
++            if not ( hasattr(self, 'ref') and hasattr(self, 'sat') ):
++                return 0
++
++        # All other run types
++        else:
++            return 1
+ 
+ 
+     def __getattr__(self, name):
+         &quot;&quot;&quot;Force on-the-fly evaluation of select every time it is 
+referenced&quot;&quot;&quot;
+ 
+-        # The list of data maps.
+         if name == 'select':
+-            return (self.autoSelect() and self.userSelect)
++            return (self.auto_select() and self.user_select)
+         raise AttributeError, name
+ 
+ 
+@@ -222,7 +268,7 @@
+         for name in dir(self):
+             if match(&quot;^__&quot;, name):
+                 continue
+-            if name == 'autoSelect' or name == 'userSelect':
++            if name == 'auto_select' or name == 'user_select':
+                 continue
+             text = text + &quot;%-25s%-100s\n&quot; % (name, `getattr(self, name)`)
+ 
+@@ -236,7 +282,7 @@
+         &quot;&quot;&quot;Prevent accidental rebinding of select.&quot;&quot;&quot;
+ 
+         # The list of prescribed attributes.
+-        dontRebind = ['select', 'autoSelect']
++        dontRebind = ['select', 'auto_select']
+         if name in dontRebind:
+ 
+             # Allow initial binding of the attribute.
+@@ -245,7 +291,7 @@
+ 
+             # But prevent rebinding.
+             else:
+-                raise AttributeError, &quot;&quot;&quot;Can't rebind automated residue 
+selection. Use userSelect instead (do select.res())&quot;&quot;&quot;
++                raise AttributeError, &quot;&quot;&quot;Can't rebind automated residue 
+selection. Use user_select instead (do select.res())&quot;&quot;&quot;
+ 
+         # Normal behaviour for attributes not in list.
+         self.__dict__[name] = value
+
+Modified: branches/auto_select/generic_fns/intensity.py
+URL: 
+<a  href="http://svn.gna.org/viewcvs/relax/branches/auto_select/generic_fns/intensity.py?rev=2396&amp;r1=2395&amp;r2=2396&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/auto_select/generic_fns/intensity.py?rev=2396&amp;r1=2395&amp;r2=2396&amp;view=diff</a>
+==============================================================================
+--- branches/auto_select/generic_fns/intensity.py (original)
++++ branches/auto_select/generic_fns/intensity.py Thu Mar 16 18:10:55 2006
+@@ -152,8 +152,8 @@
+             data = self.relax.data.res[self.run][index]
+ 
+             # Skip unselected residues.
+-            if not data.select:
+-                continue
++            #if not data.select:
++            #    continue
+ 
+             # Assign the data.
+             self.assign_func(run=self.run, i=index, intensity=intensity)
+
+Modified: branches/auto_select/generic_fns/selection.py
+URL: 
+<a  href="http://svn.gna.org/viewcvs/relax/branches/auto_select/generic_fns/selection.py?rev=2396&amp;r1=2395&amp;r2=2396&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/auto_select/generic_fns/selection.py?rev=2396&amp;r1=2395&amp;r2=2396&amp;view=diff</a>
+==============================================================================
+--- branches/auto_select/generic_fns/selection.py (original)
++++ branches/auto_select/generic_fns/selection.py Thu Mar 16 18:10:55 2006
+@@ -53,10 +53,10 @@
+                 data = self.relax.data.res[self.run][i]
+ 
+                 # Reverse the selection.
+-                if data.userSelect:
+-                    data.userSelect = 0
++                if data.user_select:
++                    data.user_select = 0
+                 else:
+-                    data.userSelect = 1
++                    data.user_select = 1
+ 
+ 
+     def sel_all(self, run=None):
+@@ -77,7 +77,7 @@
+ 
+             # Loop over the sequence and set the selection flag to 1.
+             for i in xrange(len(self.relax.data.res[self.run])):
+-                self.relax.data.res[self.run][i].userSelect = 1
++                self.relax.data.res[self.run][i].user_select = 1
+ 
+ 
+     def sel_read(self, run=None, file=None, dir=None, change_all=None):
+@@ -118,11 +118,11 @@
+ 
+                 # Unselect all residues.
+                 if change_all:
+-                    data.userSelect = 0
++                    data.user_select = 0
+ 
+                 # Select the residue if it is in the list select.
+                 if data.num in select:
+-                    data.userSelect = 1
++                    data.user_select = 1
+ 
+                 # Match flag.
+                 no_match = 0
+@@ -170,7 +170,7 @@
+ 
+                 # Unselect all residues.
+                 if change_all:
+-                    data.userSelect = 0
++                    data.user_select = 0
+ 
+                 # Skip the residue if there is no match to 'num'.
+                 if type(num) == int:
+@@ -186,7 +186,7 @@
+                         continue
+ 
+                 # Select the residue.
+-                data.userSelect = 1
++                data.user_select = 1
+ 
+                 # Match flag.
+                 no_match = 0
+@@ -214,7 +214,7 @@
+ 
+             # Loop over the sequence and set the selection flag to 0.
+             for i in xrange(len(self.relax.data.res[self.run])):
+-                self.relax.data.res[self.run][i].userSelect = 0
++                self.relax.data.res[self.run][i].user_select = 0
+ 
+ 
+     def unsel_read(self, run=None, file=None, dir=None, change_all=None):
+@@ -255,11 +255,11 @@
+ 
+                 # Select all residues.
+                 if change_all:
+-                    data.userSelect = 1
++                    data.user_select = 1
+ 
+                 # Unselect the residue if it is in the list unselect.
+                 if data.num in unselect:
+-                    data.userSelect = 0
++                    data.user_select = 0
+ 
+                 # Match flag.
+                 no_match = 0
+@@ -307,7 +307,7 @@
+ 
+                 # Select all residues.
+                 if change_all:
+-                    data.userSelect = 1
++                    data.user_select = 1
+ 
+                 # Skip the residue if there is no match to 'num'.
+                 if type(num) == int:
+@@ -323,7 +323,7 @@
+                         continue
+ 
+                 # Unselect the residue.
+-                data.userSelect = 0
++                data.user_select = 0
+ 
+                 # Match flag.
+                 no_match = 0
+
+Modified: branches/auto_select/generic_fns/sequence.py
+URL: 
+<a  href="http://svn.gna.org/viewcvs/relax/branches/auto_select/generic_fns/sequence.py?rev=2396&amp;r1=2395&amp;r2=2396&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/auto_select/generic_fns/sequence.py?rev=2396&amp;r1=2395&amp;r2=2396&amp;view=diff</a>
+==============================================================================
+--- branches/auto_select/generic_fns/sequence.py (original)
++++ branches/auto_select/generic_fns/sequence.py Thu Mar 16 18:10:55 2006
+@@ -54,7 +54,7 @@
+         # Insert the data.
+         self.relax.data.res[run][index].num = res_num
+         self.relax.data.res[run][index].name = res_name
+-        self.relax.data.res[run][index].userSelect = select
++        self.relax.data.res[run][index].user_select = select
+ 
+ 
+     def copy(self, run1=None, run2=None):
+@@ -87,7 +87,7 @@
+             # Insert the data.
+             self.relax.data.res[run2][i].num = 
+self.relax.data.res[run1][i].num
+             self.relax.data.res[run2][i].name = 
+self.relax.data.res[run1][i].name
+-            self.relax.data.res[run2][i].userSelect = 
+self.relax.data.res[run1][i].userSelect
++            self.relax.data.res[run2][i].user_select = 
+self.relax.data.res[run1][i].user_select
+ 
+ 
+     def data_names(self):
+
+Modified: branches/auto_select/specific_fns/relax_data.py
+URL: 
+<a  href="http://svn.gna.org/viewcvs/relax/branches/auto_select/specific_fns/relax_data.py?rev=2396&amp;r1=2395&amp;r2=2396&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/auto_select/specific_fns/relax_data.py?rev=2396&amp;r1=2395&amp;r2=2396&amp;view=diff</a>
+==============================================================================
+--- branches/auto_select/specific_fns/relax_data.py (original)
++++ branches/auto_select/specific_fns/relax_data.py Thu Mar 16 18:10:55 2006
+@@ -631,15 +631,15 @@
+         #################
+ 
+         # Loop over the sequence.
+-        for index in xrange(len(self.relax.data.res[self.run])):
++        #for index in xrange(len(self.relax.data.res[self.run])):
+             # Remap the data structure 
+'self.relax.data.res[self.run][index]'.
+-            data = self.relax.data.res[self.run][index]
++        #    data = self.relax.data.res[self.run][index]
+ 
+             # No data loaded for this residue.
+-            if index not in index_list:
++        #    if index not in index_list:
+                 # If no relaxation data exists, unselect the residue.
+-                if not hasattr(data, 'relax_data'):
+-                    data.select = 0
++        #        if not hasattr(data, 'relax_data'):
++        #            data.select = 0
+ 
+ 
+     def return_value(self, run, i, data_type):
+
+Modified: branches/auto_select/specific_fns/relax_fit.py
+URL: 
+<a  href="http://svn.gna.org/viewcvs/relax/branches/auto_select/specific_fns/relax_fit.py?rev=2396&amp;r1=2395&amp;r2=2396&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/auto_select/specific_fns/relax_fit.py?rev=2396&amp;r1=2395&amp;r2=2396&amp;view=diff</a>
+==============================================================================
+--- branches/auto_select/specific_fns/relax_fit.py (original)
++++ branches/auto_select/specific_fns/relax_fit.py Thu Mar 16 18:10:55 2006
+@@ -223,8 +223,8 @@
+             data = self.relax.data.res[self.run][i]
+ 
+             # Skip unselected residues.
+-            if not data.select:
+-                continue
++            #if not data.select:
++            #    continue
+ 
+             # Loop over the data structure names.
+             for name in data_names:
+@@ -570,9 +570,9 @@
+                     continue
+ 
+                 # Skip and unselect residues which have no data.
+-                if not hasattr(data, 'intensities'):
+-                    data.select = 0
+-                    continue
++                #if not hasattr(data, 'intensities'):
++                #    data.select = 0
++                #    continue
+ 
+                 # Initialise the average intensity and standard deviation 
+data structures.
+                 if not hasattr(data, 'ave_intensities'):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Mar 20 03:00:09 2006</div>  
+</body>
+</html>

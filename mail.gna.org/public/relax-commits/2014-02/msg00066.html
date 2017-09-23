@@ -1,0 +1,154 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r22174 &#45;	/branches/double_rotor/test_suite/system_tests/scripts/frame_order/cam/base_script.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 12 Feb 2014 11:14:09 +0100 -->
+<!--X-Message-Id: E1WDWpV&#45;0002xE&#45;ST@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r22174 -	/branches/double_rotor/test_suite/system_tests/scripts/frame_order/cam/base_script.py -- February 12, 2014 - 11:14</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r22174 -	/branches/double_rotor/test_suite/system_tests/scripts/frame_order/cam/base_script.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00066" class="tabs">Index by Date</a> | <a href="threads.html#00066" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00065.html">Date Prev</a>] [<a href="msg00067.html">Date Next</a>] [<a href="msg00065.html">Thread Prev</a>] [<a href="msg00067.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 12 Feb 2014 10:14:09 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00066.html">E1WDWpV-0002xE-ST@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on February 12, 2014 - 11:14:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Feb 12 11:14:09 2014
+New Revision: 22174
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=22174&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=22174&amp;view=rev</a>
+Log:
+Changed the handling of the pivot point in the CaM frame order system tests.
+
+The pivot point is now a class variable, rather than being hardcoded into a 
+function.  The handling
+of a second pivot has also been added.
+
+
+Modified:
+    
+branches/double_rotor/test_suite/system_tests/scripts/frame_order/cam/base_script.py
+
+Modified: 
+branches/double_rotor/test_suite/system_tests/scripts/frame_order/cam/base_script.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/double_rotor/test_suite/system_tests/scripts/frame_order/cam/base_script.py?rev=22174&amp;r1=22173&amp;r2=22174&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/double_rotor/test_suite/system_tests/scripts/frame_order/cam/base_script.py?rev=22174&amp;r1=22173&amp;r2=22174&amp;view=diff</a>
+==============================================================================
+--- 
+branches/double_rotor/test_suite/system_tests/scripts/frame_order/cam/base_script.py
+ (original)
++++ 
+branches/double_rotor/test_suite/system_tests/scripts/frame_order/cam/base_script.py
+ Wed Feb 12 11:14:09 2014
+@@ -23,7 +23,7 @@
+ &quot;&quot;&quot;Base script for the optimisation of the rigid frame order test models.&quot;&quot;&quot;
+ 
+ # Python module imports.
+-from numpy import array, float64, transpose, zeros
++from numpy import array, float32, float64, transpose, zeros
+ from os import F_OK, access, sep
+ 
+ # relax module imports.
+@@ -46,6 +46,9 @@
+ 
+     # The frame order model.
+     MODEL = None
++
++    # The number of integration points.
++    NUM_INT_PTS = 50
+ 
+     # The model parameters.
+     AVE_POS_ALPHA, AVE_POS_BETA, AVE_POS_GAMMA = 
+reverse_euler_zyz(4.3434999280669997, 0.43544332764249905, 3.8013235235956007)
+@@ -62,8 +65,9 @@
+     AXIS_PHI2 = None
+     CONE_SIGMA_MAX2 = None
+ 
+-    # The number of integration points.
+-    NUM_INT_PTS = 50
++    # The pivot points.
++    PIVOT = array([ 37.254, 0.5, 16.7465], float32)
++    PIVOT2 = None
+ 
+ 
+     def __init__(self, exec_fn):
+@@ -259,9 +263,10 @@
+         # Set the reference domain.
+         self._execute_uf(uf_name='frame_order.ref_domain', ref='N')
+ 
+-        # Set the initial pivot point.
+-        pivot = array([ 37.254, 0.5, 16.7465])
+-        self._execute_uf(uf_name='frame_order.pivot', pivot=pivot, fix=True)
++        # Set the initial pivot point(s).
++        self._execute_uf(uf_name='frame_order.pivot', pivot=self.PIVOT, 
+fix=True)
++        if self.PIVOT2 != None:
++            self._execute_uf(uf_name='frame_order.pivot', pivot=self.PIVOT2, 
+order=2, fix=True)
+ 
+         # Set the paramagnetic centre.
+         self._execute_uf(uf_name='paramag.centre', pos=[35.934, 12.194, 
+-4.206])
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Feb 12 11:20:02 2014</div>  
+</body>
+</html>

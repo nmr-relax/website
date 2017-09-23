@@ -1,0 +1,180 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r27145 &#45; /trunk/pipe_control/structure/main.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 19 Dec 2014 11:49:08 +0100 -->
+<!--X-Message-Id: E1Y1v7M&#45;0002vM&#45;2B@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r27145 - /trunk/pipe_control/structure/main.py -- December 19, 2014 - 11:49</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r27145 - /trunk/pipe_control/structure/main.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00268" class="tabs">Index by Date</a> | <a href="threads.html#00268" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00267.html">Date Prev</a>] [<a href="msg00269.html">Date Next</a>] [<a href="msg00267.html">Thread Prev</a>] [<a href="msg00269.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 19 Dec 2014 10:49:08 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00268.html">E1Y1v7M-0002vM-2B@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on December 19, 2014 - 11:49:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Dec 19 11:49:07 2014
+New Revision: 27145
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=27145&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=27145&amp;view=rev</a>
+Log:
+Clean ups and speed ups of the structure.atomic_fluctuations user function.
+
+Duplicate calculations are now avoided, as the SD matrix is symmetric.
+
+
+Modified:
+    trunk/pipe_control/structure/main.py
+
+Modified: trunk/pipe_control/structure/main.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/pipe_control/structure/main.py?rev=27145&amp;r1=27144&amp;r2=27145&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/pipe_control/structure/main.py?rev=27145&amp;r1=27144&amp;r2=27145&amp;view=diff</a>
+==============================================================================
+--- trunk/pipe_control/structure/main.py        (original)
++++ trunk/pipe_control/structure/main.py        Fri Dec 19 11:49:07 2014
+@@ -261,12 +261,13 @@
+     # Assemble the atomic coordinates.
+     coord, ids, mol_names, res_names, res_nums, atom_names, elements = 
+assemble_coordinates(pipes=pipes, molecules=molecules, models=models, 
+atom_id=atom_id, seq_info_flag=True)
+ 
+-    # Check that more than one structure is present.
+-    if not len(coord) &gt; 1:
+-        raise RelaxError(&quot;Two or more structures are required.&quot;)
+-
+     # The number of dimensions.
+     n = len(atom_names)
++    m = len(coord)
++
++    # Check that more than one structure is present.
++    if not m &gt; 1:
++        raise RelaxError(&quot;Two or more structures are required.&quot;)
+ 
+     # The labels as spin ID strings.
+     labels = []
+@@ -275,39 +276,47 @@
+ 
+     # Initialise the SD matrix and other structures.
+     matrix = zeros((n, n), float64)
+-    vectors = zeros((len(coord), 3), float64)
+-    angles = zeros(len(coord), float64)
++    dist = zeros(m, float64)
++    vectors = zeros((m, 3), float64)
++    angles = zeros(m, float64)
+ 
+     # Generate the pairwise distance SD matrix.
+     if measure == 'distance':
+         for i in range(n):
+             for j in range(n):
++                # Only calculate the upper triangle to avoid duplicate 
+calculations.
++                if j &gt; i:
++                    continue
++
+                 # The interatomic distances between each structure.
+-                dist = []
+-                for k in range(len(coord)):
+-                    dist.append(norm(coord[k, i] - coord[k, j]))
++                for k in range(m):
++                    dist[k] = norm(coord[k, i] - coord[k, j])
+ 
+                 # Calculate and store the corrected sample standard 
+deviation.
+-                matrix[i, j] = std(array(dist, float64), ddof=1)
++                matrix[i, j] = matrix[j, i] = std(dist, ddof=1)
+ 
+     # Generate the pairwise angle SD matrix.
+     elif measure == 'angle':
+         # Loop over the atom pairs.
+         for i in range(n):
+             for j in range(n):
+-                # The interatomic vectors.
+-                for k in range(len(coord)):
++                # Only calculate the upper triangle to avoid duplicate 
+calculations.
++                if j &gt; i:
++                    continue
++
++                # The interatomic vectors between each structure.
++                for k in range(m):
+                     vectors[k] = coord[k, i] - coord[k, j]
+ 
+                 # The average vector.
+                 ave_vect = average(vectors, axis=0)
+ 
+                 # The intervector angles.
+-                for k in range(len(coord)):
++                for k in range(m):
+                     angles[k] = vector_angle_atan2(ave_vect, vectors[k])
+ 
+                 # Calculate and store the corrected sample standard 
+deviation.
+-                matrix[i, j] = std(angles, ddof=1)
++                matrix[i, j] = matrix[j, i] = std(angles, ddof=1)
+ 
+     # Call the plotting API.
+     correlation_matrix(format=format, matrix=matrix, labels=labels, 
+file=file, dir=dir, force=force)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Dec 19 15:20:03 2014</div>  
+</body>
+</html>

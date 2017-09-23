@@ -1,0 +1,163 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r17284 &#45; /branches/frame_order_testing/maths_fns/frame_order.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 18 Jul 2012 12:42:25 +0200 -->
+<!--X-Message-Id: E1SrRi5&#45;00014P&#45;IE@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r17284 - /branches/frame_order_testing/maths_fns/frame_order.py -- July 18, 2012 - 12:42</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r17284 - /branches/frame_order_testing/maths_fns/frame_order.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00170" class="tabs">Index by Date</a> | <a href="threads.html#00170" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00169.html">Date Prev</a>] [<a href="msg00171.html">Date Next</a>] [<a href="msg00169.html">Thread Prev</a>] [<a href="msg00171.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 18 Jul 2012 10:42:25 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00170.html">E1SrRi5-00014P-IE@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on July 18, 2012 - 12:42:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Jul 18 12:42:25 2012
+New Revision: 17284
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=17284&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=17284&amp;view=rev</a>
+Log:
+The free-rotor pseudo-ellipse frame order target function is now using the 
+multi-processor framework.
+
+This is for the func_pseudo_ellipse_free_rotor_qrint() target function.
+
+
+Modified:
+    branches/frame_order_testing/maths_fns/frame_order.py
+
+Modified: branches/frame_order_testing/maths_fns/frame_order.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_testing/maths_fns/frame_order.py?rev=17284&amp;r1=17283&amp;r2=17284&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_testing/maths_fns/frame_order.py?rev=17284&amp;r1=17283&amp;r2=17284&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_testing/maths_fns/frame_order.py (original)
++++ branches/frame_order_testing/maths_fns/frame_order.py Wed Jul 18 12:42:25 
+2012
+@@ -1371,8 +1371,47 @@
+ 
+         # PCS via Monte Carlo integration.
+         if self.pcs_flag_sum:
+-            # Numerical integration of the PCSs.
+-            pcs_numeric_int_pseudo_ellipse_qrint(points=self.sobol_angles, 
+theta_x=cone_theta_x, theta_y=cone_theta_y, sigma_max=pi, c=self.pcs_const, 
+full_in_ref_frame=self.full_in_ref_frame, r_pivot_atom=self.r_pivot_atom, 
+r_pivot_atom_rev=self.r_pivot_atom_rev, r_ln_pivot=self.r_ln_pivot, 
+A=self.A_3D, R_eigen=self.R_eigen, RT_eigen=RT_eigen, Ri_prime=self.Ri_prime, 
+pcs_theta=self.pcs_theta, pcs_theta_err=self.pcs_theta_err, 
+missing_pcs=self.missing_pcs, error_flag=False)
++            # Clear the data structures.
++            for i in range(len(self.pcs_theta)):
++                for j in range(len(self.pcs_theta[i])):
++                    self.pcs_theta[i, j] = 0.0
++                    self.pcs_theta_err[i, j] = 0.0
++
++            # Initialise the data object for the slave results to be stored 
+in.
++            data = Data()
++            data.num_pts = 0
++            data.pcs_theta = self.pcs_theta
++
++            # Subdivide the points.
++            for i in range(self.processor.processor_size()):
++                # Initialise the slave command and memo.
++                self.slaves[i].load_data(theta_x=cone_theta_x, 
+theta_y=cone_theta_x, sigma_max=pi, r_pivot_atom=self.r_pivot_atom, 
+r_pivot_atom_rev=self.r_pivot_atom_rev, R_eigen=self.R_eigen, 
+RT_eigen=RT_eigen)
++
++                # Update certain data structures.
++                if self.pivot_opt:
++                    self.slaves[i].r_ln_pivot = self.r_ln_pivot
++
++                # Initialise the memo.
++                memo = Memo_pcs_pseudo_ellipse_qrint(data)
++
++                # Queue the block.
++                self.processor.add_to_queue(self.slaves[i], memo)
++
++            # Wait for completion.
++            self.processor.run_queue()
++
++            # Calculate the PCS and error.
++            num = data.num_pts
++            for i in range(len(self.pcs_theta)):
++                for j in range(len(self.pcs_theta[i])):
++                    # The average PCS.
++                    self.pcs_theta[i, j] = self.pcs_const[i] * 
+self.pcs_theta[i, j] / float(num)
++
++                    # The error.
++                    error_flag = False
++                    if error_flag:
++                        self.pcs_theta_err[i, j] = abs(self.pcs_theta_err[i, 
+j] / float(num)  -  self.pcs_theta[i, j]**2) / float(num)
++                        self.pcs_theta_err[i, j] = c[i] * 
+sqrt(self.pcs_theta_err[i, j])
+ 
+             # Calculate and sum the single alignment chi-squared value (for 
+the PCS).
+             for align_index in xrange(self.num_align):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Jul 18 16:20:01 2012</div>  
+</body>
+</html>

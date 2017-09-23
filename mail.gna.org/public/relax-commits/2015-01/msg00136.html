@@ -1,0 +1,166 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r27290 &#45; /trunk/lib/structure/internal/coordinates.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 23 Jan 2015 11:09:42 +0100 -->
+<!--X-Message-Id: E1YEbBN&#45;0003xE&#45;QN@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r27290 - /trunk/lib/structure/internal/coordinates.py -- January 23, 2015 - 11:09</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r27290 - /trunk/lib/structure/internal/coordinates.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00136" class="tabs">Index by Date</a> | <a href="threads.html#00136" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00135.html">Date Prev</a>] [<a href="msg00137.html">Date Next</a>] [<a href="msg00135.html">Thread Prev</a>] [<a href="msg00137.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 23 Jan 2015 10:09:41 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00136.html">E1YEbBN-0003xE-QN@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on January 23, 2015 - 11:09:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Jan 23 11:09:41 2015
+New Revision: 27290
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=27290&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=27290&amp;view=rev</a>
+Log:
+Sequence alignment is now performed in 
+lib.structure.internal.coordinates.assemble_coord_array().
+
+This is a pairwise alignment to the first molecule of the list.  The 
+alignments are not yet used for
+anything.  The assemble_coord_array() function is used by the structure.align 
+user function, as well
+as a few other structure user functions.
+
+
+Modified:
+    trunk/lib/structure/internal/coordinates.py
+
+Modified: trunk/lib/structure/internal/coordinates.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/lib/structure/internal/coordinates.py?rev=27290&amp;r1=27289&amp;r2=27290&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/lib/structure/internal/coordinates.py?rev=27290&amp;r1=27289&amp;r2=27290&amp;view=diff</a>
+==============================================================================
+--- trunk/lib/structure/internal/coordinates.py (original)
++++ trunk/lib/structure/internal/coordinates.py Fri Jan 23 11:09:41 2015
+@@ -1,6 +1,6 @@
+ 
+###############################################################################
+ #                                                                            
+ #
+-# Copyright (C) 2014 Edward d'Auvergne                                       
+ #
++# Copyright (C) 2014-2015 Edward d'Auvergne                                  
+ #
+ #                                                                            
+ #
+ # This file is part of the program relax (<a  rel="nofollow" href="http://www.nmr-relax.com">http://www.nmr-relax.com</a>).         
+ #
+ #                                                                            
+ #
+@@ -24,6 +24,9 @@
+ 
+ # Python module imports.
+ from numpy import array, float64
++
++# relax module imports.
++from lib.sequence_alignment.align_protein import align_pairwise
+ 
+ 
+ def assemble_coord_array(objects=None, object_names=None, molecules=None, 
+models=None, atom_id=None, algorithm='NW70', matrix='BLOSUM62', 
+gap_open_penalty=1.0, gap_extend_penalty=1.0, end_gap_open_penalty=0.0, 
+end_gap_extend_penalty=0.0, seq_info_flag=False):
+@@ -67,6 +70,7 @@
+     res_nums = []
+     atom_names = []
+     elements = []
++    one_letter_codes = []
+     for struct_index in range(len(objects)):
+         # Printout.
+         print(&quot;    Data pipe: %s&quot; % object_names[struct_index])
+@@ -126,6 +130,9 @@
+                     # Change the current molecule name.
+                     current_mol = mol_name
+ 
++                    # Store the one letter codes for sequence alignment.
++                    
+one_letter_codes.append(objects[struct_index].one_letter_codes(mol_name=mol_name))
++
+                     # Extend the lists.
+                     if molecules != None:
+                         atom_ids.append([])
+@@ -165,6 +172,14 @@
+                     res_nums[-1][id] = res_num
+                     atom_names[-1][id] = atom_name
+                     elements[-1][id] = elem
++
++    # Sequence alignment.
++    print(&quot;\nPairwise sequence alignment to the first molecule:\n&quot;)
++    gap_matrices = []
++    for i in range(1, len(one_letter_codes)):
++        print(&quot;Molecules 1-%i&quot; % (i+1))
++        align1, align2, gaps = align_pairwise(one_letter_codes[0], 
+one_letter_codes[i], matrix='BLOSUM62', gap_open_penalty=5.0, 
+gap_extend_penalty=1.0)
++        gap_matrices.append(gaps)
+ 
+     # Set up the structures for the superimposition algorithm.
+     num = len(atom_ids)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Jan 23 15:40:02 2015</div>  
+</body>
+</html>

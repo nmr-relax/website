@@ -1,0 +1,192 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r6934 &#45; /branches/rdc_analysis/specific_fns/n_state_model.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 10 Jul 2008 13:42:41 +0200 -->
+<!--X-Message-Id: E1KGuXp&#45;0004zs&#45;Pj@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r6934 - /branches/rdc_analysis/specific_fns/n_state_model.py -- July 10, 2008 - 13:42</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r6934 - /branches/rdc_analysis/specific_fns/n_state_model.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00329" class="tabs">Index by Date</a> | <a href="threads.html#00329" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00328.html">Date Prev</a>] [<a href="msg00330.html">Date Next</a>] [<a href="msg00328.html">Thread Prev</a>] [<a href="msg00330.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 10 Jul 2008 11:42:41 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00329.html">E1KGuXp-0004zs-Pj@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on July 10, 2008 - 13:42:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Jul 10 13:42:41 2008
+New Revision: 6934
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=6934&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=6934&amp;view=rev</a>
+Log:
+Made some more use of the scaling matrix.
+
+
+Modified:
+    branches/rdc_analysis/specific_fns/n_state_model.py
+
+Modified: branches/rdc_analysis/specific_fns/n_state_model.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/rdc_analysis/specific_fns/n_state_model.py?rev=6934&amp;r1=6933&amp;r2=6934&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/rdc_analysis/specific_fns/n_state_model.py?rev=6934&amp;r1=6933&amp;r2=6934&amp;view=diff</a>
+==============================================================================
+--- branches/rdc_analysis/specific_fns/n_state_model.py (original)
++++ branches/rdc_analysis/specific_fns/n_state_model.py Thu Jul 10 13:42:41 
+2008
+@@ -736,23 +736,24 @@
+         # Create the initial parameter vector.
+         param_vector = self.assemble_param_vector(sim_index=sim_index)
+ 
++        # Determine if alignment tensors or RDCs are to be used.
++        data_type = self.__determine_data_type()
++
++        # Diagonal scaling.
++        scaling_matrix = self.__assemble_scaling_matrix(data_type=data_type, 
+scaling=scaling)
++        param_vector = dot(inv(scaling_matrix), param_vector)
++
+         # Linear constraints.
+         if constraints:
+-            A, b = self.linear_constraints()
+-
+-        # Determine if alignment tensors or RDCs are to be used.
+-        data_type = self.__determine_data_type()
+-
+-        # Diagonal scaling.
+-        scaling_matrix = self.__assemble_scaling_matrix(data_type=data_type, 
+scaling=scaling)
++            A, b = self.linear_constraints(data_type=data_type, 
+scaling_matrix=scaling_matrix)
+ 
+         # Set up minimisation using alignment tensors.
+         if data_type == 'tensor':
+-            model = self.minimise_setup_tensors(param_vector=param_vector)
++            model = self.minimise_setup_tensors(param_vector=param_vector, 
+scaling_matrix=scaling_matrix)
+ 
+         # Set up minimisation using RDCs.
+         elif data_type == 'rdc':
+-            model = self.minimise_setup_rdcs(param_vector=param_vector)
++            model = self.minimise_setup_rdcs(param_vector=param_vector, 
+scaling_matrix=scaling_matrix)
+ 
+         # Minimisation.
+         if constraints:
+@@ -817,11 +818,13 @@
+             cdp.warning = warning
+ 
+ 
+-    def minimise_setup_rdcs(self, param_vector=None):
++    def minimise_setup_rdcs(self, param_vector=None, scaling_matrix=None):
+         &quot;&quot;&quot;Set up minimisation for the N-state model using RDCs.
+ 
+         @keyword param_vector:  The parameter vector.
+         @type param_vector:     list of str
++        @scaling_matrix:        The square and diagonal scaling matrix.
++        @scaling_matrix:        numpy rank-2 array
+         @return:                The initialised N_state_opt class for 
+minimisation.
+         @rteyp:                 N_state_opt instance
+         &quot;&quot;&quot;
+@@ -869,17 +872,19 @@
+                 xh_vect_numpy[i,j] = xh_vectors[i][j]
+ 
+         # Set up the class instance containing the target function.
+-        model = N_state_opt(model=cdp.model, N=cdp.N, 
+init_params=param_vector, rdcs=rdcs_numpy, xh_vect=xh_vect_numpy)
++        model = N_state_opt(model=cdp.model, N=cdp.N, 
+init_params=param_vector, rdcs=rdcs_numpy, xh_vect=xh_vect_numpy, 
+scaling_matrix=scaling_matrix)
+ 
+         # Return the instantiated class.
+         return model
+ 
+ 
+-    def minimise_setup_tensors(self, param_vector=None):
++    def minimise_setup_tensors(self, param_vector=None, scaling_matrix=None):
+         &quot;&quot;&quot;Set up minimisation for the N-state model using alignment tensors.
+ 
+         @keyword param_vector:  The parameter vector.
+         @type param_vector:     list of str
++        @scaling_matrix:        The square and diagonal scaling matrix.
++        @scaling_matrix:        numpy rank-2 array
+         @return:                The initialised N_state_opt class for 
+minimisation.
+         @rteyp:                 N_state_opt instance
+         &quot;&quot;&quot;
+@@ -933,7 +938,7 @@
+         full_in_ref_frame = array(full_in_ref_frame, float64)
+ 
+         # Set up the class instance containing the target function.
+-        model = N_state_opt(model=cdp.model, N=cdp.N, 
+init_params=param_vector, full_tensors=full_tensors, 
+red_data=red_tensor_elem, red_errors=red_tensor_err, 
+full_in_ref_frame=full_in_ref_frame)
++        model = N_state_opt(model=cdp.model, N=cdp.N, 
+init_params=param_vector, full_tensors=full_tensors, 
+red_data=red_tensor_elem, red_errors=red_tensor_err, 
+full_in_ref_frame=full_in_ref_frame, scaling_matrix=scaling_matrix)
+ 
+         # Return the instantiated class.
+         return model
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Jul 10 14:00:18 2008</div>  
+</body>
+</html>

@@ -1,0 +1,226 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r11754 &#45; /branches/bieri_gui/gui_bieri/components/mol_res_spin_tree.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 10 Dec 2010 15:23:40 +0100 -->
+<!--X-Message-Id: E1PR3sq&#45;0006XY&#45;QV@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r11754 - /branches/bieri_gui/gui_bieri/components/mol_res_spin_tree.py -- December 10, 2010 - 15:23</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r11754 - /branches/bieri_gui/gui_bieri/components/mol_res_spin_tree.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00054" class="tabs">Index by Date</a> | <a href="threads.html#00054" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00053.html">Date Prev</a>] [<a href="msg00055.html">Date Next</a>] [<a href="msg00053.html">Thread Prev</a>] [<a href="msg00055.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 10 Dec 2010 14:23:40 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00054.html">E1PR3sq-0006XY-QV@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on December 10, 2010 - 15:23:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Dec 10 15:23:40 2010
+New Revision: 11754
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=11754&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=11754&amp;view=rev</a>
+Log:
+_build_menu_item() has been renamed to build_menu_item().
+
+
+Modified:
+    branches/bieri_gui/gui_bieri/components/mol_res_spin_tree.py
+
+Modified: branches/bieri_gui/gui_bieri/components/mol_res_spin_tree.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/bieri_gui/gui_bieri/components/mol_res_spin_tree.py?rev=11754&amp;r1=11753&amp;r2=11754&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/bieri_gui/gui_bieri/components/mol_res_spin_tree.py?rev=11754&amp;r1=11753&amp;r2=11754&amp;view=diff</a>
+==============================================================================
+--- branches/bieri_gui/gui_bieri/components/mol_res_spin_tree.py (original)
++++ branches/bieri_gui/gui_bieri/components/mol_res_spin_tree.py Fri Dec 10 
+15:23:40 2010
+@@ -37,13 +37,16 @@
+ class Mol_res_spin_tree(wx.Panel):
+     &quot;&quot;&quot;The tree view class.&quot;&quot;&quot;
+ 
+-    def __init__(self, parent=None, id=None):
++    def __init__(self, gui, parent=None, id=None):
+         &quot;&quot;&quot;Set up the tree GUI element.
+ 
+         @keyword parent:    The parent GUI element that this is to be 
+attached to.
+         @type parent:       wx object
+         &quot;&quot;&quot;
+ 
++        # Store the args.
++        self.gui = gui
++
+         # Execute the base class method.
+         wx.Panel.__init__(self, parent, id, style=wx.WANTS_CHARS)
+ 
+@@ -58,7 +61,7 @@
+ 
+         # The tree roots.
+         self.root = self.tree.AddRoot(&quot;Spin system information&quot;)
+-        self.tree.SetPyData(self.root, None)
++        self.tree.SetPyData(self.root, &quot;root&quot;)
+ 
+         # Build the icon list.
+         icon_list = wx.ImageList(self.icon_size, self.icon_size)
+@@ -74,6 +77,9 @@
+         # Populate the tree.
+         self._tree_update()
+ 
++        # Catch mouse events.
++        self.tree.Bind(wx.EVT_RIGHT_DOWN, self._right_click)
++
+ 
+     def _resize(self, event):
+         &quot;&quot;&quot;Resize the tree element.
+@@ -87,6 +93,47 @@
+ 
+         # Set the tree dimensions.
+         self.tree.SetDimensions(0, 0, width, height)
++
++
++    def _right_click(self, event):
++        &quot;&quot;&quot;Handle right clicks in the tree.
++
++        @param event:   The wx event.
++        @type event:    wx event
++        &quot;&quot;&quot;
++
++        # Obtain the position.
++        pos = event.GetPosition()
++
++        # Find the item clicked on.
++        item, flags = self.tree.HitTest(pos)
++
++        # The python data.
++        info = self.tree.GetItemPyData(item)
++
++        # Bring up the root menu.
++        if info == 'root':
++            self._root_menu()
++
++
++    def _root_menu(self):
++        &quot;&quot;&quot;The right click root menu.&quot;&quot;&quot;
++
++        # Some ids.
++        ids = []
++        for i in range(1):
++            ids.append(wx.NewId())
++
++        # The menu.
++        menu = wx.Menu()
++        menu.AppendItem(self.gui.menu.build_menu_item(menu, id=ids[0], 
+text=&quot;Add molecule&quot;, icon=paths.icon_16x16.add))
++
++        # The menu actions.
++        self.Bind(wx.EVT_MENU, self.gui.user_functions.molecule.add, 
+id=ids[0])
++
++        # Show the menu.
++        self.PopupMenu(menu)
++        menu.Destroy()
+ 
+ 
+     def _tree_update(self, pipe_name=None):
+@@ -108,7 +155,7 @@
+         # The molecules.
+         for mol in pipe.mol:
+             # Append a molecule with name to the tree.
+-            mol_branch = self.tree.AppendItem(self.root, &quot;Molecule %s&quot; % 
+mol.name)
++            mol_branch = self.tree.AppendItem(self.root, &quot;Molecule: %s&quot; % 
+mol.name)
+             self.tree.SetPyData(mol_branch, None)
+ 
+             # Set the bitmap.
+@@ -118,7 +165,7 @@
+             # The residues.
+             for res in mol.res:
+                 # Append a residue with name and number to the tree.
+-                res_branch = self.tree.AppendItem(mol_branch, &quot;Residue %s 
+%s&quot; % (res.num, res.name))
++                res_branch = self.tree.AppendItem(mol_branch, &quot;Residue: %s 
+%s&quot; % (res.name, res.num))
+                 self.tree.SetPyData(res_branch, None)
+ 
+                 # Set the bitmap.
+@@ -127,7 +174,7 @@
+                 # The spins.
+                 for spin in res.spin:
+                     # Append a spin with name and number to the tree.
+-                    spin_branch = self.tree.AppendItem(res_branch, &quot;Spin %s 
+%s&quot; % (spin.num, spin.name))
++                    spin_branch = self.tree.AppendItem(res_branch, &quot;Spin: %s 
+%s&quot; % (spin.name, spin.num))
+                     self.tree.SetPyData(spin_branch, None)
+ 
+                     # Set the bitmap.
+@@ -163,7 +210,7 @@
+         sizer = self.setup_window()
+ 
+         # Add the tree view panel.
+-        self.tree_panel = Mol_res_spin_tree(parent=self, id=-1)
++        self.tree_panel = Mol_res_spin_tree(self.gui, parent=self, id=-1)
+         sizer.Add(self.tree_panel, 1, wx.EXPAND|wx.ALL, self.border)
+ 
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Dec 10 15:40:02 2010</div>  
+</body>
+</html>

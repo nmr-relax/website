@@ -1,0 +1,188 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r25347 &#45; /trunk/user_functions/relax_disp.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 27 Aug 2014 20:06:24 +0200 -->
+<!--X-Message-Id: E1XMhbz&#45;0002CS&#45;O0@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r25347 - /trunk/user_functions/relax_disp.py -- August 27, 2014 - 20:06</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r25347 - /trunk/user_functions/relax_disp.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00481" class="tabs">Index by Date</a> | <a href="threads.html#00481" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00480.html">Date Prev</a>] [<a href="msg00482.html">Date Next</a>] [<a href="msg00480.html">Thread Prev</a>] [<a href="msg00482.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 27 Aug 2014 18:06:23 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00481.html">E1XMhbz-0002CS-O0@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on August 27, 2014 - 20:06:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Wed Aug 27 20:06:23 2014
+New Revision: 25347
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=25347&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=25347&amp;view=rev</a>
+Log:
+Added front-end to the new user function relax_disp.r2eff_err_estimate(), 
+which will estimate the R2eff errors
+from a pipe and spins with optimised values of R2eff and i0.
+
+The co-variance matrix can be calculated from the optimised parameters, and 
+the Jacobian.
+
+Big care should be taken not to directly trust these results, since the 
+errors are quite different compared to the Monte-Carlo simulations.
+
+This implementation, will reach the exact same error estimation as 
+scipy.optimize.leastsq.
+
+But with much better control over the data, and insight into the calculations.
+
+task #7822(<a  rel="nofollow" href="https://gna.org/task/index.php?7822">https://gna.org/task/index.php?7822</a>): Implement user function to 
+estimate R2eff and associated errors for exponential curve fitting.
+
+Modified:
+    trunk/user_functions/relax_disp.py
+
+Modified: trunk/user_functions/relax_disp.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/user_functions/relax_disp.py?rev=25347&amp;r1=25346&amp;r2=25347&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/user_functions/relax_disp.py?rev=25347&amp;r1=25346&amp;r2=25347&amp;view=diff</a>
+==============================================================================
+--- trunk/user_functions/relax_disp.py  (original)
++++ trunk/user_functions/relax_disp.py  Wed Aug 27 20:06:23 2014
+@@ -40,6 +40,7 @@
+ from pipe_control.mol_res_spin import get_spin_ids
+ from specific_analyses.relax_disp.catia import catia_execute, catia_input
+ from specific_analyses.relax_disp.cpmgfit import cpmgfit_execute, 
+cpmgfit_input
++from specific_analyses.relax_disp.estimate_r2eff import estimate_r2eff_err
+ from specific_analyses.relax_disp.data import cpmg_setup, insignificance, 
+plot_disp_curves, plot_exp_curves, r2eff_read, r2eff_read_spin, relax_time, 
+set_exp_type, r20_from_min_r2eff, spin_lock_field, spin_lock_offset, 
+write_disp_curves
+ from specific_analyses.relax_disp.data import INTERPOLATE_DISP, 
+INTERPOLATE_OFFSET, X_AXIS_DISP, X_AXIS_W_EFF, X_AXIS_THETA, Y_AXIS_R2_R1RHO, 
+Y_AXIS_R2_EFF
+ from specific_analyses.relax_disp.nessy import nessy_input
+@@ -627,6 +628,50 @@
+ uf.gui_icon = &quot;oxygen.status.object-locked&quot;
+ uf.wizard_size = (800, 500)
+ uf.wizard_image = ANALYSIS_IMAGE_PATH + 'relax_disp_200x200.png'
++
++
++# The relax_disp.r2eff_err_estimate user function.
++uf = uf_info.add_uf('relax_disp.r2eff_err_estimate')
++uf.title = &quot;Estimate R2eff errors by the Jacobian matrix.&quot;
++uf.title_short = &quot;Estimate R2eff errors.&quot;
++uf.add_keyarg(
++    name = &quot;spin_id&quot;,
++    py_type = &quot;str&quot;,
++    arg_type = &quot;spin ID&quot;,
++    desc_short = &quot;spin ID to restrict value setting to&quot;,
++    desc = &quot;The spin ID string to restrict value setting to.&quot;,
++    can_be_none = True
++)
++uf.add_keyarg(
++    name = &quot;epsrel&quot;,
++    py_type = &quot;float&quot;,
++    default = 0.0,
++    desc_short = &quot;parameter to remove linear-dependent columns.&quot;,
++    desc = &quot;The parameter to remove linear-dependent columns when J is rank 
+deficient.&quot;,
++    can_be_none = False
++)
++uf.add_keyarg(
++    name = &quot;verbosity&quot;,
++    default = 1,
++    py_type = &quot;int&quot;,
++    desc_short = &quot;amount of information to print.&quot;,
++    desc = &quot;The higher the value, the greater the verbosity.&quot;,
++    can_be_none = False
++)
++# Description.
++uf.desc.append(Desc_container())
++uf.desc[-1].add_paragraph(&quot;This is a new experimental feature from version 
+3.3, and should only be tried out with big care.&quot;)
++uf.desc[-1].add_paragraph(&quot;This will estimate R2eff errors by using the 
+exponential decay Jacobian matrix 'J' to compute the covariance matrix of the 
+best-fit parameters.&quot;)
++uf.desc[-1].add_paragraph(&quot;This can be an huge time saving step, when 
+performing model fitting in R1rho.  Errors of R2eff values, are normally 
+estimated by time-consuming Monte-Carlo simulations.&quot;)
++uf.desc[-1].add_paragraph(&quot;This method is inspired from the GNU Scientific 
+Library (GSL).&quot;)
++uf.desc[-1].add_paragraph(&quot;The covariance matrix is given by: covar = Qxx = 
+(J^T J)^{-1}.&quot;)
++uf.desc[-1].add_paragraph(&quot;Qxx is computed by QR decomposition, Qxx=QR, 
+Qxx^-1=R^-1 Q^T.  The columns of R which satisfy: |R_{kk}| &lt;= epsrel |R_{11}| 
+are considered linearly-dependent and are excluded from the covariance matrix 
+(the corresponding rows and columns of the covariance matrix are set to 
+zero).&quot;)
++uf.desc[-1].add_paragraph(&quot;The parameter 'epsrel' is used to remove 
+linear-dependent columns when J is rank deficient.&quot;)
++uf.backend = estimate_r2eff_err
++uf.menu_text = &quot;&amp;r2eff_err_estimate&quot;
++uf.gui_icon = &quot;relax.relax_fit&quot;
++uf.wizard_size = (800, 800)
++uf.wizard_image = ANALYSIS_IMAGE_PATH + sep + 'blank_150x150.png'
+ 
+ 
+ # The relax_disp.r2eff_read user function.
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Aug 27 20:20:03 2014</div>  
+</body>
+</html>

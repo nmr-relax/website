@@ -1,0 +1,205 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: [bug #22017] LinAlgError, for all numerical CPMG models. -->
+<!--X-From-R13: "Febryf S. Zvaarg" &#60;@A&#45;DSBZK.W@HOZWR&#45;ORRDSEENtan.bet> -->
+<!--X-Date: Fri, 09 May 2014 10:39:40 +0200 -->
+<!--X-Message-Id: 20140509&#45;083940.sv20529.7512@gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Reference: 20140507&#45;150749.sv20529.5081@gna.org -->
+<!--X-Reference: 20140508&#45;183035.sv20529.13474@gna.org -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>[bug #22017] LinAlgError, for all numerical CPMG models. -- May 09, 2014 - 10:39</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />[bug #22017] LinAlgError, for all numerical CPMG models.</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00268" class="tabs">Index by Date</a> | <a href="threads.html#00268" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00267.html">Date Prev</a>] [<a href="msg00269.html">Date Next</a>] [<a href="msg00266.html">Thread Prev</a>] [<a href="msg00316.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: &quot;Troels E. Linnet&quot; &lt;tlinnet@xxxxxxxxxxxxx&gt;, relax-devel@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 09 May 2014 10:39:40 +0200</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00268.html">20140509-083940.sv20529.7512@gna.org</a>&gt;</li>
+<li class="menuitem">
+<em>References</em>: &lt;<a href="msg00194.html">20140507-150749.sv20529.5081@gna.org</a>&gt; &lt;<a href="msg00264.html">20140508-183035.sv20529.13474@gna.org</a>&gt;</li>
+<li class="menuitem">
+<em>User-agent</em>: Mozilla/5.0 (X11; Linux x86_64; rv:24.0) Gecko/20100101 Firefox/24.0</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>Troels E. Linnet</strong> on May 09, 2014 - 10:39:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Follow-up Comment #2, bug #22017 (project relax):
+
+It is somewhere in:
+
+def return_r2eff_arrays(spins=None, spin_ids=None, fields=None,
+field_count=None, sim_index=None):
+
+/specific_analyses/relax_disp/data.py
+
+The looping over time points is misbehaving.
+
+Under the looping:
+for exp_type, frq, offset, point, ei, mi, oi, di in
+loop_exp_frq_offset_point(return_indices=True)
+
+
+-------------------------
+        # Loop over the R2eff data.
+        for exp_type, frq, offset, point, ei, mi, oi, di in
+loop_exp_frq_offset_point(return_indices=True):
+
+            # Alias the correct spin.
+            current_spin = spin
+            if exp_type in [EXP_TYPE_CPMG_PROTON_SQ,
+EXP_TYPE_CPMG_PROTON_MQ]:
+                current_spin = proton
+
+            # Add the experiment type.
+            if exp_type not in exp_types:
+                exp_types.append(exp_type)
+
+            # The key.
+            key = return_param_key_from_data(exp_type=exp_type, frq=frq,
+offset=offset, point=point)
+            if mi == 0:
+                fact = 60.83831274541046
+            else:
+                fact = 81.11775032721394
+            
+            # The Larmor frequency for this spin (and that of an attached
+proton for the MMQ models) and field strength (in MHz*2pi to speed up the ppm
+to rad/s conversion).
+            if frq != None:
+                frqs[ei][si][mi] = 2.0 * pi * frq / g1H *
+return_gyromagnetic_ratio(spin.isotope) * 1e-6
+                frqs_H[ei][si][mi] = 2.0 * pi * frq * 1e-6
+
+            # Missing data.
+            if key not in current_spin.r2eff.keys():
+                values[ei][si][mi][oi].append(0.0)
+                errors[ei][si][mi][oi].append(1.0)
+                missing[ei][si][mi][oi].append(1)
+                continue
+            else:
+                missing[ei][si][mi][oi].append(0)
+
+            # The values.
+            if sim_index == None:
+                values[ei][si][mi][oi].append(current_spin.r2eff[key])
+            else:
+               
+values[ei][si][mi][oi].append(current_spin.r2eff_sim[sim_index][key])
+
+            # The errors.
+            errors[ei][si][mi][oi].append(current_spin.r2eff_err[key])
+
+            # The relaxation times.
+            for id in cdp.spectrum_ids:
+                # Non-matching data.
+                if cdp.spectrometer_frq[id] != frq:
+                    continue
+                if cdp.exp_type[id] != exp_type:
+                    continue
+                if exp_type in EXP_TYPE_LIST_CPMG:
+                    if id not in cdp.cpmg_frqs.keys() or cdp.cpmg_frqs[id] !=
+point:
+                        continue
+                else:
+                    if id not in cdp.spin_lock_nu1.keys() or 
+cdp.spin_lock_nu1[id] != point:
+                        continue
+
+                # Found.
+                relax_time = cdp.relax_times[id]
+                break
+
+            # Check the value if already set.
+            if relax_times[ei][mi] != None:
+                if relax_times[ei][mi] != relax_time:
+                    raise RelaxError(&quot;The relaxation times do not match for
+all experiments.&quot;)
+                continue
+
+            # Store the time.
+            relax_times[ei][mi] = relax_time
+
+        # Increment the spin index.
+        si += 1
+
+    _______________________________________________________
+
+Reply to this item at:
+
+  &lt;<a  rel="nofollow" href="http://gna.org/bugs/?22017">http://gna.org/bugs/?22017</a>&gt;
+
+_______________________________________________
+  Message sent via/by Gna!
+  <a  rel="nofollow" href="http://gna.org/">http://gna.org/</a>
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<ul><li><strong>Follow-Ups</strong>:
+<ul>
+<li><strong><a name="00337" href="msg00337.html">[bug #22017] LinAlgError, for all numerical CPMG models.</a></strong>
+<ul><li><em>From:</em> Edward d Auvergne</li></ul></li>
+<li><strong><a name="00316" href="msg00316.html">Re: [bug #22017] LinAlgError, for all numerical CPMG models.</a></strong>
+<ul><li><em>From:</em> Edward d'Auvergne</li></ul></li>
+</ul></li></ul>
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<ul><li><strong>References</strong>:
+<ul>
+<li><strong><a name="00194" href="msg00194.html">[bug #22017] LinAlgError, for all numerical CPMG models.</a></strong>
+<ul><li><em>From:</em> Troels E. Linnet</li></ul></li>
+<li><strong><a name="00264" href="msg00264.html">[bug #22017] LinAlgError, for all numerical CPMG models.</a></strong>
+<ul><li><em>From:</em> Troels E. Linnet</li></ul></li>
+</ul></li></ul>
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu May 15 15:00:16 2014</div>  
+</body>
+</html>

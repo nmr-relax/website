@@ -1,0 +1,181 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r8893 &#45; /1.3/data/align_tensor.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 27 Feb 2009 18:58:25 +0100 -->
+<!--X-Message-Id: E1Ld6ye&#45;0001vZ&#45;W3@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r8893 - /1.3/data/align_tensor.py -- February 27, 2009 - 18:58</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r8893 - /1.3/data/align_tensor.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00189" class="tabs">Index by Date</a> | <a href="threads.html#00189" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00188.html">Date Prev</a>] [Date Next] [<a href="msg00188.html">Thread Prev</a>] [Thread Next]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 27 Feb 2009 17:58:24 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00189.html">E1Ld6ye-0001vZ-W3@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on February 27, 2009 - 18:58:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Feb 27 18:58:24 2009
+New Revision: 8893
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=8893&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=8893&amp;view=rev</a>
+Log:
+The diagonalised alignment tensor is now being created (and is being done 
+correctly).
+
+
+Modified:
+    1.3/data/align_tensor.py
+
+Modified: 1.3/data/align_tensor.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/data/align_tensor.py?rev=8893&amp;r1=8892&amp;r2=8893&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/data/align_tensor.py?rev=8893&amp;r1=8892&amp;r2=8893&amp;view=diff</a>
+==============================================================================
+--- 1.3/data/align_tensor.py (original)
++++ 1.3/data/align_tensor.py Fri Feb 27 18:58:24 2009
+@@ -24,6 +24,7 @@
+ from re import search
+ from math import cos, sin
+ from numpy import dot, float64, identity, transpose, zeros
++from numpy.linalg import eigvals
+ from types import ListType
+ 
+ # relax module imports.
+@@ -505,8 +506,8 @@
+     return tensor
+ 
+ 
+-def calc_tensor_diag(rotation, tensor):
+-    &quot;&quot;&quot;Function for calculating the diagonalised alignment tensor.
++def calc_tensor_diag(tensor):
++    &quot;&quot;&quot;Calculate the diagonalised alignment tensor.
+ 
+     The diagonalised alignment tensor is defined as::
+ 
+@@ -514,10 +515,8 @@
+         tensor  =  |  0   Ayy'  0  |.
+                    |  0    0   Azz'|
+ 
+-    The diagonalised alignment tensor is calculated using the tensor and the 
+rotation matrix
+-    through the equation::
+-
+-        R^T . tensor_diag . R.
++    The diagonalised alignment tensor is calculated by eigenvalue 
+decomposition.
++
+ 
+     @param rotation:    The rotation matrix.
+     @type rotation:     numpy array ((3, 3), float64)
+@@ -527,8 +526,28 @@
+     @rtype:             numpy array ((3, 3), float64)
+     &quot;&quot;&quot;
+ 
+-    # Rotation (R^T . tensor_diag . R).
+-    return dot(transpose(rotation), dot(tensor_diag, rotation))
++    # The eigenvalues.
++    vals = eigvals(tensor)
++
++    # Find the x &lt; y &lt; z indices.
++    abs_vals = abs(vals).tolist()
++    Axx_index = abs_vals.index(min(abs_vals))
++    Azz_index = abs_vals.index(max(abs_vals))
++    last_index = range(3)
++    last_index.pop(Axx_index)
++    last_index.pop(Azz_index)
++    Ayy_index = last_index[0]
++
++    # Empty tensor.
++    tensor_diag = zeros((3, 3), float64)
++
++    # Fill the elements.
++    tensor_diag[0, 0] = vals[Axx_index]
++    tensor_diag[1, 1] = vals[Ayy_index]
++    tensor_diag[2, 2] = vals[Azz_index]
++
++    # Return the tensor.
++    return tensor_diag
+ 
+ 
+ def dependency_generator():
+@@ -561,10 +580,10 @@
+     yield ('Axx_unit',      ['alpha', 'beta', 'gamma'],                     
+['alpha', 'beta', 'gamma'])
+     yield ('Ayy_unit',      ['alpha', 'beta', 'gamma'],                     
+['alpha', 'beta', 'gamma'])
+     yield ('Azz_unit',      ['alpha', 'beta'],                              
+['alpha', 'beta'])
+-    yield ('tensor_diag',   ['Axx', 'Ayy', 'Axy', 'Axz', 'Ayz'],            
+['tensor', 'rotation'])
+     yield ('rotation',      ['alpha', 'beta', 'gamma'],                     
+['Axx_unit', 'Ayy_unit', 'Azz_unit'])
+     yield ('tensor',        ['Axx', 'Ayy', 'Axy', 'Axz', 'Ayz'],            
+['Axx', 'Ayy', 'Azz', 'Axy', 'Axz', 'Ayz'])
+     yield ('tensor_5D',     ['Axx', 'Ayy', 'Axy', 'Axz', 'Ayz'],            
+['Axx', 'Ayy', 'Azz', 'Axy', 'Axz', 'Ayz'])
++    yield ('tensor_diag',   ['Axx', 'Ayy', 'Axy', 'Axz', 'Ayz'],            
+['tensor'])
+ 
+ 
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Feb 27 19:00:03 2009</div>  
+</body>
+</html>

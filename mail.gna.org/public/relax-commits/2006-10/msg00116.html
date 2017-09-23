@@ -1,0 +1,418 @@
+<!-- MHonArc v2.6.10 -->
+<!--X-Subject: r2681 &#45; /branches/tensor_pdb/generic_fns/pdb.py -->
+<!--X-From-R13: rqjneq.qnhiretarNtznvy.pbz -->
+<!--X-Date: Sun, 29 Oct 2006 03:52:17 +0100 -->
+<!--X-Message-Id: E1Ge0m3&#45;0002Zs&#45;0a@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r2681 - /branches/tensor_pdb/generic_fns/pdb.py -- October 29, 2006 - 03:52</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r2681 - /branches/tensor_pdb/generic_fns/pdb.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00116" class="tabs">Index by Date</a> | <a href="threads.html#00116" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00115.html">Date Prev</a>] [<a href="msg00117.html">Date Next</a>] [<a href="msg00115.html">Thread Prev</a>] [<a href="msg00117.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Sun, 29 Oct 2006 02:51:46 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00116.html">E1Ge0m3-0002Zs-0a@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward . dauvergne</strong> on October 29, 2006 - 03:52:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Sun Oct 29 03:51:46 2006
+New Revision: 2681
+
+URL: <a  href="http://svn.gna.org/viewcvs/relax?rev=2681&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=2681&amp;view=rev</a>
+Log:
+A overhaul of the handling of the tensor PDB atomic data and how atoms are 
+added and connected.
+
+A new data structure called 'self.atomic_data' has been created to store all 
+the atomic data.  The
+data structure is a dictionary of arrays.  The key is a string corresponding 
+to the 'atom_id'.  The
+elements of the array are:
+    0:  Atom number.
+    1:  Element type.
+    2:  The x coordinate of the atom.
+    3:  The y coordinate of the atom.
+    4:  The z coordinate of the atom.
+    5+:  The bonded atom numbers.
+
+Two new functions have been added to maintain the 'self.atomic_data' 
+structure.  The first is
+'self.atom_add()' which creates a key-value pair within the data structure 
+for the given atom adding
+the atom number, element type, and coordinates of the atom.
+
+The second function is 'self.atom_connect()'.  Two arguments are expected, 
+the 'atom_id' and
+'bonded_id' strings.  The atom number corresponding to 'bonded_id' is added 
+to the 'atom_id' array
+and vice versa.
+
+The centre of mass atom is now added using the 'self.atom_add()' function.  
+The atom corresponding
+to the unique axis of the spheroid ('Dpar_vect') is also added using this 
+function.  These two atoms
+are connected using 'self.atom_connect()'.
+
+The 'self.write_pdb_file()' function has been modified accordingly.
+
+
+Modified:
+    branches/tensor_pdb/generic_fns/pdb.py
+
+Modified: branches/tensor_pdb/generic_fns/pdb.py
+URL: 
+<a  href="http://svn.gna.org/viewcvs/relax/branches/tensor_pdb/generic_fns/pdb.py?rev=2681&amp;r1=2680&amp;r2=2681&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/tensor_pdb/generic_fns/pdb.py?rev=2681&amp;r1=2680&amp;r2=2681&amp;view=diff</a>
+==============================================================================
+--- branches/tensor_pdb/generic_fns/pdb.py (original)
++++ branches/tensor_pdb/generic_fns/pdb.py Sun Oct 29 03:51:46 2006
+@@ -37,6 +37,80 @@
+         self.print_flag = 1
+ 
+ 
++    def atom_add(self, atom_id, element, pos):
++        &quot;&quot;&quot;Function for adding an atom to the self.atomic_data structure.
++
++        The self.atomic_data data structure is a dictionary of arrays.  The 
+keys correspond to the
++        'atom_id' strings.  The elements of the array are:
++
++            0:  Atom number.
++
++            1:  Element type.
++
++            2:  The x coordinate of the atom.
++
++            3:  The y coordinate of the atom.
++
++            4:  The z coordinate of the atom.
++
++            5 onwards:  The bonded atom numbers.
++
++        This function will create the key-value pair for the atom.
++
++        &quot;&quot;&quot;
++
++        # Create the key-value pair.
++        # The array elements added are:
++        #     The atom number (length of the structure + 1).
++        #     The element type.
++        #     The coordinates.
++        self.atomic_data[atom_id] = [len(self.atomic_data) + 1, element, 
+pos[0], pos[1], pos[2]]
++
++
++    def atom_connect(self, atom_id, bonded_id):
++        &quot;&quot;&quot;Function for connecting two atoms within the self.atomic_data 
+data structure.
++
++        The self.atomic_data data structure is a dictionary of arrays.  The 
+keys correspond to the
++        'atom_id' strings.  The elements of the array are:
++
++            0:  Atom number.
++
++            1:  Element type.
++
++            2:  The x coordinate of the atom.
++
++            3:  The y coordinate of the atom.
++
++            4:  The z coordinate of the atom.
++
++            5 onwards:  The bonded atom numbers.
++
++        This function will find the atom number corresponding to both the 
+atom_id and bonded_id.
++        The bonded_id atom number will then be appended to the atom_id 
+array.  Because the
++        connections work both ways in the PDB file, the atom_id atom number 
+will be appended to the
++        bonded_id atom array as well.
++
++        &quot;&quot;&quot;
++
++        # Find the atom number corresponding to atom_id.
++        if self.atomic_data.has_key(atom_id):
++            atom_num = self.atomic_data[atom_id][0]
++        else:
++            raise RelaxError, &quot;The atom corresponding to the atom_id &quot; + 
+`atom_id` + &quot; doesn't exist.&quot;
++
++        # Find the atom number corresponding to bonded_id.
++        if self.atomic_data.has_key(bonded_id):
++            bonded_num = self.atomic_data[bonded_id][0]
++        else:
++            raise RelaxError, &quot;The atom corresponding to the bonded_id &quot; + 
+`bonded_id` + &quot; doesn't exist.&quot;
++
++        # Add the bonded_id to the atom_id array.
++        self.atomic_data[atom_id].append(bonded_num)
++
++        # Add the atom_id to the bonded_id array.
++        self.atomic_data[bonded_id].append(atom_num)
++
++
+     def atomic_mass(self, element=None):
+         &quot;&quot;&quot;Return the atomic mass of the given element.&quot;&quot;&quot;
+ 
+@@ -156,11 +230,10 @@
+         # Initialise the PDB data.
+         ##########################
+ 
+-        # PDB HETATM and CONECT data.
+-        hetatm = []
+-        conect = []
+-
+-        # Chain ID, residue number, residue name.
++        # The atom and atomic connections data structures.
++        self.atomic_data = {}
++
++        # Chain ID, residue number, residue name, chemical name, occupancy, 
+and default element.
+         chain_id = 'A'
+         res_num = 1
+         res_name = 'TNS'
+@@ -176,7 +249,7 @@
+         R = self.center_of_mass()
+ 
+         # Add the central atom.
+-        hetatm.append([R, 'C'])
++        self.atom_add(atom_id='R', element='C', pos=R)
+ 
+ 
+         # Axes of the tensor.
+@@ -196,8 +269,9 @@
+             # Position relative to the center of mass.
+             pos = R + Dpar_vect
+ 
+-            # Add the position as a HETATM.
+-            hetatm.append([pos, 'C'])
++            # Add the atom and connect it to the center of mass.
++            self.atom_add(atom_id='Dpar', element='C', pos=pos)
++            self.atom_connect(atom_id='Dpar', bonded_id='R')
+ 
+             # Print out.
+             print &quot;    Scaling factor:              &quot; + `scale`
+@@ -207,13 +281,6 @@
+             print
+ 
+ 
+-        # Connectivities.
+-        #################
+-
+-        conect.append(['1', '2'])
+-        conect.append(['2', '1'])
+-
+-
+         # Create the PDB file.
+         ######################
+ 
+@@ -221,7 +288,7 @@
+         tensor_pdb_file = self.relax.IO.open_write_file(self.file, self.dir, 
+force=self.force)
+ 
+         # Write the data.
+-        self.write_pdb_file(tensor_pdb_file, hetatm, conect, chain_id, 
+res_num, res_name, chemical_name, occupancy)
++        self.write_pdb_file(tensor_pdb_file, chain_id, res_num, res_name, 
+chemical_name, occupancy)
+ 
+         # Close the file.
+         tensor_pdb_file.close()
+@@ -557,11 +624,11 @@
+             data.xh_vect = ave_vector / sqrt(dot(ave_vector, ave_vector))
+ 
+ 
+-    def write_pdb_file(self, file, hetatm, conect, chain_id, res_num, 
+res_name, chemical_name, occupancy):
++    def write_pdb_file(self, file, chain_id, res_num, res_name, 
+chemical_name, occupancy):
+         &quot;&quot;&quot;Function for creating a PDB file from the given data.&quot;&quot;&quot;
+ 
+         # The HET record.
+-        file.write(&quot;%-6s %3s  %1s%4s%1s  %5s     %-40s\n&quot; % ('HET', 
+res_name, chain_id, res_num, '', len(hetatm), ''))
++        file.write(&quot;%-6s %3s  %1s%4s%1s  %5s     %-40s\n&quot; % ('HET', 
+res_name, chain_id, res_num, '', len(self.atomic_data), ''))
+ 
+         # The HETNAM record.
+         file.write(&quot;%-6s  %2s %3s %-55s\n&quot; % ('HETNAM', '', res_name, 
+chemical_name))
+@@ -569,11 +636,19 @@
+         # Count the elements.
+         H_count = 0
+         C_count = 0
+-        for vector, element in hetatm:
++        for key in self.atomic_data:
++            # The element.
++            element = self.atomic_data[key][1]
++
++            # Protons.
+             if element == 'H':
+                 H_count = H_count + 1
++
++            # Carbons.
+             elif element == 'C':
+                 C_count = C_count + 1
++
++            # Unsupported element type.
+             else:
+                 raise RelaxError, &quot;The element &quot; + `element` + &quot; was 
+expected to be one of ['H', 'C'].&quot;
+ 
+@@ -591,49 +666,54 @@
+         # The FORMUL record (chemical formula).
+         file.write(&quot;%-6s  %2s  %3s %2s%1s%-51s\n&quot; % ('FORMUL', 1, res_name, 
+'', '', formula))
+ 
+-        # Loop over the HETATMs.
+-        serial_num = 1
+-        for vector, element in hetatm:
++        # Add the HETATM records.
++        for key in self.atomic_data:
+             # Write the HETATM record.
+-            file.write(&quot;%-6s%5s %4s%1s%3s %1s%4s%1s   
+%8.3f%8.3f%8.3f%6.2f%6.2f      %4s%2s%2s\n&quot; % ('HETATM', serial_num, 
+element+`serial_num`, '', res_name, chain_id, res_num, '', vector[0], 
+vector[1], vector[2], occupancy, 0, '', element, ''))
+-
+-            # Increment the atom number.
+-            serial_num = serial_num + 1
++            file.write(&quot;%-6s%5s %4s%1s%3s %1s%4s%1s   
+%8.3f%8.3f%8.3f%6.2f%6.2f      %4s%2s%2s\n&quot; % ('HETATM', 
+self.atomic_data[key][0], 
+self.atomic_data[key][1]+`self.atomic_data[key][0]`, '', res_name, chain_id, 
+res_num, '', self.atomic_data[key][2], self.atomic_data[key][3], 
+self.atomic_data[key][4], occupancy, 0, '', self.atomic_data[key][1], ''))
+ 
+         # Terminate (TER record).
+-        file.write(&quot;%-6s%5s      %3s %1s%4s%1s\n&quot; % ('TER', serial_num, 
+res_name, chain_id, '', ''))
+-
+-        # Loop over the connections.
+-        for array in conect:
+-            # The atom.
+-            atom_serial_num = array[0]
++        file.write(&quot;%-6s%5s      %3s %1s%4s%1s\n&quot; % ('TER', 
+len(self.atomic_data)+1, res_name, chain_id, '', ''))
++
++        # Create the CONECT records.
++        connect_count = 0
++        for key in self.atomic_data:
++            # The atom number.
++            atom_num = self.atomic_data[key][0]
+ 
+             # First bonded atom.
+-            bonded1 = array[1]
++            if len(self.atomic_data[key]) &gt; 5:
++                bonded1 = self.atomic_data[key][5]
++
++            # No CONECT record required!
++            else:
++                continue
+ 
+             # Second bonded atom.
+-            if len(array) &gt; 2:
+-                bonded2 = array[2]
++            if len(self.atomic_data[key]) &gt; 6:
++                bonded2 = self.atomic_data[key][6]
+             else:
+                 bonded2 = ''
+ 
+             # Third bonded atom.
+-            if len(array) &gt; 3:
+-                bonded3 = array[3]
++            if len(self.atomic_data[key]) &gt; 7:
++                bonded3 = self.atomic_data[key][7]
+             else:
+                 bonded3 = ''
+ 
+             # Forth bonded atom.
+-            if len(array) &gt; 4:
+-                bonded4 = array[4]
++            if len(self.atomic_data[key]) &gt; 8:
++                bonded4 = self.atomic_data[key][8]
+             else:
+                 bonded4 = ''
+ 
+             # Write the CONECT record.
+-            file.write(&quot;%-6s%5s%5s%5s%5s%5s%5s%5s%5s%5s%5s%5s\n&quot; % 
+('CONECT', atom_serial_num, bonded1, bonded2, bonded3, bonded4, '', '', '', 
+'', '', ''))
++            file.write(&quot;%-6s%5s%5s%5s%5s%5s%5s%5s%5s%5s%5s%5s\n&quot; % 
+('CONECT', atom_num, bonded1, bonded2, bonded3, bonded4, '', '', '', '', '', 
+''))
++
++            # Increment the CONECT record count.
++            connect_count = connect_count + 1
+ 
+         # MASTER record.
+-        file.write(&quot;%-6s    %5s%5s%5s%5s%5s%5s%5s%5s%5s%5s%5s%5s\n&quot; % 
+('MASTER', 0, 0, 1, 0, 0, 0, 0, 0, len(hetatm), 1, len(conect), 0))
++        file.write(&quot;%-6s    %5s%5s%5s%5s%5s%5s%5s%5s%5s%5s%5s%5s\n&quot; % 
+('MASTER', 0, 0, 1, 0, 0, 0, 0, 0, len(self.atomic_data), 1, connect_count, 
+0))
+ 
+         # END.
+         file.write(&quot;END\n&quot;)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Sun Oct 29 04:00:08 2006</div>  
+</body>
+</html>

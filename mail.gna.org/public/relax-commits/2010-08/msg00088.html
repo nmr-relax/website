@@ -1,0 +1,274 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r11474 &#45; in /1.3: maths_fns/ test_suite/unit_tests/_maths_fns/ -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 11 Aug 2010 23:03:37 +0200 -->
+<!--X-Message-Id: E1OjISX&#45;0000fB&#45;Ts@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r11474 - in /1.3: maths_fns/ test_suite/unit_tests/_maths_fns/ -- August 11, 2010 - 23:03</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r11474 - in /1.3: maths_fns/ test_suite/unit_tests/_maths_fns/</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00088" class="tabs">Index by Date</a> | <a href="threads.html#00088" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00087.html">Date Prev</a>] [<a href="msg00089.html">Date Next</a>] [<a href="msg00087.html">Thread Prev</a>] [<a href="msg00089.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 11 Aug 2010 21:03:37 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00088.html">E1OjISX-0000fB-Ts@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on August 11, 2010 - 23:03:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Aug 11 23:03:37 2010
+New Revision: 11474
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=11474&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=11474&amp;view=rev</a>
+Log:
+Implemented the rotor frame order matrix model.
+
+This includes the addition of the target function and a unit test.
+
+
+Modified:
+    1.3/maths_fns/frame_order.py
+    1.3/maths_fns/frame_order_matrix_ops.py
+    1.3/test_suite/unit_tests/_maths_fns/test_frame_order_matrix_ops.py
+
+Modified: 1.3/maths_fns/frame_order.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/maths_fns/frame_order.py?rev=11474&amp;r1=11473&amp;r2=11474&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/maths_fns/frame_order.py?rev=11474&amp;r1=11473&amp;r2=11474&amp;view=diff</a>
+==============================================================================
+--- 1.3/maths_fns/frame_order.py (original)
++++ 1.3/maths_fns/frame_order.py Wed Aug 11 23:03:37 2010
+@@ -367,6 +367,30 @@
+         return chi2(self.red_tensors, self.red_tensors_bc, self.red_errors)
+ 
+ 
++    def func_rotor(self, params):
++        &quot;&quot;&quot;Target function for rotor model optimisation.
++
++        This function optimises against alignment tensors.  The Euler angles 
+for the tensor rotation are the first 3 parameters optimised in this model, 
+followed by the polar and azimuthal angles of the cone axis and the torsion 
+angle restriction.
++
++        @param params:  The vector of parameter values.  These are the 
+tensor rotation angles {alpha, beta, gamma, theta, phi, sigma_max}.
++        @type params:   list of float
++        @return:        The chi-squared or SSE value.
++        @rtype:         float
++        &quot;&quot;&quot;
++
++        # Unpack the parameters.
++        ave_pos_alpha, ave_pos_beta, ave_pos_gamma, axis_theta, axis_phi, 
+sigma_max = params
++
++        # Generate the 2nd degree Frame Order super matrix.
++        frame_order_2nd = compile_2nd_matrix_rotor(self.frame_order_2nd, 
+self.rot, self.z_axis, self.cone_axis, axis_theta, axis_phi, sigma_max)
++
++        # Reduce and rotate the tensors.
++        self.reduce_and_rot(ave_pos_alpha, ave_pos_beta, ave_pos_gamma, 
+frame_order_2nd)
++
++        # Return the chi-squared value.
++        return chi2(self.red_tensors, self.red_tensors_bc, self.red_errors)
++
++
+     def reduce_and_rot(self, ave_pos_alpha=None, ave_pos_beta=None, 
+ave_pos_gamma=None, daeg=None):
+         &quot;&quot;&quot;Reduce and rotate the alignments tensors using the frame order 
+matrix and Euler angles.
+ 
+
+Modified: 1.3/maths_fns/frame_order_matrix_ops.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/maths_fns/frame_order_matrix_ops.py?rev=11474&amp;r1=11473&amp;r2=11474&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/maths_fns/frame_order_matrix_ops.py?rev=11474&amp;r1=11473&amp;r2=11474&amp;view=diff</a>
+==============================================================================
+--- 1.3/maths_fns/frame_order_matrix_ops.py (original)
++++ 1.3/maths_fns/frame_order_matrix_ops.py Wed Aug 11 23:03:37 2010
+@@ -349,6 +349,64 @@
+ 
+     # Average position rotation.
+     euler_to_R_zyz(eigen_alpha, eigen_beta, eigen_gamma, R)
++
++    # Rotate and return the frame order matrix.
++    return rotate_daeg(matrix, R)
++
++
++def compile_2nd_matrix_rotor(matrix, R, z_axis, cone_axis, theta_axis, 
+phi_axis, smax):
++    &quot;&quot;&quot;Generate the rotated 2nd degree Frame Order matrix for the rotor 
+model.
++
++    The cone axis is assumed to be parallel to the z-axis in the eigenframe.
++
++
++    @param matrix:      The Frame Order matrix, 2nd degree to be populated.
++    @type matrix:       numpy 9D, rank-2 array
++    @param R:           The rotation matrix to be populated.
++    @type R:            numpy 3D, rank-2 array
++    @param z_axis:      The molecular frame z-axis from which the cone axis 
+is rotated from.
++    @type z_axis:       numpy 3D, rank-1 array
++    @param cone_axis:   The storage structure for the cone axis.
++    @type cone_axis:    numpy 3D, rank-1 array
++    @param theta_axis:  The cone axis polar angle.
++    @type theta_axis:   float
++    @param phi_axis:    The cone axis azimuthal angle.
++    @type phi_axis:     float
++    @param smax:        The maximum torsion angle.
++    @type smax:         float
++    &quot;&quot;&quot;
++
++    # Zeros.
++    for i in range(9):
++        for j in range(9):
++            matrix[i, j] = 0.0
++
++    # Repetitive trig calculations.
++    sinc_smax = sinc(smax/pi)
++    sinc_2smax = sinc(2.0*smax/pi)
++
++    # Diagonal.
++    matrix[0, 0] = (sinc_2smax + 1.0) / 2.0
++    matrix[1, 1] = matrix[0, 0]
++    matrix[2, 2] = sinc_smax
++    matrix[3, 3] = matrix[0, 0]
++    matrix[4, 4] = matrix[0, 0]
++    matrix[5, 5] = matrix[2, 2]
++    matrix[6, 6] = matrix[2, 2]
++    matrix[7, 7] = matrix[2, 2]
++    matrix[8, 8] = 1.0
++
++    # Off diagonal set 1.
++    matrix[0, 4] = matrix[4, 0] = -(sinc_2smax - 1.0) / 2.0
++
++    # Off diagonal set 2.
++    matrix[1, 3] = matrix[3, 1] = -matrix[0, 4]
++
++    # Generate the cone axis from the spherical angles.
++    spherical_to_cartesian([1.0, theta_axis, phi_axis], cone_axis)
++
++    # Average position rotation.
++    two_vect_to_R(z_axis, cone_axis, R)
+ 
+     # Rotate and return the frame order matrix.
+     return rotate_daeg(matrix, R)
+
+Modified: 1.3/test_suite/unit_tests/_maths_fns/test_frame_order_matrix_ops.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/test_suite/unit_tests/_maths_fns/test_frame_order_matrix_ops.py?rev=11474&amp;r1=11473&amp;r2=11474&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/test_suite/unit_tests/_maths_fns/test_frame_order_matrix_ops.py?rev=11474&amp;r1=11473&amp;r2=11474&amp;view=diff</a>
+==============================================================================
+--- 1.3/test_suite/unit_tests/_maths_fns/test_frame_order_matrix_ops.py 
+(original)
++++ 1.3/test_suite/unit_tests/_maths_fns/test_frame_order_matrix_ops.py Wed 
+Aug 11 23:03:37 2010
+@@ -811,6 +811,39 @@
+                 self.assertAlmostEqual(f2a[i, j], f2b[i, j])
+ 
+ 
++    def test_compile_2nd_matrix_rotor(self):
++        &quot;&quot;&quot;Check the operation of the compile_2nd_matrix_rotor() function.&quot;&quot;&quot;
++
++        # The real 2nd degree frame order matrix.
++        real = array(
++                    [[    0.7069,   -0.0002,         0,   -0.0002,    
+0.2931,         0,         0,         0,         0],
++                     [    0.0002,    0.7069,         0,   -0.2931,   
+-0.0002,         0,         0,         0,         0],
++                     [         0,         0,    0.8271,         0,         
+0,   -0.0003,         0,         0,         0],
++                     [    0.0002,   -0.2931,         0,    0.7069,   
+-0.0002,         0,         0,         0,         0],
++                     [    0.2931,    0.0002,         0,    0.0002,    
+0.7069,         0,         0,         0,         0],
++                     [         0,         0,    0.0003,         0,         
+0,    0.8271,         0,         0,         0],
++                     [         0,         0,         0,         0,         
+0,         0,    0.8271,   -0.0003,         0],
++                     [         0,         0,         0,         0,         
+0,         0,    0.0003,    0.8271,         0],
++                     [         0,         0,         0,         0,         
+0,         0,         0,         0,    1.0000]])
++
++        # Init.
++        sigma_max = 60.0 / 180.0 * pi
++
++        # Calculate the matrix.
++        f2 = compile_2nd_matrix_rotor(self.f2_temp, self.R_temp, 
+self.z_axis, self.cone_axis, 0.0, 0.0, sigma_max)
++
++        # Print out.
++        print_frame_order_2nd_degree(real, &quot;real&quot;)
++        print_frame_order_2nd_degree(f2, &quot;calculated&quot;)
++        print_frame_order_2nd_degree(real-f2, &quot;difference&quot;)
++
++        # Check the values.
++        for i in range(9):
++            for j in range(9):
++                print &quot;Element %s, %s.&quot; % (i, j)
++                self.assert_(abs(f2[i, j] - real[i, j]) &lt; 1e-3)
++
++
+     def test_reduce_alignment_tensor_order(self):
+         &quot;&quot;&quot;Test the alignment tensor reduction for the order identity 
+matrix.&quot;&quot;&quot;
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Aug 11 23:20:01 2010</div>  
+</body>
+</html>

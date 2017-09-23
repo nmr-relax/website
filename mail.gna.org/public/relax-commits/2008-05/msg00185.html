@@ -1,0 +1,265 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r6200 &#45; /1.3/specific_fns/relax_fit.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 21 May 2008 22:37:11 +0200 -->
+<!--X-Message-Id: E1Jyuzz&#45;0007ot&#45;6M@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r6200 - /1.3/specific_fns/relax_fit.py -- May 21, 2008 - 22:37</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r6200 - /1.3/specific_fns/relax_fit.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00185" class="tabs">Index by Date</a> | <a href="threads.html#00185" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00184.html">Date Prev</a>] [<a href="msg00186.html">Date Next</a>] [<a href="msg00184.html">Thread Prev</a>] [<a href="msg00186.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 21 May 2008 20:33:22 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00185.html">E1Jyuzz-0007ot-6M@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on May 21, 2008 - 22:37:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed May 21 22:33:16 2008
+New Revision: 6200
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=6200&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=6200&amp;view=rev</a>
+Log:
+Updated the grid_search_setup() to the new design.
+
+
+Modified:
+    1.3/specific_fns/relax_fit.py
+
+Modified: 1.3/specific_fns/relax_fit.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/specific_fns/relax_fit.py?rev=6200&amp;r1=6199&amp;r2=6200&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/specific_fns/relax_fit.py?rev=6200&amp;r1=6199&amp;r2=6200&amp;view=diff</a>
+==============================================================================
+--- 1.3/specific_fns/relax_fit.py (original)
++++ 1.3/specific_fns/relax_fit.py Wed May 21 22:33:16 2008
+@@ -406,82 +406,107 @@
+         self.minimise(min_algor='grid', lower=lower, upper=upper, inc=inc, 
+constraints=constraints, verbosity=verbosity, sim_index=sim_index)
+ 
+ 
+-    def grid_search_setup(self, index=None):
+-        &quot;&quot;&quot;The grid search setup function.&quot;&quot;&quot;
++    def grid_search_setup(self, spin=None, param_vector=None, lower=None, 
+upper=None, inc=None, scaling_matrix=None):
++        &quot;&quot;&quot;The grid search setup function.
++
++        @keyword spin:              The spin data container.
++        @type spin:                 SpinContainer instance
++        @keyword param_vector:      The parameter vector.
++        @type param_vector:         numpy array
++        @keyword lower:             The lower bounds of the grid search 
+which must be equal to the
++                                    number of parameters in the model.  This 
+optional argument is
++                                    only used when doing a grid search.
++        @type lower:                array of numbers
++        @keyword upper:             The upper bounds of the grid search 
+which must be equal to the
++                                    number of parameters in the model.  This 
+optional argument is
++                                    only used when doing a grid search.
++        @type upper:                array of numbers
++        @keyword inc:               The increments for each dimension of the 
+space for the grid
++                                    search.  The number of elements in the 
+array must equal to the
++                                    number of parameters in the model.  This 
+argument is only used
++                                    when doing a grid search.
++        @type inc:                  array of int
++        @keyword scaling_matrix:    The scaling matrix.
++        @type scaling_matrix:       numpy diagonal matrix
++        @return:                    The minimisation options.  The first 
+dimension corresponds to
++                                    the model parameter.  The second 
+dimension is a list of the
++                                    number of increments, the lower bound, 
+and upper bound.
++        @rtype:                     list of lists [int, float, float]
++        &quot;&quot;&quot;
+ 
+         # The length of the parameter array.
+-        n = len(self.param_vector)
++        n = len(param_vector)
+ 
+         # Make sure that the length of the parameter array is &gt; 0.
+         if n == 0:
+             raise RelaxError, &quot;Cannot run a grid search on a model with zero 
+parameters.&quot;
+ 
+         # Lower bounds.
+-        if self.lower != None:
+-            if len(self.lower) != n:
++        if lower != None:
++            if len(lower) != n:
+                 raise RelaxLenError, ('lower bounds', n)
+ 
+         # Upper bounds.
+-        if self.upper != None:
+-            if len(self.upper) != n:
++        if upper != None:
++            if len(upper) != n:
+                 raise RelaxLenError, ('upper bounds', n)
+ 
+         # Increment.
+-        if type(self.inc) == list:
+-            if len(self.inc) != n:
++        if type(inc) == list:
++            if len(inc) != n:
+                 raise RelaxLenError, ('increment', n)
+-            inc = self.inc
+-        elif type(self.inc) == int:
++            inc = inc
++        elif type(inc) == int:
+             temp = []
+             for j in xrange(n):
+-                temp.append(self.inc)
++                temp.append(inc)
+             inc = temp
++
++        # Alias the current data pipe.
++        cdp = relax_data_store[relax_data_store.current_pipe]
+ 
+         # Minimisation options initialisation.
+         min_options = []
+         j = 0
+ 
+-        # Alias the residue specific data structure.
+-        data = relax_data_store.res[self.run][index]
+-
+         # Loop over the parameters.
+-        for i in xrange(len(data.params)):
++        for i in xrange(len(spin.params)):
+             # Relaxation rate (from 0 to 20 s^-1).
+-            if data.params[i] == 'Rx':
++            if spin.params[i] == 'Rx':
+                 min_options.append([inc[j], 0.0, 20.0])
+ 
+             # Intensity
+-            elif search('^I', data.params[i]):
++            elif search('^I', spin.params[i]):
+                 # Find the position of the first time point.
+-                pos = 
+relax_data_store.relax_times[self.run].index(min(relax_data_store.relax_times[self.run]))
++                pos = cdp.relax_times.index(min(cdp.relax_times))
+ 
+                 # Scaling.
+-                min_options.append([inc[j], 0.0, 
+average(data.intensities[pos])])
++                min_options.append([inc[j], 0.0, 
+average(spin.intensities[pos])])
+ 
+             # Increment j.
+             j = j + 1
+ 
+         # Set the lower and upper bounds if these are supplied.
+-        if self.lower != None:
++        if lower != None:
+             for j in xrange(n):
+-                if self.lower[j] != None:
+-                    min_options[j][1] = self.lower[j]
+-        if self.upper != None:
++                if lower[j] != None:
++                    min_options[j][1] = lower[j]
++        if upper != None:
+             for j in xrange(n):
+-                if self.upper[j] != None:
+-                    min_options[j][2] = self.upper[j]
++                if upper[j] != None:
++                    min_options[j][2] = upper[j]
+ 
+         # Test if the grid is too large.
+-        self.grid_size = 1
++        grid_size = 1
+         for i in xrange(len(min_options)):
+-            self.grid_size = self.grid_size * min_options[i][0]
+-        if type(self.grid_size) == long:
+-            raise RelaxError, &quot;A grid search of size &quot; + `self.grid_size` + 
+&quot; is too large.&quot;
++            grid_size = grid_size * min_options[i][0]
++        if type(grid_size) == long:
++            raise RelaxError, &quot;A grid search of size &quot; + `grid_size` + &quot; is 
+too large.&quot;
+ 
+         # Diagonal scaling of minimisation options.
+         for j in xrange(len(min_options)):
+-            min_options[j][1] = min_options[j][1] / self.scaling_matrix[j, j]
+-            min_options[j][2] = min_options[j][2] / self.scaling_matrix[j, j]
++            min_options[j][1] = min_options[j][1] / scaling_matrix[j, j]
++            min_options[j][2] = min_options[j][2] / scaling_matrix[j, j]
+ 
+         return min_options
+ 
+@@ -739,7 +764,7 @@
+ 
+             # Get the grid search minimisation options.
+             if match('^[Gg]rid', min_algor):
+-                min_options = self.grid_search_setup(spin=spin, lower=lower, 
+upper=upper, inc=inc, scaling_matrix=scaling_matrix)
++                min_options = self.grid_search_setup(spin=spin, 
+param_vector=param_vector, lower=lower, upper=upper, inc=inc, 
+scaling_matrix=scaling_matrix)
+ 
+             # Linear constraints.
+             if constraints:
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed May 21 22:40:17 2008</div>  
+</body>
+</html>

@@ -1,0 +1,154 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r23964 &#45; /branches/disp_spin_speed/lib/dispersion/ns_cpmg_2site_3d.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Sun, 15 Jun 2014 15:57:34 +0200 -->
+<!--X-Message-Id: E1WwAw9&#45;0006EW&#45;TB@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r23964 - /branches/disp_spin_speed/lib/dispersion/ns_cpmg_2site_3d.py -- June 15, 2014 - 15:57</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r23964 - /branches/disp_spin_speed/lib/dispersion/ns_cpmg_2site_3d.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00351" class="tabs">Index by Date</a> | <a href="threads.html#00351" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00350.html">Date Prev</a>] [<a href="msg00352.html">Date Next</a>] [<a href="msg00350.html">Thread Prev</a>] [<a href="msg00352.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Sun, 15 Jun 2014 13:57:33 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00351.html">E1WwAw9-0006EW-TB@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on June 15, 2014 - 15:57:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Sun Jun 15 15:57:33 2014
+New Revision: 23964
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=23964&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=23964&amp;view=rev</a>
+Log:
+Implemented the BLAS method of dot product, which should be faster.
+
+I cannot get the &quot;out&quot; argument to work.
+
+Task #7807 (<a  rel="nofollow" href="https://gna.org/task/index.php?7807">https://gna.org/task/index.php?7807</a>): Speed-up of dispersion 
+models for Clustered analysis.
+
+Modified:
+    branches/disp_spin_speed/lib/dispersion/ns_cpmg_2site_3d.py
+
+Modified: branches/disp_spin_speed/lib/dispersion/ns_cpmg_2site_3d.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/disp_spin_speed/lib/dispersion/ns_cpmg_2site_3d.py?rev=23964&amp;r1=23963&amp;r2=23964&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/disp_spin_speed/lib/dispersion/ns_cpmg_2site_3d.py?rev=23964&amp;r1=23963&amp;r2=23964&amp;view=diff</a>
+==============================================================================
+--- branches/disp_spin_speed/lib/dispersion/ns_cpmg_2site_3d.py (original)
++++ branches/disp_spin_speed/lib/dispersion/ns_cpmg_2site_3d.py Sun Jun 15 
+15:57:33 2014
+@@ -56,6 +56,7 @@
+ # Python module imports.
+ from numpy import asarray, dot, fabs, isfinite, log, min, sum
+ from numpy.ma import fix_invalid, masked_where
++from scipy.linalg.blas import dgemm as blas_dot
+ 
+ 
+ # relax module imports.
+@@ -158,14 +159,31 @@
+                 # This matrix is a propagator that will evolve the 
+magnetization with the matrix R for a delay tcp.
+                 Rexpo = matrix_exponential(R*tcp_si_mi_di)
+ 
++                # The numpy way. Give dot two matrices that are both 
+C_CONTIGUOUS, then the performance is better:
+                 # The essential evolution matrix.
+                 # This is the first round.
+-                dot(Rexpo, r180x, evolution_matrix)
+-                evolution_matrix = dot(evolution_matrix, Rexpo)
++                #dot(Rexpo.T, r180x.T, evolution_matrix)
++                #evolution_matrix = dot(evolution_matrix, Rexpo)
+                 # The second round.
+-                evolution_matrix = dot(evolution_matrix, evolution_matrix)
++                #evolution_matrix = dot(evolution_matrix, evolution_matrix)
+                 # The third and fourth round,
+-                evolution_matrix = dot(evolution_matrix, evolution_matrix)
++                #evolution_matrix = dot(evolution_matrix, evolution_matrix)
++
++                # Give dot two matrices that are both F_CONTIGUOUS, we can 
+use BLAS through the method: 
++                # The become F_CONTIGUOUS by transposing them.
++                # See by: print Rexpo.flags.c_contiguous, 
+Rexpo.T.flags.c_contiguous
++                # <a  rel="nofollow" href="http://wiki.scipy.org/PerformanceTips">http://wiki.scipy.org/PerformanceTips</a>
++                # The FORTRAN code.
++                # 
+tchar=s,d,c,z&gt;gemm(m,n,k,alpha,a,b,beta,c,trans_a,trans_b,lda,ka,ldb,kb)
++                #   ! c = 
+gemm(alpha,a,b,beta=0,c=0,trans_a=0,trans_b=0,overwrite_c=0)
++                #   ! Calculate C &lt;- alpha * op(A) * op(B) + beta * C
++                # This is the first round.
++                evolution_matrix[:] = blas_dot(alpha=1.0, a=Rexpo.T, 
+b=r180x.T, trans_a=True, trans_b=True)
++                evolution_matrix[:] = blas_dot(alpha=1.0, 
+a=evolution_matrix.T, b=Rexpo.T, trans_a=True, trans_b=True)
++                # The second round.
++                evolution_matrix[:] = blas_dot(alpha=1.0, 
+a=evolution_matrix.T, b=evolution_matrix.T, trans_a=True, trans_b=True)
++                # The third and fourth round.
++                evolution_matrix[:] = blas_dot(alpha=1.0, 
+a=evolution_matrix.T, b=evolution_matrix.T, trans_a=True, trans_b=True)
+ 
+                 # Loop over the CPMG elements, propagating the magnetisation.
+                 for j in range(power_si_mi_di/2):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Sun Jun 15 16:40:02 2014</div>  
+</body>
+</html>

@@ -1,0 +1,220 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r5838 &#45; /1.3/generic_fns/structure/main.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Sun, 20 Apr 2008 13:26:30 +0200 -->
+<!--X-Message-Id: E1JnXgi&#45;0006Up&#45;VQ@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r5838 - /1.3/generic_fns/structure/main.py -- April 20, 2008 - 13:26</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r5838 - /1.3/generic_fns/structure/main.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00596" class="tabs">Index by Date</a> | <a href="threads.html#00596" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00595.html">Date Prev</a>] [<a href="msg00597.html">Date Next</a>] [<a href="msg00595.html">Thread Prev</a>] [<a href="msg00597.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Sun, 20 Apr 2008 11:26:28 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00596.html">E1JnXgi-0006Up-VQ@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on April 20, 2008 - 13:26:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Sun Apr 20 13:26:25 2008
+New Revision: 5838
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=5838&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=5838&amp;view=rev</a>
+Log:
+Shifted the XH vector calculation from the xh_vector() structural API method 
+to the vector() fn.
+
+This calculation can be done independently from the type of the structural 
+data object.
+
+
+Modified:
+    1.3/generic_fns/structure/main.py
+
+Modified: 1.3/generic_fns/structure/main.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/generic_fns/structure/main.py?rev=5838&amp;r1=5837&amp;r2=5838&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/generic_fns/structure/main.py?rev=5838&amp;r1=5837&amp;r2=5838&amp;view=diff</a>
+==============================================================================
+--- 1.3/generic_fns/structure/main.py (original)
++++ 1.3/generic_fns/structure/main.py Sun Apr 20 13:26:25 2008
+@@ -21,6 +21,8 @@
+ 
+###############################################################################
+ 
+ # Python module imports.
++from math import sqrt
++from numpy import dot
+ from os import F_OK, access
+ import sys
+ from warnings import warn
+@@ -33,7 +35,7 @@
+ from generic_fns.structure.scientific import Scientific_data
+ from relax_errors import RelaxError, RelaxFileError, RelaxNoPipeError, 
+RelaxNoSequenceError, RelaxPdbError
+ from relax_io import get_file_path
+-from relax_warnings import RelaxNoPDBFileWarning
++from relax_warnings import RelaxNoPDBFileWarning, RelaxZeroVectorWarning
+ 
+ 
+ 
+@@ -228,33 +230,79 @@
+             print &quot;\nCalculating the unit XH vectors from the structure.&quot;
+ 
+     # Loop over all the structural data.
++    first_model = None
++    spin_list = []
+     for atom in cdp.structure.atom_loop(atom_id=spin_id, 
+model_num_flag=True, mol_name_flag=True, res_num_flag=True, 
+res_name_flag=True, atom_num_flag=True, atom_name_flag=True, 
+element_flag=True, pos_flag=True):
+         # Unpack the data.
+         model_num, mol_name, res_num, res_name, atom_num, atom_name, 
+element, pos = atom
+ 
+         # The spin identification string.
+         spin_id = generate_spin_id(mol_name, res_num, res_name, atom_num, 
+atom_name)
+-        print spin_id
+ 
+         # Get the corresponding spin.
+         spin = return_spin(selection=spin_id)
+ 
+-    return
+-
+-    # Loop over the sequence.
+-    for spin in spin_loop(spin_id):
+-        # Skip unselected residues.
++        # Proton name does not match, so skip the atom.
++        if proton != atom_name:
++            continue
++
++        # No matching spin, so skip the atom.
++        if not spin:
++            continue
++
++        # Skip deselected spins.
+         if not spin.select:
+             continue
+ 
++        # The first model.
++        if first_model == None:
++            first_model = model_num
++
++        # The XH vector already exists.
++        if first_model == model_num and hasattr(spin, 'xh_vect'):
++            warn(RelaxWarning(&quot;The XH vector for the spin &quot; + `spin_id` + &quot; 
+already exists&quot;))
++            continue
++
++        # Store the spin_id.
++        if first_model == model_num:
++            spin_list.append(spin_id)
++
+         # Set the attached proton name.
+-        spin.attached_proton = proton
+-
+-        # Calculate the vector.
+-        vector = cdp.structure.xh_vector(spin)
++        if not hasattr(spin, 'attached_proton'):
++            spin.attached_proton = proton
++        elif spin.attached_proton != proton:
++            raise RelaxError, &quot;The attached proton &quot; + 
+`spin.attached_proton` + &quot; does not match the proton argument &quot; + `proton` + 
+&quot;.&quot;
++
++        # Set the heteronucleus and proton positions.
++        posX = spin.pos
++        posH = pos
++
++        # Calculate the XH bond vector.
++        vector = posH - posX
++
++        # Unit vector.
++        if unit:
++            # Normalisation factor.
++            norm_factor = sqrt(dot(vector, vector))
++
++            # Test for zero length.
++            if norm_factor == 0.0:
++                warn(RelaxZeroVectorWarning(spin_id))
++
++            # Calculate the normalised vector.
++            else:
++                vector = vector / norm_factor
+ 
+         # Set the vector and deselect the spin if the vector doesn't exist.
+-        if vector != None:
+-            spin.xh_vect = vector    
++        if not hasattr(spin, 'xh_vect'):
++            spin.xh_vect = vector
+         else:
+-            spin.select = False
++            spin.xh_vect = spin.xh_vect + vector
++
++    # Average the XH vectors for all models.
++    for spin_id in spin_list:
++        # Get the spin.
++        spin = return_spin(selection=spin_id)
++
++        # Average the vector.
++        spin.xh_vect = spin.xh_vect / cdp.structure.num_models()
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Sun Apr 20 13:40:26 2008</div>  
+</body>
+</html>

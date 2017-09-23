@@ -1,0 +1,349 @@
+<!-- MHonArc v2.6.10 -->
+<!--X-Subject: r3217 &#45; in /1.3: ./ generic_fns/ test_suite/unit_tests/generic_fns/ -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 19 Mar 2007 05:48:31 +0100 -->
+<!--X-Message-Id: E1HT9mr&#45;0002xQ&#45;Dx@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r3217 - in /1.3: ./ generic_fns/ test_suite/unit_tests/generic_fns/ -- March 19, 2007 - 05:48</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r3217 - in /1.3: ./ generic_fns/ test_suite/unit_tests/generic_fns/</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00158" class="tabs">Index by Date</a> | <a href="threads.html#00158" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00157.html">Date Prev</a>] [<a href="msg00159.html">Date Next</a>] [<a href="msg00157.html">Thread Prev</a>] [<a href="msg00159.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 19 Mar 2007 04:48:00 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00158.html">E1HT9mr-0002xQ-Dx@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on March 19, 2007 - 05:48:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Mon Mar 19 05:47:57 2007
+New Revision: 3217
+
+URL: <a  href="http://svn.gna.org/viewcvs/relax?rev=3217&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=3217&amp;view=rev</a>
+Log:
+Implemented the generic_fns.residue.delete() function (although it doesn't 
+work yet).
+
+This function has been coded to use the UCSF selection syntax as described in 
+Gary Thompson's post
+located at <a  href="https://mail.gna.org/public/relax-devel/2007-01/msg00014.html">https://mail.gna.org/public/relax-devel/2007-01/msg00014.html</a> 
+(Message-id:
+&lt;f001463a0701071417w6bd7927cp8fdd052e698575ec@xxxxxxxxxxxxxx&gt;).
+
+The function makes use of three new selection functions - tokenise, 
+parse_token, and molecule_loop.
+The first two are described at 
+<a  href="https://mail.gna.org/public/relax-devel/2007-01/msg00036.html">https://mail.gna.org/public/relax-devel/2007-01/msg00036.html</a>
+(Message-ID: &lt;1168883717.7569.511.camel@mrspell&gt;).  The last function is 
+similar to the spin_loop
+function described in the same post.  All three are yet to be implemented 
+(although stubs have been
+created for the functions).
+
+The RelaxError 'RelaxSpinSelectDisallowError' has been created to prevent 
+spins from being selected
+by the user function.
+
+The unit tests for generic_fns.residue.delete() have been updated and two 
+more added:
+test_delete_all() and test_delete_shift().
+
+Modified:
+    1.3/generic_fns/residue.py
+    1.3/generic_fns/selection.py
+    1.3/relax_errors.py
+    1.3/test_suite/unit_tests/generic_fns/test_residue.py
+
+Modified: 1.3/generic_fns/residue.py
+URL: 
+<a  href="http://svn.gna.org/viewcvs/relax/1.3/generic_fns/residue.py?rev=3217&amp;r1=3216&amp;r2=3217&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/generic_fns/residue.py?rev=3217&amp;r1=3216&amp;r2=3217&amp;view=diff</a>
+==============================================================================
+--- 1.3/generic_fns/residue.py (original)
++++ 1.3/generic_fns/residue.py Mon Mar 19 05:47:57 2007
+@@ -22,10 +22,8 @@
+ 
+ # relax module imports.
+ from data import Data as relax_data_store
+-from relax_errors import RelaxError, RelaxFileEmptyError, 
+RelaxNoPdbChainError, RelaxNoRunError, RelaxNoSequenceError, 
+RelaxSequenceError
+-
+-
+-# The relax data storage object.
++from relax_errors import RelaxError, RelaxFileEmptyError, 
+RelaxNoPdbChainError, RelaxNoRunError, RelaxNoSequenceError, 
+RelaxSequenceError, RelaxSpinSelectDisallowError
++from selection import molecule_loop, parse_token, tokenise
+ 
+ 
+ 
+@@ -113,6 +111,32 @@
+         cdp.mol[0].res.add_item(res_num=res_num, res_name=res_name)
+ 
+ 
++def delete(res_id=None):
++    &quot;&quot;&quot;Function for deleting residues from the current data pipe.
++
++    @param res_id:  The residue identifier string.
++    @type res_id:   str
++    &quot;&quot;&quot;
++
++    # Split up the selection string.
++    mol_token, res_token, spin_token = tokenise(res_id)
++
++    # Disallow spin selections.
++    if spin_token != None:
++        raise RelaxSpinSelectDisallowError
++
++    # Parse the tokens.
++    residues = parse_token(res_token)
++
++    # Molecule loop.
++    for mol in molecule_loop(mol_token):
++        # Loop over the residues of the molecule.
++        for i in xrange(len(mol.res)):
++            # Remove the residue is there is a match.
++            if mol.res[i].num in residues:
++                mol.res[i].pop()
++
++
+ class Residue:
+     def __init__(self, relax):
+         &quot;&quot;&quot;Class containing functions specific to amino-acid sequence.&quot;&quot;&quot;
+@@ -124,24 +148,6 @@
+         &quot;&quot;&quot;Function for returning a list of names of data structures 
+associated with the sequence.&quot;&quot;&quot;
+ 
+         return [ 'res' ]
+-
+-
+-    def delete(self, run=None):
+-        &quot;&quot;&quot;Function for deleting the sequence.&quot;&quot;&quot;
+-
+-        # Test if the run exists.
+-        if not run in relax_data_store.run_names:
+-            raise RelaxNoRunError, run
+-
+-        # Test if the sequence data is loaded.
+-        if not relax_data_store.res.has_key(run):
+-            raise RelaxNoSequenceError, run
+-
+-        # Delete the data.
+-        del(relax_data_store.res[run])
+-
+-        # Clean up the runs.
+-        self.relax.generic.runs.eliminate_unused_runs()
+ 
+ 
+     def display(self, run=None):
+
+Modified: 1.3/generic_fns/selection.py
+URL: 
+<a  href="http://svn.gna.org/viewcvs/relax/1.3/generic_fns/selection.py?rev=3217&amp;r1=3216&amp;r2=3217&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/generic_fns/selection.py?rev=3217&amp;r1=3216&amp;r2=3217&amp;view=diff</a>
+==============================================================================
+--- 1.3/generic_fns/selection.py (original)
++++ 1.3/generic_fns/selection.py Mon Mar 19 05:47:57 2007
+@@ -32,6 +32,15 @@
+ # The relax data storage object.
+ 
+ 
++def tokenise(selection):
++    return None, None, None
++
++def molecule_loop(selection):
++    for mol in relax_data_store[relax_data_store.current_pipe].mol:
++        yield mol
++
++def parse_token(token):
++    return []
+ 
+ class Selection:
+     def __init__(self, relax):
+
+Modified: 1.3/relax_errors.py
+URL: 
+<a  href="http://svn.gna.org/viewcvs/relax/1.3/relax_errors.py?rev=3217&amp;r1=3216&amp;r2=3217&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/relax_errors.py?rev=3217&amp;r1=3216&amp;r2=3217&amp;view=diff</a>
+==============================================================================
+--- 1.3/relax_errors.py (original)
++++ 1.3/relax_errors.py Mon Mar 19 05:47:57 2007
+@@ -532,6 +532,17 @@
+             self.save_state()
+ 
+ 
++# Selection errors.
++###################
++
++# Disallow spin selection.
++class RelaxSpinSelectDisallowError(BaseError):
++    def __init__(self):
++        self.text = &quot;The selection of spin systems is not allowed.&quot;
++        if Debug:
++            self.save_state()
++
++
+ # Setup errors.
+ ###############
+ 
+
+Modified: 1.3/test_suite/unit_tests/generic_fns/test_residue.py
+URL: 
+<a  href="http://svn.gna.org/viewcvs/relax/1.3/test_suite/unit_tests/generic_fns/test_residue.py?rev=3217&amp;r1=3216&amp;r2=3217&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/test_suite/unit_tests/generic_fns/test_residue.py?rev=3217&amp;r1=3216&amp;r2=3217&amp;view=diff</a>
+==============================================================================
+--- 1.3/test_suite/unit_tests/generic_fns/test_residue.py (original)
++++ 1.3/test_suite/unit_tests/generic_fns/test_residue.py Mon Mar 19 05:47:57 
+2007
+@@ -149,19 +149,69 @@
+         The function used is generic_fns.residues.delete().
+         &quot;&quot;&quot;
+ 
+-        # Create the first residue and add some data to its spin container.
+-        residue.create(1, 'Ala')
+-        relax_data_store['orig'].mol[0].res[0].spin[0].num = 111
+-        relax_data_store['orig'].mol[0].res[0].spin[0].x = 1
+-
+-        # Delete the residue.
+-        residue.delete(res_num=1, res_name='Ala')
++        # Create some residues and add some data to the spin containers.
++        residue.create(1, 'Ala')
++        residue.create(2, 'Ala')
++        residue.create(3, 'Ala')
++        residue.create(4, 'Ala')
++        relax_data_store['orig'].mol[0].res[3].spin[0].num = 111
++        relax_data_store['orig'].mol[0].res[3].spin[0].x = 1
++
++        # Delete the first residue.
++        residue.delete(res_id=':1')
+ 
+         # Test that the residue no longer exists (and defaults back to the 
+empty residue).
++        
+self.assertNotEqual(relax_data_store['orig'].mol[0].res[1].spin[0].num, 111)
++        self.assert_(not 
+hasattr(relax_data_store['orig'].mol[0].res[1].spin[0], 'x'))
++
++        # Delete the first residue.
++        residue.delete(res_id=':1')
++
++
++    def test_delete_all(self):
++        &quot;&quot;&quot;Test the deletion of all residues.
++
++        The function used is generic_fns.residues.delete().
++        &quot;&quot;&quot;
++
++        # Create some residues and add some data to the spin containers.
++        residue.create(1, 'Ala')
++        residue.create(2, 'Ala')
++        residue.create(3, 'Ala')
++        residue.create(4, 'Ala')
++        relax_data_store['orig'].mol[0].res[3].spin[0].num = 111
++        relax_data_store['orig'].mol[0].res[3].spin[0].x = 1
++
++        # Delete the first and third residues.
++        residue.delete(res_id=':1-4')
++
++        # Test that the first residue defaults back to the empty residue.
+         self.assertEqual(relax_data_store['orig'].mol[0].res[0].num, None)
+         self.assertEqual(relax_data_store['orig'].mol[0].res[0].name, None)
+-        
+self.assertNotEqual(relax_data_store['orig'].mol[0].res[1].spin[0].num, 111)
+-        self.assert_(not 
+hasattr(relax_data_store['orig'].mol[0].res[1].spin[0], 'x'))
++
++
++    def test_delete_shift(self):
++        &quot;&quot;&quot;Test the deletion of multiple residue.
++
++        The function used is generic_fns.residues.delete().
++        &quot;&quot;&quot;
++
++        # Create some residues and add some data to the spin containers.
++        residue.create(1, 'Ala')
++        residue.create(2, 'Ala')
++        residue.create(3, 'Ala')
++        residue.create(4, 'Ala')
++        relax_data_store['orig'].mol[0].res[3].spin[0].num = 111
++        relax_data_store['orig'].mol[0].res[3].spin[0].x = 1
++
++        # Delete the first and third residues.
++        residue.delete(res_id=':1,3')
++
++        # Test that the residue no longer exists (and defaults back to the 
+empty residue).
++        self.assertEqual(relax_data_store['orig'].mol[0].res[1].spin[0].num, 
+111)
++        self.assert_(hasattr(relax_data_store['orig'].mol[0].res[1].spin[0], 
+'x'))
++        self.assertEqual(relax_data_store['orig'].mol[0].res[0].num, None)
++        self.assertEqual(relax_data_store['orig'].mol[0].res[0].name, None)
+ 
+ 
+     def test_delete_fail(self):
+@@ -170,5 +220,5 @@
+         The function used is generic_fns.residues.delete().
+         &quot;&quot;&quot;
+ 
+-        # Delete a non-existant residue (1 Met).
+-        self.assertRaises(RelaxError, residue.delete, 1, 'Met')
++        # Delete a non-existant residue (2).
++        self.assertRaises(RelaxError, residue.delete, res_id=':2')
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Mar 19 06:00:08 2007</div>  
+</body>
+</html>

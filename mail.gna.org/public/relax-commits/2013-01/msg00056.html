@@ -1,0 +1,195 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r18229 &#45; /trunk/test_suite/system_tests/pcs.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 18 Jan 2013 17:01:53 +0100 -->
+<!--X-Message-Id: E1TwEO9&#45;0006tq&#45;06@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r18229 - /trunk/test_suite/system_tests/pcs.py -- January 18, 2013 - 17:01</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r18229 - /trunk/test_suite/system_tests/pcs.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00056" class="tabs">Index by Date</a> | <a href="threads.html#00056" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00055.html">Date Prev</a>] [<a href="msg00057.html">Date Next</a>] [<a href="msg00055.html">Thread Prev</a>] [<a href="msg00057.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 18 Jan 2013 16:01:52 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00056.html">E1TwEO9-0006tq-06@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on January 18, 2013 - 17:01:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Jan 18 17:01:52 2013
+New Revision: 18229
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=18229&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=18229&amp;view=rev</a>
+Log:
+Created the Pcs.test_grace_plot system test to check the pcs.corr_plot user 
+function.
+
+
+Modified:
+    trunk/test_suite/system_tests/pcs.py
+
+Modified: trunk/test_suite/system_tests/pcs.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/test_suite/system_tests/pcs.py?rev=18229&amp;r1=18228&amp;r2=18229&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/test_suite/system_tests/pcs.py?rev=18229&amp;r1=18228&amp;r2=18229&amp;view=diff</a>
+==============================================================================
+--- trunk/test_suite/system_tests/pcs.py (original)
++++ trunk/test_suite/system_tests/pcs.py Fri Jan 18 17:01:52 2013
+@@ -25,6 +25,9 @@
+ 
+ # Python module imports.
+ from os import sep
++from re import search
++from string import split
++from tempfile import mkdtemp
+ 
+ # relax module imports.
+ from generic_fns.mol_res_spin import count_spins, spin_loop
+@@ -34,6 +37,79 @@
+ 
+ class Pcs(SystemTestCase):
+     &quot;&quot;&quot;Class for testing PCS operations.&quot;&quot;&quot;
++
++    def test_grace_plot(self):
++        &quot;&quot;&quot;Test the creation of Grace plots of PCS data.&quot;&quot;&quot;
++
++        # Create a data pipe for all the data.
++        self.interpreter.pipe.create('CaM N-dom', 'N-state')
++
++        # Create some spins.
++        self.interpreter.spin.create(spin_name='N', spin_num=1, 
+res_name='Gly', res_num=3)
++        self.interpreter.spin.create(spin_name='H', spin_num=2, 
+res_name='Gly', res_num=3)
++        self.interpreter.spin.create(spin_name='N', spin_num=3, 
+res_name='Gly', res_num=4)
++        self.interpreter.spin.create(spin_name='H', spin_num=4, 
+res_name='Gly', res_num=4)
++        self.interpreter.sequence.display()
++
++        # Set the element type.
++        self.interpreter.spin.element(element='N', spin_id='@N')
++        self.interpreter.spin.element(element='H', spin_id='@H')
++
++        # Data directory.
++        dir = status.install_path + 
+sep+'test_suite'+sep+'shared_data'+sep+'align_data'+sep
++
++        # PCSs.
++        self.interpreter.pcs.read(align_id='dy', file='pcs_dy_200911.txt', 
+dir=dir, res_num_col=1, data_col=2, error_col=4, spin_id='@N')
++        self.interpreter.pcs.read(align_id='dy', file='pcs_dy_200911.txt', 
+dir=dir, res_num_col=1, data_col=3, error_col=4, spin_id='@H')
++
++        # Fudge the back-calculated PCS data.
++        for spin in spin_loop():
++            spin.pcs_bc = {}
++            spin.pcs_bc['dy'] = spin.pcs['dy'] + 0.1
++
++        # Create the grace plot.
++        self.tmpdir = mkdtemp()
++        self.interpreter.pcs.corr_plot(format='grace', file='pcs_corr.agr', 
+dir=self.tmpdir, force=True)
++
++        # Read the file data.
++        file = open(self.tmpdir+sep+'pcs_corr.agr')
++        lines = file.readlines()
++        file.close()
++
++        # Check the diagonal data.
++        for i in range(len(lines)):
++            if search('G0.S0', lines[i]):
++                point1 = split(lines[i+2])
++                point2 = split(lines[i+3])
++                self.assertAlmostEqual(float(point1[0]), -100.0)
++                self.assertAlmostEqual(float(point1[1]), -100.0)
++                self.assertAlmostEqual(float(point2[0]), 100.0)
++                self.assertAlmostEqual(float(point2[1]), 100.0)
++
++        # Check the 15N data.
++        for i in range(len(lines)):
++            if search('G0.S1', lines[i]):
++                point1 = split(lines[i+2])
++                point2 = split(lines[i+3])
++                self.assertAlmostEqual(float(point1[0]), 0.917+0.1)
++                self.assertAlmostEqual(float(point1[1]), 0.917)
++                self.assertAlmostEqual(float(point1[2]), 0.1)
++                self.assertAlmostEqual(float(point2[0]), 1.131+0.1)
++                self.assertAlmostEqual(float(point2[1]), 1.131)
++                self.assertAlmostEqual(float(point2[2]), 0.1)
++
++        # Check the 1H data.
++        for i in range(len(lines)):
++            if search('G0.S2', lines[i]):
++                point1 = split(lines[i+2])
++                point2 = split(lines[i+3])
++                self.assertAlmostEqual(float(point1[0]), 0.843+0.1)
++                self.assertAlmostEqual(float(point1[1]), 0.843)
++                self.assertAlmostEqual(float(point1[2]), 0.1)
++                self.assertAlmostEqual(float(point2[0]), 1.279+0.1)
++                self.assertAlmostEqual(float(point2[1]), 1.279)
++                self.assertAlmostEqual(float(point2[2]), 0.1)
++
+ 
+     def test_load_multi_col_data(self):
+         &quot;&quot;&quot;Test the loading of PCS data from a file with different columns 
+for each spin type.&quot;&quot;&quot;
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Jan 18 17:40:01 2013</div>  
+</body>
+</html>

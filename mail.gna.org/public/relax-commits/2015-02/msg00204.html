@@ -1,0 +1,352 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r27639 &#45; in /trunk: lib/structure/internal/object.py pipe_control/structure/main.py user_functions/structure.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 13 Feb 2015 17:45:08 +0100 -->
+<!--X-Message-Id: E1YMJMa&#45;000368&#45;Os@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r27639 - in /trunk: lib/structure/internal/object.py pipe_control/structure/main.py user_functions/structure.py -- February 13, 2015 - 17:45</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r27639 - in /trunk: lib/structure/internal/object.py pipe_control/structure/main.py user_functions/structure.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00204" class="tabs">Index by Date</a> | <a href="threads.html#00204" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00203.html">Date Prev</a>] [<a href="msg00205.html">Date Next</a>] [<a href="msg00203.html">Thread Prev</a>] [<a href="msg00205.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 13 Feb 2015 16:45:08 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00204.html">E1YMJMa-000368-Os@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on February 13, 2015 - 17:45:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Feb 13 17:45:08 2015
+New Revision: 27639
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=27639&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=27639&amp;view=rev</a>
+Log:
+Converted the structure.mean user function to the new 
+pipe/model/molecule/atom_id design.
+
+This allows the average structure calculation to work on atomic coordinates 
+from different data
+pipes, different structural models, and different molecules.  The user 
+function backend uses the new
+pipe_control.structure.main.assemble_structural_coordinates() function to 
+assemble the common atom
+coordinates, molecule names, residue names, residue numbers, atom names and 
+elements.  All this
+information is then used to construct a new molecule container for storing 
+the average structure in
+the internal structural object.
+
+To allow for the averaged structural data to be stored, the internal 
+structural object method
+add_coordinates() has been created.  This is modelled on the PDB, Gaussian, 
+and XYZ format loading
+methods.  The internal structural object mean() method is no longer used, but 
+remains for anyone who
+might have interest in the future (though as it is untested, bit-rot will be 
+a problem).
+
+
+Modified:
+    trunk/lib/structure/internal/object.py
+    trunk/pipe_control/structure/main.py
+    trunk/user_functions/structure.py
+
+Modified: trunk/lib/structure/internal/object.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/lib/structure/internal/object.py?rev=27639&amp;r1=27638&amp;r2=27639&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/lib/structure/internal/object.py?rev=27639&amp;r1=27638&amp;r2=27639&amp;view=diff</a>
+==============================================================================
+--- trunk/lib/structure/internal/object.py      (original)
++++ trunk/lib/structure/internal/object.py      Fri Feb 13 17:45:08 2015
+@@ -1162,6 +1162,50 @@
+ 
+             # Sort.
+             mol._sort()
++
++
++    def add_coordinates(self, coord=None, mol_names=None, res_names=None, 
+res_nums=None, atom_names=None, elements=None, set_mol_name=None, 
+set_model_num=None):
++        &quot;&quot;&quot;Add a set of coordinates to the structural object.
++
++        @keyword coord:         The array of atomic coordinates (first 
+dimension is the atoms and the second are the coordinates).
++        @type coord:            numpy rank-2 float64 array
++        @keyword mol_names:     The list of molecule names corresponding to 
+the first dimension of the coordinate array.
++        @type mol_names:        list of str
++        @keyword res_names:     The list of residue names corresponding to 
+the first dimension of the coordinate array.
++        @type res_names:        list of str
++        @keyword res_nums:      The list of residue numbers corresponding to 
+the first dimension of the coordinate array.
++        @type res_nums:         list of str
++        @keyword atom_names:    The list of atom names corresponding to the 
+first dimension of the coordinate array.
++        @type atom_names:       list of str
++        @keyword elements:      The list of elements corresponding to the 
+first dimension of the coordinate array.
++        @type elements:         list of str
++        @keyword set_mol_name:  Set the names of the molecules which are 
+loaded.  If set to None, then all molecule names must be identical and the 
+new molecule will have the same name.
++        @type set_mol_name:     None or str
++        @keyword set_model_num: Set the model number for the coordinates.
++        @type set_model_num:    None or int
++        &quot;&quot;&quot;
++
++        # The new molecule name.
++        if not set_mol_name:
++            set_mol_name = mol_names[0]
++            for name in mol_names:
++                if set_mol_name != name:
++                    raise RelaxError(&quot;No unique molecule name can be found 
+in the list %s for storing the new molecule structure.&quot;)
++
++        # No model set, so delete all current data.
++        if set_mol_name == None and set_model_num == None:
++            print(&quot;Deleting all structural data so that only the new 
+molecule will be present.&quot;)
++            self.delete(verbosity=0)
++
++        # Generate a molecule container for the new data.
++        mol = MolContainer()
++
++        # Add the data.
++        for i in range(len(coord)):
++            mol.atom_add(atom_name=atom_names[i], res_name=res_names[i], 
+res_num=res_nums[i], pos=coord[i], element=elements[i])
++
++        # Create the structural data data structures.
++        self.pack_structs([[mol]], orig_model_num=[None], 
+set_model_num=[set_model_num], orig_mol_num=[None], 
+set_mol_name=[set_mol_name])
+ 
+ 
+     def add_model(self, model=None, coords_from=None):
+
+Modified: trunk/pipe_control/structure/main.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/pipe_control/structure/main.py?rev=27639&amp;r1=27638&amp;r2=27639&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/pipe_control/structure/main.py?rev=27639&amp;r1=27638&amp;r2=27639&amp;view=diff</a>
+==============================================================================
+--- trunk/pipe_control/structure/main.py        (original)
++++ trunk/pipe_control/structure/main.py        Fri Feb 13 17:45:08 2015
+@@ -21,7 +21,7 @@
+ 
+ # Python module imports.
+ from minfx.generic import generic_minimise
+-from numpy import array, average, dot, float64, std, zeros
++from numpy import array, average, dot, float64, mean, std, zeros
+ from numpy.linalg import norm
+ from os import F_OK, access, getcwd
+ from re import search
+@@ -368,6 +368,36 @@
+     correlation_matrix(format=format, matrix=matrix, labels=labels, 
+file=file, dir=dir, force=force)
+ 
+ 
++def average_structure(pipes=None, models=None, molecules=None, atom_id=None, 
+set_mol_name=None, set_model_num=None):
++    &quot;&quot;&quot;Calculate a mean structure.
++
++    @keyword pipes:         The data pipes containing structures to average.
++    @type pipes:            None or list of str
++    @keyword models:        The list of models for each data pipe.  The 
+number of elements must match the pipes argument.  If set to None, then all 
+models will be used.
++    @type models:           None or list of lists of int
++    @keyword molecules:     The list of molecules for each data pipe.  The 
+number of elements must match the pipes argument.
++    @type molecules:        None or list of lists of str
++    @keyword atom_id:       The molecule, residue, and atom identifier 
+string.  This matches the spin ID string format.
++    @type atom_id:          str or None
++    @keyword set_mol_name:  The molecule name for the averaged molecule.
++    @type set_mol_name:     None or str
++    @keyword set_model_num: The model number for the averaged molecule.
++    @type set_model_num:    None or int
++    &quot;&quot;&quot;
++
++    # Checks.
++    check_pipe()
++
++    # Assemble the structural coordinates.
++    coord, ids, mol_names, res_names, res_nums, atom_names, elements = 
+assemble_structural_coordinates(pipes=pipes, models=models, 
+molecules=molecules, atom_id=atom_id)
++
++    # Calculate the mean structure.
++    struct = mean(coord, axis=0)
++
++    # Store the data.
++    cdp.structure.add_coordinates(coord=struct, mol_names=mol_names, 
+res_names=res_names, res_nums=res_nums, atom_names=atom_names, 
+elements=elements, set_mol_name=set_mol_name, set_model_num=set_model_num)
++
++
+ def connect_atom(index1=None, index2=None):
+     &quot;&quot;&quot;Connect two atoms.
+ 
+@@ -964,17 +994,6 @@
+ 
+     # Set the number of states for use in the specific analyses.
+     cdp.N = len(from_mols)
+-
+-
+-def mean():
+-    &quot;&quot;&quot;Calculate the mean structure from all models in the structural data 
+object.&quot;&quot;&quot;
+-
+-    # Checks.
+-    check_pipe()
+-    check_structure()
+-
+-    # Call the specific code.
+-    cdp.structure.mean()
+ 
+ 
+ def read_gaussian(file=None, dir=None, set_mol_name=None, 
+set_model_num=None, verbosity=1, fail=True):
+
+Modified: trunk/user_functions/structure.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/user_functions/structure.py?rev=27639&amp;r1=27638&amp;r2=27639&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/user_functions/structure.py?rev=27639&amp;r1=27638&amp;r2=27639&amp;view=diff</a>
+==============================================================================
+--- trunk/user_functions/structure.py   (original)
++++ trunk/user_functions/structure.py   Fri Feb 13 17:45:08 2015
+@@ -812,13 +812,57 @@
+ uf = uf_info.add_uf('structure.mean')
+ uf.title = &quot;Calculate the mean structure from all loaded models.&quot;
+ uf.title_short = &quot;Mean structure.&quot;
+-# Description.
+-uf.desc.append(Desc_container())
+-uf.desc[-1].add_paragraph(&quot;This will calculate the mean structure from all 
+loaded models.  The mean structure will replace all the models in the 
+internal structural object.  This is provided as a structural aid, 
+specifically for superimposition purposes.&quot;)
+-uf.backend = pipe_control.structure.main.mean
++uf.add_keyarg(
++    name = &quot;pipes&quot;,
++    py_type = &quot;str_list&quot;,
++    desc_short = &quot;data pipes&quot;,
++    desc = &quot;The data pipes containing structures to average.&quot;,
++    wiz_combo_iter = pipe_names,
++    wiz_read_only = False,
++    can_be_none = True
++)
++uf.add_keyarg(
++    name = &quot;models&quot;,
++    py_type = &quot;int_list_of_lists&quot;,
++    desc_short = &quot;model list for each data pipe&quot;,
++    desc = &quot;The list of models for each data pipe containing structures to 
+average.  The number of elements must match the pipes argument.  If no models 
+are given, then all will be used.&quot;,
++    can_be_none = True
++)
++uf.add_keyarg(
++    name = &quot;molecules&quot;,
++    py_type = &quot;str_list_of_lists&quot;,
++    desc_short = &quot;molecule list for each data pipe&quot;,
++    desc = &quot;The list of molecules for each data pipe to average.  This 
+allows differently named molecules in the same or different data pipes to be 
+averaged.  The number of elements must match the pipes argument.  If no 
+molecules are given, then all will be used.&quot;,
++    can_be_none = True
++)
++uf.add_keyarg(
++    name = &quot;atom_id&quot;,
++    py_type = &quot;str&quot;,
++    desc_short = &quot;atom identification string&quot;,
++    desc = &quot;The atom identification string of the coordinates of interest.  
+This can be used to restrict the averaged structure to one atom per residue, 
+for example.&quot;,
++    can_be_none = True
++)
++uf.add_keyarg(
++    name = &quot;set_mol_name&quot;,
++    py_type = &quot;str&quot;,
++    desc_short = &quot;averaged molecule name&quot;,
++    desc = &quot;Set the optional name of the averaged molecule.&quot;,
++    can_be_none = True
++)
++uf.add_keyarg(
++    name = &quot;set_model_num&quot;,
++    py_type = &quot;int&quot;,
++    desc_short = &quot;averaged model number&quot;,
++    desc = &quot;Set the optional model number of the averaged molecule.&quot;,
++    can_be_none = True
++)
++# Description.
++uf.desc.append(Desc_container())
++uf.desc[-1].add_paragraph(&quot;This will calculate and store the mean structure 
+from a collection of related molecules.  If a new molecule name or model 
+number is not supplied, the mean structure will replace all the models in the 
+internal structural object.  This is provided as a structural aid, 
+specifically for superimposition purposes.&quot;)
++uf.backend = pipe_control.structure.main.average_structure
+ uf.menu_text = &quot;&amp;mean&quot;
+ uf.gui_icon = &quot;oxygen.categories.applications-education&quot;
+-uf.wizard_size = (700, 400)
++uf.wizard_size = (800, 600)
+ uf.wizard_image = WIZARD_IMAGE_PATH + 'structure' + sep + '2JK4.png'
+ 
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Feb 13 18:40:02 2015</div>  
+</body>
+</html>

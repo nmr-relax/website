@@ -1,0 +1,244 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r22718 &#45; /trunk/specific_analyses/parameter_object.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 11 Apr 2014 18:08:29 +0200 -->
+<!--X-Message-Id: E1WYe0C&#45;0004bZ&#45;RS@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r22718 - /trunk/specific_analyses/parameter_object.py -- April 11, 2014 - 18:08</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r22718 - /trunk/specific_analyses/parameter_object.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00107" class="tabs">Index by Date</a> | <a href="threads.html#00107" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00106.html">Date Prev</a>] [<a href="msg00108.html">Date Next</a>] [<a href="msg00106.html">Thread Prev</a>] [<a href="msg00108.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 11 Apr 2014 16:08:28 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00107.html">E1WYe0C-0004bZ-RS@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on April 11, 2014 - 18:08:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Apr 11 18:08:28 2014
+New Revision: 22718
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=22718&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=22718&amp;view=rev</a>
+Log:
+Added the ability to automatically create the parameter tables for the user 
+function documentation.
+
+These are the tables used in many of the user function docstrings.  This has 
+been added to the
+parameter list base class.  The section title is pre-specified by the new 
+_set_uf_title() method,
+and the table caption and LaTeX label by the _set_uf_table() method.  The 
+documentation is generated
+by calling the uf_doc() method.  This uses the new type_string() method to 
+add a compact parameter
+type string representation to the table.
+
+The aim is to eliminate all of the hard-coded tables in the specific analyses 
+which are always very
+quickly out of date.  By automatically creating the tables, this simplifies 
+the codebase and
+simplifies the addition of new analysis types.
+
+
+Modified:
+    trunk/specific_analyses/parameter_object.py
+
+Modified: trunk/specific_analyses/parameter_object.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/parameter_object.py?rev=22718&amp;r1=22717&amp;r2=22718&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/parameter_object.py?rev=22718&amp;r1=22717&amp;r2=22718&amp;view=diff</a>
+==============================================================================
+--- trunk/specific_analyses/parameter_object.py (original)
++++ trunk/specific_analyses/parameter_object.py Fri Apr 11 18:08:28 2014
+@@ -32,6 +32,8 @@
+ 
+ # relax module imports.
+ from lib.errors import RelaxError
++from user_functions.data import Uf_tables; uf_tables = Uf_tables()
++from user_functions.objects import Desc_container
+ 
+ 
+ class Param_list:
+@@ -65,6 +67,11 @@
+         if self.spin_data:
+             self._add('select', scope='spin', desc='The spin selection 
+flag', py_type=bool, sim=True)
+             self._add('fixed', scope='spin', desc='The fixed flag', 
+py_type=bool)
++
++        # Default user function documentation.
++        self._uf_title = &quot;Parameters&quot;
++        self._uf_table_label = &quot;table: parameters&quot;
++        self._uf_table_caption = &quot;Parameters&quot;
+ 
+ 
+     def __new__(self, *args, **kargs):
+@@ -251,6 +258,31 @@
+         self._add('peak_intensity', scope='spin', desc='The peak 
+intensities', py_type=dict, grace_string='\\qPeak intensities\\Q')
+ 
+ 
++    def _set_uf_table(self, label=None, caption=None):
++        &quot;&quot;&quot;Set the title for the user function documentation.
++
++        @keyword label:     The unique label of the table.  This is used to 
+identify tables, and is also used in the table referencing in the LaTeX 
+compilation of the user manual.
++        @type label:        str
++        @keyword caption:   The caption for the table.
++        @type caption:      str
++        &quot;&quot;&quot;
++
++        # Store the text.
++        self._uf_table_label = label
++        self._uf_table_caption = caption
++
++
++    def _set_uf_title(self, title):
++        &quot;&quot;&quot;Set the title for the user function documentation.
++
++        @param title:   The title to use in the user function docstrings.
++        @type title:    str
++        &quot;&quot;&quot;
++
++        # Store the text.
++        self._uf_title = title
++
++
+     def base_loop(self, set=None, scope=None):
+         &quot;&quot;&quot;An iterator method for looping over all the base parameters.
+ 
+@@ -542,6 +574,67 @@
+         return self._py_types[name]
+ 
+ 
++    def type_string(self, name):
++        &quot;&quot;&quot;Return the Python type for the parameter as a string 
+representation.
++
++        @param name:    The name of the parameter.
++        @type name:     str
++        @return:        The Python type.
++        @rtype:         Python type object
++        &quot;&quot;&quot;
++
++        # Parameter check.
++        self.check_param(name)
++
++        # The text representation.
++        text = repr(self._py_types[name])
++
++        # Return only the part in quotes.
++        return text.split(&quot;'&quot;)[1]
++
++
++    def uf_doc(self, default=True, type=False):
++        &quot;&quot;&quot;&quot;Create the parameter documentation for the user function 
+docstrings.
++
++        @keyword default:   A flag which if True will cause the default 
+parameter value to be included in the table.
++        @type default:      bool
++        @keyword type:      A flag which if True will cause the parameter 
+type to be included in the table.
++        @type type:         bool
++        &quot;&quot;&quot;
++
++        # Initialise the documentation object.
++        doc = Desc_container(self._uf_title)
++
++        # The parameter table.
++        table = uf_tables.add_table(label=self._uf_table_label, 
+caption=self._uf_table_caption)
++
++        # Add the headings.
++        headings = [&quot;Name&quot;, &quot;Description&quot;]
++        if default:
++            headings.append(&quot;Default&quot;)
++        if type:
++            headings.append(&quot;Type&quot;)
++        table.add_headings(headings)
++
++        # Add each parameter, first of the parameter set, then the 'generic' 
+set.
++        for set in ['params', 'fixed']:
++            for param in self.loop(set=set):
++                row = []
++                row.append(param)
++                row.append(self.description(param))
++                if default:
++                    row.append(&quot;%s&quot; % self.default_value(param))
++                if type:
++                    row.append(&quot;%s&quot; % self.type_string(param))
++                table.add_row(row)
++
++        # Add the table to the documentation object.
++        doc.add_table(table.label)
++
++        # Return the documentation object.
++        return doc
++
++
+     def units(self, name):
+         &quot;&quot;&quot;Return the units string for the parameter.
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Apr 11 18:40:02 2014</div>  
+</body>
+</html>

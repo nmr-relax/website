@@ -1,0 +1,205 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r19289 &#45; /trunk/specific_analyses/consistency_tests.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 02 Apr 2013 11:08:28 +0200 -->
+<!--X-Message-Id: E1UMxCd&#45;0000eE&#45;VI@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r19289 - /trunk/specific_analyses/consistency_tests.py -- April 02, 2013 - 11:08</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r19289 - /trunk/specific_analyses/consistency_tests.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00008" class="tabs">Index by Date</a> | <a href="threads.html#00008" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00007.html">Date Prev</a>] [<a href="msg00009.html">Date Next</a>] [<a href="msg00007.html">Thread Prev</a>] [<a href="msg00009.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 02 Apr 2013 09:08:27 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00008.html">E1UMxCd-0000eE-VI@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on April 02, 2013 - 11:08:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Apr  2 11:08:27 2013
+New Revision: 19289
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=19289&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=19289&amp;view=rev</a>
+Log:
+Manually ported r19283 from the 2.2 development line to trunk.
+
+The command used was:
+svn merge -r19283:19284 svn+ssh://bugman@xxxxxxxxxxx/svn/relax/branches/2.2 .
+
+.....
+  r19284 | bugman | 2013-04-02 11:02:34 +0200 (Tue, 02 Apr 2013) | 10 lines
+  Changed paths:
+     M /branches/2.2/specific_analyses/consistency_tests.py
+  
+  Fix for bug #20674 (<a  rel="nofollow" href="https://gna.org/bugs/?20674">https://gna.org/bugs/?20674</a>) - the failure of the 
+consistency testing analysis.
+  
+  This was reported by Mengjun Xue &lt;mengjun dott xue att mailbox dott 
+tu-berlin dot de&gt;.
+  
+  The problem was that the first residue did not have a single proton 'H' in 
+the PDB file, and
+  therefore the dipolar relaxation interaction was not set up.  The 
+overfit_deselect() method of the
+  consistency testing specific API was not checking for this.  The method is 
+now much more like that
+  of the model-free specific analysis.
+.....
+
+
+Modified:
+    trunk/specific_analyses/consistency_tests.py
+
+Modified: trunk/specific_analyses/consistency_tests.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/consistency_tests.py?rev=19289&amp;r1=19288&amp;r2=19289&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/consistency_tests.py?rev=19289&amp;r1=19288&amp;r2=19289&amp;view=diff</a>
+==============================================================================
+--- trunk/specific_analyses/consistency_tests.py (original)
++++ trunk/specific_analyses/consistency_tests.py Tue Apr  2 11:08:27 2013
+@@ -308,32 +308,68 @@
+ 
+         # Loop over spin data.
+         deselect_flag = False
++        spin_count = 0
+         for spin, spin_id in spin_loop(return_id=True):
+             # Skip deselected spins.
+             if not spin.select:
+                 continue
+ 
+-            # Check if data exists.
+-            if not hasattr(spin, 'ri_data'):
+-                warn(RelaxDeselectWarning(spin_id, 'missing relaxation 
+data'))
++            # The interatomic data.
++            interatoms = return_interatom_list(spin_id)
++
++            # Loop over the interatomic data.
++            dipole_relax = False
++            for i in range(len(interatoms)):
++                # No dipolar relaxation mechanism.
++                if not interatoms[i].dipole_pair:
++                    continue
++
++                # The surrounding spins.
++                if spin_id != interatoms[i].spin_id1:
++                    spin_id2 = interatoms[i].spin_id1
++                else:
++                    spin_id2 = interatoms[i].spin_id2
++                spin2 = return_spin(spin_id2)
++
++                # Dipolar relaxation flag.
++                dipole_relax = True
++
++            # No relaxation mechanism.
++            if not dipole_relax or not hasattr(spin, 'csa') or spin.csa == 
+None:
++                warn(RelaxDeselectWarning(spin_id, 'an absence of relaxation 
+mechanisms'))
+                 spin.select = False
+                 deselect_flag = True
+                 continue
+ 
+-            # Require 3 or more data points.
+-            else:
+-                # Count the points.
++            # Data checks.
++            if data_check:
++                # The number of relaxation data points.
+                 data_points = 0
+-                for id in cdp.ri_ids:
+-                    if id in spin.ri_data and spin.ri_data[id] != None:
+-                        data_points += 1
+-
+-                # Not enough.
++                if hasattr(cdp, 'ri_ids') and hasattr(spin, 'ri_data'):
++                    for id in cdp.ri_ids:
++                        if id in spin.ri_data and spin.ri_data[id] != None:
++                            data_points += 1
++
++                # Relaxation data must exist!
++                if not hasattr(spin, 'ri_data'):
++                    warn(RelaxDeselectWarning(spin_id, 'missing relaxation 
+data'))
++                    spin.select = False
++                    deselect_flag = True
++                    continue
++
++                # Require 3 or more data points.
+                 if data_points &lt; 3:
+                     warn(RelaxDeselectWarning(spin_id, 'insufficient 
+relaxation data, 3 or more data points are required'))
+                     spin.select = False
+                     deselect_flag = True
+                     continue
++
++            # Increment the spin number.
++            spin_count += 1
++
++        # No spins selected, so fail hard to prevent the user from going any 
+further.
++        if spin_count == 0:
++            warn(RelaxWarning(&quot;No spins are selected therefore the 
+optimisation or calculation cannot proceed.&quot;))
+ 
+         # Final printout.
+         if verbose and not deselect_flag:
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Apr 02 11:20:02 2013</div>  
+</body>
+</html>

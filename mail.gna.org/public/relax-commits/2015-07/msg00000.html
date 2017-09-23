@@ -1,0 +1,469 @@
+<!-- MHonArc v2.6.19+ -->
+<!--X-Subject: r27866 &#45; /trunk/auto_analyses/relax_disp_repeat_cpmg.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 23 Jul 2015 14:08:18 +0200 -->
+<!--X-Message-Id: E1ZIFIQ&#45;0008DF&#45;Fx@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r27866 - /trunk/auto_analyses/relax_disp_repeat_cpmg.py -- July 23, 2015 - 14:08</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r27866 - /trunk/auto_analyses/relax_disp_repeat_cpmg.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00000" class="tabs">Index by Date</a> | <a href="threads.html#00000" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[Date Prev] [Date Next] [Thread Prev] [Thread Next]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 23 Jul 2015 12:08:18 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00000.html">E1ZIFIQ-0008DF-Fx@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on July 23, 2015 - 14:08:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Thu Jul 23 14:08:17 2015
+New Revision: 27866
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=27866&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=27866&amp;view=rev</a>
+Log:
+Made a summarize function to compare results.
+
+Task #7826 (<a  rel="nofollow" href="https://gna.org/task/?7826">https://gna.org/task/?7826</a>): Write an python class for the 
+repeated analysis of dispersion data.
+
+Modified:
+    trunk/auto_analyses/relax_disp_repeat_cpmg.py
+
+Modified: trunk/auto_analyses/relax_disp_repeat_cpmg.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/auto_analyses/relax_disp_repeat_cpmg.py?rev=27866&amp;r1=27865&amp;r2=27866&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/auto_analyses/relax_disp_repeat_cpmg.py?rev=27866&amp;r1=27865&amp;r2=27866&amp;view=diff</a>
+==============================================================================
+--- trunk/auto_analyses/relax_disp_repeat_cpmg.py       (original)
++++ trunk/auto_analyses/relax_disp_repeat_cpmg.py       Thu Jul 23 14:08:17 
+2015
+@@ -33,7 +33,7 @@
+ from datetime import datetime
+ from glob import glob
+ from os import F_OK, access, chmod, getcwd, sep
+-from numpy import any, asarray, arange, concatenate, max, mean, min, sqrt, 
+std, sum
++from numpy import any, asarray, arange, concatenate, max, mean, min, 
+savetxt, square, sqrt, std, sum, zeros_like
+ if dep_check.scipy_module:
+     from scipy.stats import pearsonr
+ from stat import S_IRWXU, S_IRGRP, S_IROTH
+@@ -2791,7 +2791,6 @@
+ 
+             # Write grace
+             self.interpreter.grace.write(x_data_type='res_num', 
+y_data_type=param, file='%s.agr'%file_name_ini, dir=path+sep+&quot;grace&quot;, 
+force=True)
+-
+ 
+     def write_convert_file(self, file_name=None, path=None, search=None):
+         file_obj, file_path = open_write_file(file_name=file_name, dir=path, 
+force=True, compress_type=0, verbosity=1, return_path=True)
+@@ -2875,6 +2874,286 @@
+                     self.interpreter.results.write(file=resfile, dir=path, 
+force=force)
+ 
+ 
++    def summarize_results(self, methods=None, model=None, analysis=None, 
+list_glob_ini=None, selections=None):
++        &quot;&quot;&quot; Collect all results and make statistics&quot;&quot;&quot;
++
++        ref_method, ni_method = methods
++        ref_ni, ni_list = list_glob_ini
++
++        def collect_data(pipe_name=None, selections=None, ni=None):
++            # Swith pipe
++            self.interpreter.pipe.switch(pipe_name)
++
++            # Collect intensities
++            all_intensities = []
++            all_intensities_err = []
++
++            for selection in selections:
++                sel_intensities = []
++                sel_intensities_err = []
++                for cur_spin, mol_name, resi, resn, spin_id in 
+spin_loop(selection=selection, full_info=True, return_id=True, 
+skip_desel=False):
++
++                    # Loop over spectrum_ids.
++                    for s_id in cdp.spectrum_ids:
++                        # Check for bad data has skipped peak_intensity 
+points
++                        if s_id in cur_spin.peak_intensity:
++                            peak_intensity_point = 
+cur_spin.peak_intensity[s_id]
++                            peak_intensity_err_point = 
+cur_spin.peak_intensity_err[s_id]
++
++                            sel_intensities.append(peak_intensity_point)
++                            
+sel_intensities_err.append(peak_intensity_err_point)
++
++                # Collect
++                all_intensities.append(sel_intensities)
++                all_intensities_err.append(sel_intensities_err)
++
++            # Collect R2eff
++            all_r2eff = []
++            all_r2eff_err = []
++
++            for selection in selections:
++                sel_r2eff = []
++                sel_r2eff_err = []
++
++                # Loop over the spins.
++                for cur_spin, mol_name, resi, resn, spin_id in 
+spin_loop(selection=selection, full_info=True, return_id=True, 
+skip_desel=False):
++                    # Loop over the R2eff points
++                    for exp_type, frq, offset, point, ei, mi, oi, di in 
+loop_exp_frq_offset_point(return_indices=True):
++                        # Define the key.
++                        data_key = 
+return_param_key_from_data(exp_type=self.exp_type, frq=frq, offset=offset, 
+point=point)
++
++                        # Check for bad data has skipped r2eff points
++                        if data_key in cur_spin.r2eff:
++                            r2eff_point = cur_spin.r2eff[data_key]
++                            r2eff_err_point = cur_spin.r2eff_err[data_key]
++
++                            sel_r2eff.append(r2eff_point)
++                            sel_r2eff_err.append(r2eff_err_point)
++
++                # Collect
++                all_r2eff.append(sel_r2eff)
++                all_r2eff_err.append(sel_r2eff_err)
++
++            # Collect minimisations parameteers
++            for cur_spin, mol_name, resi, resn, spin_id in 
+spin_loop(selection=selection, full_info=True, return_id=True, 
+skip_desel=True):
++                params_list = cur_spin.params
++
++                # Break after first round.
++                break
++
++            # Collect
++            all_pars = []
++            all_pars_err = []
++
++            # Loop over selections
++            for selection in selections:
++                sel_pars = []
++                sel_pars_err = []
++
++                # Loop over params
++                for param in params_list:
++                    # If param in PARAMS_R20, values are stored in with 
+parameter key.
++                    sel_pars_list = []
++                    sel_pars_list_err = []
++
++                    # Loop over the spins.
++                    for cur_spin, mol_name, resi, resn, spin_id in 
+spin_loop(selection=selection, full_info=True, return_id=True, 
+skip_desel=True):
++                        if param in PARAMS_R20:
++                            # Loop over frq key.
++                            for exp_type, frq, offset, ei, mi, oi, in 
+loop_exp_frq_offset(return_indices=True):
++                                # Get the parameter key.
++                                param_key = 
+generate_r20_key(exp_type=exp_type, frq=frq)
++
++                                # Get the Value.
++                                param_val = deepcopy(getattr(cur_spin, 
+param)[param_key])
++                                param_err = deepcopy(getattr(cur_spin, 
+param+&quot;_err&quot;)[param_key])
++
++                        else:
++                            # Get the value.
++                            param_val = deepcopy(getattr(cur_spin, param))
++                            param_err = deepcopy(getattr(cur_spin, 
+param+&quot;_err&quot;))
++
++                        # Collect
++                        sel_pars_list.append(param_val)
++                        sel_pars_list_err.append(param_err)
++
++                    # Collect
++                    sel_pars.append(sel_pars_list)
++                    sel_pars_err.append(sel_pars_list_err)
++
++                # Collect
++                all_pars.append(sel_pars)
++                all_pars_err.append(sel_pars_err)
++
++            # Update data dictionary
++            data_dic[pipe_name] = {}
++            data_dic[pipe_name]['ni'] = ni
++            data_dic[pipe_name]['all_intensities'] = all_intensities
++            data_dic[pipe_name]['all_intensities_err'] = all_intensities_err
++            data_dic[pipe_name]['all_r2eff'] = all_r2eff
++            data_dic[pipe_name]['all_r2eff_err'] = all_r2eff_err
++            data_dic['params_list'] = params_list
++            data_dic[pipe_name]['all_pars'] = all_pars
++            data_dic[pipe_name]['all_pars_err'] = all_pars_err
++
++        # Load the reference pipe
++        found, ref_pipe_name, resfile, path = 
+self.check_previous_result(method=ref_method, model=model, analysis=analysis, 
+glob_ini=ref_ni, bundle=ref_method)
++
++        #Create data dic
++        data_dic = {}
++        # For ref
++        collect_data(pipe_name=ref_pipe_name, selections=selections, 
+ni=ref_ni)
++
++        # For other
++        # Loop over ni and collect pipe names
++        ni_pipe_names = []
++        for i, ni in enumerate(ni_list):
++            # Get the ni pipe name
++            found, ni_pipe_name, resfile, path = 
+self.check_previous_result(method=ni_method, model=model, analysis=analysis, 
+glob_ini=ni, bundle=ref_method)
++            ni_pipe_names.append(ni_pipe_name)
++
++            # Collect data
++            collect_data(pipe_name=ni_pipe_name, selections=selections, 
+ni=ni)
++
++            # Swith pipe back to ref
++            self.interpreter.pipe.switch(ref_pipe_name)
++
++            # Delete ni pipe, to free memory
++            if ni_pipe_name != ref_pipe_name:
++                self.interpreter.pipe.delete(pipe_name=ni_pipe_name)
++
++        # Now define method for stats
++        def get_stats(x=None, y=None, x_err=None, y_err=None):
++            # Convert to numpy
++            x = asarray(x)
++            y = asarray(y)
++
++            # Define the ratio weighted values
++            g = x/x
++            h = y/x
++
++            # Calculate the deviation
++            d_xy = x - y
++            d_gh = g - h
++
++            # Calculate the mean of the deviations
++            mean_d_xy = mean(d_xy)
++            mean_d_gh = mean(d_gh)
++
++            # Calculate the standard deviations
++            std_d_xy = std(d_xy, ddof=1)
++            std_d_gh = std(d_gh, ddof=1)
++
++            # Calculate the root mean square deviation
++            rmsd_xy = sqrt(mean(square(d_xy)))
++            rmsd_gh = sqrt(mean(square(d_gh)))
++
++            if x_err != None and y_err != None:
++                pool_std_xy = sqrt( mean(square(x_err) + square(y_err)) )
++
++                g_err = x_err / x
++                h_err = y_err / x
++
++                pool_std_gh= sqrt( mean(square(g_err) + square(h_err)) )
++
++                return mean_d_xy, mean_d_gh, std_d_xy, std_d_gh, 
+pool_std_xy, pool_std_gh, rmsd_xy, rmsd_gh
++
++            else:
++                return mean_d_xy, mean_d_gh, std_d_xy, std_d_gh, rmsd_xy, 
+rmsd_gh
++
++        # Analyse data
++        headers = [&quot;ni&quot;, &quot;pct&quot;]
++        types = [&quot;int&quot;, &quot;r2eff&quot;] + data_dic['params_list']
++
++        # Make list of
++        all_data = []
++        # Loop over rows in pct
++        for i, ni in enumerate(ni_list):
++            # Get the pipe name
++            pipe_name = ni_pipe_names[i]
++
++            # Define row list
++            d_row = []
++            pct = float(ni)/float(ref_ni)*100
++
++            # Append
++            d_row.append(ni)
++            d_row.append(pct)
++
++            # Loop over selections
++            for j, selection in enumerate(selections):
++                # Loop over types
++                k = 0
++                for type_i in types:
++                    if type_i == 'int':
++                        # Append the header type
++                        if i == 0:
++                            headers += [&quot;%s_%s_mean_d_xy&quot;%(j, type_i), 
+&quot;%s_%s_mean_d_gh&quot;%(j, type_i), &quot;%s_%s_std_d_xy&quot;%(j, type_i), 
+&quot;%s_%s_std_d_gh&quot;%(j, type_i), &quot;%s_%s_pool_d_xy&quot;%(j, type_i), 
+&quot;%s_%s_pool_d_gh&quot;%(j, type_i), &quot;%s_%s_rmsd_d_xy&quot;%(j, type_i), 
+&quot;%s_%s_rmsd_d_gh&quot;%(j, type_i)]
++                        x = data_dic[ref_pipe_name]['all_intensities'][j]
++                        y = data_dic[pipe_name]['all_intensities'][j]
++                        x_err = 
+data_dic[ref_pipe_name]['all_intensities_err'][j]
++                        y_err = data_dic[pipe_name]['all_intensities_err'][j]
++
++                        mean_d_xy, mean_d_gh, std_d_xy, std_d_gh, 
+pool_std_xy, pool_std_gh, rmsd_xy, rmsd_gh = get_stats(x=x, y=y, x_err=x_err, 
+y_err=y_err)
++                        d_row += [mean_d_xy, mean_d_gh, std_d_xy, std_d_gh, 
+pool_std_xy, pool_std_gh, rmsd_xy, rmsd_gh]
++
++                    elif type_i == 'r2eff':
++                        # Append the header type
++                        if i == 0:
++                            headers += [&quot;%s_%s_mean_d_xy&quot;%(j, type_i), 
+&quot;%s_%s_mean_d_gh&quot;%(j, type_i), &quot;%s_%s_std_d_xy&quot;%(j, type_i), 
+&quot;%s_%s_std_d_gh&quot;%(j, type_i), &quot;%s_%s_pool_d_xy&quot;%(j, type_i), 
+&quot;%s_%s_pool_d_gh&quot;%(j, type_i), &quot;%s_%s_rmsd_d_xy&quot;%(j, type_i), 
+&quot;%s_%s_rmsd_d_gh&quot;%(j, type_i)]
++                        x = data_dic[ref_pipe_name]['all_r2eff'][j]
++                        y = data_dic[pipe_name]['all_r2eff'][j]
++                        x_err = data_dic[ref_pipe_name]['all_r2eff_err'][j]
++                        y_err = data_dic[pipe_name]['all_r2eff_err'][j]
++
++                        if len(x) != len(y):
++                            d_row += [9999.0, 9999.0, 9999.0, 9999.0, 
+9999.0, 9999.0, 9999.0, 9999.0]
++                        else:
++                            mean_d_xy, mean_d_gh, std_d_xy, std_d_gh, 
+pool_std_xy, pool_std_gh, rmsd_xy, rmsd_gh = get_stats(x=x, y=y, x_err=x_err, 
+y_err=y_err)
++                            d_row += [mean_d_xy, mean_d_gh, std_d_xy, 
+std_d_gh, pool_std_xy, pool_std_gh, rmsd_xy, rmsd_gh]
++
++                    elif type_i in data_dic['params_list']:
++                        #if type_i not in ['kex', 'k_AB']:
++                        #if type_i not in ['not']:
++                        if i == 0:
++                            headers += [&quot;%s_%s_mean_d_xy&quot;%(j, type_i), 
+&quot;%s_%s_mean_d_gh&quot;%(j, type_i), &quot;%s_%s_std_d_xy&quot;%(j, type_i), 
+&quot;%s_%s_std_d_gh&quot;%(j, type_i), &quot;%s_%s_pool_d_xy&quot;%(j, type_i), 
+&quot;%s_%s_pool_d_gh&quot;%(j, type_i), &quot;%s_%s_rmsd_d_xy&quot;%(j, type_i), 
+&quot;%s_%s_rmsd_d_gh&quot;%(j, type_i)]
++                        x = data_dic[ref_pipe_name]['all_pars'][j][k]
++                        y = data_dic[pipe_name]['all_pars'][j][k]
++                        x_err = data_dic[ref_pipe_name]['all_pars_err'][j][k]
++                        y_err = data_dic[pipe_name]['all_pars_err'][j][k]
++
++                        mean_d_xy, mean_d_gh, std_d_xy, std_d_gh, 
+pool_std_xy, pool_std_gh, rmsd_xy, rmsd_gh = get_stats(x=x, y=y, x_err=x_err, 
+y_err=y_err)
++                        d_row += [mean_d_xy, mean_d_gh, std_d_xy, std_d_gh, 
+pool_std_xy, pool_std_gh, rmsd_xy, rmsd_gh]
++
++                        if type_i in ['kex', 'k_AB', 'pA']:
++                            if i == 0:
++                                headers += [&quot;%s_%s_ref&quot;%(j, type_i), 
+&quot;%s_%s_ref_std&quot;%(j, type_i), &quot;%s_%s_ni&quot;%(j, type_i), &quot;%s_%s_ni_std&quot;%(j, 
+type_i)]
++
++                            ref_val = 
+data_dic[ref_pipe_name]['all_pars'][j][k][0]
++                            ni_val = data_dic[pipe_name]['all_pars'][j][k][0]
++                            ref_err = 
+data_dic[ref_pipe_name]['all_pars_err'][j][k][0]
++                            ni_err = 
+data_dic[pipe_name]['all_pars_err'][j][k][0]
++
++                            d_row += [ref_val, ref_err, ni_val, ni_err]
++
++                        k += 1    
++
++
++            # Add data
++            all_data.append(d_row)
++
++        file_name = ni_pipe_names[0] + '.txt'
++        path = self.results_dir
++        DAT = asarray(all_data)
++        fmt = &quot; &quot;.join([&quot;%6d&quot;] + [&quot;%8.2f&quot;] + [&quot;%21.6e&quot;] * (DAT.shape[1]-2))
++        headers_fmt = &quot; &quot;.join([&quot;%4s&quot;] + [&quot;%8s&quot;] + [&quot;%21s&quot;] * 
+(DAT.shape[1]-2))
++        headers_num = []
++        for k, header_k in enumerate(headers):
++            headers_num.append(&quot;%i_%s&quot;%(k, header_k))
++        headers_out = headers_fmt % tuple(headers_num)
++        savetxt(path+sep+file_name, DAT, fmt=fmt, header=headers_out, 
+delimiter=' ')
++
++
+     def interpreter_start(self):
+         # Load the interpreter.
+         self.interpreter = Interpreter(show_script=False, 
+raise_relax_error=True)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Jul 23 14:20:27 2015</div>  
+</body>
+</html>

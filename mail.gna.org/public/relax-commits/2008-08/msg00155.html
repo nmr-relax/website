@@ -1,0 +1,153 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r7197 &#45; in /branches/rdc_analysis: generic_fns/pcs.py	specific_fns/n_state_model.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 14 Aug 2008 18:14:37 +0200 -->
+<!--X-Message-Id: E1KTeFs&#45;0001Gh&#45;Ny@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r7197 - in /branches/rdc_analysis: generic_fns/pcs.py	specific_fns/n_state_model.py -- August 14, 2008 - 18:14</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r7197 - in /branches/rdc_analysis: generic_fns/pcs.py	specific_fns/n_state_model.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00155" class="tabs">Index by Date</a> | <a href="threads.html#00155" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00154.html">Date Prev</a>] [<a href="msg00157.html">Date Next</a>] [<a href="msg00154.html">Thread Prev</a>] [<a href="msg00157.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 14 Aug 2008 14:56:48 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00155.html">E1KTeFs-0001Gh-Ny@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on August 14, 2008 - 18:14:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Aug 14 16:56:46 2008
+New Revision: 7197
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=7197&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=7197&amp;view=rev</a>
+Log:
+Shifted the calculation of the paramagnetic centre from 
+__minimise_setup_pcs() to centre().
+
+
+Modified:
+    branches/rdc_analysis/generic_fns/pcs.py
+    branches/rdc_analysis/specific_fns/n_state_model.py
+
+Modified: branches/rdc_analysis/generic_fns/pcs.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/rdc_analysis/generic_fns/pcs.py?rev=7197&amp;r1=7196&amp;r2=7197&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/rdc_analysis/generic_fns/pcs.py?rev=7197&amp;r1=7196&amp;r2=7197&amp;view=diff</a>
+==============================================================================
+--- branches/rdc_analysis/generic_fns/pcs.py (original)
++++ branches/rdc_analysis/generic_fns/pcs.py Thu Aug 14 16:56:46 2008
+@@ -234,10 +234,20 @@
+ 
+     # Test the centre has already been set.
+     if hasattr(dp, 'paramagnetic_centre'):
+-        raise RelaxError, &quot;The paramagnetic centre has already been set to 
+the atom &quot; + `dp.paramagnetic_centre` + &quot;.&quot;
++        raise RelaxError, &quot;The paramagnetic centre has already been set to 
+the coordinates &quot; + `dp.paramagnetic_centre` + &quot;.&quot;
++
++    # Get the positions.
++    pos = zeros(3, float64)
++    i = 0
++    for R in cdp.structure.atom_loop(atom_id=atom_id, pos_flag=True):
++        pos = pos + R
++        i = i + 1
++
++    # Averaging.
++    pos = pos / float(i)
+ 
+     # Set the centre.
+-    dp.paramagnetic_centre = atom_id
++    dp.paramagnetic_centre = pos
+ 
+ 
+ def copy(pipe_from=None, pipe_to=None, ri_label=None, frq_label=None):
+
+Modified: branches/rdc_analysis/specific_fns/n_state_model.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/rdc_analysis/specific_fns/n_state_model.py?rev=7197&amp;r1=7196&amp;r2=7197&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/rdc_analysis/specific_fns/n_state_model.py?rev=7197&amp;r1=7196&amp;r2=7197&amp;view=diff</a>
+==============================================================================
+--- branches/rdc_analysis/specific_fns/n_state_model.py (original)
++++ branches/rdc_analysis/specific_fns/n_state_model.py Thu Aug 14 16:56:46 
+2008
+@@ -425,17 +425,8 @@
+ 
+             # Loop over the states, and calculate the paramagnetic centre to 
+nucleus unit vectors.
+             for c in range(cdp.N):
+-                # Get the paramagnetic coordinates.
+-                i = 0
+-                for R in 
+cdp.structure.atom_loop(atom_id=cdp.paramagnetic_centre, str_id=c, 
+pos_flag=True):
+-                    i = i + 1
+-
+-                # Can only be one paramagnetic centre (for now).
+-                if i &gt; 1:
+-                    raise RelaxError, &quot;More than one paramagnetic centre 
+found.&quot;
+-
+                 # Calculate the electron spin to nuclear spin vector.
+-                vect = spin.pos[c] - R
++                vect = spin.pos[c] - cdp.paramagnetic_centre
+ 
+                 # The length.
+                 r[-1].append(norm(vect))
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Aug 14 19:20:30 2008</div>  
+</body>
+</html>

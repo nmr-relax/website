@@ -1,0 +1,331 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r24907 &#45; /trunk/lib/dispersion/matrix_exponential.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 01 Aug 2014 18:09:33 +0200 -->
+<!--X-Message-Id: E1XDFOe&#45;0007n4&#45;VO@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r24907 - /trunk/lib/dispersion/matrix_exponential.py -- August 01, 2014 - 18:09</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r24907 - /trunk/lib/dispersion/matrix_exponential.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00041" class="tabs">Index by Date</a> | <a href="threads.html#00041" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00040.html">Date Prev</a>] [<a href="msg00042.html">Date Next</a>] [<a href="msg00040.html">Thread Prev</a>] [<a href="msg00042.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 01 Aug 2014 16:09:32 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00041.html">E1XDFOe-0007n4-VO@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on August 01, 2014 - 18:09:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Fri Aug  1 18:09:32 2014
+New Revision: 24907
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=24907&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=24907&amp;view=rev</a>
+Log:
+Made new general stride helper function and matrix_exponential function.
+
+Modified:
+    trunk/lib/dispersion/matrix_exponential.py
+
+Modified: trunk/lib/dispersion/matrix_exponential.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/lib/dispersion/matrix_exponential.py?rev=24907&amp;r1=24906&amp;r2=24907&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/lib/dispersion/matrix_exponential.py?rev=24907&amp;r1=24906&amp;r2=24907&amp;view=diff</a>
+==============================================================================
+--- trunk/lib/dispersion/matrix_exponential.py  (original)
++++ trunk/lib/dispersion/matrix_exponential.py  Fri Aug  1 18:09:32 2014
+@@ -23,7 +23,7 @@
+ &quot;&quot;&quot;Module for the calculation of the matrix exponential, for higher 
+dimensional data.&quot;&quot;&quot;
+ 
+ # Python module imports.
+-from numpy import array, any, dot, einsum, eye, exp, iscomplex, int16, 
+newaxis, multiply, tile, sqrt, version, zeros
++from numpy import array, any, complex128, dot, einsum, eye, exp, iscomplex, 
+int16, newaxis, multiply, tile, sqrt, version, zeros
+ from numpy.lib.stride_tricks import as_strided
+ from numpy.linalg import eig, inv
+ 
+@@ -153,6 +153,196 @@
+     return data_view
+ 
+ 
++def data_view_via_striding_array_row_col(data_array=None):
++    &quot;&quot;&quot;Method to stride through the data matrix, extracting the outer matrix 
+with nr of elements as Row X Column length.  Row and Col should have same 
+size.
++
++    @keyword data:  The numpy data array to stride through.
++    @type data:     numpy array of rank [NE][NS][NM][NO][ND][Row][Col] or 
+[NS][NM][NO][ND][Row][Col].
++    @return:        The data view of the full numpy array, returned as a 
+numpy array with number of small numpy arrays corresponding to 
+Nr_mat=NE*NS*NM*NO*ND or Nr_mat=NS*NM*NO*ND, where each small array has size 
+Col.
++    @rtype:         numpy array of rank [NE*NS*NM*NO*ND][Col] or 
+[NS*NM*NO*ND][Col].
++    &quot;&quot;&quot;
++
++    # Get the expected shape of the higher dimensional column numpy array.
++    if len(data_array.shape) == 7:
++        # Extract shapes from data.
++        NE, NS, NM, NO, ND, Row, Col = data_array.shape
++
++    else:
++        # Extract shapes from data.
++        NS, NM, NO, ND, Ros, Col = data_array.shape
++
++        # Set NE to 1.
++        NE = 1
++
++    # Calculate how many small matrices.
++    Nr_mat = NE * NS * NM * NO * ND
++
++    # Define the shape for the stride view.
++    shape = (Nr_mat, Row, Col)
++
++    # Get itemsize, Length of one array element in bytes. Depends on dtype. 
+float64=8, complex128=16.
++    itz = data_array.itemsize
++
++    # Bytes_between_elements
++    bbe = 1 * itz
++
++    # Bytes between row. The distance in bytes to next row is number of 
+Columns elements multiplied with itemsize.
++    bbr = Col * itz
++
++    # Bytes between matrices.  The byte distance is separated by the number 
+of rows.
++    bbm = Row * bbr
++
++    # Make a tuple of the strides.
++    strides = (bbm, bbr, bbe)
++
++    # Make the stride view.
++    data_view = as_strided(data_array, shape=shape, strides=strides)
++
++    return data_view
++
++
++def matrix_exponential(A, dtype=None):
++    &quot;&quot;&quot;Calculate the exact matrix exponential using the eigenvalue 
+decomposition approach, for higher dimensional data.  This of dimension 
+[NE][NS][NM][NO][ND][X][X] or [NS][NM][NO][ND][X][X].
++
++    Here X is the Row and Column length, of the outer square matrix.
++
++    @param A:               The square matrix to calculate the matrix 
+exponential of.
++    @type A:                numpy float array of rank 
+[NE][NS][NM][NO][ND][X][X]
++    @param dtype:           If provided, forces the calculation to use the 
+data type specified.
++    @type type:             data-type, optional
++    @return:                The matrix exponential.  This will have the same 
+dimensionality as the A matrix.
++    @rtype:                 numpy float array of rank 
+[NE][NS][NM][NO][ND][X][X]
++    &quot;&quot;&quot;
++
++    # Get the expected shape of the higher dimensional column numpy array.
++    if len(A.shape) == 7:
++        # Extract shapes from data.
++        NE, NS, NM, NO, ND, Row, Col = A.shape
++
++    else:
++        # Extract shapes from data.
++        NS, NM, NO, ND, Row, Col = A.shape
++
++        # Set NE to None.
++        NE = None
++
++    # Convert dtype, if specified.
++    if dtype != None:
++        dtype_mat = A.dtype
++
++        # If the dtype is different from the input.
++        if dtype_mat != dtype:
++            # This needs to be made as a copy.
++            A = A.astype(dtype)
++
++    # Is the original matrix real?
++    complex_flag = any(iscomplex(A))
++
++    # If numpy is under 1.8, there would be a need to do eig(A) per matrix.
++    if float(version.version[:3]) &lt; 1.9:
++        # Make array to store results
++        if NE != None:
++            if dtype != None:
++                eA = zeros([NE, NS, NM, NO, ND, Row, Col], dtype=dtype)
++            else:
++                eA = zeros([NE, NS, NM, NO, ND, Row, Col], dtype=complex128)
++        else:
++            if dtype != None:
++                eA = zeros([NS, NM, NO, ND, Row, Col], dtype=dtype)
++            else:
++                eA = zeros([NS, NM, NO, ND, Row, Col], dtype=complex128)
++
++        # Get the data view, from the helper function.
++        A_view = data_view_via_striding_array_row_col(data_array=A)
++
++        # Create index view.
++        index = create_index(NE=NE, NS=NS, NM=NM, NO=NO, ND=ND)
++        index_view = data_view_via_striding_array_col(data_array=index)
++
++        # Zip them together and iterate over them.
++        for A_i, index_i in zip(A_view, index_view):
++            # The eigenvalue decomposition.
++            W_i, V_i = eig(A_i)
++
++            # Calculate the exponential.
++            W_exp_i = exp(W_i)
++
++            # Make a eye matrix.
++            eye_mat_i = eye(Row)
++
++            # Transform it to a diagonal matrix, with elements from vector 
+down the diagonal.
++            # Use the dtype, if specified.
++            if dtype != None:
++                W_exp_diag_i = multiply(W_exp_i, eye_mat_i, dtype=dtype )
++            else:
++                W_exp_diag_i = multiply(W_exp_i, eye_mat_i)
++
++            # Make dot product.
++            dot_V_W_i = dot( V_i, W_exp_diag_i)
++
++            # Compute the (multiplicative) inverse of a matrix.
++            inv_V_i = inv(V_i)
++
++            # Calculate the exact exponential.
++            eA_i = dot(dot_V_W_i, inv_V_i)
++
++            # Save results.
++            # Extract index from index_view.
++            ei, si, mi, oi, di = index_i
++
++            # Store the result.
++            eA[ei, si, mi, oi, di, :] = eA_i
++
++    else:
++        # The eigenvalue decomposition.
++        W, V = eig(A)
++
++        # W: The eigenvalues, each repeated according to its multiplicity.
++        # The eigenvalues are not necessarily ordered.
++        # The resulting array will be always be of complex type. Shape 
+[NE][NS][NM][NO][ND][X]
++        # V: The normalized (unit 'length') eigenvectors, such that the 
+column v[:,i]
++        # is the eigenvector corresponding to the eigenvalue w[i]. Shape 
+[NE][NS][NM][NO][ND][X][X]
++
++        # Calculate the exponential of all elements in the input array. 
+Shape [NE][NS][NM][NO][ND][X]
++        # Add one axis, to allow for broadcasting multiplication.
++        if NE != None:
++            W_exp = exp(W).reshape(NE, NS, NM, NO, ND, Row, 1)
++        else:
++            W_exp = exp(W).reshape(NS, NM, NO, ND, Row, 1)
++
++        # Make a eye matrix, with Shape [NE][NS][NM][NO][ND][X][X]
++        if NE != None:
++            eye_mat = tile(eye(Row)[newaxis, newaxis, newaxis, newaxis, 
+newaxis, ...], (NE, NS, NM, NO, ND, 1, 1) )
++        else:
++            eye_mat = tile(eye(Row)[newaxis, newaxis, newaxis, newaxis, 
+newaxis, ...], (NS, NM, NO, ND, 1, 1) )
++
++        # Transform it to a diagonal matrix, with elements from vector down 
+the diagonal.
++        # Use the dtype, if specified.
++        if dtype != None:
++            W_exp_diag = multiply(W_exp, eye_mat, dtype=dtype )
++        else:
++            W_exp_diag = multiply(W_exp, eye_mat)
++
++        # Make dot products for higher dimension.
++        # &quot;...&quot;, the Ellipsis notation, is designed to mean to insert as 
+many full slices (:)
++        # to extend the multi-dimensional slice to all dimensions.
++        dot_V_W = einsum('...ij, ...jk', V, W_exp_diag)
++
++        # Compute the (multiplicative) inverse of a matrix.
++        inv_V = inv(V)
++
++        # Calculate the exact exponential.
++        eA = einsum('...ij, ...jk', dot_V_W, inv_V)
++
++    # Return the complex matrix.
++    if complex_flag:
++        return array(eA)
++
++    # Return only the real part.
++    else:
++        return array(eA.real)
++
++
+ def matrix_exponential_rank_NE_NS_NM_NO_ND_x_x(A, dtype=None):
+     &quot;&quot;&quot;Calculate the exact matrix exponential using the eigenvalue 
+decomposition approach, for higher dimensional data.  This of dimension 
+[NS][NS][NM][NO][ND][X][X].
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Aug 01 18:20:03 2014</div>  
+</body>
+</html>

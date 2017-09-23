@@ -1,0 +1,170 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r15051 &#45; /branches/frame_order_testing/specific_fns/frame_order.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 07 Dec 2011 18:54:44 +0100 -->
+<!--X-Message-Id: E1RYLhc&#45;0006Dd&#45;Md@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r15051 - /branches/frame_order_testing/specific_fns/frame_order.py -- December 07, 2011 - 18:54</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r15051 - /branches/frame_order_testing/specific_fns/frame_order.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00038" class="tabs">Index by Date</a> | <a href="threads.html#00038" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00037.html">Date Prev</a>] [<a href="msg00039.html">Date Next</a>] [<a href="msg00037.html">Thread Prev</a>] [<a href="msg00039.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 07 Dec 2011 17:54:44 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00038.html">E1RYLhc-0006Dd-Md@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on December 07, 2011 - 18:54:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Dec  7 18:54:44 2011
+New Revision: 15051
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=15051&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=15051&amp;view=rev</a>
+Log:
+The back-calculated RDCs and PCSs are now being stored in the relax data 
+store.
+
+This is for the frame order optimisation, calculation, or back calculation 
+functions.
+
+
+Modified:
+    branches/frame_order_testing/specific_fns/frame_order.py
+
+Modified: branches/frame_order_testing/specific_fns/frame_order.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_testing/specific_fns/frame_order.py?rev=15051&amp;r1=15050&amp;r2=15051&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_testing/specific_fns/frame_order.py?rev=15051&amp;r1=15050&amp;r2=15051&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_testing/specific_fns/frame_order.py (original)
++++ branches/frame_order_testing/specific_fns/frame_order.py Wed Dec  7 
+18:54:44 2011
+@@ -626,14 +626,6 @@
+ 
+                 # Skip spins without PCS data.
+                 if not hasattr(spin, 'pcs'):
+-                    # Add rows of None if other alignment data exists.
+-                    if hasattr(spin, 'rdc'):
+-                        pcs[-1].append(None)
+-                        pcs_err[-1].append(None)
+-                        pcs_weight[-1].append(None)
+-                        j = j + 1
+-
+-                    # Jump to the next spin.
+                     continue
+ 
+                 # Append the PCSs to the list.
+@@ -1041,6 +1033,52 @@
+ 
+             # Initialise the new tensor.
+             align_tensor.init(tensor=name, params=(target_fn.A_5D_bc[5*i + 
+0], target_fn.A_5D_bc[5*i + 1], target_fn.A_5D_bc[5*i + 2], 
+target_fn.A_5D_bc[5*i + 3], target_fn.A_5D_bc[5*i + 4]), param_types=2)
++
++        # The RDC data.
++        for i in xrange(len(cdp.align_ids)):
++            # The alignment ID.
++            align_id = cdp.align_ids[i]
++
++            # Data flags
++            rdc_flag = False
++            if hasattr(cdp, 'rdc_ids') and align_id in cdp.rdc_ids:
++                rdc_flag = True
++            pcs_flag = False
++            if hasattr(cdp, 'pcs_ids') and align_id in cdp.pcs_ids:
++                pcs_flag = True
++
++            # Spin loop over the domain.
++            id = cdp.domain[self._domain_moving()]
++            pcs_index = 0
++            rdc_index = 0
++            for spin in spin_loop(id):
++                # Skip deselected spins.
++                if not spin.select:
++                    continue
++
++                # Spins with PCS data.
++                if pcs_flag and hasattr(spin, 'pcs'):
++                    # Initialise the data structure.
++                    if not hasattr(spin, 'pcs_bc'):
++                        spin.pcs_bc = {}
++
++                    # Store the back-calculated value.
++                    spin.pcs_bc[align_id] = target_fn.pcs_theta[i, pcs_index]
++
++                    # Increment the index.
++                    pcs_index += 1
++
++                # Spins with RDC data.
++                if rdc_flag and hasattr(spin, 'rdc'):
++                    # Initialise the data structure.
++                    if not hasattr(spin, 'rdc_bc'):
++                        spin.rdc_bc = {}
++
++                    # Store the back-calculated value.
++                    spin.rdc_bc[align_id] = target_fn.rdc_theta[i, rdc_index]
++
++                    # Increment the index.
++                    rdc_index += 1
+ 
+ 
+     def _target_fn_setup(self, sim_index=None, scaling=True):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Dec 07 19:20:02 2011</div>  
+</body>
+</html>

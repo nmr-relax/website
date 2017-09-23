@@ -1,0 +1,266 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r10974 &#45; /1.3/generic_fns/structure/geometric.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 11 Mar 2010 11:31:07 +0100 -->
+<!--X-Message-Id: E1NpffX&#45;0003ap&#45;HA@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r10974 - /1.3/generic_fns/structure/geometric.py -- March 11, 2010 - 11:31</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r10974 - /1.3/generic_fns/structure/geometric.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00025" class="tabs">Index by Date</a> | <a href="threads.html#00025" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00024.html">Date Prev</a>] [<a href="msg00026.html">Date Next</a>] [<a href="msg00024.html">Thread Prev</a>] [<a href="msg00026.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 11 Mar 2010 10:31:07 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00025.html">E1NpffX-0003ap-HA@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on March 11, 2010 - 11:31:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Mar 11 11:31:06 2010
+New Revision: 10974
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=10974&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=10974&amp;view=rev</a>
+Log:
+Rewrote the stitch_cone_to_edge() function to handle the arbitrarily shaped 
+cones.
+
+
+Modified:
+    1.3/generic_fns/structure/geometric.py
+
+Modified: 1.3/generic_fns/structure/geometric.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/generic_fns/structure/geometric.py?rev=10974&amp;r1=10973&amp;r2=10974&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/generic_fns/structure/geometric.py?rev=10974&amp;r1=10973&amp;r2=10974&amp;view=diff</a>
+==============================================================================
+--- 1.3/generic_fns/structure/geometric.py (original)
++++ 1.3/generic_fns/structure/geometric.py Thu Mar 11 11:31:06 2010
+@@ -808,17 +808,22 @@
+             return names[i] + repr(atom_num - lims[i])
+ 
+ 
+-def stitch_cone_to_edge(mol=None, cone_start=None, edge_start=None, 
+limit_check=None, inc=None, debug=False):
++def stitch_cone_to_edge(mol=None, cone=None, chain_id='', dome_start=None, 
+edge_start=None, scale=1.0, inc=None, debug=False):
+     &quot;&quot;&quot;Function for stitching the cone dome to its edge, in the PDB 
+representations.
+ 
+     @keyword mol:           The molecule container.
+     @type mol:              MolContainer instance
+-    @keyword cone_start:    The starting atom number of the cone dome 
+residue.
+-    @type cone_start:       int
++    @keyword cone:          The cone object.  This should provide the 
+limit_check() method with determines the limits of the distribution accepting 
+two arguments, the polar angle phi and the azimuthal angle theta, and return 
+True if the point is in the limits or False if outside.  It should also 
+provide the theta_max() method for returning the theta value for the given 
+phi.
++    @type cone:             class instance
++    @keyword chain_id:      The chain identifier.
++    @type chain_id:         str
++    @type limit_check:      function
++    @keyword dome_start:    The starting atom number of the cone dome 
+residue.
++    @type dome_start:       int
+     @keyword edge_start:    The starting atom number of the cone edge 
+residue.
+     @type edge_start:       int
+-    @keyword limit_check:   A function with determines the limits of the 
+distribution.  It should accept two arguments, the polar angle phi and the 
+azimuthal angle theta, and return True if the point is in the limits or False 
+if outside.
+-    @type limit_check:      function
++    @keyword scale:         The scaling factor to stretch all points by.
++    @type scale:            float
+     @keyword inc:           The number of increments or number of vectors 
+used to generate the outer edge of the cone.
+     @type inc:              int
+     &quot;&quot;&quot;
+@@ -826,35 +831,104 @@
+     # Get the polar and azimuthal angles for the distribution.
+     phi, theta = angles_uniform(inc)
+ 
+-    # Find the cone edge atoms of the first and last longitudes.
++    # Determine the maximum phi values and the indices of the point just 
+above the edge.
++    phi_max = zeros(len(theta), float64)
+     edge_index = zeros(len(theta), int)
+     for i in range(len(theta)):
++        # Get the polar angle for the longitude edge atom.
++        phi_max[i] = cone.phi_max(theta[i])
++
++        # The index.
+         for j in range(len(phi)):
+-            if limit_check(phi[j], theta[i]):
++            if phi[j] &lt; phi_max[i]:
+                 edge_index[i] = j
+                 break
+ 
++    # Reverse edge index.
++    edge_index_rev = len(phi) - 1 - edge_index
++
+     # Debugging.
+     if debug:
+-        print(&quot;\nCone start: %s&quot; % cone_start)
++        print(&quot;\nDome start: %s&quot; % dome_start)
+         print(&quot;Edge start: %s&quot; % edge_start)
+-        print(&quot;Edge indices: %s&quot; % edge_index)
++        print(&quot;Edge indices:     %s&quot; % edge_index)
++        print(&quot;Edge indices rev: %s&quot; % edge_index_rev)
+ 
+     # Move around the azimuth.
+-    dome_edge = cone_start
+-    for j in range(len(theta)):
+-        # Cone edge atom.
+-        edge_atom = edge_start + j
+-
++    dome_atom = dome_start
++    edge_atom = edge_start
++    for i in range(len(theta)):
+         # Debugging.
+         if debug:
+-            print(&quot;Stitching %s to %s&quot; % (get_proton_name(edge_atom), 
+get_proton_name(dome_edge)))
++            print(&quot;i: %s; theta: %s&quot; % (i, theta[i]))
++            print(&quot;%sStitching longitudinal line to edge - %s to %s.&quot; % (&quot; 
+&quot;*4, get_proton_name(edge_atom), get_proton_name(dome_atom)))
+ 
+         # Connect the two atoms (to stitch up the 2 objects).
+-        mol.atom_connect(index1=dome_edge-1, index2=edge_atom-1)
+-
+-        # Update the dome edge atom.
+-        dome_edge = dome_edge + (len(phi) - edge_index[j])
++        mol.atom_connect(index1=dome_atom-1, index2=edge_atom-1)
++
++        # Update the edge atom.
++        edge_atom = edge_atom + 1
++
++        # Stitch up the latitude atoms.
++        for j in range(len(phi)):
++            # The index for the direction top to bottom!
++            k = len(phi) - 1 - j
++
++            # Debugging.
++            if debug:
++                print(&quot;%sj: %s; phi: %-20s; k: %s; phi: %-20s&quot; % (&quot; &quot;*4, j, 
+phi[j], k, phi[k]))
++
++            # No edge.
++            skip = True
++
++            # Forward edge.
++            fwd_index = i+1
++            if i == len(theta)-1:
++                fwd_index = 0
++            if j &gt;= edge_index[i] and j &lt; edge_index[fwd_index]:
++                # Debugging.
++                if debug:
++                    print(&quot;%sForward edge.&quot; % (&quot; &quot;*8))
++
++                # Edge found.
++                skip = False
++                forward = True
++
++            # Back edge.
++            rev_index = i-1
++            if i == 0:
++                rev_index = len(theta)-1
++            if i &lt; len(theta)-1 and j &gt; edge_index_rev[i] and j &lt;= 
+edge_index_rev[i+1]:
++                # Debugging.
++                if debug:
++                    print(&quot;%sBack edge.&quot; % (&quot; &quot;*8))
++
++                # Edge found.
++                skip = False
++                forward = False
++
++            # Skipping.
++            if skip:
++                continue
++
++            # The dome atom to stitch to (current dome atom + one latitude 
+line to shift across).
++            if forward:
++                atom = dome_atom + j - edge_index[i]
++            else:
++                atom = dome_atom + edge_index_rev[i]+1 + k - 
+edge_index[fwd_index]
++
++            # Debugging.
++            if debug:
++                print(&quot;%sStitching latitude line to edge - %s to %s.&quot; % (&quot; 
+&quot;*8, get_proton_name(edge_atom), get_proton_name(atom)))
++
++            # Connect the two atoms (to stitch up the 2 objects).
++            mol.atom_connect(index1=atom-1, index2=edge_atom-1)
++
++            # Increment the cone edge atom number.
++            edge_atom = edge_atom + 1
++
++        # Update the cone dome and edge atoms.
++        dome_atom = dome_atom + (len(phi) - edge_index[i])
+ 
+ 
+ def uniform_vect_dist_spherical_angles(inc=20):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Mar 11 12:00:02 2010</div>  
+</body>
+</html>

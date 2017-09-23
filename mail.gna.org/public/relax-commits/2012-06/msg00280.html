@@ -1,0 +1,194 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r16835 &#45; /trunk/gui/export_bmrb.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 11 Jun 2012 09:31:41 +0200 -->
+<!--X-Message-Id: E1Sdz6D&#45;0008LH&#45;JS@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r16835 - /trunk/gui/export_bmrb.py -- June 11, 2012 - 09:31</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r16835 - /trunk/gui/export_bmrb.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00280" class="tabs">Index by Date</a> | <a href="threads.html#00280" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00279.html">Date Prev</a>] [<a href="msg00281.html">Date Next</a>] [<a href="msg00279.html">Thread Prev</a>] [<a href="msg00281.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 11 Jun 2012 07:31:41 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00280.html">E1Sdz6D-0008LH-JS@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on June 11, 2012 - 09:31:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Mon Jun 11 09:31:41 2012
+New Revision: 16835
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=16835&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=16835&amp;view=rev</a>
+Log:
+Added checks to the BMRB export to make sure all necessary data has been 
+input.
+
+If not, then the Missing_data dialog will be presented to the user to explain 
+what is required.
+
+
+Modified:
+    trunk/gui/export_bmrb.py
+
+Modified: trunk/gui/export_bmrb.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/gui/export_bmrb.py?rev=16835&amp;r1=16834&amp;r2=16835&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/gui/export_bmrb.py?rev=16835&amp;r1=16834&amp;r2=16835&amp;view=diff</a>
+==============================================================================
+--- trunk/gui/export_bmrb.py (original)
++++ trunk/gui/export_bmrb.py Mon Jun 11 09:31:41 2012
+@@ -27,6 +27,7 @@
+ import wx
+ 
+ # relax module imports.
++from generic_fns.mol_res_spin import molecule_loop
+ from generic_fns.pipes import cdp_name, pipe_names, switch
+ from graphics import IMAGE_PATH, fetch_icon
+ from status import Status; status = Status()
+@@ -37,6 +38,7 @@
+ from gui.components.relax_data_meta import Relax_data_meta_list
+ from gui.components.scripts import Scripts
+ from gui.components.software import Software
++from gui.message import Missing_data
+ from gui.fonts import font
+ from gui.icons import relax_icons
+ from gui.input_elements.value import Value
+@@ -149,6 +151,14 @@
+         @type event:    wx event
+         &quot;&quot;&quot;
+ 
++        # Checks.
++        missing = self.is_complete()
++
++        # Missing data.
++        if len(missing):
++            Missing_data(missing, parent=self)
++            return
++
+         # Execute the user function.
+         uf_store['bmrb.write'](wx_parent=self, wx_wizard_sync=True, 
+wx_wizard_modal=True)
+ 
+@@ -317,6 +327,52 @@
+         event.Skip()
+ 
+ 
++    def is_complete(self):
++        &quot;&quot;&quot;Determine if the data input is complete.
++
++        @return:    A list of all the missing components.
++        @rtype:     list of str
++        &quot;&quot;&quot;
++
++        # Initialise.
++        missing = []
++
++        # Relaxation data metadata.
++        if hasattr(cdp, 'ri_ids'):
++            # Loop over the data.
++            for i in range(len(cdp.ri_ids)):
++                # Check the peak intensity types.
++                if not hasattr(cdp, 'exp_info') or not hasattr(cdp.exp_info, 
+'peak_intensity_type') or not cdp.ri_ids[i] in 
+cdp.exp_info.peak_intensity_type.keys():
++                    missing.append(&quot;The peak intensity type for the 
+relaxation data ID '%s'.&quot; % cdp.ri_ids[i])
++
++                # Check the temperature calibration methods.
++                if not hasattr(cdp, 'exp_info') or not hasattr(cdp.exp_info, 
+'temp_calibration') or not cdp.ri_ids[i] in 
+cdp.exp_info.temp_calibration.keys():
++                    missing.append(&quot;The temperature calibration method for 
+the relaxation data ID '%s'.&quot; % cdp.ri_ids[i])
++
++                # Check the temperature control methods.
++                if not hasattr(cdp, 'exp_info') or not hasattr(cdp.exp_info, 
+'temp_control') or not cdp.ri_ids[i] in cdp.exp_info.temp_control.keys():
++                    missing.append(&quot;The temperature control method for the 
+relaxation data ID '%s'.&quot; % cdp.ri_ids[i])
++
++
++        # Loop over the molecules.
++        for mol, mol_id in molecule_loop(return_id=True):
++            # No name.
++            if mol.name == None:
++                missing.append(&quot;The name of the molecule for %s.&quot; % mol_id)
++                continue
++
++            # No molecule type.
++            if not hasattr(mol, 'type') or mol.type == None:
++                missing.append(&quot;The type of the molecule %s.&quot; % mol_id)
++
++            # No thiol state.
++            if not hasattr(cdp, 'exp_info') or not hasattr(cdp.exp_info, 
+'thiol_state'):
++                missing.append(&quot;The thiol state of the molecule %s.&quot; % 
+mol_id)
++
++        # Return the list of missing data.
++        return missing
++
++
+     def observer_register(self, remove=False):
+         &quot;&quot;&quot;Register and unregister methods with the observer objects.
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Jun 11 10:20:02 2012</div>  
+</body>
+</html>

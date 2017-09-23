@@ -1,0 +1,216 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r9139 &#45; /branches/frame_order/generic_fns/align_tensor.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 23 Jun 2009 17:52:08 +0200 -->
+<!--X-Message-Id: E1MJ8I4&#45;00012j&#45;AE@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r9139 - /branches/frame_order/generic_fns/align_tensor.py -- June 23, 2009 - 17:52</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r9139 - /branches/frame_order/generic_fns/align_tensor.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00073" class="tabs">Index by Date</a> | <a href="threads.html#00073" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00072.html">Date Prev</a>] [<a href="msg00074.html">Date Next</a>] [<a href="msg00072.html">Thread Prev</a>] [<a href="msg00074.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 23 Jun 2009 15:52:08 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00073.html">E1MJ8I4-00012j-AE@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on June 23, 2009 - 17:52:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Jun 23 17:52:07 2009
+New Revision: 9139
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=9139&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=9139&amp;view=rev</a>
+Log:
+Bug fix for the init() method.
+
+Now errors are being placed in the pre-existing tensor, rather than a new 
+tensor being added.
+
+
+Modified:
+    branches/frame_order/generic_fns/align_tensor.py
+
+Modified: branches/frame_order/generic_fns/align_tensor.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order/generic_fns/align_tensor.py?rev=9139&amp;r1=9138&amp;r2=9139&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order/generic_fns/align_tensor.py?rev=9139&amp;r1=9138&amp;r2=9139&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order/generic_fns/align_tensor.py (original)
++++ branches/frame_order/generic_fns/align_tensor.py Tue Jun 23 17:52:07 2009
+@@ -453,6 +453,8 @@
+     # Test if alignment tensor data already exists.
+     if not errors and align_data_exists(tensor):
+         raise RelaxTensorError, 'alignment'
++    if errors and not align_data_exists(tensor):
++        raise RelaxNoTensorError, 'alignment'
+ 
+     # Check the validity of the angle_units argument.
+     valid_types = ['deg', 'rad']
+@@ -460,9 +462,16 @@
+         raise RelaxError, &quot;The alignment tensor 'angle_units' argument &quot; + 
+`angle_units` + &quot; should be either 'deg' or 'rad'.&quot;
+ 
+     # Add the align_tensors object to the data pipe.
+-    if not hasattr(cdp, 'align_tensors'):
+-        cdp.align_tensors = AlignTensorList()
+-    cdp.align_tensors.add_item(tensor)
++    if not errors:
++        # Initialise the super structure.
++        if not hasattr(cdp, 'align_tensors'):
++            cdp.align_tensors = AlignTensorList()
++
++        # Add the tensor.
++        cdp.align_tensors.add_item(tensor)
++
++    # Get the tensor.
++    tensor_obj = get_tensor_object(tensor)
+ 
+     # {Sxx, Syy, Sxy, Sxz, Syz}.
+     if param_types == 0:
+@@ -477,7 +486,7 @@
+         Syz = Syz * scale
+ 
+         # Set the parameters.
+-        set(tensor=cdp.align_tensors[-1], value=[Sxx, Syy, Sxy, Sxz, Syz], 
+param=['Sxx', 'Syy', 'Sxy', 'Sxz', 'Syz'], errors=errors)
++        set(tensor=tensor_obj, value=[Sxx, Syy, Sxy, Sxz, Syz], 
+param=['Sxx', 'Syy', 'Sxy', 'Sxz', 'Syz'], errors=errors)
+ 
+     # {Szz, Sxx-yy, Sxy, Sxz, Syz}.
+     elif param_types == 1:
+@@ -492,7 +501,7 @@
+         Syz = Syz * scale
+ 
+         # Set the parameters.
+-        set(tensor=cdp.align_tensors[-1], value=[Szz, Sxxyy, Sxy, Sxz, Syz], 
+param=['Szz', 'Sxxyy', 'Sxy', 'Sxz', 'Syz'])
++        set(tensor=tensor_obj, value=[Szz, Sxxyy, Sxy, Sxz, Syz], 
+param=['Szz', 'Sxxyy', 'Sxy', 'Sxz', 'Syz'])
+ 
+     # {Axx, Ayy, Axy, Axz, Ayz}.
+     elif param_types == 2:
+@@ -507,7 +516,7 @@
+         Ayz = Ayz * scale
+ 
+         # Set the parameters.
+-        set(tensor=cdp.align_tensors[-1], value=[Axx, Ayy, Axy, Axz, Ayz], 
+param=['Axx', 'Ayy', 'Axy', 'Axz', 'Ayz'])
++        set(tensor=tensor_obj, value=[Axx, Ayy, Axy, Axz, Ayz], 
+param=['Axx', 'Ayy', 'Axy', 'Axz', 'Ayz'])
+ 
+     # {Azz, Axx-yy, Axy, Axz, Ayz}.
+     elif param_types == 3:
+@@ -522,7 +531,7 @@
+         Ayz = Ayz * scale
+ 
+         # Set the parameters.
+-        set(tensor=cdp.align_tensors[-1], value=[Azz, Axxyy, Axy, Axz, Ayz], 
+param=['Azz', 'Axxyy', 'Axy', 'Axz', 'Ayz'])
++        set(tensor=tensor_obj, value=[Azz, Axxyy, Axy, Axz, Ayz], 
+param=['Azz', 'Axxyy', 'Axy', 'Axz', 'Ayz'])
+ 
+     # {Axx, Ayy, Axy, Axz, Ayz}.
+     elif param_types == 4:
+@@ -549,7 +558,7 @@
+         Ayz = Ayz * scale
+ 
+         # Set the parameters.
+-        set(tensor=cdp.align_tensors[-1], value=[Axx, Ayy, Axy, Axz, Ayz], 
+param=['Axx', 'Ayy', 'Axy', 'Axz', 'Ayz'])
++        set(tensor=tensor_obj, value=[Axx, Ayy, Axy, Axz, Ayz], 
+param=['Axx', 'Ayy', 'Axy', 'Axz', 'Ayz'])
+ 
+     # {Azz, Axx-yy, Axy, Axz, Ayz}.
+     elif param_types == 5:
+@@ -576,7 +585,7 @@
+         Ayz = Ayz * scale
+ 
+         # Set the parameters.
+-        set(tensor=cdp.align_tensors[-1], value=[Azz, Axxyy, Axy, Axz, Ayz], 
+param=['Azz', 'Axxyy', 'Axy', 'Axz', 'Ayz'])
++        set(tensor=tensor_obj, value=[Azz, Axxyy, Axy, Axz, Ayz], 
+param=['Azz', 'Axxyy', 'Axy', 'Axz', 'Ayz'])
+ 
+     # {Pxx, Pyy, Pxy, Pxz, Pyz}.
+     elif param_types == 6:
+@@ -591,7 +600,7 @@
+         Pyz = Pyz * scale
+ 
+         # Set the parameters.
+-        set(tensor=cdp.align_tensors[-1], value=[Pxx, Pyy, Pxy, Pxz, Pyz], 
+param=['Pxx', 'Pyy', 'Pxy', 'Pxz', 'Pyz'])
++        set(tensor=tensor_obj, value=[Pxx, Pyy, Pxy, Pxz, Pyz], 
+param=['Pxx', 'Pyy', 'Pxy', 'Pxz', 'Pyz'])
+ 
+     # {Pzz, Pxx-yy, Pxy, Pxz, Pyz}.
+     elif param_types == 7:
+@@ -606,7 +615,7 @@
+         Pyz = Pyz * scale
+ 
+         # Set the parameters.
+-        set(tensor=cdp.align_tensors[-1], value=[Pzz, Pxxyy, Pxy, Pxz, Pyz], 
+param=['Pzz', 'Pxxyy', 'Pxy', 'Pxz', 'Pyz'])
++        set(tensor=tensor_obj, value=[Pzz, Pxxyy, Pxy, Pxz, Pyz], 
+param=['Pzz', 'Pxxyy', 'Pxy', 'Pxz', 'Pyz'])
+ 
+     # Unknown parameter combination.
+     else:
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Jun 23 18:20:03 2009</div>  
+</body>
+</html>

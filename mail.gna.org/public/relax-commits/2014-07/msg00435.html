@@ -1,0 +1,432 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r24801 &#45; /branches/frame_order_cleanup/auto_analyses/frame_order.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 29 Jul 2014 13:11:21 +0200 -->
+<!--X-Message-Id: E1XC5JR&#45;0003Up&#45;39@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r24801 - /branches/frame_order_cleanup/auto_analyses/frame_order.py -- July 29, 2014 - 13:11</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r24801 - /branches/frame_order_cleanup/auto_analyses/frame_order.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00435" class="tabs">Index by Date</a> | <a href="threads.html#00435" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00434.html">Date Prev</a>] [<a href="msg00436.html">Date Next</a>] [<a href="msg00434.html">Thread Prev</a>] [<a href="msg00436.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 29 Jul 2014 11:11:21 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00435.html">E1XC5JR-0003Up-39@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on July 29, 2014 - 13:11:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Jul 29 13:11:20 2014
+New Revision: 24801
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=24801&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=24801&amp;view=rev</a>
+Log:
+Redesign and expansion of the nested model parameter copying in the frame 
+order auto-analysis.
+
+The nested parameter protocol used to allow the analysis to complete in under 
+1,000,000 years was no
+longer functional due to the switching to the axis alpha parameter to 
+decrease parameter number and
+redundancy.  The copying of the average domain position for the free rotor 
+models was also incorrect
+as the dropping of the alpha Euler angle cause the translation parameters and 
+beta and gamma angles
+to change drastically.
+
+The new protocol has been split into four methods for the average domain 
+position, the pivot point,
+the motional eigenframe and the parameters of ordering.  These use the fact 
+that the free rotor and
+torsionless models are the two extrema of the models where the torsion angle 
+is restricted.  The
+pivot copying is a new addition.
+
+
+Modified:
+    branches/frame_order_cleanup/auto_analyses/frame_order.py
+
+Modified: branches/frame_order_cleanup/auto_analyses/frame_order.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/auto_analyses/frame_order.py?rev=24801&amp;r1=24800&amp;r2=24801&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/auto_analyses/frame_order.py?rev=24801&amp;r1=24800&amp;r2=24801&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/auto_analyses/frame_order.py   (original)
++++ branches/frame_order_cleanup/auto_analyses/frame_order.py   Tue Jul 29 
+13:11:20 2014
+@@ -20,7 +20,14 @@
+ 
+###############################################################################
+ 
+ # Module docstring.
+-&quot;&quot;&quot;The full frame order analysis.&quot;&quot;&quot;
++&quot;&quot;&quot;The full frame order analysis.
++
++
++The nested model parameter copying protocol
++===========================================
++
++To allow the analysis to complete in under 1,000,000 years, the trick of 
+copying parameters from simpler nested models is used in this auto-analysis.  
+The protocol is split into four categories for the average domain position, 
+the pivot point, the motional eigenframe and the parameters of ordering.  
+These use the fact that the free rotor and torsionless models are the two 
+extrema of the models where the torsion angle is restricted, whereby 
+sigma_max is pi and 0 respectively.
++&quot;&quot;&quot;
+ 
+ 
+ # Python module imports.
+@@ -35,7 +42,11 @@
+ from lib.geometry.coord_transform import spherical_to_cartesian
+ from prompt.interpreter import Interpreter
+ from lib.errors import RelaxError
++from lib.frame_order.conversions import convert_axis_alpha_to_spherical
+ from lib.io import open_write_file
++from lib.order import iso_cone_theta_to_S
++from pipe_control.structure.mass import pipe_centre_of_mass
++from specific_analyses.frame_order.data import generate_pivot
+ from specific_analyses.frame_order.variables import MODEL_FREE_ROTOR, 
+MODEL_ISO_CONE, MODEL_ISO_CONE_FREE_ROTOR, MODEL_ISO_CONE_TORSIONLESS, 
+MODEL_LIST_FREE_ROTORS, MODEL_LIST_NONREDUNDANT, MODEL_LIST_PSEUDO_ELLIPSE, 
+MODEL_PSEUDO_ELLIPSE, MODEL_PSEUDO_ELLIPSE_FREE_ROTOR, 
+MODEL_PSEUDO_ELLIPSE_TORSIONLESS, MODEL_RIGID, MODEL_ROTOR
+ from status import Status; status = Status()
+ 
+@@ -250,64 +261,207 @@
+         return incs
+ 
+ 
+-    def nested_params(self, model):
+-        &quot;&quot;&quot;Copy the parameters from the simpler nested models for faster 
+optimisation.
++    def nested_params_ave_dom_pos(self, model):
++        &quot;&quot;&quot;Copy the average domain parameters from simpler nested models for 
+faster optimisation.
+ 
+         @param model:   The frame order model.
+         @type model:    str
+         &quot;&quot;&quot;
+ 
++        # Skip the following models to allow for full optimisation.
++        if model in [MODEL_RIGID, MODEL_FREE_ROTOR]:
++            # Printout.
++            print(&quot;No nesting of the average domain position parameters.&quot;)
++
++            # Exit.
++            return
++
+         # The average position from the rigid model.
+-        if model not in []:
++        if model not in MODEL_LIST_FREE_ROTORS:
++            # Printout.
++            print(&quot;Obtaining the average position from the rigid model.&quot;)
++
+             # Get the rigid data pipe.
+-            rigid_pipe = get_pipe(self.pipe_name_dict[MODEL_RIGID])
++            pipe = get_pipe(self.pipe_name_dict[MODEL_RIGID])
+ 
+             # Copy the average position parameters from the rigid model.
+-            if hasattr(rigid_pipe, 'ave_pos_x'):
+-                cdp.ave_pos_x = rigid_pipe.ave_pos_x
+-            if hasattr(rigid_pipe, 'ave_pos_y'):
+-                cdp.ave_pos_y = rigid_pipe.ave_pos_y
+-            if hasattr(rigid_pipe, 'ave_pos_z'):
+-                cdp.ave_pos_z = rigid_pipe.ave_pos_z
+-            if model not in MODEL_LIST_FREE_ROTORS:
+-                cdp.ave_pos_alpha = rigid_pipe.ave_pos_alpha
+-            cdp.ave_pos_beta = rigid_pipe.ave_pos_beta
+-            cdp.ave_pos_gamma = rigid_pipe.ave_pos_gamma
++            cdp.ave_pos_x = pipe.ave_pos_x
++            cdp.ave_pos_y = pipe.ave_pos_y
++            cdp.ave_pos_z = pipe.ave_pos_z
++            cdp.ave_pos_alpha = pipe.ave_pos_alpha
++            cdp.ave_pos_beta = pipe.ave_pos_beta
++            cdp.ave_pos_gamma = pipe.ave_pos_gamma
++
++        # The average position from the free rotor model.
++        else:
++            # Printout.
++            print(&quot;Obtaining the average position from the free rotor 
+model.&quot;)
++
++            # Get the free rotor data pipe.
++            pipe = get_pipe(self.pipe_name_dict[MODEL_FREE_ROTOR])
++
++            # Copy the average position parameters from the free rotor model.
++            cdp.ave_pos_x = pipe.ave_pos_x
++            cdp.ave_pos_y = pipe.ave_pos_y
++            cdp.ave_pos_z = pipe.ave_pos_z
++            cdp.ave_pos_beta = pipe.ave_pos_beta
++            cdp.ave_pos_gamma = pipe.ave_pos_gamma
++
++
++    def nested_params_eigenframe(self, model):
++        &quot;&quot;&quot;Copy the eigenframe parameters from simpler nested models for 
+faster optimisation.
++
++        @param model:   The frame order model.
++        @type model:    str
++        &quot;&quot;&quot;
++
++        # Skip the following models to allow for full optimisation.
++        if model in [MODEL_ROTOR, MODEL_PSEUDO_ELLIPSE]:
++            # Printout.
++            print(&quot;No nesting of the eigenframe parameters.&quot;)
++
++            # Exit.
++            return
+ 
+         # The cone axis from the rotor model.
+-        if model in [MODEL_ISO_CONE]:
++        if model in [MODEL_FREE_ROTOR, MODEL_ISO_CONE]:
++            # Printout.
++            print(&quot;Obtaining the cone axis from the rotor model.&quot;)
++
+             # Get the rotor data pipe.
+-            rotor_pipe = get_pipe(self.pipe_name_dict[MODEL_ROTOR])
++            pipe = get_pipe(self.pipe_name_dict[MODEL_ROTOR])
++
++            # The cone axis as the axis alpha angle.
++            if model == MODEL_FREE_ROTOR:
++                cdp.axis_alpha = pipe.axis_alpha
++
++            # The cone axis from the axis alpha angle to spherical angles.
++            if model == MODEL_ISO_CONE:
++                cdp.axis_theta, cdp_axis_phi = 
+convert_axis_alpha_to_spherical(alpha=pipe.axis_alpha, 
+pivot=generate_pivot(order=1, pipe_name=self.pipe_name_dict[MODEL_ROTOR]), 
+point=pipe_centre_of_mass(verbosity=0))
++
++        # The cone axis from the isotropic cone model.
++        elif model in [MODEL_ISO_CONE_FREE_ROTOR, 
+MODEL_ISO_CONE_TORSIONLESS]:
++            # Printout.
++            print(&quot;Obtaining the cone axis from the isotropic cone model.&quot;)
++
++            # Get the iso cone data pipe.
++            pipe = get_pipe(self.pipe_name_dict[MODEL_ISO_CONE])
++
++            # Copy the cone axis parameters.
++            cdp.axis_theta = pipe.axis_theta
++            cdp.axis_phi = pipe.axis_phi
++
++        # The full eigenframe from the pseudo-ellipse model.
++        elif model in [MODEL_PSEUDO_ELLIPSE_FREE_ROTOR, 
+MODEL_PSEUDO_ELLIPSE_TORSIONLESS, MODEL_DOUBLE_ROTOR]:
++            # Printout.
++            print(&quot;Obtaining the full eigenframe from the pseudo-ellipse 
+model.&quot;)
++
++            # Get the pseudo-ellipse data pipe.
++            pipe = get_pipe(self.pipe_name_dict[MODEL_PSEUDO_ELLIPSE])
++
++            # Copy the three Euler angles.
++            cdp.eigen_alpha = pipe.eigen_alpha
++            cdp.eigen_beta = pipe.eigen_beta
++            cdp.eigen_gamma = pipe.eigen_gamma
++
++
++    def nested_params_order(self, model):
++        &quot;&quot;&quot;Copy the order parameters from simpler nested models for faster 
+optimisation.
++
++        @param model:   The frame order model.
++        @type model:    str
++        &quot;&quot;&quot;
++
++        # Skip the following models to allow for full optimisation.
++        if model in [MODEL_ROTOR, MODEL_DOUBLE_ROTOR]:
++            # Printout.
++            print(&quot;No nesting of the order parameters.&quot;)
++
++            # Exit.
++            return
++
++        # The cone angle from the isotropic cone model.
++        if model in [MODEL_ISO_CONE_TORSIONLESS, MODEL_PSEUDO_ELLIPSE, 
+MODEL_ISO_CONE_FREE_ROTOR]:
++            # Get the iso cone data pipe.
++            pipe = get_pipe(self.pipe_name_dict[MODEL_ISO_CONE])
++
++            # Copy the cone angle directly.
++            if model == MODEL_ISO_CONE_TORSIONLESS:
++                print(&quot;Obtaining the cone angle from the isotropic cone 
+model.&quot;)
++                cdp.cone_theta = pipe.cone_theta
++
++            # Copy as the X cone angle.
++            elif model == MODEL_PSEUDO_ELLIPSE:
++                print(&quot;Obtaining the cone X angle from the isotropic cone 
+model.&quot;)
++                cdp.cone_theta_x = pipe.cone_theta
++
++            # Convert to the order parameter S.
++            elif model == MODEL_ISO_CONE_FREE_ROTOR:
++                print(&quot;Obtaining the cone order parameter from the isotropic 
+cone model.&quot;)
++                cdp.cone_s1 = iso_cone_theta_to_S(pipe.cone_theta)
++
++        # The X and Y cone angles from the pseudo-ellipse model.
++        elif model in [MODEL_PSEUDO_ELLIPSE_TORSIONLESS, 
+MODEL_PSEUDO_ELLIPSE_FREE_ROTOR]:
++            # Printout.
++            print(&quot;Obtaining the cone X and Y angles from the pseudo-ellipse 
+model.&quot;)
++
++            # Get the pseudo-ellipse data pipe.
++            pipe = get_pipe(self.pipe_name_dict[MODEL_PSEUDO_ELLIPSE])
+ 
+             # Copy the cone axis.
+-            cdp.axis_theta = rotor_pipe.axis_theta
+-            cdp.axis_phi = rotor_pipe.axis_phi
+-
+-        # The cone axis from the free rotor model.
+-        if model in [MODEL_ISO_CONE_FREE_ROTOR]:
+-            # Get the rotor data pipe.
+-            free_rotor_pipe = get_pipe(self.pipe_name_dict[MODEL_FREE_ROTOR])
+-
+-            # Copy the cone axis.
+-            cdp.axis_theta = free_rotor_pipe.axis_theta
+-            cdp.axis_phi = free_rotor_pipe.axis_phi
++            cdp.cone_theta_x = pipe.cone_theta_x
++            cdp.cone_theta_y = pipe.cone_theta_y
++
+ 
+         # The torsion from the rotor model.
+         if model in [MODEL_ISO_CONE, MODEL_PSEUDO_ELLIPSE]:
+             # Get the rotor data pipe.
+-            rotor_pipe = get_pipe(self.pipe_name_dict[MODEL_ROTOR])
++            pipe = get_pipe(self.pipe_name_dict[MODEL_ROTOR])
+ 
+             # Copy the cone axis.
+-            cdp.cone_sigma_max = rotor_pipe.cone_sigma_max
+-
+-        # The cone angles from from the torsionless isotropic cone model.
+-        if model in MODEL_LIST_PSEUDO_ELLIPSE:
+-            # Get the rotor data pipe.
+-            pipe = get_pipe(self.pipe_name_dict[MODEL_ISO_CONE_TORSIONLESS])
+-
+-            # Copy the cone axis.
+-            cdp.cone_theta_x = pipe.cone_theta
+-            cdp.cone_theta_y = pipe.cone_theta
++            cdp.cone_sigma_max = pipe.cone_sigma_max
++
++
++    def nested_params_pivot(self, model):
++        &quot;&quot;&quot;Copy the pivot parameters from simpler nested models for faster 
+optimisation.
++
++        @param model:   The frame order model.
++        @type model:    str
++        &quot;&quot;&quot;
++
++        # Skip the following models to allow for full optimisation.
++        if model in [MODEL_ROTOR]:
++            # Printout.
++            print(&quot;No nesting of the pivot parameters.&quot;)
++
++            # Exit.
++            return
++
++        # The pivot from the rotor model.
++        if model in [MODEL_ISO_CONE, MODEL_FREE_ROTOR]:
++            # Printout.
++            print(&quot;Obtaining the pivot point from the rotor model.&quot;)
++
++            # Get the iso cone data pipe.
++            pipe = get_pipe(self.pipe_name_dict[MODEL_ROTOR])
++
++            # Copy the pivot parameters.
++            cdp.pivot_x = pipe.pivot_x
++            cdp.pivot_y = pipe.pivot_y
++            cdp.pivot_z = pipe.pivot_z
++
++        # The pivot from the isotropic cone model.
++        else:
++            # Printout.
++            print(&quot;Obtaining the pivot point from the isotropic cone model.&quot;)
++
++            # Get the iso cone data pipe.
++            pipe = get_pipe(self.pipe_name_dict[MODEL_ISO_CONE])
++
++            # Copy the cone axis parameters.
++            cdp.pivot_x = pipe.pivot_x
++            cdp.pivot_y = pipe.pivot_y
++            cdp.pivot_z = pipe.pivot_z
+ 
+ 
+     def nested_models(self):
+@@ -351,7 +505,11 @@
+             self.interpreter.frame_order.select_model(model=model)
+ 
+             # Copy nested parameters.
+-            self.nested_params(model)
++            subsection(file=sys.stdout, text=&quot;Parameter nesting.&quot;)
++            self.nested_params_ave_dom_pos(model)
++            self.nested_params_eigenframe(model)
++            self.nested_params_pivot(model)
++            self.nested_params_order(model)
+ 
+             # The optimisation settings.
+             
+self.interpreter.frame_order.num_int_pts(num=self.num_int_pts_grid)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Jul 29 14:00:03 2014</div>  
+</body>
+</html>

@@ -1,0 +1,531 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r16795 &#45; in /branches/uf_redesign/gui: misc.py uf_objects.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 08 Jun 2012 21:06:09 +0200 -->
+<!--X-Message-Id: E1Sd4Vc&#45;0001vY&#45;Sm@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r16795 - in /branches/uf_redesign/gui: misc.py uf_objects.py -- June 08, 2012 - 21:06</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r16795 - in /branches/uf_redesign/gui: misc.py uf_objects.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00240" class="tabs">Index by Date</a> | <a href="threads.html#00240" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00239.html">Date Prev</a>] [<a href="msg00241.html">Date Next</a>] [<a href="msg00239.html">Thread Prev</a>] [<a href="msg00241.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 08 Jun 2012 19:06:08 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00240.html">E1Sd4Vc-0001vY-Sm@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on June 08, 2012 - 21:06:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Jun  8 21:06:08 2012
+New Revision: 16795
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=16795&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=16795&amp;view=rev</a>
+Log:
+Shifted the GUI user function page _format_table() and _table_line() methods 
+into the misc module.
+
+These are now the gui.misc.format_table() and gui.misc.table_line() 
+functions.  This allows the code
+to be used in other parts of the GUI.
+
+
+Modified:
+    branches/uf_redesign/gui/misc.py
+    branches/uf_redesign/gui/uf_objects.py
+
+Modified: branches/uf_redesign/gui/misc.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/uf_redesign/gui/misc.py?rev=16795&amp;r1=16794&amp;r2=16795&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/uf_redesign/gui/misc.py?rev=16795&amp;r1=16794&amp;r2=16795&amp;view=diff</a>
+==============================================================================
+--- branches/uf_redesign/gui/misc.py (original)
++++ branches/uf_redesign/gui/misc.py Fri Jun  8 21:06:08 2012
+@@ -25,8 +25,10 @@
+ &quot;&quot;&quot;Miscellaneous functions used throughout the GUI.&quot;&quot;&quot;
+ 
+ # Python module imports.
++from copy import deepcopy
+ import os
+ import platform
++from textwrap import wrap
+ import wx
+ 
+ # relax module imports.
+@@ -113,6 +115,127 @@
+     return sizer_cent
+ 
+ 
++def format_table(table):
++    &quot;&quot;&quot;Format the text by stripping whitespace.
++
++    @param table:       The table.
++    @type table:        lists of lists of str
++    @return:            The formatted table.
++    @rtype:             str
++    &quot;&quot;&quot;
++
++    # Initialise some variables.
++    text = ''
++    num_rows = len(table.cells)
++    num_cols = len(table.headings)
++
++    # The column widths.
++    widths = []
++    for j in range(num_cols):
++        widths.append(len(table.headings[j]))
++    for i in range(num_rows):
++        for j in range(num_cols):
++            # The element is larger than the previous.
++            if len(table.cells[i][j]) &gt; widths[j]:
++                widths[j] = len(table.cells[i][j])
++
++    # The free space for the text.
++    used = 0
++    used += 2    # Start of the table '  '.
++    used += 2    # End of the table '  '.
++    used += 3 * (num_cols - 1)   # Middle of the table '   '.
++    free_space = status.text_width - used
++
++    # The maximal width for all cells.
++    free_width = sum(widths)
++
++    # Column wrapping.
++    if free_width &gt; free_space:
++        # New structures.
++        new_widths = deepcopy(widths)
++        num_cols_wrap = num_cols
++        free_space_wrap = free_space
++        col_wrap = [True] * num_cols
++
++        # Loop.
++        while 1:
++            # The average column width.
++            ave_width = free_space_wrap / num_cols_wrap
++
++            # Rescale.
++            rescale = False
++            for i in range(num_cols):
++                # Remove the column from wrapping if smaller than the 
+average wrapped width.
++                if col_wrap[i] and new_widths[i] &lt; ave_width:
++                    # Recalculate.
++                    free_space_wrap = free_space_wrap - new_widths[i]
++                    num_cols_wrap -= 1
++                    rescale = True
++
++                    # Remove the column from wrapping.
++                    col_wrap[i] = False
++
++            # Done.
++            if not rescale:
++                # Set the column widths.
++                for i in range(num_cols):
++                    if new_widths[i] &gt; ave_width:
++                        new_widths[i] = ave_width
++                break
++
++    # No column wrapping.
++    else:
++        new_widths = widths
++        col_wrap = [False] * num_cols
++
++    # The total table width.
++    total_width = sum(new_widths) + used
++
++    # The header.
++    text += &quot; &quot; + &quot;_&quot; * (total_width - 2) + &quot;\n\n&quot;    # Top rule and black 
+line.
++    text += table_line(text=table.headings, widths=new_widths)    # The 
+headings.
++    text += table_line(widths=new_widths, bottom=True)    # Middle rule.
++
++    # The table contents.
++    for i in range(num_rows):
++        # Column text, with wrapping.
++        col_text = [table.cells[i]]
++        num_lines = 1
++        for j in range(num_cols):
++            if col_wrap[j]:
++                # Wrap.
++                lines = wrap(col_text[0][j], new_widths[j])
++
++                # Count the lines.
++                num_lines = len(lines)
++
++                # Replace the column text.
++                for k in range(num_lines):
++                    # New row of empty text.
++                    if len(col_text) &lt;= k:
++                        col_text.append(['']*num_cols)
++
++                    # Pack the data.
++                    col_text[k][j] = lines[k]
++
++        # Blank line (between rows when asked, and for the first row after 
+the header).
++        if table.spacing or i == 1:
++            text += table_line(widths=new_widths)
++
++        # The contents.
++        for k in range(num_lines):
++            text += table_line(text=col_text[k], widths=new_widths)
++
++    # The bottom.
++    text += table_line(widths=new_widths, bottom=True)    # Bottom rule.
++
++    # Add a newline.
++    text += '\n'
++
++    # Return the table text.
++    return text
++
++
+ def open_file(file, force_text=False):
+     &quot;&quot;&quot;Open the file in the platform's native editor/viewer.
+ 
+@@ -176,3 +299,54 @@
+ 
+     # Success.
+     return True
++
++
++def table_line(text=None, widths=None, bottom=False):
++    &quot;&quot;&quot;Format a line of a table.
++
++    @keyword text:      The list of table elements.  If not given, an empty 
+line will be be produced.
++    @type text:         list of str or None
++    @keyword widths:    The list of column widths for the table.
++    @type widths:       list of int
++    @keyword botton:    A flag which if True will cause a table bottom line 
+to be produced.
++    @type bottom:       bool
++    @return:            The table line.
++    @rtype:             str
++    &quot;&quot;&quot;
++
++    # Initialise.
++    if bottom:
++        line = &quot; _&quot;
++    else:
++        line = &quot;  &quot;
++
++    # Loop over the columns.
++    for i in range(len(widths)):
++        # The column separator.
++        if i &gt; 0:
++            if bottom:
++                line += &quot;___&quot;
++            else:
++                line += &quot;   &quot;
++
++        # A bottom line.
++        if bottom:
++            line += &quot;_&quot; * widths[i]
++
++        # Empty line.
++        elif text == None:
++            line += &quot; &quot; * widths[i]
++
++        # The text.
++        else:
++            line += text[i]
++            line += &quot; &quot; * (widths[i] - len(text[i]))
++
++    # Close the line.
++    if bottom:
++        line += &quot;_ \n&quot;
++    else:
++        line += &quot;  \n&quot;
++
++    # Return the text.
++    return line
+
+Modified: branches/uf_redesign/gui/uf_objects.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/uf_redesign/gui/uf_objects.py?rev=16795&amp;r1=16794&amp;r2=16795&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/uf_redesign/gui/uf_objects.py?rev=16795&amp;r1=16794&amp;r2=16795&amp;view=diff</a>
+==============================================================================
+--- branches/uf_redesign/gui/uf_objects.py (original)
++++ branches/uf_redesign/gui/uf_objects.py Fri Jun  8 21:06:08 2012
+@@ -24,7 +24,6 @@
+ &quot;&quot;&quot;Module containing the special objects for auto-generating the GUI user 
+functions and classes.&quot;&quot;&quot;
+ 
+ # Python module imports.
+-from copy import deepcopy
+ from re import search
+ from string import split
+ from textwrap import wrap
+@@ -54,6 +53,7 @@
+ from gui.input_elements.spin_id import Spin_id
+ from gui.input_elements.value import Value
+ from gui.interpreter import Interpreter; interpreter = Interpreter()
++from gui.misc import format_table
+ from gui.wizard import Wiz_page, Wiz_window
+ 
+ 
+@@ -351,130 +351,6 @@
+             wx.EndBusyCursor()
+ 
+ 
+-    def _format_table(self, label):
+-        &quot;&quot;&quot;Format the text by stripping whitespace.
+-
+-        @param label:       The unique table label.
+-        @type label:        str
+-        @return:            The formatted table.
+-        @rtype:             str
+-        &quot;&quot;&quot;
+-
+-        # Get the table.
+-        table = uf_tables.get_table(label)
+-
+-        # Initialise some variables.
+-        text = ''
+-        num_rows = len(table.cells)
+-        num_cols = len(table.headings)
+-
+-        # The column widths.
+-        widths = []
+-        for j in range(num_cols):
+-            widths.append(len(table.headings[j]))
+-        for i in range(num_rows):
+-            for j in range(num_cols):
+-                # The element is larger than the previous.
+-                if len(table.cells[i][j]) &gt; widths[j]:
+-                    widths[j] = len(table.cells[i][j])
+-
+-        # The free space for the text.
+-        used = 0
+-        used += 2    # Start of the table '  '.
+-        used += 2    # End of the table '  '.
+-        used += 3 * (num_cols - 1)   # Middle of the table '   '.
+-        free_space = status.text_width - used
+-
+-        # The maximal width for all cells.
+-        free_width = sum(widths)
+-
+-        # Column wrapping.
+-        if free_width &gt; free_space:
+-            # New structures.
+-            new_widths = deepcopy(widths)
+-            num_cols_wrap = num_cols
+-            free_space_wrap = free_space
+-            col_wrap = [True] * num_cols
+-
+-            # Loop.
+-            while 1:
+-                # The average column width.
+-                ave_width = free_space_wrap / num_cols_wrap
+-
+-                # Rescale.
+-                rescale = False
+-                for i in range(num_cols):
+-                    # Remove the column from wrapping if smaller than the 
+average wrapped width.
+-                    if col_wrap[i] and new_widths[i] &lt; ave_width:
+-                        # Recalculate.
+-                        free_space_wrap = free_space_wrap - new_widths[i]
+-                        num_cols_wrap -= 1
+-                        rescale = True
+-
+-                        # Remove the column from wrapping.
+-                        col_wrap[i] = False
+-
+-                # Done.
+-                if not rescale:
+-                    # Set the column widths.
+-                    for i in range(num_cols):
+-                        if new_widths[i] &gt; ave_width:
+-                            new_widths[i] = ave_width
+-                    break
+-
+-        # No column wrapping.
+-        else:
+-            new_widths = widths
+-            col_wrap = [False] * num_cols
+-
+-        # The total table width.
+-        total_width = sum(new_widths) + used
+-
+-        # The header.
+-        text += &quot; &quot; + &quot;_&quot; * (total_width - 2) + &quot;\n\n&quot;    # Top rule and 
+black line.
+-        text += self._table_line(text=table.headings, widths=new_widths)    
+# The headings.
+-        text += self._table_line(widths=new_widths, bottom=True)    # Middle 
+rule.
+-
+-        # The table contents.
+-        for i in range(num_rows):
+-            # Column text, with wrapping.
+-            col_text = [table.cells[i]]
+-            num_lines = 1
+-            for j in range(num_cols):
+-                if col_wrap[j]:
+-                    # Wrap.
+-                    lines = wrap(col_text[0][j], new_widths[j])
+-
+-                    # Count the lines.
+-                    num_lines = len(lines)
+-
+-                    # Replace the column text.
+-                    for k in range(num_lines):
+-                        # New row of empty text.
+-                        if len(col_text) &lt;= k:
+-                            col_text.append(['']*num_cols)
+-
+-                        # Pack the data.
+-                        col_text[k][j] = lines[k]
+-
+-            # Blank line (between rows when asked, and for the first row 
+after the header).
+-            if table.spacing or i == 1:
+-                text += self._table_line(widths=new_widths)
+-
+-            # The contents.
+-            for k in range(num_lines):
+-                text += self._table_line(text=col_text[k], widths=new_widths)
+-
+-        # The bottom.
+-        text += self._table_line(widths=new_widths, bottom=True)    # Bottom 
+rule.
+-
+-        # Add a newline.
+-        text += '\n'
+-
+-        # Return the table text.
+-        return text
+-
+-
+     def _format_text(self, text):
+         &quot;&quot;&quot;Format the text by stripping whitespace.
+ 
+@@ -542,57 +418,6 @@
+ 
+         # Return the text.
+         return text
+-
+-
+-    def _table_line(self, text=None, widths=None, bottom=False):
+-        &quot;&quot;&quot;Format a line of a table.
+-
+-        @keyword text:      The list of table elements.  If not given, an 
+empty line will be be produced.
+-        @type text:         list of str or None
+-        @keyword widths:    The list of column widths for the table.
+-        @type widths:       list of int
+-        @keyword botton:    A flag which if True will cause a table bottom 
+line to be produced.
+-        @type bottom:       bool
+-        @return:            The table line.
+-        @rtype:             str
+-        &quot;&quot;&quot;
+-
+-        # Initialise.
+-        if bottom:
+-            line = &quot; _&quot;
+-        else:
+-            line = &quot;  &quot;
+-
+-        # Loop over the columns.
+-        for i in range(len(widths)):
+-            # The column separator.
+-            if i &gt; 0:
+-                if bottom:
+-                    line += &quot;___&quot;
+-                else:
+-                    line += &quot;   &quot;
+-
+-            # A bottom line.
+-            if bottom:
+-                line += &quot;_&quot; * widths[i]
+-
+-            # Empty line.
+-            elif text == None:
+-                line += &quot; &quot; * widths[i]
+-
+-            # The text.
+-            else:
+-                line += text[i]
+-                line += &quot; &quot; * (widths[i] - len(text[i]))
+-
+-        # Close the line.
+-        if bottom:
+-            line += &quot;_ \n&quot;
+-        else:
+-            line += &quot;  \n&quot;
+-
+-        # Return the text.
+-        return line
+ 
+ 
+     def Clear(self, key):
+@@ -866,7 +691,7 @@
+ 
+                     # Format the tables.
+                     if type == 'table':
+-                        text = self._format_table(element)
++                        text = format_table(uf_tables.get_table(element))
+ 
+                     # Format the lists.
+                     elif type == 'list':
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Jun 08 21:20:02 2012</div>  
+</body>
+</html>

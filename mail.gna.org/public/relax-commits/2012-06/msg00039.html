@@ -1,0 +1,369 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r16594 &#45; in /branches/uf_redesign/user_functions: data.py objects.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Sat, 02 Jun 2012 12:21:09 +0200 -->
+<!--X-Message-Id: E1SalSH&#45;0002s5&#45;7X@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r16594 - in /branches/uf_redesign/user_functions: data.py objects.py -- June 02, 2012 - 12:21</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r16594 - in /branches/uf_redesign/user_functions: data.py objects.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00039" class="tabs">Index by Date</a> | <a href="threads.html#00039" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00038.html">Date Prev</a>] [<a href="msg00040.html">Date Next</a>] [<a href="msg00038.html">Thread Prev</a>] [<a href="msg00040.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Sat, 02 Jun 2012 10:21:09 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00039.html">E1SalSH-0002s5-7X@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on June 02, 2012 - 12:21:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Sat Jun  2 12:21:08 2012
+New Revision: 16594
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=16594&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=16594&amp;view=rev</a>
+Log:
+Created a new way of defining and inputting tables into the user function 
+descriptions.
+
+This introduces the user_functions.objects.Table for holding all the table 
+data and metadata, and
+the user_functions.data.Uf_tables singleton object for holding all the 
+tables.  This design will
+allow more metadata (for example using longtables in the LaTeX user manual) 
+to be specified.  The
+singleton collection of tables with unique labels will also allow the 
+elimination of duplicated
+tables in the PDF and HTML user manuals.  The new table title metadata will 
+also be used for the
+table headings in the user manuals.
+
+
+Modified:
+    branches/uf_redesign/user_functions/data.py
+    branches/uf_redesign/user_functions/objects.py
+
+Modified: branches/uf_redesign/user_functions/data.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/uf_redesign/user_functions/data.py?rev=16594&amp;r1=16593&amp;r2=16594&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/uf_redesign/user_functions/data.py?rev=16594&amp;r1=16593&amp;r2=16594&amp;view=diff</a>
+==============================================================================
+--- branches/uf_redesign/user_functions/data.py (original)
++++ branches/uf_redesign/user_functions/data.py Sat Jun  2 12:21:08 2012
+@@ -30,7 +30,7 @@
+ 
+ # relax module imports.
+ from relax_errors import RelaxError
+-from user_functions.objects import Class_container, Uf_container
++from user_functions.objects import Class_container, Table, Uf_container
+ 
+ 
+ class Uf_info(object):
+@@ -182,3 +182,63 @@
+             # Check the backend.
+             if uf.backend == None:
+                 raise RelaxError(&quot;The back end of the %s user function has 
+not been specified.&quot; % name)
++
++
++
++class Uf_tables(object):
++    &quot;&quot;&quot;The data singleton holding all of the description tables.&quot;&quot;&quot;
++
++    # Class variable for storing the class instance (for the singleton).
++    _instance = None
++
++    def __new__(self, *args, **kargs):
++        &quot;&quot;&quot;Replacement method for implementing the singleton design 
+pattern.&quot;&quot;&quot;
++
++        # First instantiation.
++        if self._instance is None:
++            # Instantiate.
++            self._instance = object.__new__(self, *args, **kargs)
++
++            # Initialise a number of class variables.
++            self._tables = {}
++            self._labels = []
++
++        # Already instantiated, so return the instance.
++        return self._instance
++
++
++    def add_table(self, title=None, label=None, spacing=True, 
+longtable=False):
++        &quot;&quot;&quot;Add a new table to the object.
++
++        @keyword title:     The title of the table.
++        @type title:        str
++        @keyword label:     The unique label of the table.  This is used to 
+identify tables, and is also used in the table referencing in the LaTeX 
+compilation of the user manual.
++        @type label:        str
++        @keyword spacing:   A flag which if True will cause empty rows to be 
+placed between elements.
++        @type spacing:      bool
++        @keyword longtable: A special LaTeX flag which if True will cause 
+the longtables package to be used to spread a table across multiple pages.  
+This should only be used for tables that do not fit on a single page.
++        @type longtable:    bool
++        @return:            The table object.
++        @rtype:             user_functions.objects.Table instance
++        &quot;&quot;&quot;
++
++        # Check if the table already exists.
++        if label in self._labels:
++            raise RelaxError(&quot;The table with label '%s' has already been set 
+up.&quot; % label)
++
++        # Store the label and initialise a new object.
++        self._labels.append(label)
++        self._tables[label] = Table(title=title, label=label, 
+spacing=spacing, longtable=longtable)
++
++
++    def get_table(self, label):
++        &quot;&quot;&quot;Return the table matching the given label.
++
++        @param label:   The unique label of the table.
++        @type label:    str
++        @return:        The table data container.
++        @rtype:         user_functions.objects.Table instance
++        &quot;&quot;&quot;
++
++        # Return the table.
++        return self._tables[label]
+
+Modified: branches/uf_redesign/user_functions/objects.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/uf_redesign/user_functions/objects.py?rev=16594&amp;r1=16593&amp;r2=16594&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/uf_redesign/user_functions/objects.py?rev=16594&amp;r1=16593&amp;r2=16594&amp;view=diff</a>
+==============================================================================
+--- branches/uf_redesign/user_functions/objects.py (original)
++++ branches/uf_redesign/user_functions/objects.py Sat Jun  2 12:21:08 2012
+@@ -97,7 +97,6 @@
+         # Initialise internal storage objects.
+         self._data = []
+         self._types = []
+-        self._format = {}
+ 
+ 
+     def add_item_list_element(self, item, text):
+@@ -165,38 +164,16 @@
+             self._data[-1].append(text)
+ 
+ 
+-    def add_table_titles(self, titles, spacing=True):
+-        &quot;&quot;&quot;Add a row of table titles to the description.
+-
+-        @param titles:      The table titles.
+-        @type titles:       list of str
+-        @keyword spacing:   A flag which if True will cause empty rows to be 
+placed between elements.
+-        @type spacing:      bool
+-        &quot;&quot;&quot;
+-
+-        # Create a new table.
+-        self._data.append([titles])
++    def add_table(self, label):
++        &quot;&quot;&quot;Add a table to the description.
++
++        @param label:   The unique label corresponding to a 
+user_functions.objects.Table instance.
++        @type label:    str
++        &quot;&quot;&quot;
++
++        # Add the table.
++        self._data.append(label)
+         self._types.append('table')
+-
+-        # Store the formatting.
+-        self._format[repr(len(self._data)-1)] = spacing
+-
+-
+-    def add_table_row(self, row):
+-        &quot;&quot;&quot;Add a table row to the description.
+-
+-        @param text:    The table row.
+-        @type text:     list of str
+-        &quot;&quot;&quot;
+-
+-        # Create a new table if needed.
+-        if not len(self._types) or self._types[-1] != 'table' or len(row) != 
+len(self._data[-1][-1]):
+-            self._data.append([row])
+-            self._types.append('table')
+-
+-        # Append the row to an existing table.
+-        else:
+-            self._data[-1].append(row)
+ 
+ 
+     def add_verbatim(self, text):
+@@ -211,29 +188,16 @@
+         self._types.append('verbatim')
+ 
+ 
+-    def element_loop(self, format=False):
++    def element_loop(self):
+         &quot;&quot;&quot;Iterator method yielding the description elements.
+ 
+-        @keyword format:    A flag which if True will cause formatting 
+information to be returned.
+-        @return:            The element type and corresponding data (and 
+formatting info, if asked for). 
++        @return:            The element type and corresponding data. 
+         @rtype:             str and anything
+         &quot;&quot;&quot;
+ 
+         # Loop over the elements.
+         for i in range(len(self._data)):
+-            # The format.
+-            if format:
+-                # The key and value.
+-                key = repr(i)
+-                val = None
+-                if self._format.has_key(key):
+-                    val = self._format[key]
+-
+-                yield self._types[i], self._data[i], val
+-
+-            # No format.
+-            else:
+-                yield self._types[i], self._data[i]
++            yield self._types[i], self._data[i]
+ 
+ 
+     def get_title(self):
+@@ -245,6 +209,66 @@
+ 
+         # The title.
+         return self._title
++
++
++
++class Table(object):
++    &quot;&quot;&quot;A special class defining the tables used in the user function 
+descriptions.&quot;&quot;&quot;
++
++    def __init__(self, title=None, label=None, spacing=True, 
+longtable=False):
++        &quot;&quot;&quot;Set up the table container.
++
++        @keyword title:     The title of the table.
++        @type title:        str
++        @keyword label:     The unique label of the table.  This is used to 
+identify tables, and is also used in the table referencing in the LaTeX 
+compilation of the user manual.
++        @type label:        str
++        @keyword spacing:   A flag which if True will cause empty rows to be 
+placed between elements.
++        @type spacing:      bool
++        @keyword longtable: A special LaTeX flag which if True will cause 
+the longtables package to be used to spread a table across multiple pages.  
+This should only be used for tables that do not fit on a single page.
++        @type longtable:    bool
++        &quot;&quot;&quot;
++
++        # Store the args.
++        self.title = title
++        self.label = label
++        self.spacing = spacing
++        self.longtable = longtable
++
++        # Initialise some objects.
++        self.headings = None
++        self.cells = []
++        self.num_cols = 0
++
++
++    def add_headings(self, headings):
++        &quot;&quot;&quot;Add a row of table headings.
++
++        @param headings:    The table headings.
++        @type headings:     list of str
++        &quot;&quot;&quot;
++
++        # Store the titles.
++        self.headings = headings
++
++        # The number of columns.
++        self.num_cols = len(self.headings)
++
++
++    def add_row(self, row):
++        &quot;&quot;&quot;Add a table row.
++
++        @param row: The table row.
++        @type row:  list of str
++        &quot;&quot;&quot;
++
++        # Checks.
++        if self.headings == None:
++            raise RelaxError(&quot;A row cannot be added as the titles have not 
+been set up.&quot;)
++        if len(row) != self.num_cols:
++            raise RelaxError(&quot;The number of columns in %s does not match the 
+%s columns of the titles.&quot; % (row, self.num_cols))
++
++        # Append the row.
++        self.cells.append(row)
+ 
+ 
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Sat Jun 02 12:40:01 2012</div>  
+</body>
+</html>

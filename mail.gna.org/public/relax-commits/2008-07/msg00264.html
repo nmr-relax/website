@@ -1,0 +1,287 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r6869 &#45; /branches/rdc_analysis/specific_fns/n_state_model.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 09 Jul 2008 13:29:26 +0200 -->
+<!--X-Message-Id: E1KGXrS&#45;0006NY&#45;CK@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r6869 - /branches/rdc_analysis/specific_fns/n_state_model.py -- July 09, 2008 - 13:29</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r6869 - /branches/rdc_analysis/specific_fns/n_state_model.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00264" class="tabs">Index by Date</a> | <a href="threads.html#00264" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00263.html">Date Prev</a>] [<a href="msg00265.html">Date Next</a>] [<a href="msg00263.html">Thread Prev</a>] [<a href="msg00265.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 09 Jul 2008 11:29:25 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00264.html">E1KGXrS-0006NY-CK@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on July 09, 2008 - 13:29:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Jul  9 13:29:21 2008
+New Revision: 6869
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=6869&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=6869&amp;view=rev</a>
+Log:
+Spun out some of the minimisation code into the minimise_setup_tensors() 
+method.
+
+
+Modified:
+    branches/rdc_analysis/specific_fns/n_state_model.py
+
+Modified: branches/rdc_analysis/specific_fns/n_state_model.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/rdc_analysis/specific_fns/n_state_model.py?rev=6869&amp;r1=6868&amp;r2=6869&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/rdc_analysis/specific_fns/n_state_model.py?rev=6869&amp;r1=6868&amp;r2=6869&amp;view=diff</a>
+==============================================================================
+--- branches/rdc_analysis/specific_fns/n_state_model.py (original)
++++ branches/rdc_analysis/specific_fns/n_state_model.py Wed Jul  9 13:29:21 
+2008
+@@ -32,6 +32,7 @@
+ import generic_fns
+ import generic_fns.structure.geometric
+ import generic_fns.structure.mass
++from generic_fns.mol_res_spin import spin_loop
+ from generic_fns.structure.internal import Internal
+ from maths_fns.n_state_model import N_state_opt
+ from maths_fns.rotation_matrix import R_2vect, R_euler_zyz
+@@ -559,6 +560,94 @@
+         if constraints:
+             A, b = self.linear_constraints()
+ 
++        # Determine if alignment tensors or RDCs are to be used.
++        tensor_flag = False
++        rdc_flag = False
++        if hasattr(cdp, 'align_tensors'):
++            tensor_flag = True
++        for spin in spin_loop():
++            if hasattr(spin, 'rdc'):
++                rdc_flag = True
++                break
++
++        # Ok, have no idea what to do, so complain.
++        if tensor_flag and rdc_flag:
++            raise RelaxError, &quot;Both RDCs and alignment tensors are present.  
+Cannot determine which will be used for optimisation.&quot; 
++
++        # Set up minimisation using alignment tensors.
++        if tensor_flag:
++            results = self.minimise_setup_tensors()
++
++        # Minimisation.
++        if constraints:
++            results = generic_minimise(func=model.func, args=(), 
+x0=param_vector, min_algor=min_algor, min_options=min_options, 
+func_tol=func_tol, grad_tol=grad_tol, maxiter=max_iterations, A=A, b=b, 
+full_output=1, print_flag=verbosity)
++        else:
++            results = generic_minimise(func=model.func, args=(), 
+x0=param_vector, min_algor=min_algor, min_options=min_options, 
+func_tol=func_tol, grad_tol=grad_tol, maxiter=max_iterations, full_output=1, 
+print_flag=verbosity)
++        if results == None:
++            return
++
++        # Disassemble the results.
++        param_vector, func, iter_count, f_count, g_count, h_count, warning = 
+results
++
++        # Catch infinite chi-squared values.
++        if isInf(func):
++            raise RelaxInfError, 'chi-squared'
++
++        # Catch chi-squared values of NaN.
++        if isNaN(func):
++            raise RelaxNaNError, 'chi-squared'
++
++        # Disassemble the parameter vector.
++        self.disassemble_param_vector(param_vector=param_vector, 
+sim_index=sim_index)
++
++        # Monte Carlo minimisation statistics.
++        if sim_index != None:
++            # Chi-squared statistic.
++            cdp.chi2_sim[sim_index] = func
++
++            # Iterations.
++            cdp.iter_sim[sim_index] = iter_count
++
++            # Function evaluations.
++            cdp.f_count_sim[sim_index] = f_count
++
++            # Gradient evaluations.
++            cdp.g_count_sim[sim_index] = g_count
++
++            # Hessian evaluations.
++            cdp.h_count_sim[sim_index] = h_count
++
++            # Warning.
++            cdp.warning_sim[sim_index] = warning
++
++        # Normal statistics.
++        else:
++            # Chi-squared statistic.
++            cdp.chi2 = func
++
++            # Iterations.
++            cdp.iter = iter_count
++
++            # Function evaluations.
++            cdp.f_count = f_count
++
++            # Gradient evaluations.
++            cdp.g_count = g_count
++
++            # Hessian evaluations.
++            cdp.h_count = h_count
++
++            # Warning.
++            cdp.warning = warning
++
++
++    def minimise_setup_tensors(self):
++        &quot;&quot;&quot;Set up minimisation for the N-state model using alignment tensors.
++
++        @return:        The initialised N_state_opt class for minimisation.
++        @rteyp:         N_state_opt instance
++        &quot;&quot;&quot;
++
+         # Initialise.
+         full_tensors = []
+         red_tensor_elem = []
+@@ -607,65 +696,8 @@
+         # Set up the class instance containing the target function.
+         model = N_state_opt(N=cdp.N, init_params=param_vector, 
+full_tensors=full_tensors, red_data=red_tensor_elem, 
+red_errors=red_tensor_err, full_in_ref_frame=full_in_ref_frame)
+ 
+-        # Minimisation.
+-        if constraints:
+-            results = generic_minimise(func=model.func, args=(), 
+x0=param_vector, min_algor=min_algor, min_options=min_options, 
+func_tol=func_tol, grad_tol=grad_tol, maxiter=max_iterations, A=A, b=b, 
+full_output=1, print_flag=verbosity)
+-        else:
+-            results = generic_minimise(func=model.func, args=(), 
+x0=param_vector, min_algor=min_algor, min_options=min_options, 
+func_tol=func_tol, grad_tol=grad_tol, maxiter=max_iterations, full_output=1, 
+print_flag=verbosity)
+-        if results == None:
+-            return
+-        param_vector, func, iter_count, f_count, g_count, h_count, warning = 
+results
+-
+-        # Catch infinite chi-squared values.
+-        if isInf(func):
+-            raise RelaxInfError, 'chi-squared'
+-
+-        # Catch chi-squared values of NaN.
+-        if isNaN(func):
+-            raise RelaxNaNError, 'chi-squared'
+-
+-        # Disassemble the parameter vector.
+-        self.disassemble_param_vector(param_vector=param_vector, 
+sim_index=sim_index)
+-
+-        # Monte Carlo minimisation statistics.
+-        if sim_index != None:
+-            # Chi-squared statistic.
+-            cdp.chi2_sim[sim_index] = func
+-
+-            # Iterations.
+-            cdp.iter_sim[sim_index] = iter_count
+-
+-            # Function evaluations.
+-            cdp.f_count_sim[sim_index] = f_count
+-
+-            # Gradient evaluations.
+-            cdp.g_count_sim[sim_index] = g_count
+-
+-            # Hessian evaluations.
+-            cdp.h_count_sim[sim_index] = h_count
+-
+-            # Warning.
+-            cdp.warning_sim[sim_index] = warning
+-
+-        # Normal statistics.
+-        else:
+-            # Chi-squared statistic.
+-            cdp.chi2 = func
+-
+-            # Iterations.
+-            cdp.iter = iter_count
+-
+-            # Function evaluations.
+-            cdp.f_count = f_count
+-
+-            # Gradient evaluations.
+-            cdp.g_count = g_count
+-
+-            # Hessian evaluations.
+-            cdp.h_count = h_count
+-
+-            # Warning.
+-            cdp.warning = warning
++        # Return the instantiated class.
++        return model
+ 
+ 
+     def number_of_states(self, N=None):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Jul 09 13:40:15 2008</div>  
+</body>
+</html>

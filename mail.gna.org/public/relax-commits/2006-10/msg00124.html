@@ -1,0 +1,212 @@
+<!-- MHonArc v2.6.10 -->
+<!--X-Subject: r2689 &#45; in /branches/tensor_pdb: data.py generic_fns/pdb.py -->
+<!--X-From-R13: rqjneq.qnhiretarNtznvy.pbz -->
+<!--X-Date: Sun, 29 Oct 2006 04:14:09 +0100 -->
+<!--X-Message-Id: E1Ge17D&#45;00040h&#45;Es@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r2689 - in /branches/tensor_pdb: data.py generic_fns/pdb.py -- October 29, 2006 - 04:14</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r2689 - in /branches/tensor_pdb: data.py generic_fns/pdb.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00124" class="tabs">Index by Date</a> | <a href="threads.html#00124" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00123.html">Date Prev</a>] [<a href="msg00125.html">Date Next</a>] [<a href="msg00123.html">Thread Prev</a>] [<a href="msg00125.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Sun, 29 Oct 2006 03:13:39 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00124.html">E1Ge17D-00040h-Es@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward . dauvergne</strong> on October 29, 2006 - 04:14:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Sun Oct 29 04:13:38 2006
+New Revision: 2689
+
+URL: <a  href="http://svn.gna.org/viewcvs/relax?rev=2689&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=2689&amp;view=rev</a>
+Log:
+Fixed the transposed spheroidal rotation matrix.
+
+The spheroidal rotation matrix returned from the data structure 
+'self.relax.data.diff[run].rotation'
+was incorrect.  Instead of the true rotation matrix, the transpose of the 
+matrix was being returned.
+As the spheroidal rotation matrix was transposed whereas the ellipsoidal 
+rotation matrix was correct
+(the spherical rotation matrix was the identity matrix, so no problem there), 
+the maths for
+generating the PDB geometric object representing the diffusion tensor was 
+causing problems.  Now all
+three geometric objects - sphere, spheroid, and ellipsoid - should be 
+correctly generated.
+
+
+Modified:
+    branches/tensor_pdb/data.py
+    branches/tensor_pdb/generic_fns/pdb.py
+
+Modified: branches/tensor_pdb/data.py
+URL: 
+<a  href="http://svn.gna.org/viewcvs/relax/branches/tensor_pdb/data.py?rev=2689&amp;r1=2688&amp;r2=2689&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/tensor_pdb/data.py?rev=2689&amp;r1=2688&amp;r2=2689&amp;view=diff</a>
+==============================================================================
+--- branches/tensor_pdb/data.py (original)
++++ branches/tensor_pdb/data.py Sun Oct 29 04:13:38 2006
+@@ -217,9 +217,9 @@
+         The rotation matrix required to shift from the diffusion tensor 
+frame to the PDB frame is
+         equal to
+ 
+-                  |  cos(theta) * cos(phi)   cos(theta) * sin(phi)  
+-sin(theta) |
+-            R  =  | -sin(phi)                cos(phi)                0       
+   |.
+-                  |  sin(theta) * cos(phi)   sin(theta) * sin(phi)   
+cos(tehta) |
++                  |  cos(theta) * cos(phi)  -sin(phi)   sin(theta) * 
+cos(phi) |
++            R  =  |  cos(theta) * sin(phi)   cos(phi)   sin(theta) * 
+sin(phi) |.
++                  | -sin(theta)              0          cos(theta)           
+ |
+ 
+ 
+         Ellipsoidal diffusion
+@@ -262,9 +262,9 @@
+ 
+             R  =  | Dx_unit  Dy_unit  Dz_unit |,
+ 
+-                  | Dx_unit[0]  Dy_unit[0]  Dz_unit[0] | 
++                  | Dx_unit[0]  Dy_unit[0]  Dz_unit[0] |
+                =  | Dx_unit[1]  Dy_unit[1]  Dz_unit[1] |.
+-                  | Dx_unit[2]  Dy_unit[2]  Dz_unit[2] | 
++                  | Dx_unit[2]  Dy_unit[2]  Dz_unit[2] |
+         &quot;&quot;&quot;
+ 
+         # All tensor types.
+@@ -339,9 +339,9 @@
+ 
+         # The diffusion tensor (within the structural frame).
+         if name == 'tensor' and self.type == 'spheroid':
+-            # Rotation (R^T . tensor . R).
++            # Rotation (R . tensor . R^T).
+             R = self.rotation
+-            return dot(transpose(R), dot(self.tensor_diag, R))
++            return dot(R, dot(self.tensor_diag, transpose(R)))
+ 
+         # The rotation matrix.
+         if name == 'rotation' and self.type == 'spheroid':
+@@ -350,15 +350,15 @@
+ 
+             # First row of the rotation matrix.
+             rotation[0, 0] = cos(self.theta) * cos(self.phi)
+-            rotation[0, 1] = cos(self.theta) * sin(self.phi)
+-            rotation[0, 2] = -sin(self.theta)
++            rotation[1, 0] = cos(self.theta) * sin(self.phi)
++            rotation[2, 0] = -sin(self.theta)
+ 
+             # Second row of the rotation matrix.
+-            rotation[1, 0] = -sin(self.phi)
++            rotation[0, 1] = -sin(self.phi)
+             rotation[1, 1] = cos(self.phi)
+ 
+             # Replace the last row of the rotation matrix with the Dpar unit 
+vector.
+-            rotation[2] = self.Dpar_unit
++            rotation[:, 2] = self.Dpar_unit
+ 
+             # Return the tensor.
+             return rotation
+
+Modified: branches/tensor_pdb/generic_fns/pdb.py
+URL: 
+<a  href="http://svn.gna.org/viewcvs/relax/branches/tensor_pdb/generic_fns/pdb.py?rev=2689&amp;r1=2688&amp;r2=2689&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/tensor_pdb/generic_fns/pdb.py?rev=2689&amp;r1=2688&amp;r2=2689&amp;view=diff</a>
+==============================================================================
+--- branches/tensor_pdb/generic_fns/pdb.py (original)
++++ branches/tensor_pdb/generic_fns/pdb.py Sun Oct 29 04:13:38 2006
+@@ -21,7 +21,7 @@
+ 
+###############################################################################
+ 
+ from math import sqrt, cos, pi, sin
+-from Numeric import Float64, arccos, dot, transpose, zeros
++from Numeric import Float64, arccos, dot, zeros
+ from os import F_OK, access
+ from re import compile
+ import Scientific.IO.PDB
+@@ -309,7 +309,7 @@
+         ######################
+ 
+         # Print out.
+-        print &quot;Creating the vector distribution.&quot;
++        print &quot;Creating the vector distribution.\n&quot;
+ 
+         # Increment value.
+         inc = 20
+@@ -328,7 +328,7 @@
+                 atom_id = 'T' + `i` + 'P' + `j`
+ 
+                 # Rotate the vector into the diffusion frame.
+-                vector = 
+dot(transpose(self.relax.data.diff[self.run].rotation), vectors[index])
++                vector = dot(self.relax.data.diff[self.run].rotation, 
+vectors[index])
+ 
+                 # Set the length of the vector to its diffusion rate within 
+the diffusion tensor geometric object.
+                 vector = dot(self.relax.data.diff[self.run].tensor, vector)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Sun Oct 29 05:20:06 2006</div>  
+</body>
+</html>

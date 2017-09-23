@@ -1,0 +1,391 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r10263 &#45; /branches/bieri_gui/gui_bieri/res/calc_rx.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 20 Jan 2010 09:21:23 +0100 -->
+<!--X-Message-Id: E1NXVoZ&#45;0002ST&#45;8p@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r10263 - /branches/bieri_gui/gui_bieri/res/calc_rx.py -- January 20, 2010 - 09:21</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r10263 - /branches/bieri_gui/gui_bieri/res/calc_rx.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00165" class="tabs">Index by Date</a> | <a href="threads.html#00165" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00164.html">Date Prev</a>] [<a href="msg00166.html">Date Next</a>] [<a href="msg00164.html">Thread Prev</a>] [<a href="msg00166.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 20 Jan 2010 08:21:23 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00165.html">E1NXVoZ-0002ST-8p@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on January 20, 2010 - 09:21:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Jan 20 09:21:22 2010
+New Revision: 10263
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=10263&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=10263&amp;view=rev</a>
+Log:
+Created feedback to relaxGUI Log Window during Rx calculation
+
+This corresponds to the calc_rx_patch file attached to 
+<a  rel="nofollow" href="https://gna.org/task/?6847">https://gna.org/task/?6847</a> by
+Michael Bieri (<a  rel="nofollow" href="https://gna.org/users/michaelbieri">https://gna.org/users/michaelbieri</a>), in the zip file
+<a  rel="nofollow" href="https://gna.org/support/download.php?file_id=7726">https://gna.org/support/download.php?file_id=7726</a>.
+
+added:
+
+class RedirectText --&gt; redirect the relax output to relaxGUI Log Window
+
+# Number of Monte Carlo simulations
+global montecarlo
+montecarlo = int(global_setting[6])
+
+--&gt; set monte carlo value for updating progress bar in log window
+
+
+# value for progress bar during monte carlo simulation
+global progress
+progress = 5.0
+
+--&gt; initial progress value before monte carlo simulation
+
+
+
+# redirect relax output and errors to relaxGUI - log panel
+redir=RedirectText(self)
+sys.stdout=redir
+sys.stderr=redir
+
+redirecting system output and error to new created class that updates log
+window
+
+
+Modified:
+    branches/bieri_gui/gui_bieri/res/calc_rx.py
+
+Modified: branches/bieri_gui/gui_bieri/res/calc_rx.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/bieri_gui/gui_bieri/res/calc_rx.py?rev=10263&amp;r1=10262&amp;r2=10263&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/bieri_gui/gui_bieri/res/calc_rx.py?rev=10263&amp;r1=10262&amp;r2=10263&amp;view=diff</a>
+==============================================================================
+--- branches/bieri_gui/gui_bieri/res/calc_rx.py (original)
++++ branches/bieri_gui/gui_bieri/res/calc_rx.py Wed Jan 20 09:21:22 2010
+@@ -29,24 +29,66 @@
+ import time
+ import sys
+ import os
++import wx
+ 
+ # relax module imports.
+ from float import floatAsByteArray
+ from generic_fns.mol_res_spin import generate_spin_id, spin_index_loop, 
+spin_loop
+-from generic_fns import pipes
+ import generic_fns.structure.main
+ from relax_errors import RelaxError
+ from specific_fns.setup import relax_fit_obj
+ from generic_fns.state import save_state
+-from generic_fns import monte_carlo
++from generic_fns import monte_carlo, results, minimise, pipes, 
+diffusion_tensor, fix, sequence, spectrum, relax_data, selection, value, 
+grace, eliminate
+ from minfx.generic import generic_minimise
+ 
+ # relaxGUI module import
+ from results_analysis import color_code_noe
+-from message import relax_run_ok
+-
++from message import relax_run_ok, question
++
++
++####### Class to redirect relax output to relaxGUI - log panel and progress 
+bar
++class RedirectText(object):
++    def __init__(self,aWxTextCtrl):
++        self.out=aWxTextCtrl
+  
+-def make_rx(target_dir, rx_list, relax_times, structure_pdb, nmr_freq, 
+r1_r2, freq_no, unres, self, freqno, global_setting, file_setting, 
+sequencefile):
++    def write(self,string):
++        global progress
++
++        wx.CallAfter(self.out.log_panel.WriteText, string)
++        time.sleep(0.001)  # allow relaxGUI log panel to get refreshed
++
++        # split print out into list
++        a = str(string)
++        check = []
++        check = a.split()
++        
++        # update progress bar
++        if 'Simulation' in string:          
++            add = round(progress)
++            add_int = int(add)
++            wx.CallAfter(self.out.progress_bar.SetValue, add_int)
++            progress = ( (int(check[1]) * 100) / float(montecarlo + 6)) + 5
++            time.sleep(0.001)  # allow relaxGUI progressbar to get refreshed
++
++
++
++########### Rx Calculation
++ 
++def make_rx(target_dir, rx_list, relax_times, structure_pdb, nmr_freq, 
+r1_r2, freq_no, unres, main, freqno, global_setting, file_setting, 
+sequencefile, self):
++
++        # Number of Monte Carlo simulations
++        global montecarlo
++        montecarlo = int(global_setting[6]) 
++
++        # value for progress bar during monte carlo simulation
++        global progress
++        progress = 5.0
++
++
++        # redirect relax output and errors to relaxGUI - log panel
++        redir=RedirectText(self)
++        sys.stdout=redir
++        sys.stderr=redir
+ 
+         hetero = global_setting[2]
+         prot = global_setting[3]
+@@ -60,6 +102,9 @@
+         gracedir = str(target_dir) + sep + 'grace'
+         savefile = str(target_dir) + sep + 'r' + str(r1_r2) + '.' + 
+str(nmr_freq)  + '.out'
+ 
++        wx.CallAfter(self.log_panel.AppendText, ('Starting R' + str(r1_r2) + 
+' calculation\n------------------------------------------\n\n') )
++        time.sleep(0.5)
++
+ 
+         # Select Peak Lists and Relaxation Times 
+         peakfiles = rx_list
+@@ -74,7 +119,8 @@
+ 
+         #create unresolved file
+         if not unres == '':
+-           print &quot;\nCreating unresolved file&quot;
++           wx.CallAfter(self.log_panel.AppendText, ('Creating unresolved 
+file\n\n'))
++           time.sleep(0.001)
+            unres = replace(unres, &quot;,&quot;,&quot;\n&quot;)
+            unres = replace(unres, &quot; &quot;,&quot;&quot;)
+            filename2 = target_dir + sep + 'unresolved'
+@@ -85,20 +131,29 @@
+         pipename = 'Rx ' + str(time.asctime(time.localtime()))
+ 
+         # Create the NOE data pipe.
++        wx.CallAfter(self.log_panel.AppendText, (&quot;pipes.create(&quot;+pipename+&quot;, 
+'relax_fit')\n\n&quot;))
++        time.sleep(0.001)
+         pipes.create(pipename, 'relax_fit')
++
++        # update progress bar
++        wx.CallAfter(self.progress_bar.SetValue, (1))
+ 
+         # Load Sequence
+         if str(structure_pdb) == '!!! Sequence file selected !!!':
+             
+              # Read sequence file
+-             print &quot;Reading Suquence from &quot;+ sequencefile
++             wx.CallAfter(self.log_panel.AppendText, (&quot;Reading Suquence from 
+&quot;+ sequencefile+'\n\n'))
++             time.sleep(0.001)
+              sequence.read(sequencefile)
+         
+         else:
+              # Load the backbone amide 15N spins from a PDB file.
+-             print &quot;\nReading sequence from &quot; + str(structure_pdb)
++             wx.CallAfter(self.log_panel.AppendText, (&quot;Reading sequence from 
+&quot; + str(structure_pdb) + '\n\n'))
+              generic_fns.structure.main.read_pdb(str(structure_pdb))
+              generic_fns.structure.main.load_spins(spin_id='@N')
++
++        # update progress bar
++        wx.CallAfter(self.progress_bar.SetValue, (2))
+ 
+         # Spectrum names.
+         names = peakfiles
+@@ -110,7 +165,7 @@
+         print '\n'
+         for i in xrange(len(names)):
+             # Load the peak intensities.
+-            print &quot;\nspectrum.read(file=str(&quot;+names[i]+&quot;), 
+spectrum_id=str(&quot;+names[i]+&quot;), int_method='height', 
+heteronuc=&quot;+str(hetero)+&quot;, proton=&quot;+str(prot)+&quot;)&quot;
++            wx.CallAfter(self.log_panel.AppendText, 
+(&quot;spectrum.read(file=str(&quot;+names[i]+&quot;), spectrum_id=str(&quot;+names[i]+&quot;), 
+int_method='height', heteronuc=&quot;+str(hetero)+&quot;, proton=&quot;+str(prot)+&quot;)\n\n&quot;))
+             spectrum.read(file=str(names[i]), spectrum_id=str(names[i]), 
+int_method='height', heteronuc=hetero, proton=prot)
+ 
+             # Set the relaxation times.
+@@ -123,9 +178,11 @@
+             for j in range(i,(len(names))):
+                if times[i] == times[j]:
+                   if not i == j:
+-                     print &quot;spectrum.replicated(spectrum_ids=[&quot; + names[i] + 
+&quot;, &quot;+names[j]+&quot;])&quot;   
+-                     spectrum.replicated(spectrum_ids=[names[i], names[j]])
+-
++                     print &quot;spectrum.replicated(spectrum_ids=[&quot; + 
+str(names[i]) + &quot;, &quot;+str(names[j])+&quot;])&quot;   
++                     spectrum.replicated(spectrum_ids= [ str(names[i]), 
+str(names[j])])
++
++        # update progress bar
++        wx.CallAfter(self.progress_bar.SetValue, (4))
+ 
+         # Peak intensity error analysis.
+         print &quot;spectrum.error_analysis()&quot;
+@@ -136,6 +193,9 @@
+            print '\nDeselect Residues'
+            selection.desel_read(file=resultsdir + sep + 'unresolved', 
+res_num_col= 1)
+ 
++        # update progress bar
++        wx.CallAfter(self.progress_bar.SetValue, (5))
++
+         # Set the relaxation curve type.
+         print &quot;\nrelax_fit_obj._select_model('exp')&quot;
+         relax_fit_obj._select_model('exp')
+@@ -149,8 +209,8 @@
+         minimise.minimise(min_algor='simplex', min_options=6, 
+func_tol=1e-25, grad_tol=None, max_iterations=10000000, constraints=False, 
+scaling=False, verbosity=1)
+         
+         # Monte Carlo simulations.
+-        print &quot;\nmonte_carlo.setup(number=500)&quot;
+-        monte_carlo.setup(number=500)
++        print &quot;\nmonte_carlo.setup(number=&quot;+str(montecarlo)+&quot;)&quot;
++        monte_carlo.setup(number=montecarlo)
+ 
+         print &quot;\nmonte_carlo.create_data('back_calc')&quot;
+         monte_carlo.create_data('back_calc')
+@@ -187,30 +247,37 @@
+         print &quot;&quot;
+         print &quot;&quot;
+         print &quot;&quot;
+-        print 
+&quot;____________________________________________________________________________&quot;
++        print 
+&quot;________________________________________________________________________________&quot;
+         print &quot;&quot;
+         print &quot;calculation finished&quot;
+-        print &quot;&quot;
++        print 
+&quot;________________________________________________________________________________&quot;
+ 
+         # list files to results
+-        self.list_rx.Append(target_dir + sep + 'grace' + sep + 'r' + 
+str(r1_r2)+'.' + str(nmr_freq) + '.agr')
+-        self.list_rx.Append(target_dir + sep + 'grace' + sep + 
+'intensities_norm.' + str(nmr_freq) + '.agr')
++        main.list_rx.Append(target_dir + sep + 'grace' + sep + 'r' + 
+str(r1_r2)+'.' + str(nmr_freq) + '.agr')
++        main.list_rx.Append(target_dir + sep + 'grace' + sep + 
+'intensities_norm.' + str(nmr_freq) + '.agr')
+ 
+         # add files to model-free tab
+         if r1_r2 == 1:
+                     if freqno == 1:
+-                      self.m_r1_1.SetValue(target_dir + sep + 'r1.' + 
+str(nmr_freq) + '.out')
++                      main.m_r1_1.SetValue(target_dir + sep + 'r1.' + 
+str(nmr_freq) + '.out')
+                     if freqno == 2:
+-                      self.m_r1_2.SetValue(target_dir + sep + 'r1.' + 
+str(nmr_freq) + '.out')
++                      main.m_r1_2.SetValue(target_dir + sep + 'r1.' + 
+str(nmr_freq) + '.out')
+                     if freqno == 3:
+-                      self.m_r1_3.SetValue(target_dir + sep + 'r1.' + 
+str(nmr_freq) + '.out')
++                      main.m_r1_3.SetValue(target_dir + sep + 'r1.' + 
+str(nmr_freq) + '.out')
+         if r1_r2 == 2:
+                     if freqno == 1:
+-                      self.m_r2_1.SetValue(target_dir + sep + 'r2.' + 
+str(nmr_freq) + '.out')
++                      main.m_r2_1.SetValue(target_dir + sep + 'r2.' + 
+str(nmr_freq) + '.out')
+                     if freqno == 2:
+-                      self.m_r2_2.SetValue(target_dir + sep + 'r2.' + 
+str(nmr_freq) + '.out')
++                      main.m_r2_2.SetValue(target_dir + sep + 'r2.' + 
+str(nmr_freq) + '.out')
+                     if freqno == 3:
+-                      self.m_r2_3.SetValue(target_dir + sep + 'r2.' + 
+str(nmr_freq) + '.out')
+-
+-        # Feedback
+-        relax_run_ok('T' + str(r1_r2) +' calculation was successful !') 
++                      main.m_r2_3.SetValue(target_dir + sep + 'r2.' + 
+str(nmr_freq) + '.out')
++
++        # update progress bar
++        wx.CallAfter(self.progress_bar.SetValue, (100))
++
++        # enable close button and disable cancel button
++        wx.CallAfter(self.close_button.Enable, True)
++        wx.CallAfter(self.cancel_button.Enable, False)
++
++        # close thread 
++        return
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Jan 20 09:40:02 2010</div>  
+</body>
+</html>

@@ -1,0 +1,165 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r17214 &#45; /trunk/test_suite/gui_tests/base_classes.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 10 Jul 2012 08:11:42 +0200 -->
+<!--X-Message-Id: E1SoTfi&#45;0005cV&#45;1w@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r17214 - /trunk/test_suite/gui_tests/base_classes.py -- July 10, 2012 - 08:11</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r17214 - /trunk/test_suite/gui_tests/base_classes.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00100" class="tabs">Index by Date</a> | <a href="threads.html#00100" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00099.html">Date Prev</a>] [<a href="msg00101.html">Date Next</a>] [<a href="msg00099.html">Thread Prev</a>] [<a href="msg00101.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 10 Jul 2012 06:11:41 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00100.html">E1SoTfi-0005cV-1w@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on July 10, 2012 - 08:11:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Jul 10 08:11:40 2012
+New Revision: 17214
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=17214&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=17214&amp;view=rev</a>
+Log:
+Redesign of the setUp() and tearDown() methods of the GUI tests.
+
+This is needed as the current design does not work under MS Windows!  Instead 
+of created a new wx
+app for each test (this dies in Windows as it looks like only a limited 
+number of toolbars can be
+created), only one app is created and is recycled.  This design better mimics 
+GUI usage anyway.
+
+This change uncovers a few GUI bugs not caught by the previous design.
+
+
+Modified:
+    trunk/test_suite/gui_tests/base_classes.py
+
+Modified: trunk/test_suite/gui_tests/base_classes.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/test_suite/gui_tests/base_classes.py?rev=17214&amp;r1=17213&amp;r2=17214&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/test_suite/gui_tests/base_classes.py?rev=17214&amp;r1=17213&amp;r2=17214&amp;view=diff</a>
+==============================================================================
+--- trunk/test_suite/gui_tests/base_classes.py (original)
++++ trunk/test_suite/gui_tests/base_classes.py Tue Jul 10 08:11:40 2012
+@@ -63,14 +63,6 @@
+         # A string used for classifying skipped tests.
+         self._skip_type = 'gui'
+ 
+-        # Get the wx app, if the test suite is launched from the gui.
+-        self.app = wx.GetApp()
+-
+-        # Flag for the GUI.
+-        self._gui_launch = False
+-        if self.app != None:
+-            self._gui_launch = True
+-
+ 
+     def _execute_uf(self, *args, **kargs):
+         &quot;&quot;&quot;Execute the given user function.
+@@ -193,8 +185,12 @@
+         # Create a temporary directory for the results.
+         ds.tmpdir = mkdtemp()
+ 
+-        # Start the GUI if not launched from the GUI.
+-        if not self._gui_launch:
++        # Get the wx app, if it exists.
++        self.app = wx.GetApp()
++
++        # Create the app if needed.
++        if self.app == None:
++            # Initialise.
+             self.app = wx.App(redirect=False)
+ 
+             # relax GUI imports (here to prevent a circular import from the 
+test suite in the GUI).
+@@ -249,24 +245,15 @@
+         # Reset relax.
+         reset()
+ 
+-        # Reset the observers.
+-        status._setup_observers()
+-
+-        # Destroy some GUI windows, if open.
++        # Close some GUI windows, if open.
+         windows = ['pipe_editor', 'relax_prompt', 'results_viewer', 
+'spin_viewer']
+         for window in windows:
+             if hasattr(self.app.gui, window):
+                 # Get the object.
+                 win_obj = getattr(self.app.gui, window)
+ 
+-                # Destroy the wxWidget part.
+-                win_obj.Destroy()
+-
+-                # Destroy the Python object part.
+-                delattr(self.app.gui, window)
+-
+-        # Delete the app.
+-        del self.app
++                # Close the window.
++                win_obj.Close()
+ 
+         # Flush all wx events to make sure the GUI is ready for the next 
+test.
+         wx.Yield()
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Jul 10 09:00:03 2012</div>  
+</body>
+</html>

@@ -1,0 +1,236 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r16581 &#45; /branches/uf_redesign/prompt/uf_docstring.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 01 Jun 2012 10:58:27 +0200 -->
+<!--X-Message-Id: E1SaNgh&#45;0000Ol&#45;Ab@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r16581 - /branches/uf_redesign/prompt/uf_docstring.py -- June 01, 2012 - 10:58</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r16581 - /branches/uf_redesign/prompt/uf_docstring.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00026" class="tabs">Index by Date</a> | <a href="threads.html#00026" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00025.html">Date Prev</a>] [<a href="msg00027.html">Date Next</a>] [<a href="msg00025.html">Thread Prev</a>] [<a href="msg00027.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 01 Jun 2012 08:58:27 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00026.html">E1SaNgh-0000Ol-Ab@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on June 01, 2012 - 10:58:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Jun  1 10:58:27 2012
+New Revision: 16581
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=16581&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=16581&amp;view=rev</a>
+Log:
+Created an algorithm for wrapping table columns to fit within 
+status.text_width.
+
+This if for the prompt user function docstring tables.  The columns are now 
+dynamically wrapped so
+that the table will not be wider than the given width.  For example the 
+value.set user function
+description table would normally have a total width of 238 characters, but 
+this now fits within one
+screen of text under all operating systems.
+
+
+Modified:
+    branches/uf_redesign/prompt/uf_docstring.py
+
+Modified: branches/uf_redesign/prompt/uf_docstring.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/uf_redesign/prompt/uf_docstring.py?rev=16581&amp;r1=16580&amp;r2=16581&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/uf_redesign/prompt/uf_docstring.py?rev=16581&amp;r1=16580&amp;r2=16581&amp;view=diff</a>
+==============================================================================
+--- branches/uf_redesign/prompt/uf_docstring.py (original)
++++ branches/uf_redesign/prompt/uf_docstring.py Fri Jun  1 10:58:27 2012
+@@ -24,6 +24,7 @@
+ &quot;&quot;&quot;The base class for all the user function classes.&quot;&quot;&quot;
+ 
+ # Python module imports.
++from copy import deepcopy
+ from string import split
+ from textwrap import wrap
+ 
+@@ -117,21 +118,114 @@
+     free_space = status.text_width - used
+ 
+     # The total table width.
+-    total_width = sum(widths)
++    free_width = sum(widths)
++    total_width = free_width + used
++
++    # Column wrapping.
++    if free_width &gt; free_space:
++        # Debugging printouts.
++        if status.debug:
++            print
++            print(&quot;Table column wrapping algorithm:&quot;)
++            print(&quot;%-20s %s&quot; % (&quot;num_cols:&quot;, num_cols))
++            print(&quot;%-20s %s&quot; % (&quot;free space:&quot;, free_space))
++            print(&quot;%-20s %s&quot; % (&quot;total_width:&quot;, total_width))
++
++        # New structures.
++        new_widths = deepcopy(widths)
++        num_cols_wrap = num_cols
++        free_space_wrap = free_space
++        col_wrap = [True] * num_cols
++
++        # Loop.
++        while 1:
++            # The average column width.
++            ave_width = free_space_wrap / num_cols_wrap
++
++            # Debugging printout.
++            if status.debug:
++                print(&quot;    %-20s %s&quot; % (&quot;ave_width:&quot;, ave_width))
++
++            # Rescale.
++            rescale = False
++            for i in range(num_cols):
++                # Remove the column from wrapping if smaller than the 
+average wrapped width.
++                if col_wrap[i] and new_widths[i] &lt; ave_width:
++                    # Recalculate.
++                    free_space_wrap = free_space_wrap - new_widths[i]
++                    num_cols_wrap -= 1
++                    rescale = True
++
++                    # Remove the column from wrapping.
++                    col_wrap[i] = False
++
++                    # Debugging printout.
++                    if status.debug:
++                        print(&quot;        %-20s %s&quot; % (&quot;remove column:&quot;, i))
++
++            # Done.
++            if not rescale:
++                # Set the column widths.
++                for i in range(num_cols):
++                    if new_widths[i] &gt; ave_width:
++                        new_widths[i] = ave_width
++                break
++
++            # New total width.
++            total_width = status.text_width
++
++        # Debugging printouts.
++        if status.debug:
++            print(&quot;    %-20s %s&quot; % (&quot;widths:&quot;, widths))
++            print(&quot;    %-20s %s&quot; % (&quot;new_widths:&quot;, new_widths))
++            print(&quot;    %-20s %s&quot; % (&quot;num_cols:&quot;, num_cols))
++            print(&quot;    %-20s %s&quot; % (&quot;num_cols_wrap:&quot;, num_cols_wrap))
++            print(&quot;    %-20s %s&quot; % (&quot;free_space:&quot;, free_space))
++            print(&quot;    %-20s %s&quot; % (&quot;free_space_wrap:&quot;, free_space_wrap))
++            print(&quot;    %-20s %s&quot; % (&quot;col_wrap:&quot;, col_wrap))
++
++    # No column wrapping.
++    else:
++        new_widths = widths
++        col_wrap = [False] * num_cols
+ 
+     # The header.
+-    text += &quot;_&quot; * (total_width+used) + &quot;\n&quot;    # Top rule.
+-    text += table_line(widths=widths)    # Blank line.
+-    text += table_line(text=table[0], widths=widths)    # The headers.
+-    text += table_line(widths=widths, bottom=True)    # Middle rule.
++    text += &quot;_&quot; * total_width + &quot;\n&quot;    # Top rule.
++    text += table_line(widths=new_widths)    # Blank line.
++    text += table_line(text=table[0], widths=new_widths)    # The headers.
++    text += table_line(widths=new_widths, bottom=True)    # Middle rule.
+ 
+     # The table contents.
+     for i in range(1, num_rows):
+-        text += table_line(widths=widths)    # Blank line.
+-        text += table_line(text=table[i], widths=widths)    # The contents.
++        # Column text, with wrapping.
++        col_text = [table[i]]
++        num_lines = 1
++        for j in range(num_cols):
++            if col_wrap[j]:
++                # Wrap.
++                lines = wrap(col_text[0][j], new_widths[j])
++
++                # Count the lines.
++                num_lines = len(lines)
++
++                # Replace the column text.
++                for k in range(num_lines):
++                    # New row of empty text.
++                    if len(col_text) &lt;= k:
++                        col_text.append(['']*num_cols)
++
++                    # Pack the data.
++                    col_text[k][j] = lines[k]
++
++        # Blank line.
++        text += table_line(widths=new_widths)
++
++        # The contents.
++        for k in range(num_lines):
++            text += table_line(text=col_text[k], widths=new_widths)
+ 
+     # The bottom.
+-    text += table_line(widths=widths, bottom=True)    # Bottom rule.
++    text += table_line(widths=new_widths, bottom=True)    # Bottom rule.
+ 
+     # Add a newline.
+     text += '\n'
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Jun 01 11:20:01 2012</div>  
+</body>
+</html>

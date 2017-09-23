@@ -1,0 +1,450 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r25956 &#45; in /branches/frame_order_cleanup/specific_analyses/frame_order: geometric.py uf.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 22 Sep 2014 15:08:07 +0200 -->
+<!--X-Message-Id: E1XW3Lb&#45;0001Zu&#45;B8@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r25956 - in /branches/frame_order_cleanup/specific_analyses/frame_order: geometric.py uf.py -- September 22, 2014 - 15:08</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r25956 - in /branches/frame_order_cleanup/specific_analyses/frame_order: geometric.py uf.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00462" class="tabs">Index by Date</a> | <a href="threads.html#00462" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00461.html">Date Prev</a>] [<a href="msg00463.html">Date Next</a>] [<a href="msg00461.html">Thread Prev</a>] [<a href="msg00463.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 22 Sep 2014 13:08:07 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00462.html">E1XW3Lb-0001Zu-B8@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on September 22, 2014 - 15:08:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Mon Sep 22 15:08:06 2014
+New Revision: 25956
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=25956&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=25956&amp;view=rev</a>
+Log:
+Created the specific_analyses.frame_order.geometric.generate_axis_system() 
+function.
+
+This is now used by most parts of the frame order analysis to generate the 
+full 3D eigenframe of the
+motions.  Previously this was implemented each time the frame or major axis 
+was required.  This
+replicated and highly inconsistent code has been eliminated.
+
+
+Modified:
+    branches/frame_order_cleanup/specific_analyses/frame_order/geometric.py
+    branches/frame_order_cleanup/specific_analyses/frame_order/uf.py
+
+Modified: 
+branches/frame_order_cleanup/specific_analyses/frame_order/geometric.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/specific_analyses/frame_order/geometric.py?rev=25956&amp;r1=25955&amp;r2=25956&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/specific_analyses/frame_order/geometric.py?rev=25956&amp;r1=25955&amp;r2=25956&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/specific_analyses/frame_order/geometric.py   
+  (original)
++++ branches/frame_order_cleanup/specific_analyses/frame_order/geometric.py   
+  Mon Sep 22 15:08:06 2014
+@@ -29,6 +29,7 @@
+ import sys
+ 
+ # relax module imports.
++from lib.errors import RelaxFault
+ from lib.frame_order.conversions import create_rotor_axis_alpha, 
+create_rotor_axis_euler, create_rotor_axis_spherical
+ from lib.geometry.rotations import euler_to_R_zyz, two_vect_to_R
+ from lib.io import open_write_file
+@@ -41,7 +42,7 @@
+ from lib.text.sectioning import subsection, subsubsection
+ from pipe_control.structure.mass import pipe_centre_of_mass
+ from specific_analyses.frame_order.data import domain_moving, generate_pivot
+-from specific_analyses.frame_order.variables import MODEL_DOUBLE_ROTOR, 
+MODEL_FREE_ROTOR, MODEL_ISO_CONE, MODEL_ISO_CONE_FREE_ROTOR, 
+MODEL_ISO_CONE_TORSIONLESS, MODEL_LIST_FREE_ROTORS, MODEL_LIST_ISO_CONE, 
+MODEL_LIST_PSEUDO_ELLIPSE, MODEL_PSEUDO_ELLIPSE, 
+MODEL_PSEUDO_ELLIPSE_FREE_ROTOR, MODEL_PSEUDO_ELLIPSE_TORSIONLESS, MODEL_ROTOR
++from specific_analyses.frame_order.variables import MODEL_DOUBLE_ROTOR, 
+MODEL_FREE_ROTOR, MODEL_ISO_CONE, MODEL_ISO_CONE_FREE_ROTOR, 
+MODEL_ISO_CONE_TORSIONLESS, MODEL_LIST_DOUBLE, MODEL_LIST_FREE_ROTORS, 
+MODEL_LIST_ISO_CONE, MODEL_LIST_PSEUDO_ELLIPSE, MODEL_PSEUDO_ELLIPSE, 
+MODEL_PSEUDO_ELLIPSE_FREE_ROTOR, MODEL_PSEUDO_ELLIPSE_TORSIONLESS, MODEL_ROTOR
+ 
+ 
+ def add_axes(structure=None, representation=None, size=None, sims=False):
+@@ -124,11 +125,7 @@
+             mol.atom_add(atom_num=1, atom_name='R', res_name='AXE', 
+res_num=1, pos=pivot1, element='C', pdb_record='HETATM')
+ 
+             # The axis system.
+-            axes = zeros((3, 3), float64)
+-            if sims:
+-                euler_to_R_zyz(cdp.eigen_alpha_sim[sim_indices[i]], 
+cdp.eigen_beta_sim[sim_indices[i]], cdp.eigen_gamma_sim[sim_indices[i]], axes)
+-            else:
+-                euler_to_R_zyz(cdp.eigen_alpha, cdp.eigen_beta, 
+cdp.eigen_gamma, axes)
++            axes = generate_axis_system(sim_index=sim_indices[i])
+ 
+             # Rotations and inversions.
+             axes = dot(T, axes)
+@@ -184,24 +181,7 @@
+         pivot = generate_pivot(order=1, sim_index=sim_indices[i], 
+pdb_limit=True)
+ 
+         # The rotation matrix (rotation from the z-axis to the cone axis).
+-        R = zeros((3, 3), float64)
+-        if cdp.model in MODEL_LIST_PSEUDO_ELLIPSE:
+-            if sims:
+-                euler_to_R_zyz(cdp.eigen_alpha_sim[sim_indices[i]], 
+cdp.eigen_beta_sim[sim_indices[i]], cdp.eigen_gamma_sim[sim_indices[i]], R)
+-            else:
+-                euler_to_R_zyz(cdp.eigen_alpha, cdp.eigen_beta, 
+cdp.eigen_gamma, R)
+-        else:
+-            if cdp.model in [MODEL_ROTOR, MODEL_FREE_ROTOR]:
+-                if sims:
+-                    axis = 
+create_rotor_axis_alpha(alpha=cdp.axis_alpha_sim[sim_indices[i]], 
+pivot=pivot, point=com)
+-                else:
+-                    axis = create_rotor_axis_alpha(alpha=cdp.axis_alpha, 
+pivot=pivot, point=com)
+-            elif cdp.model in MODEL_LIST_ISO_CONE:
+-                if sims:
+-                    axis = 
+create_rotor_axis_spherical(theta=cdp.axis_theta_sim[sim_indices[i]], 
+phi=cdp.axis_phi_sim[sim_indices[i]])
+-                else:
+-                    axis = create_rotor_axis_spherical(theta=cdp.axis_theta, 
+phi=cdp.axis_phi)
+-            two_vect_to_R(array([0, 0, 1], float64), axis, R)
++        R = generate_axis_system(sim_index=sim_indices[i])
+         print((&quot;Rotation matrix:\n%s&quot; % R))
+ 
+         # The transformation.
+@@ -358,27 +338,11 @@
+         # Alias the molecule.
+         mol = structure.get_molecule(mol_name, model=model_nums[i])
+ 
+-        # The single rotor models.
+-        if cdp.model not in [MODEL_DOUBLE_ROTOR]:
+-            # Generate the rotor axis.
+-            if cdp.model in [MODEL_ROTOR, MODEL_FREE_ROTOR]:
+-                axis = create_rotor_axis_alpha(alpha=cdp.axis_alpha, 
+pivot=pivot1, point=pipe_centre_of_mass(verbosity=0))
+-            elif cdp.model in MODEL_LIST_ISO_CONE:
+-                axis = create_rotor_axis_spherical(theta=cdp.axis_theta, 
+phi=cdp.axis_phi)
+-            else:
+-                axis = create_rotor_axis_euler(alpha=cdp.eigen_alpha, 
+beta=cdp.eigen_beta, gamma=cdp.eigen_gamma)
+-
+-        # The double rotor models.
+-        else:
+-            # Generate the eigenframe of the motion.
+-            frame = zeros((3, 3), float64)
+-            euler_to_R_zyz(cdp.eigen_alpha, cdp.eigen_beta, cdp.eigen_gamma, 
+frame)
+-
+-            # Add the z axis.
+-            axis = frame[:, 2]
++        # The axis system.
++        axes = generate_axis_system(sim_index=sim_indices[i])
+ 
+         # Transform the central axis.
+-        axis = dot(T, axis)
++        axis = dot(T, axes[:, 2])
+ 
+         # The label position.
+         pos = pivot1 + displacement*axis
+@@ -450,21 +414,8 @@
+                 com.append(pivot1)
+ 
+             # Generate the rotor axis.
+-            if cdp.model in [MODEL_ROTOR, MODEL_FREE_ROTOR]:
+-                if sims:
+-                    
+axis.append(create_rotor_axis_alpha(alpha=cdp.axis_alpha_sim[sim_indices[i]], 
+pivot=pivot1, point=com[i]))
+-                else:
+-                    
+axis.append(create_rotor_axis_alpha(alpha=cdp.axis_alpha, pivot=pivot1, 
+point=com[i]))
+-            elif cdp.model in [MODEL_ISO_CONE, MODEL_ISO_CONE_FREE_ROTOR]:
+-                if sims:
+-                    
+axis.append(create_rotor_axis_spherical(theta=cdp.axis_theta_sim[sim_indices[i]],
+ phi=cdp.axis_phi_sim[sim_indices[i]]))
+-                else:
+-                    
+axis.append(create_rotor_axis_spherical(theta=cdp.axis_theta, 
+phi=cdp.axis_phi))
+-            else:
+-                if sims:
+-                    
+axis.append(create_rotor_axis_euler(alpha=cdp.eigen_alpha_sim[sim_indices[i]],
+ beta=cdp.eigen_beta_sim[sim_indices[i]], 
+gamma=cdp.eigen_gamma_sim[sim_indices[i]]))
+-                else:
+-                    
+axis.append(create_rotor_axis_euler(alpha=cdp.eigen_alpha, 
+beta=cdp.eigen_beta, gamma=cdp.eigen_gamma))
++            axes = generate_axis_system(sim_index=sim_indices[i])
++            axis.append(axes[:, 2])
+ 
+             # The size of the rotor, taking the 30 Angstrom cone 
+representation into account.
+             if cdp.model in [MODEL_ROTOR, MODEL_FREE_ROTOR]:
+@@ -505,11 +456,7 @@
+             com.append(pivot1)
+ 
+             # Generate the eigenframe of the motion.
+-            frame = zeros((3, 3), float64)
+-            if sims:
+-                euler_to_R_zyz(cdp.eigen_alpha_sim[sim_indices[i]], 
+cdp.eigen_beta_sim[sim_indices[i]], cdp.eigen_gamma_sim[sim_indices[i]], 
+frame)
+-            else:
+-                euler_to_R_zyz(cdp.eigen_alpha, cdp.eigen_beta, 
+cdp.eigen_gamma, frame)
++            frame = generate_axis_system(sim_index=sim_indices[i])
+ 
+             # Add the x and y axes.
+             axis.append(frame[:, 0])
+@@ -765,3 +712,57 @@
+             pdb_file = open_write_file(file_root[i]+'.pdb', dir, 
+compress_type=compress_type, force=force)
+             structures[i].write_pdb(pdb_file)
+             pdb_file.close()
++
++
++def generate_axis_system(sim_index=None):
++    &quot;&quot;&quot;Generate and return the full 3D axis system for the current frame 
+order model.
++
++    @keyword sim_index: The optional MC simulation index to obtain the frame 
+for a given simulation.
++    @type sim_index:    None or int
++    @return:            The full 3D axis system for the model.
++    @rtype:             numpy rank-2, 3D float64 array
++    &quot;&quot;&quot;
++
++    # Initialise.
++    axis = zeros(3, float64)
++    frame = zeros((3, 3), float64)
++
++    # The 1st pivot point.
++    pivot = generate_pivot(order=1, sim_index=sim_index, pdb_limit=True)
++
++    # The CoM of the system.
++    com = pipe_centre_of_mass(verbosity=0)
++
++    # The system for the rotor models.
++    if cdp.model in [MODEL_ROTOR, MODEL_FREE_ROTOR]:
++        # Generate the axis.
++        if sim_index == None:
++            axis = create_rotor_axis_alpha(alpha=cdp.axis_alpha, 
+pivot=pivot, point=com)
++        else:
++            axis = 
+create_rotor_axis_alpha(alpha=cdp.axis_alpha_sim[sim_index], pivot=pivot, 
+point=com)
++
++    # The system for the isotropic cones.
++    elif cdp.model in MODEL_LIST_ISO_CONE:
++        # Generate the axis.
++        if sim_index == None:
++            axis = create_rotor_axis_spherical(theta=cdp.axis_theta, 
+phi=cdp.axis_phi)
++        else:
++            axis = 
+create_rotor_axis_spherical(theta=cdp.axis_theta_sim[sim_index], 
+phi=cdp.axis_phi_sim[sim_index])
++
++        # Create a full normalised axis system.
++        two_vect_to_R(array([1, 0, 0], float64), axis, frame)
++
++    # The system for the pseudo-ellipses and double rotor.
++    elif cdp.model in MODEL_LIST_PSEUDO_ELLIPSE + MODEL_LIST_DOUBLE:
++        # Generate the eigenframe of the motion.
++        if sim_index == None:
++            euler_to_R_zyz(cdp.eigen_alpha, cdp.eigen_beta, cdp.eigen_gamma, 
+frame)
++        else:
++            euler_to_R_zyz(cdp.eigen_alpha_sim[sim_index], 
+cdp.eigen_beta_sim[sim_index], cdp.eigen_gamma_sim[sim_index], frame)
++
++    # Unknown model.
++    else:
++        raise RelaxFault
++
++    # Return the full eigenframe.
++    return frame
+
+Modified: branches/frame_order_cleanup/specific_analyses/frame_order/uf.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/specific_analyses/frame_order/uf.py?rev=25956&amp;r1=25955&amp;r2=25956&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/specific_analyses/frame_order/uf.py?rev=25956&amp;r1=25955&amp;r2=25956&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/specific_analyses/frame_order/uf.py    
+(original)
++++ branches/frame_order_cleanup/specific_analyses/frame_order/uf.py    Mon 
+Sep 22 15:08:06 2014
+@@ -40,7 +40,7 @@
+ from lib.warnings import RelaxWarning
+ from pipe_control import pipes
+ from specific_analyses.frame_order.checks import check_domain, check_model, 
+check_parameters, check_pivot
+-from specific_analyses.frame_order.geometric import average_position, 
+create_ave_pos, create_geometric_rep
++from specific_analyses.frame_order.geometric import average_position, 
+create_ave_pos, create_geometric_rep, generate_axis_system
+ from specific_analyses.frame_order.optimisation import count_sobol_points
+ from specific_analyses.frame_order.parameters import assemble_param_vector, 
+update_model
+ from specific_analyses.frame_order.variables import MODEL_ISO_CONE, 
+MODEL_ISO_CONE_FREE_ROTOR, MODEL_ISO_CONE_TORSIONLESS, MODEL_LIST, 
+MODEL_LIST_FREE_ROTORS, MODEL_LIST_ISO_CONE, MODEL_LIST_PSEUDO_ELLIPSE, 
+MODEL_LIST_RESTRICTED_TORSION, MODEL_PSEUDO_ELLIPSE, 
+MODEL_PSEUDO_ELLIPSE_TORSIONLESS, MODEL_RIGID
+@@ -125,37 +125,22 @@
+         angles = array([cdp.cone_theta_x, cdp.cone_theta_y, cone_sigma_max], 
+float64)
+     x, y, z = angles
+ 
+-    # The system for the isotropic cones.
+-    if cdp.model in MODEL_LIST_ISO_CONE:
+-        # Reconstruct the rotation axis.
+-        axis = zeros(3, float64)
+-        spherical_to_cartesian([1, cdp.axis_theta, cdp.axis_phi], axis)
+-
+-        # Create a full normalised axis system.
+-        x_ax = array([1, 0, 0], float64)
+-        y_ax = cross(axis, x_ax)
+-        y_ax /= norm(y_ax)
+-        x_ax = cross(y_ax, axis)
+-        x_ax /= norm(x_ax)
+-        axes = transpose(array([x_ax, y_ax, axis], float64))
+-
+-        # Start printout.
++    # The axis system.
++    axes = generate_axis_system()
++
++    # Start printout for the isotropic cones.
++    if cdp.model in MODEL_LIST_ISO_CONE:
+         print(&quot;\nOriginal parameters:&quot;)
+         print(&quot;%-20s %20.10f&quot; % (&quot;cone_theta&quot;, cdp.cone_theta))
+         print(&quot;%-20s %20.10f&quot; % (&quot;cone_sigma_max&quot;, cone_sigma_max))
+         print(&quot;%-20s %20.10f&quot; % (&quot;axis_theta&quot;, cdp.axis_theta))
+         print(&quot;%-20s %20.10f&quot; % (&quot;axis_phi&quot;, cdp.axis_phi))
+-        print(&quot;%-20s\n%s&quot; % (&quot;cone axis&quot;, axis))
++        print(&quot;%-20s\n%s&quot; % (&quot;cone axis&quot;, axes[:, 2]))
+         print(&quot;%-20s\n%s&quot; % (&quot;full axis system&quot;, axes))
+         print(&quot;\nPermutation '%s':&quot; % permutation)
+ 
+-    # The system for the pseudo-ellipses.
+-    else:
+-        # Generate the eigenframe of the motion.
+-        frame = zeros((3, 3), float64)
+-        euler_to_R_zyz(cdp.eigen_alpha, cdp.eigen_beta, cdp.eigen_gamma, 
+frame)
+-
+-        # Start printout.
++    # Start printout for the pseudo-ellipses.
++    else:
+         print(&quot;\nOriginal parameters:&quot;)
+         print(&quot;%-20s %20.10f&quot; % (&quot;cone_theta_x&quot;, cdp.cone_theta_x))
+         print(&quot;%-20s %20.10f&quot; % (&quot;cone_theta_y&quot;, cdp.cone_theta_y))
+@@ -163,7 +148,7 @@
+         print(&quot;%-20s %20.10f&quot; % (&quot;eigen_alpha&quot;, cdp.eigen_alpha))
+         print(&quot;%-20s %20.10f&quot; % (&quot;eigen_beta&quot;, cdp.eigen_beta))
+         print(&quot;%-20s %20.10f&quot; % (&quot;eigen_gamma&quot;, cdp.eigen_gamma))
+-        print(&quot;%-20s\n%s&quot; % (&quot;eigenframe&quot;, frame))
++        print(&quot;%-20s\n%s&quot; % (&quot;eigenframe&quot;, axes))
+         print(&quot;\nPermutation '%s':&quot; % permutation)
+ 
+     # The axis inversion structure.
+@@ -239,10 +224,10 @@
+ 
+     # Permute the axes (pseudo-ellipses).
+     else:
+-        frame_new = transpose(array([inv[0]*frame[:, perm_axes[0]], 
+inv[1]*frame[:, perm_axes[1]], inv[2]*frame[:, perm_axes[2]]], float64))
++        axes_new = transpose(array([inv[0]*axes[:, perm_axes[0]], 
+inv[1]*axes[:, perm_axes[1]], inv[2]*axes[:, perm_axes[2]]], float64))
+ 
+         # Convert the permuted frame to Euler angles and store them.
+-        cdp.eigen_alpha, cdp.eigen_beta, cdp.eigen_gamma = 
+R_to_euler_zyz(frame_new)
++        cdp.eigen_alpha, cdp.eigen_beta, cdp.eigen_gamma = 
+R_to_euler_zyz(axes_new)
+ 
+     # End printout.
+     if cdp.model in MODEL_LIST_ISO_CONE:
+@@ -262,7 +247,7 @@
+         print(&quot;%-20s %20.10f&quot; % (&quot;eigen_alpha&quot;, cdp.eigen_alpha))
+         print(&quot;%-20s %20.10f&quot; % (&quot;eigen_beta&quot;, cdp.eigen_beta))
+         print(&quot;%-20s %20.10f&quot; % (&quot;eigen_gamma&quot;, cdp.eigen_gamma))
+-        print(&quot;%-20s\n%s&quot; % (&quot;eigenframe&quot;, frame_new))
++        print(&quot;%-20s\n%s&quot; % (&quot;eigenframe&quot;, axes_new))
+ 
+ 
+ def pivot(pivot=None, order=1, fix=False):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Sep 22 17:00:02 2014</div>  
+</body>
+</html>

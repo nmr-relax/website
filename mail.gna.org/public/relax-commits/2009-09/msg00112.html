@@ -1,0 +1,370 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r9548 &#45; /1.3/specific_fns/frame_order.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 21 Sep 2009 18:44:14 +0200 -->
+<!--X-Message-Id: E1Mplzq&#45;0007KR&#45;Qq@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r9548 - /1.3/specific_fns/frame_order.py -- September 21, 2009 - 18:44</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r9548 - /1.3/specific_fns/frame_order.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00112" class="tabs">Index by Date</a> | <a href="threads.html#00112" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00111.html">Date Prev</a>] [<a href="msg00113.html">Date Next</a>] [<a href="msg00111.html">Thread Prev</a>] [<a href="msg00113.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 21 Sep 2009 16:44:14 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00112.html">E1Mplzq-0007KR-Qq@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on September 21, 2009 - 18:44:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Mon Sep 21 18:44:14 2009
+New Revision: 9548
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=9548&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=9548&amp;view=rev</a>
+Log:
+Complete redesign of the grid_search() method.
+
+The grid ops structure is no longer created, rather the grid is directly 
+created to be passed to the
+grid search algorithm.  The __grid_row() method has been added to create the 
+row of the grid
+corresponding to a certain parameter.
+
+
+Modified:
+    1.3/specific_fns/frame_order.py
+
+Modified: 1.3/specific_fns/frame_order.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/specific_fns/frame_order.py?rev=9548&amp;r1=9547&amp;r2=9548&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/specific_fns/frame_order.py?rev=9548&amp;r1=9547&amp;r2=9548&amp;view=diff</a>
+==============================================================================
+--- 1.3/specific_fns/frame_order.py (original)
++++ 1.3/specific_fns/frame_order.py Mon Sep 21 18:44:14 2009
+@@ -27,6 +27,7 @@
+ from copy import deepcopy
+ from math import pi
+ from minfx.generic import generic_minimise
++from minfx.grid import grid
+ from numpy import array, float64, ones, transpose, zeros
+ from re import search
+ from warnings import warn
+@@ -49,6 +50,35 @@
+ class Frame_order(Common_functions):
+     &quot;&quot;&quot;Class containing the specific methods of the Frame Order theories.&quot;&quot;&quot;
+ 
++    def __grid_row(self, incs, lower, upper, dist_type=None):
++        &quot;&quot;&quot;Set up a row of the grid search for a given parameter.
++
++        @param incs:        The number of increments.
++        @type incs:         int
++        @param lower:       The lower bounds.
++        @type lower:        float
++        @param upper:       The upper bounds.
++        @type upper:        float
++        @keyword dist_type: The spacing or distribution type between grid 
+nodes.  If None, then a
++                            linear grid row is returned.  If 'acos', then an 
+inverse cos
++                            distribution of points is returned (e.g. for 
+uniform sampling in angular space).
++        @type dist_type:    None or str
++        @return:            The row of the grid.
++        @rtype:             list of float
++        &quot;&quot;&quot;
++
++        # Init.
++        row = []
++
++        # Loop over the increments.
++        for i in range(incs):
++            # The row.
++            row.append(lower + i * (upper - lower) / (incs - 1.0))
++
++        # Return the row.
++        return row
++
++
+     def __minimise_setup_tensors(self, sim_index=None):
+         &quot;&quot;&quot;Set up the data structures for optimisation using alignment 
+tensors as base data sets.
+ 
+@@ -389,7 +419,7 @@
+         if not hasattr(cdp, 'pivot'):
+             raise RelaxError(&quot;The pivot point for the cone motion has not 
+been set.&quot;)
+ 
+-        # The cone axis. 
++        # The cone axis.
+         cone_axis = zeros(3, float64)
+         generate_vector(cone_axis, cdp.theta_axis, cdp.phi_axis)
+         print((&quot;Cone axis: %s.&quot; % cone_axis))
+@@ -566,25 +596,27 @@
+         return names
+ 
+ 
+-    def grid_search(self, lower, upper, inc, constraints=False, verbosity=0, 
+sim_index=None):
++    def grid_search(self, lower=None, upper=None, inc=None, 
+constraints=False, verbosity=0, sim_index=None):
+         &quot;&quot;&quot;Perform a grid search.
+ 
+-        @param lower:       The lower bounds of the grid search which must 
+be equal to the number of
+-                            parameters in the model.
+-        @type lower:        array of numbers
+-        @param upper:       The upper bounds of the grid search which must 
+be equal to the number of
+-                            parameters in the model.
+-        @type upper:        array of numbers
+-        @param inc:         The increments for each dimension of the space 
+for the grid search.  The
+-                            number of elements in the array must equal to 
+the number of parameters
+-                            in the model.
+-        @type inc:          int or array of int
+-        @param constraints: If True, constraints are applied during the grid 
+search (eliminating
+-                            parts of the grid).  If False, no constraints 
+are used.
+-        @type constraints:  bool
+-        @param verbosity:   A flag specifying the amount of information to 
+print.  The higher the
+-                            value, the greater the verbosity.
+-        @type verbosity:    int
++        @keyword lower:         The lower bounds of the grid search which 
+must be equal to the
++                                number of parameters in the model.
++        @type lower:            list of float
++        @keyword upper:         The upper bounds of the grid search which 
+must be equal to the
++                                number of parameters in the model.
++        @type upper:            list of float
++        @keyword inc:           The increments for each dimension of the 
+space for the grid search.
++                                The number of elements in the array must 
+equal to the number of
++                                parameters in the model.
++        @type inc:              int or list of int
++        @keyword constraints:   If True, constraints are applied during the 
+grid search (eliminating
++                                parts of the grid).  If False, no 
+constraints are used.
++        @type constraints:      bool
++        @keyword verbosity:     A flag specifying the amount of information 
+to print.  The higher
++                                the value, the greater the verbosity.
++        @type verbosity:        int
++        @keyword sim_index:     The Monte Carlo simulation index.
++        @type sim_index:        None or int
+         &quot;&quot;&quot;
+ 
+         # Test if the Frame Order model has been set up.
+@@ -596,46 +628,89 @@
+ 
+         # If inc is an int, convert it into an array of that value.
+         if isinstance(inc, int):
+-            inc = [inc]*n
+-
+-        # Initialise the grid_ops structure.
+-        grid_ops = []
++            incs = [inc]*n
++        else:
++            incs = inc
++
++        # Initialise the grid increments structures.
++        default_bounds = False
++        if not lower:
++            lower = []
++            default_bounds = True
++        if not upper:
++            upper = []
++        grid = []
+         &quot;&quot;&quot;This structure is a list of lists.  The first dimension 
+corresponds to the model
+-        parameter.  The second dimension has the elements: 0, the number of 
+increments in that
+-        dimension; 1, the lower limit of the grid; 2, the upper limit of the 
+grid.&quot;&quot;&quot;
+-
+-        # Set the grid search options.
+-        for i in xrange(n):
+-            # Euler angles.
++        parameter.  The second dimension are the grid node positions.&quot;&quot;&quot;
++
++        # Generate the grid.
++        for i in range(n):
++            # Reset the distribution type.
++            dist_type = None
++
++            # Alpha Euler angle.
+             if cdp.params[i] == 'alpha':
+-                grid_ops.append([inc[i], 0.0, 2*pi * (1.0 - 1.0/inc[i])])
++                # Set the default bounds.
++                if default_bounds:
++                    lower.append(0.0)
++                    upper.append(2*pi * (1.0 - 1.0/incs[i]))
++
++            # Beta Euler angle.
+             if cdp.params[i] == 'beta':
+-                grid_ops.append([inc[i]/2, 0.0, pi * (1.0 - 1.0/inc[i])])
++                # Change the default increment numbers.
++                if not isinstance(inc, list):
++                    incs[i] = incs[i] / 2
++
++                # The distribution type.
++                dist_type = 'acos'
++
++                # Set the default bounds.
++                if default_bounds:
++                    lower.append(0.0)
++                    upper.append(pi * (1.0 - 1.0/incs[i]))
++
++            # Gamma Euler angle.
+             if cdp.params[i] == 'gamma':
+-                grid_ops.append([inc[i], 0.0, 2*pi * (1.0 - 1.0/inc[i])])
++                # Set the default bounds.
++                if default_bounds:
++                    lower.append(0.0)
++                    upper.append(2*pi * (1.0 - 1.0/incs[i]))
+ 
+             # The isotropic cone model.
+             if cdp.model == 'iso cone':
+-                # Cone axis angles and cone angle.
++                # Cone axis polar angle.
+                 if cdp.params[i] == 'theta_axis':
+-                    grid_ops.append([inc[i]/2, 0.0, pi * (1.0 - 1.0/inc[i])])
++                    # Change the default increment numbers.
++                    if not isinstance(inc, list):
++                        incs[i] = incs[i] / 2 + 1
++
++                    # The distribution type.
++                    dist_type = 'acos'
++
++                    # Set the default bounds.
++                    if default_bounds:
++                        lower.append(0.0)
++                        upper.append(pi)
++
++                # Cone axis azimuthal angle.
+                 if cdp.params[i] == 'phi_axis':
+-                    grid_ops.append([inc[i], 0.0, 2*pi * (1.0 - 1.0/inc[i])])
++                    # Set the default bounds.
++                    if default_bounds:
++                        lower.append(0.0)
++                        upper.append(2*pi * (1.0 - 1.0/incs[i]))
+ 
+                 # The cone angle.
+                 if cdp.params[i] == 'theta_cone':
+-                    grid_ops.append([inc[i], 0.0, pi * (1.0 - 1.0/inc[i])])
+-
+-            # Lower bound (if supplied).
+-            if lower:
+-                grid_ops[i][1] = lower[i]
+-
+-            # Upper bound (if supplied).
+-            if upper:
+-                grid_ops[i][1] = upper[i]
++                    # Set the default bounds.
++                    if default_bounds:
++                        lower.append(0.0)
++                        upper.append(pi * (1.0 - 1.0/incs[i]))
++
++            # Get the grid row.
++            grid.append(self.__grid_row(incs[i], lower[i], upper[i], 
+dist_type=dist_type))
+ 
+         # Minimisation.
+-        self.minimise(min_algor='grid', min_options=grid_ops, 
+constraints=constraints, verbosity=verbosity, sim_index=sim_index)
++        self.minimise(min_algor='grid', min_options=grid, 
+constraints=constraints, verbosity=verbosity, sim_index=sim_index)
+ 
+ 
+     def minimise(self, min_algor=None, min_options=None, func_tol=None, 
+grad_tol=None, max_iterations=None, constraints=False, scaling=True, 
+verbosity=0, sim_index=None):
+@@ -693,8 +768,14 @@
+         # Set up the optimisation function.
+         target = frame_order.Frame_order(model=cdp.model, 
+full_tensors=full_tensors, red_tensors=red_tensors, 
+red_errors=red_tensor_err, full_in_ref_frame=full_in_ref_frame)
+ 
++        # Grid search.
++        if search('^[Gg]rid', min_algor):
++            results = grid(func=target.func, args=(), 
+num_incs=min_options[0], lower=min_options[1], upper=min_options[2], 
+verbosity=verbosity)
++            print results
++
+         # Minimisation.
+-        results = generic_minimise(func=target.func, args=(), 
+x0=param_vector, min_algor=min_algor, min_options=min_options, 
+func_tol=func_tol, grad_tol=grad_tol, maxiter=max_iterations, 
+full_output=True, print_flag=verbosity)
++        else:
++            results = generic_minimise(func=target.func, args=(), 
+x0=param_vector, min_algor=min_algor, min_options=min_options, 
+func_tol=func_tol, grad_tol=grad_tol, maxiter=max_iterations, 
+full_output=True, print_flag=verbosity)
+ 
+         # Unpack the results.
+         self.__unpack_opt_results(results, sim_index)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Sep 21 19:40:03 2009</div>  
+</body>
+</html>

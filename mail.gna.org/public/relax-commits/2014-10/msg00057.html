@@ -1,0 +1,319 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r26161 &#45; /trunk/specific_analyses/relax_disp/api.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 06 Oct 2014 05:19:14 +0200 -->
+<!--X-Message-Id: E1XaypN&#45;00081P&#45;WA@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r26161 - /trunk/specific_analyses/relax_disp/api.py -- October 06, 2014 - 05:19</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r26161 - /trunk/specific_analyses/relax_disp/api.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00057" class="tabs">Index by Date</a> | <a href="threads.html#00057" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00056.html">Date Prev</a>] [<a href="msg00058.html">Date Next</a>] [<a href="msg00056.html">Thread Prev</a>] [<a href="msg00058.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 06 Oct 2014 03:19:13 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00057.html">E1XaypN-00081P-WA@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on October 06, 2014 - 05:19:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Mon Oct  6 05:19:13 2014
+New Revision: 26161
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=26161&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=26161&amp;view=rev</a>
+Log:
+Made the value set function, set values to all spins, if it is a global 
+parameter.
+
+Bug #22754 (<a  rel="nofollow" href="https://gna.org/bugs/index.php?22754">https://gna.org/bugs/index.php?22754</a>): The minimise.calculate() 
+does not calculate chi2 value for clustered residues.
+
+Modified:
+    trunk/specific_analyses/relax_disp/api.py
+
+Modified: trunk/specific_analyses/relax_disp/api.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/relax_disp/api.py?rev=26161&amp;r1=26160&amp;r2=26161&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/relax_disp/api.py?rev=26161&amp;r1=26160&amp;r2=26161&amp;view=diff</a>
+==============================================================================
+--- trunk/specific_analyses/relax_disp/api.py   (original)
++++ trunk/specific_analyses/relax_disp/api.py   Mon Oct  6 05:19:13 2014
+@@ -720,6 +720,7 @@
+ 
+             cluster_spin_list.append(free_spin_list)
+             cluster_spin_id_list.append(free_spin_id_list)
++            cluster_spin_sel_list.append(None)
+             clust_contain_spin_id_list.append(True)
+ 
+         return cluster_ids, cluster_spin_list, cluster_spin_id_list, 
+cluster_spin_sel_list, clust_contain_spin_id_list
+@@ -1268,83 +1269,111 @@
+         is_str_list(param, 'parameter name')
+         is_list(value, 'parameter value')
+ 
+-        # Loop over the parameters.
+-        for i in range(len(param)):
+-            # Is the parameter is valid?
+-            if not self._PARAMS.contains(param[i]):
+-                raise RelaxError(&quot;The parameter '%s' is not valid for this 
+data pipe type.&quot; % param[i])
+-
+-            # Spin loop.
+-            for spin in spin_loop(spin_id):
+-                # Skip deselected spins.
+-                if not spin.select:
+-                    continue
+-
+-                # The object name.
+-                obj_name = param[i]
+-                if error:
+-                    obj_name += '_err'
+-
+-                # Handle the R10 parameters.
+-                if param[i] in ['r1']:
+-                    # Loop over the current keys.
+-                    for exp_type, frq, ei, mi in 
+loop_exp_frq(return_indices=True):
+-                        # The parameter key.
+-                        key = generate_r20_key(exp_type=exp_type, frq=frq)
+-
+-                        # Initialise the structure if needed.
+-                        if not hasattr(spin, obj_name):
+-                            setattr(spin, obj_name, {})
+-
+-                        # Set the value.
+-                        if index == None:
+-                            obj = getattr(spin, obj_name)
+-                            obj[key] = value[i]
+-
+-                        # If the index is specified, let it match the 
+frequency index
+-                        elif mi == index:
+-                            obj = getattr(spin, obj_name)
+-                            obj[key] = value[i]
+-
+-                # Handle the R20 parameters.
+-                elif param[i] in PARAMS_R20:
+-                    # Loop over the current keys.
+-                    for exp_type, frq, ei, mi in 
+loop_exp_frq(return_indices=True):
+-                        # The parameter key.
+-                        key = generate_r20_key(exp_type=exp_type, frq=frq)
+-
+-                        # Initialise the structure if needed.
+-                        if not hasattr(spin, obj_name):
+-                            setattr(spin, obj_name, {})
+-
+-                        # Set the value.
+-                        if index == None:
+-                            obj = getattr(spin, obj_name)
+-                            obj[key] = value[i]
+-
+-                        # If the index is specified, let it match the 
+frequency index
+-                        elif mi == index:
+-                            obj = getattr(spin, obj_name)
+-                            obj[key] = value[i]
+-
+-                # Handle the R2eff and I0 parameters.
+-                elif param[i] in ['r2eff', 'i0'] and not 
+isinstance(value[i], dict):
+-                    # Loop over all the data.
+-                    for exp_type, frq, offset, point in 
+loop_exp_frq_offset_point():
+-                        # The parameter key.
+-                        key = return_param_key_from_data(exp_type=exp_type, 
+frq=frq, offset=offset, point=point)
+-
+-                        # Initialise the structure if needed.
+-                        if not hasattr(spin, obj_name):
+-                            setattr(spin, obj_name, {})
+-
+-                        # Set the value.
+-                        obj = getattr(spin, obj_name)
+-                        obj[key] = value[i]
+-
+-                # Set the other parameters.
++        # Get the looping list over cluster ids.
++        cluster_ids, cluster_spin_list, cluster_spin_id_list, 
+cluster_spin_sel_list, clust_contain_spin_id_list = 
+self.loop_cluster_ids(spin_id=spin_id)
++
++        # Loop over the cluster ids.
++        for j, cluster_id in enumerate(cluster_ids):
++            # Get the spins, ids and if the cluster contains the spin of 
+interest.
++            cluster_spins = cluster_spin_list[j]
++            cluster_spin_ids = cluster_spin_id_list[j]
++            spin_of_interest = clust_contain_spin_id_list[j]
++            cluster_spin_sel = cluster_spin_sel_list[j]
++
++            # If spin of interest is present:
++            if spin_of_interest:
++                # If it is a free free spin, then calculate per spin.
++                if cluster_id == 'free spins':
++                    select_string = spin_id
+                 else:
+-                    setattr(spin, obj_name, value[i])
++                    select_string = cluster_spin_sel
++
++                # Loop over the parameters.
++                for i in range(len(param)):
++                    param_i = param[i]
++                    value_i = value[i]
++
++                    # Is the parameter is valid?
++                    if not self._PARAMS.contains(param_i):
++                        raise RelaxError(&quot;The parameter '%s' is not valid 
+for this data pipe type.&quot; % param_i)
++
++                    # If the parameter is a global parameter, then change 
+for all spins part of the cluster.
++                    if param_i in ['pA', 'kex', 'tex', 'kB', 'kC', 'kex_AB', 
+'kex_BC', 'kex_AC']:
++                        loop_select_string = select_string
++                    else:
++                        loop_select_string = spin_id
++
++                    # Spin loop.
++                    for spin in spin_loop(selection=loop_select_string):
++                        # Skip deselected spins.
++                        if not spin.select:
++                            continue
++        
++                        # The object name.
++                        obj_name = param_i
++                        if error:
++                            obj_name += '_err'
++        
++                        # Handle the R10 parameters.
++                        if param_i in ['r1']:
++                            # Loop over the current keys.
++                            for exp_type, frq, ei, mi in 
+loop_exp_frq(return_indices=True):
++                                # The parameter key.
++                                key = generate_r20_key(exp_type=exp_type, 
+frq=frq)
++        
++                                # Initialise the structure if needed.
++                                if not hasattr(spin, obj_name):
++                                    setattr(spin, obj_name, {})
++        
++                                # Set the value.
++                                if index == None:
++                                    obj = getattr(spin, obj_name)
++                                    obj[key] = value_i
++        
++                                # If the index is specified, let it match 
+the frequency index
++                                elif mi == index:
++                                    obj = getattr(spin, obj_name)
++                                    obj[key] = value_i
++        
++                        # Handle the R20 parameters.
++                        elif param_i in PARAMS_R20:
++                            # Loop over the current keys.
++                            for exp_type, frq, ei, mi in 
+loop_exp_frq(return_indices=True):
++                                # The parameter key.
++                                key = generate_r20_key(exp_type=exp_type, 
+frq=frq)
++        
++                                # Initialise the structure if needed.
++                                if not hasattr(spin, obj_name):
++                                    setattr(spin, obj_name, {})
++        
++                                # Set the value.
++                                if index == None:
++                                    obj = getattr(spin, obj_name)
++                                    obj[key] = value_i
++        
++                                # If the index is specified, let it match 
+the frequency index
++                                elif mi == index:
++                                    obj = getattr(spin, obj_name)
++                                    obj[key] = value_i
++        
++                        # Handle the R2eff and I0 parameters.
++                        elif param_i in ['r2eff', 'i0'] and not 
+isinstance(value_i, dict):
++                            # Loop over all the data.
++                            for exp_type, frq, offset, point in 
+loop_exp_frq_offset_point():
++                                # The parameter key.
++                                key = 
+return_param_key_from_data(exp_type=exp_type, frq=frq, offset=offset, 
+point=point)
++        
++                                # Initialise the structure if needed.
++                                if not hasattr(spin, obj_name):
++                                    setattr(spin, obj_name, {})
++        
++                                # Set the value.
++                                obj = getattr(spin, obj_name)
++                                obj[key] = value_i
++        
++                        # Set the other parameters.
++                        else:
++                            setattr(spin, obj_name, value_i)
+ 
+ 
+     def set_selected_sim(self, select_sim, model_info=None):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Oct 06 05:20:03 2014</div>  
+</body>
+</html>

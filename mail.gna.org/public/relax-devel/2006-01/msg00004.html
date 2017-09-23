@@ -1,0 +1,248 @@
+<!-- MHonArc v2.6.10 -->
+<!--X-Subject: Re: [Relax&#45;devel] handling of relaxation data in results files -->
+<!--X-From-R13: Sqjneq q'Ohiretar <rqjneq.qnhiretarNtznvy.pbz> -->
+<!--X-Date: Wed, 11 Jan 2006 03:33:10 +0100 -->
+<!--X-Message-Id: 7f080ed10601101831j45bdc89dl@mail.gmail.com -->
+<!--X-Content-Type: text/plain -->
+<!--X-Reference: 7f080ed10601082043y67df1186r@mail.gmail.com -->
+<!--X-Reference: 1136915697.8207.160.camel@bmbpcu338.leeds.ac.uk -->
+<!--X-Head-End-->
+<!doctype html public "-//W3C//DTD HTML//EN">
+<html>
+<head>
+<title>Re: [Relax-devel] handling of relaxation data in results files -- January 11, 2006 - 03:33</title>
+<link rel="stylesheet" type="text/css" href="http://home.gna.org/admin/style.css"> 
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h1>Re: [Relax-devel] handling of relaxation data in results files (January 11, 2006 - 03:33)</h1>
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00004" class="tabs">Index by Date</a> | <a href="threads.html#00004" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00003.html">Date Prev</a>] [<a href="msg00005.html">Date Next</a>] [<a href="msg00003.html">Thread Prev</a>] [<a href="msg00005.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<div class="boxtitle">Headers</div>
+<div class="boxitemalt">
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul>
+<li><em>To</em>: <a href="mailto:relax-devel@DOMAIN.HIDDEN">relax-devel@xxxxxxx</a></li>
+<li><em>Subject</em>: Re: [Relax-devel] handling of relaxation data in results files</li>
+<li><em>From</em>: Edward d'Auvergne &lt;<a href="mailto:edward.dauvergne@DOMAIN.HIDDEN">edward.dauvergne@xxxxxxxxx</a>&gt;</li>
+<li><em>Date</em>: Wed, 11 Jan 2006 13:31:38 +1100</li>
+<li><em>Domainkey-signature</em>: a=rsa-sha1; q=dns; c=nofws; s=beta; d=gmail.com;	h=received:message-id:date:from:to:subject:in-reply-to:mime-version:content-type:content-transfer-encoding:content-disposition:references;	b=CuRBo+9+X5JS8qSTFImvkmlA1SbZy0SFZS97qH0/qPMzxv/pbmWH4AiGlLsmRD5+OueiMhPTEAV7xkB9JJNZxhAkhLy3vPjvd3lYtt0s3r9Mn+n2V/tjJnVH+/FD27yltQtNsSau6zBY0/gyu6Qag6UBl1UP+/r7BZKtZdkY2kc=</li>
+<li><em>Message-id</em>: &lt;<a href="msg00004.html">7f080ed10601101831j45bdc89dl@mail.gmail.com</a>&gt;</li>
+<li><em>References</em>: &lt;<a href="msg00000.html">7f080ed10601082043y67df1186r@mail.gmail.com</a>&gt;	&lt;<a href="msg00003.html">1136915697.8207.160.camel@bmbpcu338.leeds.ac.uk</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div>
+<p>&nbsp;</p>
+<div class="data">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre>I think I know the exact problem.  I though I had written and properly
+debugged the code to handle this situation.  The reason for having a
+global set of data structures as well as residue specific structures
+relating to the relaxation data is two fold.  That the global
+structures keep track of all data which has been loaded into relax and
+are used for internal accounting.  The residue specific structures
+relate the actual data to it's field strength and data type (NOE, R1,
+or R2) independently of which complete data sets were collected.
+
+In the results file, I found that recreating the global structures was
+very difficult when each residue had a different number of data
+points.  Rare ambiguities could even arise if there are no residues
+which posses every possible data point.  Therefore I decided that the
+global structures would be printed in the results file and if any data
+(and error) points were missing, to replace it with None.  In reading
+the file back in, relax should first recreate the global structures
+using the data of the first 'selected' residue and then for each
+residue when 'None' is encountered, recreate the residue specific data
+structures appropriately.  I.e. drop the corresponding entries in the
+'remap_table', 'relax_data', etc.  The 'num_ri' should then be
+calculated correctly and the contents of 'self.relax.data' for the run
+should be identical to that prior to saving the results and
+terminating the program.
+
+Two options are possible in fixing the bug.  The first would be to
+destroy and abandon the global data structures.  This may, however,
+have a few unintended consequences that would require a bit of
+recoding.  The second option would be to fix the data structure
+recreation - which would probably be less disruptive.
+
+I thought I had fixed this exact same problem quite a while back by
+changing the recreation of the residue specific structures.  The code
+could have been lost though.  Before I imported relax into the
+subversion database, I think I accidentally overwrote a large number
+of fixes I made to relax with an earlier version.  The code is
+probably hidden somewhere deep inside the relax SVN database, but I
+don't know where it is or what exactly was lost.  Keeping track of
+code is quite error prone if a versioning system is not used!
+
+Oh, which code base are you working from?  Are you using one of the
+stable 1.0.x releases, have you checked out the head of the 1.0
+branch, or are you working with the brand new 1.1 development branch
+I've created for the large number of changes I'm currently making? 
+I'll probably try to get the fix merged into both 1.0 and 1.1, and
+then possibly release stable version 1.0.10 as a branch off the 1.0
+line.  I've stabilised the 1.1 line so that any problems in the
+relaxation curve fitting C modules I'm writing should not affect the
+model-free code.
+
+
+On 10 Jan 2006 17:54:57 +0000, Chris MacRaild &lt;c.a.macraild@xxxxxxxxxxx&gt; wrote:
+&gt; Hi,
+&gt;
+&gt; For a while now I have been using relax with a dataset where not all
+&gt; residues have the same same number of relaxation values (I have data at
+&gt; 3 fields, but the quality varies significantly, and some of the
+&gt; relaxation decay fits I am not happy with, so I have excluded the
+&gt; corresponding data). This has caused no obvious problems in most cases,
+&gt; except that results file io fails in some interesting ways. I've had a
+&gt; bit of a poke in the code to try and fix this, but it has raised a few
+&gt; issues that I thought I should run past you before I hack too hard.
+&gt;
+&gt; Of course when I load this data from the original data files, the
+&gt; relevant residue data structures all behave correctly -
+&gt; self.relax.data.res[runName][res].num_ri is correct for each residue, as
+&gt; are the residue specific remap_table, ri_labels, etc.
+&gt;
+&gt; When I do a results.write(), things change in the results file: all
+&gt; residues now have the same remap_table, etc, and missing Ri values and
+&gt; errors are given the value None. This in itself makes some sense in the
+&gt; context of the tabular file format, but is inconsistent with the way
+&gt; things are handled in the data structures above.
+&gt;
+&gt; Just in case I'm not being clear, an example. Lets say residue 1 has all
+&gt; 9 data points, but residue 2 is missing the first data point, so only
+&gt; has 8. On initially loading the data files, I have:
+&gt; self.relax.data.res[runName][1].num_ri = 9
+&gt; self.relax.data.res[runName][1].remap_table = [0,1,2,0,1,2,0,1,2]
+&gt; self.relax.data.res[runName][1].relax_data = [1.214, 0.896, 0.6817,
+&gt; 18.64, 20.48, 21.89, 0.769, 0.858, 0.893]
+&gt;
+&gt; self.relax.data.res[runName][2].num_ri = 8
+&gt; self.relax.data.res[runName][2].remap_table = [1,2,0,1,2,0,1,2]
+&gt; self.relax.data.res[runName][2].relax_data = [0.896, 0.6817, 18.64,
+&gt; 20.48, 21.89, 0.769, 0.858, 0.893]
+&gt;
+&gt; But the results file looks like:
+&gt; Res  ...    remap_table   ...     relax_data
+&gt; 1           [0,1,2,0,1,2,0,1,2]   [1.214, 0.896, 0.6817, 18.64, 20.48,
+&gt; 21.89, 0.769, 0.858, 0.893]
+&gt; 2           [0,1,2,0,1,2,0,1,2]   [None, 0.896, 0.6817, 18.64, 20.48,
+&gt; 21.89, 0.769, 0.858, 0.893]
+&gt;
+&gt;
+&gt; This inconsistency comes back to haunt us on results.read(). The first
+&gt; problem is that Ri values and errors get read in as None. This causes
+&gt; subsequent minimisation to fail (by some wonder of python's implicit
+&gt; type conversions, None &lt; 0.0 evaluates as True so minimisation fails
+&gt; with negative errors!). The second problem relates to the fact that
+&gt; ri_labels, remap_table, etc are defined twice in the relax data
+&gt; structures, once at self.relax.data.res[runName][res].ri_labels, and
+&gt; again at self.relax.data.ri_labels[runName].
+&gt;
+&gt; read_columnar_relax_data() tries to set data.ri_labels[runName], etc.
+&gt; from the first line that is read from the results file. Then we have:
+&gt;
+&gt;     # Test if the relaxation data is consistent.
+&gt;     if self.ri_labels != eval(self.file_line[self.col['ri_labels']]) or
+&gt; self.remap_table != eval(self.file_line[self.col['remap_table']]) or
+&gt; self.frq_labels != eval(self.file_line[self.col['frq_labels']]) or
+&gt; self.frq != eval(self.file_line[self.col['frq']]):
+&gt;         raise RelaxError, &quot;The relaxation data is not consistent for all
+&gt; residues.&quot;
+&gt;
+&gt; This checks that the ri_labels, etc, for each line of the results file
+&gt; is the same as that from the first line read. This exception is never
+&gt; raised, because these values are always consistent in the results file,
+&gt; even if they weren't in the original data, as I've outlined above. It
+&gt; does, however, seem to be an attempt to stop me using data where not all
+&gt; residues have the same same number of relaxation values. It might be
+&gt; that I'm missing something, but I can see no good reason why I should be
+&gt; stopped, and indeed using this type of data has caused me no other
+&gt; problems that I can see.
+&gt;
+&gt; So, the 'big issues' for your consideration:
+&gt;  - Is there any good reason for having ri_labels, etc defined at both
+&gt; the level of the run (at data.ri_labels[runName]) and at the level of
+&gt; the residue (at data.res[runName][res].ri_labels)? We have seen other
+&gt; bugs associated with these duplications, and it does seem to be asking
+&gt; for trouble.
+&gt;  - A decision needs to be made about which of these parameters are
+&gt; expected to be constant across all residues in a run, and which are
+&gt; potentially allowed to vary. Ideally, it seems to me, those which are
+&gt; constant across the run will be defined only at
+&gt; data.param_name[runName], and those that might vary from one residue to
+&gt; another will be at data.res[runName][res].param_name (and only there).
+&gt; Again, in my opinion, what ever convention is adopted in the internal
+&gt; data structures of relax should also be reflected in the way the
+&gt; parameter values are output to the results file.
+&gt;
+&gt; Anyway, let me know what you think.  I'm happy to have a hack at
+&gt; resolving these issues which ever way you decide.
+&gt;
+&gt;
+&gt; Chris
+&gt;
+&gt;
+&gt; _______________________________________________
+&gt; Relax-devel mailing list
+&gt; Relax-devel@xxxxxxx
+&gt; <a  href="https://mail.gna.org/listinfo/relax-devel">https://mail.gna.org/listinfo/relax-devel</a>
+&gt;
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div>
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<ul><li><strong>References</strong>:
+<ul>
+<li><strong><a name="00000" href="msg00000.html">[Relax-devel] Creation of an unstable development fork from 1.0	called 1.1.</a></strong>
+<ul><li><em>From:</em> Edward d'Auvergne</li></ul></li>
+<li><strong><a name="00003" href="msg00003.html">[Relax-devel] handling of relaxation data in results files</a></strong>
+<ul><li><em>From:</em> Chris MacRaild</li></ul></li>
+</ul></li></ul>
+<!--X-References-End-->
+<!--X-BotPNI-->
+<div class="boxtitle">Related Mails</div>
+<div class="boxitemalt">
+<ul>
+<li>Prev by Date:
+<strong><a href="msg00003.html">[Relax-devel] handling of relaxation data in results files</a></strong>
+</li>
+<li>Next by Date:
+<strong><a href="msg00005.html">Re: [Relax-devel] handling of relaxation data in results files</a></strong>
+</li>
+
+<li>Previous by thread:
+<strong><a href="msg00003.html">[Relax-devel] handling of relaxation data in results files</a></strong>
+</li>
+<li>Next by thread:
+<strong><a href="msg00005.html">Re: [Relax-devel] handling of relaxation data in results files</a></strong>
+</li>
+
+</ul>
+</div>
+<br /><br /><br />
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Jan 11 11:00:23 2006</div>  
+</body>
+</html>

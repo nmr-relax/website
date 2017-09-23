@@ -1,0 +1,559 @@
+<!-- MHonArc v2.6.10 -->
+<!--X-Subject: r3018 &#45; in /1.3: data/ generic_fns/ specific_fns/	test_suite/unit_tests/data/ -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Sun, 18 Feb 2007 06:50:43 +0100 -->
+<!--X-Message-Id: E1HIen2&#45;0003I7&#45;HO@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r3018 - in /1.3: data/ generic_fns/ specific_fns/	test_suite/unit_tests/data/ -- February 18, 2007 - 06:50</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r3018 - in /1.3: data/ generic_fns/ specific_fns/	test_suite/unit_tests/data/</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00007" class="tabs">Index by Date</a> | <a href="threads.html#00007" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00006.html">Date Prev</a>] [<a href="msg00008.html">Date Next</a>] [<a href="msg00006.html">Thread Prev</a>] [<a href="msg00008.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Sun, 18 Feb 2007 05:40:47 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00007.html">E1HIen2-0003I7-HO@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on February 18, 2007 - 06:50:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Sun Feb 18 06:40:36 2007
+New Revision: 3018
+
+URL: <a  href="http://svn.gna.org/viewcvs/relax?rev=3018&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=3018&amp;view=rev</a>
+Log:
+Fix for bug #7979 (<a  href="https://gna.org/bugs/?7979">https://gna.org/bugs/?7979</a>).
+
+A large number of changes were required.  Two private functions 
+'self.__update_sim_append()' and
+'self.__update_sim_set()' have been added to the DiffTensorElement class.  
+These are used to
+automatically update the Monte Carlo simulation parameter lists.  
+
+The name 'dependencies' is now properly spelt.
+
+The unused Monte Carlo simulation code in the function 
+'self._update_object()' has been deleted.
+
+The object DiffTensorSimList has been modifed to handle the two new private 
+functions.
+
+
+Modified:
+    1.3/data/diff_tensor.py
+    1.3/generic_fns/diffusion_tensor.py
+    1.3/specific_fns/model_free.py
+    1.3/test_suite/unit_tests/data/test_diff_tensor.py
+
+Modified: 1.3/data/diff_tensor.py
+URL: 
+<a  href="http://svn.gna.org/viewcvs/relax/1.3/data/diff_tensor.py?rev=3018&amp;r1=3017&amp;r2=3018&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/data/diff_tensor.py?rev=3018&amp;r1=3017&amp;r2=3018&amp;view=diff</a>
+==============================================================================
+--- 1.3/data/diff_tensor.py (original)
++++ 1.3/data/diff_tensor.py Sun Feb 18 06:40:36 2007
+@@ -151,6 +151,118 @@
+             self._update_object(param_name, target, update_if_set, depends, 
+category)
+ 
+ 
++    def __update_sim_append(self, param_name, index):
++        &quot;&quot;&quot;Update the Monte Carlo simulation data lists when a simulation 
+value is appended.
++
++        @param param_name:  The MC sim parameter name which is being 
+appended to.
++        @type param_name:   str
++        @param index:       The index of the Monte Carlo simulation which 
+was set.
++        @type index:        int
++        &quot;&quot;&quot;
++
++        # Loop over the targets.
++        for target, update_if_set, depends in 
+dependency_generator(self.type):
++            # Only update if the parameter name is within the 
+'update_if_set' list.
++            if not param_name in update_if_set:
++                continue
++
++            # Get the function for calculating the value.
++            fn = globals()['calc_'+target]
++
++            # Get all the dependencies if possible.
++            missing_dep = 0
++            deps = ()
++            for dep_name in depends:
++                # Modify the dependency name.
++                if dep_name != 'type':
++                    dep_name = dep_name+'_sim'
++
++                # Test if the MC sim object exists.
++                if not hasattr(self, dep_name):
++                    missing_dep = 1
++                    break
++
++                # Get the MC dependency.
++                dep_obj = getattr(self, dep_name)
++
++                # The diffusion tensor type.
++                if dep_name == 'type':
++                    deps = deps+(dep_obj,)
++                    continue
++
++                # Test if the MC sim dependency is long enough.
++                if len(dep_obj) &lt;= index:
++                    missing_dep = 1
++                    break
++
++                # Place the value corresponding to the index into the 'deps' 
+array.
++                deps = deps+(dep_obj[index],)
++
++            # Only update the MC simulation object if its dependencies exist.
++            if not missing_dep:
++                # Get the target object.
++                target_obj = getattr(self, target+'_sim')
++
++                # Calculate and set the value.
++                target_obj.append_untouchable_item(fn(*deps))
++
++
++    def __update_sim_set(self, param_name, index):
++        &quot;&quot;&quot;Update the Monte Carlo simulation data lists when a simulation 
+value is set.
++
++        @param param_name:  The MC sim parameter name which is being set.
++        @type param_name:   str
++        @param index:       The index of the Monte Carlo simulation which 
+was set.
++        @type index:        int
++        &quot;&quot;&quot;
++
++        # Loop over the targets.
++        for target, update_if_set, depends in 
+dependency_generator(self.type):
++            # Only update if the parameter name is within the 
+'update_if_set' list.
++            if not param_name in update_if_set:
++                continue
++
++            # Get the function for calculating the value.
++            fn = globals()['calc_'+target]
++
++            # Get all the dependencies if possible.
++            missing_dep = 0
++            deps = ()
++            for dep_name in depends:
++                # Modify the dependency name.
++                if dep_name != 'type':
++                    dep_name = dep_name+'_sim'
++
++                # Test if the MC sim object exists.
++                if not hasattr(self, dep_name):
++                    missing_dep = 1
++                    break
++
++                # Get the MC dependency.
++                dep_obj = getattr(self, dep_name)
++
++                # The diffusion tensor type.
++                if dep_name == 'type':
++                    deps = deps+(dep_obj,)
++                    continue
++
++                # Test if the MC sim dependency is long enough.
++                if len(dep_obj) &lt;= index:
++                    missing_dep = 1
++                    break
++
++                # Place the value corresponding to the index into the 'deps' 
+array.
++                deps = deps+(dep_obj[index],)
++
++            # Only update the MC simulation object if its dependencies exist.
++            if not missing_dep:
++                # Get the target object.
++                target_obj = getattr(self, target+'_sim')
++
++                # Calculate and set the value.
++                target_obj.set_untouchable_item(index, fn(*deps))
++
++
+     def _update_object(self, param_name, target, update_if_set, depends, 
+category):
+         &quot;&quot;&quot;Function for updating the target object, its error, and the MC 
+simulations.
+ 
+@@ -166,7 +278,7 @@
+         @param update_if_set:   If the parameter being set by the 
+__setattr__() function is not
+             within this list of parameters, don't waste time updating the
+             target.
+-        @param depends:         An array of names objects that the target is 
+dependant upon.
++        @param depends:         An array of names objects that the target is 
+dependent upon.
+         @type depends:          array of str
+         @param category:        The category of the object to update (one of 
+'val', 'err', or
+             'sim').
+@@ -195,7 +307,7 @@
+         ############
+ 
+         if category == 'val':
+-            # Get all the dependancies if possible.
++            # Get all the dependencies if possible.
+             missing_dep = 0
+             deps = ()
+             for dep_name in depends:
+@@ -215,7 +327,7 @@
+             if Debug:
+                 print &quot;Deps: &quot; + `deps`
+ 
+-            # Only update the object if its dependancies exist.
++            # Only update the object if its dependencies exist.
+             if not missing_dep:
+                 # Calculate the value.
+                 value = fn(*deps)
+@@ -232,7 +344,7 @@
+         ############
+ 
+         if category == 'err':
+-            # Get all the dependancies if possible.
++            # Get all the dependencies if possible.
+             missing_dep = 0
+             deps = ()
+             for dep_name in depends:
+@@ -244,7 +356,7 @@
+                 # Get the object and place it into the 'deps' tuple.
+                 deps = deps+(getattr(self, dep_name+'_err'),)
+ 
+-            # Only update the error object if its dependancies exist.
++            # Only update the error object if its dependencies exist.
+             if not missing_dep:
+                 # Calculate the value.
+                 value = fn(*deps)
+@@ -257,57 +369,49 @@
+         ##############################
+ 
+         if category == 'sim':
+-            # Get all the dependancies if possible.
++            # Get all the dependencies if possible.
+             missing_dep = 0
+             deps = []
+             for dep_name in depends:
+-                # Test if the error object exists.
+-                if not hasattr(self, dep_name+'_sim'):
+-                    missing_dep = 1
+-                    break
+-
+-                # Get the object and place it into the 'deps' array.
+-                deps.append(getattr(self, dep_name+'_sim'))
+-
+-            # The number of simulations.
+-            if deps:
+-                num_sim = len(deps[0])
+-            else:
+-                num_sim = len(getattr(self, update_if_set[0]+'_sim'))
+-
+-            # Only update the MC simulation object if its dependancies exist.
++                # Modify the dependency name.
++                if dep_name != 'type':
++                    dep_name = dep_name+'_sim'
++
++                # Test if the MC sim object exists.
++                if not hasattr(self, dep_name):
++                    missing_dep = 1
++                    break
++
++            # Only create the MC simulation object if its dependencies exist.
+             if not missing_dep:
+-                # Initialise an empty array to store the MC simulation 
+object elements.
+-                sim_values = DiffTensorSimList(self)
+-
+-                # Loop over the simulations.
+-                for i in xrange(num_sim):
+-                    # Create a tuple of the dependancies.
+-                    deps_tuple = ()
+-                    for dep in deps:
+-                        deps_tuple = deps_tuple+(dep[i],)
+-
+-                    # Calculate the value.
+-                    sim_values.append(fn(*deps_tuple))
+-
+-                # Set the attribute.
+-                self.__dict__[target+'_sim'] = sim_values
++                # Initialise an empty array to store the MC simulation 
+object elements (if it doesn't already exist).
++                if not target+'_sim' in self.__dict__:
++                    self.__dict__[target+'_sim'] = DiffTensorSimList(target, 
+self)
+ 
+ 
+ 
+ class DiffTensorSimList(ListType):
+     &quot;&quot;&quot;Empty data container for Monte Carlo simulation diffusion tensor 
+data.&quot;&quot;&quot;
+ 
+-    def __init__(self, diff_element):
+-        &quot;&quot;&quot;Make the parent object accessible to this list object.&quot;&quot;&quot;
+-
+-        self.__diff_element = diff_element
++    def __init__(self, param_name, diff_element):
++        &quot;&quot;&quot;Initialise the Monte Carlo simulation parameter list.
++
++        This function makes the parameter name and parent object accessible 
+to the functions of this
++        list object.
++        &quot;&quot;&quot;
++
++        self.param_name = param_name
++        self.diff_element = diff_element
+ 
+ 
+     def __setitem__(self, index, value):
+         &quot;&quot;&quot;Set the value.&quot;&quot;&quot;
+ 
++        # Set the value.
+         ListType.__setitem__(self, index, value)
++
++        # Then update the other lists.
++        
+self.diff_element._DiffTensorElement__update_sim_set(self.param_name, index)
+ 
+ 
+     def append(self, value):
+@@ -315,3 +419,20 @@
+ 
+         # Append the value to the list.
+         self[len(self):len(self)] = [value]
++
++        # Update the other MC lists.
++        
+self.diff_element._DiffTensorElement__update_sim_append(self.param_name, 
+len(self)-1)
++
++
++    def append_untouchable_item(self, value):
++        &quot;&quot;&quot;Append the value for an untouchable MC data structure.&quot;&quot;&quot;
++
++        # Append the value to the list.
++        self[len(self):len(self)] = [value]
++
++
++    def set_untouchable_item(self, index, value):
++        &quot;&quot;&quot;Set the value for an untouchable MC data structure.&quot;&quot;&quot;
++
++        # Set the value.
++        ListType.__setitem__(self, index, value)
+
+Modified: 1.3/generic_fns/diffusion_tensor.py
+URL: 
+<a  href="http://svn.gna.org/viewcvs/relax/1.3/generic_fns/diffusion_tensor.py?rev=3018&amp;r1=3017&amp;r2=3018&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/generic_fns/diffusion_tensor.py?rev=3018&amp;r1=3017&amp;r2=3018&amp;view=diff</a>
+==============================================================================
+--- 1.3/generic_fns/diffusion_tensor.py (original)
++++ 1.3/generic_fns/diffusion_tensor.py Sun Feb 18 06:40:36 2007
+@@ -382,6 +382,10 @@
+ 
+         # Return the tensor.
+         return rotation
++
++    # Raise an error.
++    else:
++        raise RelaxError, 'The diffusion tensor has not been specified'
+ 
+ 
+ def calc_tensor(rotation, tensor_diag):
+
+Modified: 1.3/specific_fns/model_free.py
+URL: 
+<a  href="http://svn.gna.org/viewcvs/relax/1.3/specific_fns/model_free.py?rev=3018&amp;r1=3017&amp;r2=3018&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/specific_fns/model_free.py?rev=3018&amp;r1=3017&amp;r2=3018&amp;view=diff</a>
+==============================================================================
+--- 1.3/specific_fns/model_free.py (original)
++++ 1.3/specific_fns/model_free.py Sun Feb 18 06:40:36 2007
+@@ -2783,7 +2783,7 @@
+             else:
+                 # Create the data structure if it doesn't exist.
+                 if not hasattr(self.relax.data.diff[self.run], 'tm_sim'):
+-                    self.relax.data.diff[self.run].tm_sim = 
+DiffTensorSimList()
++                    self.relax.data.diff[self.run].tm_sim = 
+DiffTensorSimList('tm', self.relax.data.diff[self.relax])
+ 
+                 # Append the value.
+                 self.relax.data.diff[self.run].tm_sim.append(tm)
+@@ -2820,13 +2820,13 @@
+             else:
+                 # Create the data structure if it doesn't exist.
+                 if not hasattr(self.relax.data.diff[self.run], 'tm_sim'):
+-                    self.relax.data.diff[self.run].tm_sim = 
+DiffTensorSimList()
++                    self.relax.data.diff[self.run].tm_sim = 
+DiffTensorSimList('tm', self.relax.data.diff[self.relax])
+                 if not hasattr(self.relax.data.diff[self.run], 'Da_sim'):
+-                    self.relax.data.diff[self.run].Da_sim = 
+DiffTensorSimList()
++                    self.relax.data.diff[self.run].Da_sim = 
+DiffTensorSimList('Da', self.relax.data.diff[self.relax])
+                 if not hasattr(self.relax.data.diff[self.run], 'theta_sim'):
+-                    self.relax.data.diff[self.run].theta_sim = 
+DiffTensorSimList()
++                    self.relax.data.diff[self.run].theta_sim = 
+DiffTensorSimList('theta', self.relax.data.diff[self.relax])
+                 if not hasattr(self.relax.data.diff[self.run], 'phi_sim'):
+-                    self.relax.data.diff[self.run].phi_sim = 
+DiffTensorSimList()
++                    self.relax.data.diff[self.run].phi_sim = 
+DiffTensorSimList('phi', self.relax.data.diff[self.relax])
+ 
+                 # Append the value.
+                 self.relax.data.diff[self.run].tm_sim.append(tm)
+@@ -2870,17 +2870,17 @@
+             else:
+                 # Create the data structure if it doesn't exist.
+                 if not hasattr(self.relax.data.diff[self.run], 'tm_sim'):
+-                    self.relax.data.diff[self.run].tm_sim = 
+DiffTensorSimList()
++                    self.relax.data.diff[self.run].tm_sim = 
+DiffTensorSimList('tm', self.relax.data.diff[self.relax])
+                 if not hasattr(self.relax.data.diff[self.run], 'Da_sim'):
+-                    self.relax.data.diff[self.run].Da_sim = 
+DiffTensorSimList()
++                    self.relax.data.diff[self.run].Da_sim = 
+DiffTensorSimList('Da', self.relax.data.diff[self.relax])
+                 if not hasattr(self.relax.data.diff[self.run], 'Dr_sim'):
+-                    self.relax.data.diff[self.run].Dr_sim = 
+DiffTensorSimList()
++                    self.relax.data.diff[self.run].Dr_sim = 
+DiffTensorSimList('Dr', self.relax.data.diff[self.relax])
+                 if not hasattr(self.relax.data.diff[self.run], 'alpha_sim'):
+-                    self.relax.data.diff[self.run].alpha_sim = 
+DiffTensorSimList()
++                    self.relax.data.diff[self.run].alpha_sim = 
+DiffTensorSimList('alpha', self.relax.data.diff[self.relax])
+                 if not hasattr(self.relax.data.diff[self.run], 'beta_sim'):
+-                    self.relax.data.diff[self.run].beta_sim = 
+DiffTensorSimList()
++                    self.relax.data.diff[self.run].beta_sim = 
+DiffTensorSimList('beta', self.relax.data.diff[self.relax])
+                 if not hasattr(self.relax.data.diff[self.run], 'gamma_sim'):
+-                    self.relax.data.diff[self.run].gamma_sim = 
+DiffTensorSimList()
++                    self.relax.data.diff[self.run].gamma_sim = 
+DiffTensorSimList('gamma', self.relax.data.diff[self.relax])
+ 
+                 # Append the value.
+                 self.relax.data.diff[self.run].tm_sim.append(tm)
+
+Modified: 1.3/test_suite/unit_tests/data/test_diff_tensor.py
+URL: 
+<a  href="http://svn.gna.org/viewcvs/relax/1.3/test_suite/unit_tests/data/test_diff_tensor.py?rev=3018&amp;r1=3017&amp;r2=3018&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/test_suite/unit_tests/data/test_diff_tensor.py?rev=3018&amp;r1=3017&amp;r2=3018&amp;view=diff</a>
+==============================================================================
+--- 1.3/test_suite/unit_tests/data/test_diff_tensor.py (original)
++++ 1.3/test_suite/unit_tests/data/test_diff_tensor.py Sun Feb 18 06:40:36 
+2007
+@@ -90,10 +90,10 @@
+         self.diff_data.type = 'spheroid'
+ 
+         # Set the MC sim diffusion parameter lists.
+-        self.diff_data.tm_sim = DiffTensorSimList(self.diff_data)
+-        self.diff_data.Da_sim = DiffTensorSimList(self.diff_data)
+-        self.diff_data.theta_sim = DiffTensorSimList(self.diff_data)
+-        self.diff_data.phi_sim = DiffTensorSimList(self.diff_data)
++        self.diff_data.tm_sim = DiffTensorSimList('tm', self.diff_data)
++        self.diff_data.Da_sim = DiffTensorSimList('Da', self.diff_data)
++        self.diff_data.theta_sim = DiffTensorSimList('theta', self.diff_data)
++        self.diff_data.phi_sim = DiffTensorSimList('phi', self.diff_data)
+ 
+         # Append the values.
+         self.diff_data.tm_sim.append(tm)
+@@ -252,17 +252,16 @@
+         self.diff_data.type = 'spheroid'
+ 
+         # Set the MC sim diffusion parameter lists.
+-        self.diff_data.tm_sim = DiffTensorSimList(self.diff_data)
+-        self.diff_data.Da_sim = DiffTensorSimList(self.diff_data)
+-        self.diff_data.theta_sim = DiffTensorSimList(self.diff_data)
+-        self.diff_data.phi_sim = DiffTensorSimList(self.diff_data)
++        self.diff_data.tm_sim = DiffTensorSimList('tm', self.diff_data)
++        self.diff_data.Da_sim = DiffTensorSimList('Da', self.diff_data)
++        self.diff_data.theta_sim = DiffTensorSimList('theta', self.diff_data)
++        self.diff_data.phi_sim = DiffTensorSimList('phi', self.diff_data)
+ 
+         # Append the initial values.
+         self.diff_data.tm_sim.append(2e-9)
+         self.diff_data.Da_sim.append(1e5)
+         self.diff_data.theta_sim.append(0.0)
+         self.diff_data.phi_sim.append(2.0 * pi)
+-        print self.diff_data
+ 
+         # The new MC sim parameter values.
+         tm = 0.5e-9
+@@ -277,7 +276,6 @@
+         self.diff_data.phi_sim[0] = phi
+ 
+         # Test the set values.
+-        print self.diff_data
+         self.assertEqual(self.diff_data.type, 'spheroid')
+         self.assertEqual(self.diff_data.tm_sim[0], tm)
+         self.assertEqual(self.diff_data.Da_sim[0], Da)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Sun Feb 18 07:20:08 2007</div>  
+</body>
+</html>

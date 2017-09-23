@@ -1,0 +1,385 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r18505 &#45; /trunk/generic_fns/structure/internal.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 19 Feb 2013 21:54:11 +0100 -->
+<!--X-Message-Id: E1U7uCZ&#45;0003pd&#45;LH@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r18505 - /trunk/generic_fns/structure/internal.py -- February 19, 2013 - 21:54</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r18505 - /trunk/generic_fns/structure/internal.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00177" class="tabs">Index by Date</a> | <a href="threads.html#00177" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00176.html">Date Prev</a>] [<a href="msg00178.html">Date Next</a>] [<a href="msg00176.html">Thread Prev</a>] [<a href="msg00178.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 19 Feb 2013 20:54:11 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00177.html">E1U7uCZ-0003pd-LH@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on February 19, 2013 - 21:54:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Feb 19 21:54:11 2013
+New Revision: 18505
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=18505&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=18505&amp;view=rev</a>
+Log:
+Added a series of _parse_pdb_*() methods to the internal structural object.
+
+These correspond to each section of the PDB format version 3.30
+<a  rel="nofollow" href="http://www.wwpdb.org/documentation/format33/v3.3.html">http://www.wwpdb.org/documentation/format33/v3.3.html</a>.  The currently loop 
+over the records of their
+section, returning the remaining PDB records.  The aim is for fast parsing 
+and breaking into
+sections.
+
+
+Modified:
+    trunk/generic_fns/structure/internal.py
+
+Modified: trunk/generic_fns/structure/internal.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/generic_fns/structure/internal.py?rev=18505&amp;r1=18504&amp;r2=18505&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/generic_fns/structure/internal.py?rev=18505&amp;r1=18504&amp;r2=18505&amp;view=diff</a>
+==============================================================================
+--- trunk/generic_fns/structure/internal.py (original)
++++ trunk/generic_fns/structure/internal.py Tue Feb 19 21:54:11 2013
+@@ -255,8 +255,40 @@
+             return 'Average vector'
+ 
+ 
++    def _parse_pdb_connectivity_annotation(self, lines):
++        &quot;&quot;&quot;Loop over and parse the PDB connectivity annotation records.
++        
++        These are the records identified in the PDB version 3.30 
+documentation at U{<a  rel="nofollow" href="http://www.wwpdb.org/documentation/format33/sect6.html}">http://www.wwpdb.org/documentation/format33/sect6.html}</a>
++
++
++        @param lines:       The lines of the PDB file excluding the sections 
+prior to the connectivity annotation section.
++        @type lines:        list of str
++        @return:            The remaining PDB lines with the connectivity 
+annotation records stripped.
++        @rtype:             list of str
++        &quot;&quot;&quot;
++
++        # The ordered list of record names in the connectivity annotation 
+section.
++        records = [
++            'SSBOND',
++            'LINK  ',
++            'CISPEP'
++        ]
++
++        # Loop over the lines.
++        for i in range(len(lines)):
++            # No match, therefore assume to be out of the connectivity 
+annotation section.
++            if lines[i][0: 6] not in records:
++                break
++        
++        # Return the remaining lines.
++        return lines[i:]
++
++
+     def _parse_pdb_coord(self, lines):
+         &quot;&quot;&quot;Generator function for looping over the models in the PDB file.
++
++        These are the records identified in the PDB version 3.30 
+documentation at U{<a  rel="nofollow" href="http://www.wwpdb.org/documentation/format33/sect9.html}">http://www.wwpdb.org/documentation/format33/sect9.html}</a>.
++
+ 
+         @param lines:       The lines of the coordinate section.
+         @type lines:        list of str
+@@ -298,6 +330,196 @@
+         # If records is not empty then there are no models, so yield the lot.
+         if len(records):
+             yield model, records
++
++
++    def _parse_pdb_hetrogen(self, lines):
++        &quot;&quot;&quot;Loop over and parse the PDB hetrogen records.
++        
++        These are the records identified in the PDB version 3.30 
+documentation at U{<a  rel="nofollow" href="http://www.wwpdb.org/documentation/format33/sect4.html}">http://www.wwpdb.org/documentation/format33/sect4.html}</a>.
++
++
++        @param lines:       The lines of the PDB file excluding the sections 
+prior to the hetrogen section.
++        @type lines:        list of str
++        @return:            The remaining PDB lines with the hetrogen 
+records stripped.
++        @rtype:             list of str
++        &quot;&quot;&quot;
++
++        # The ordered list of record names in the hetrogen section.
++        records = [
++            'HET   ',
++            'FORMUL',
++            'HETNAM',
++            'HETSYN'
++        ]
++
++        # Loop over the lines.
++        for i in range(len(lines)):
++            # No match, therefore assume to be out of the hetrogen section.
++            if lines[i][0: 6] not in records:
++                break
++        
++        # Return the remaining lines.
++        return lines[i:]
++
++
++    def _parse_pdb_misc(self, lines):
++        &quot;&quot;&quot;Loop over and parse the PDB miscellaneous records.
++        
++        These are the records identified in the PDB version 3.30 
+documentation at U{<a  rel="nofollow" href="http://www.wwpdb.org/documentation/format33/sect7.html}">http://www.wwpdb.org/documentation/format33/sect7.html}</a>.
++
++
++        @param lines:       The lines of the PDB file excluding the sections 
+prior to the miscellaneous section.
++        @type lines:        list of str
++        @return:            The remaining PDB lines with the miscellaneous 
+records stripped.
++        @rtype:             list of str
++        &quot;&quot;&quot;
++
++        # The ordered list of record names in the miscellaneous section.
++        records = [
++            'SITE  '
++        ]
++
++        # Loop over the lines.
++        for i in range(len(lines)):
++            # No match, therefore assume to be out of the miscellaneous 
+section.
++            if lines[i][0: 6] not in records:
++                break
++        
++        # Return the remaining lines.
++        return lines[i:]
++
++
++    def _parse_pdb_prim_struct(self, lines):
++        &quot;&quot;&quot;Loop over and parse the PDB primary structure records.
++        
++        These are the records identified in the PDB version 3.30 
+documentation at U{<a  rel="nofollow" href="http://www.wwpdb.org/documentation/format33/sect3.html}">http://www.wwpdb.org/documentation/format33/sect3.html}</a>.
++
++
++        @param lines:       The lines of the PDB file excluding the title 
+section.
++        @type lines:        list of str
++        @return:            The remaining PDB lines with the primary 
+structure records stripped.
++        @rtype:             list of str
++        &quot;&quot;&quot;
++
++        # The ordered list of record names in the primary structure section.
++        records = [
++            'DBREF ',
++            'DBREF1',
++            'DBREF2',
++            'SEQADV',
++            'SEQRES',
++            'MODRES'
++        ]
++
++        # Loop over the lines.
++        for i in range(len(lines)):
++            # No match, therefore assume to be out of the primary structure 
+section.
++            if lines[i][0: 6] not in records:
++                break
++        
++        # Return the remaining lines.
++        return lines[i:]
++
++
++    def _parse_pdb_ss(self, lines):
++        &quot;&quot;&quot;Loop over and parse the PDB secondary structure records.
++        
++        These are the records identified in the PDB version 3.30 
+documentation at U{<a  rel="nofollow" href="http://www.wwpdb.org/documentation/format33/sect5.html}">http://www.wwpdb.org/documentation/format33/sect5.html}</a>.
++
++
++        @param lines:       The lines of the PDB file excluding the sections 
+prior to the secondary structure section.
++        @type lines:        list of str
++        @return:            The remaining PDB lines with the secondary 
+structure records stripped.
++        @rtype:             list of str
++        &quot;&quot;&quot;
++
++        # The ordered list of record names in the secondary structure 
+section (the depreciated TURN record is also included to handle old PDB 
+files).
++        records = [
++            'HELIX ',
++            'SHEET ',
++            'TURN  '
++        ]
++
++        # Loop over the lines.
++        for i in range(len(lines)):
++            # No match, therefore assume to be out of the secondary 
+structure section.
++            if lines[i][0: 6] not in records:
++                break
++        
++        # Return the remaining lines.
++        return lines[i:]
++
++
++    def _parse_pdb_title(self, lines):
++        &quot;&quot;&quot;Loop over and parse the PDB title records.
++        
++        These are the records identified in the PDB version 3.30 
+documentation at U{<a  rel="nofollow" href="http://www.wwpdb.org/documentation/format33/sect2.html}">http://www.wwpdb.org/documentation/format33/sect2.html}</a>.
++
++
++        @param lines:       All lines of the PDB file.
++        @type lines:        list of str
++        @return:            The remaining PDB lines with the title records 
+stripped.
++        @rtype:             list of str
++        &quot;&quot;&quot;
++
++        # The ordered list of (sometimes truncated) record names in the 
+title section.
++        records = [
++            'HEADER',
++            'OBSLTE',
++            'TITLE ',
++            'SPLT  ',
++            'CAVEAT',
++            'COMPND',
++            'SOURCE',
++            'KEYWDS',
++            'EXPDTA',
++            'NUMMDL',
++            'MDLTYP',
++            'AUTHOR',
++            'REVDAT',
++            'SPRSDE',
++            'JRNL  ',
++            'REMARK'
++        ]
++
++        # Loop over the lines.
++        for i in range(len(lines)):
++            # No match, therefore assume to be out of the title section.
++            if lines[i][0: 6] not in records:
++                break
++        
++        # Return the remaining lines.
++        return lines[i:]
++
++
++    def _parse_pdb_transform(self, lines):
++        &quot;&quot;&quot;Loop over and parse the PDB transform records.
++        
++        These are the records identified in the PDB version 3.30 
+documentation at U{<a  rel="nofollow" href="http://www.wwpdb.org/documentation/format33/sect8.html}">http://www.wwpdb.org/documentation/format33/sect8.html}</a>.
++
++
++        @param lines:       The lines of the PDB file excluding the sections 
+prior to the transform section.
++        @type lines:        list of str
++        @return:            The remaining PDB lines with the transform 
+records stripped.
++        @rtype:             list of str
++        &quot;&quot;&quot;
++
++        # The ordered list of record names in the transform section.
++        records = [
++            'CRYST',
++            'MTRIX',
++            'ORIGX',
++            'SCALE',
++        ]
++
++        # Loop over the lines.
++        for i in range(len(lines)):
++            # No match, therefore assume to be out of the transform section.
++            if lines[i][0: 5] not in records:
++                break
++        
++        # Return the remaining lines.
++        return lines[i:]
+ 
+ 
+     def _parse_models_xyz(self, file_path):
+@@ -1059,6 +1281,15 @@
+         if pdb_lines == []:
+             raise RelaxError(&quot;The PDB file is empty.&quot;)
+ 
++        # Process the different sections.
++        pdb_lines = self._parse_pdb_title(pdb_lines)
++        pdb_lines = self._parse_pdb_prim_struct(pdb_lines)
++        pdb_lines = self._parse_pdb_hetrogen(pdb_lines)
++        pdb_lines = self._parse_pdb_ss(pdb_lines)
++        pdb_lines = self._parse_pdb_connectivity_annotation(pdb_lines)
++        pdb_lines = self._parse_pdb_misc(pdb_lines)
++        pdb_lines = self._parse_pdb_transform(pdb_lines)
++
+         # Loop over all models in the PDB file.
+         model_index = 0
+         orig_model_num = []
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Feb 19 22:20:02 2013</div>  
+</body>
+</html>

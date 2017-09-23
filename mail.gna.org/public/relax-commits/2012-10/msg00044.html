@@ -1,0 +1,341 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r17665 &#45; in /trunk/data: align_tensor.py data_classes.py	diff_tensor.py relax_xml.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 02 Oct 2012 14:25:52 +0200 -->
+<!--X-Message-Id: E1TJ1Xs&#45;0003PA&#45;OP@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r17665 - in /trunk/data: align_tensor.py data_classes.py	diff_tensor.py relax_xml.py -- October 02, 2012 - 14:25</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r17665 - in /trunk/data: align_tensor.py data_classes.py	diff_tensor.py relax_xml.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00044" class="tabs">Index by Date</a> | <a href="threads.html#00044" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00043.html">Date Prev</a>] [<a href="msg00045.html">Date Next</a>] [<a href="msg00043.html">Thread Prev</a>] [<a href="msg00045.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 02 Oct 2012 12:25:52 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00044.html">E1TJ1Xs-0003PA-OP@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on October 02, 2012 - 14:25:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Oct  2 14:25:52 2012
+New Revision: 17665
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=17665&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=17665&amp;view=rev</a>
+Log:
+Better support for both Python 2 and 3 in the relax data store.
+
+The 2to3 script was used on all of the files in the data package.
+
+
+Modified:
+    trunk/data/align_tensor.py
+    trunk/data/data_classes.py
+    trunk/data/diff_tensor.py
+    trunk/data/relax_xml.py
+
+Modified: trunk/data/align_tensor.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/data/align_tensor.py?rev=17665&amp;r1=17664&amp;r2=17665&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/data/align_tensor.py?rev=17665&amp;r1=17664&amp;r2=17665&amp;view=diff</a>
+==============================================================================
+--- trunk/data/align_tensor.py (original)
++++ trunk/data/align_tensor.py Tue Oct  2 14:25:52 2012
+@@ -26,6 +26,7 @@
+ from numpy.linalg import det, eig, eigvals
+ 
+ # relax module imports.
++from compat import py_version
+ from data.data_classes import Element
+ from data.relax_xml import fill_object_contents, xml_to_object
+ from float import nan
+@@ -998,7 +999,7 @@
+         tensor_list_element.setAttribute('desc', 'Alignment tensor list')
+ 
+         # Add all simple python objects within the PipeContainer to the pipe 
+element.
+-        fill_object_contents(doc, tensor_list_element, object=self, 
+blacklist=list(self.__class__.__dict__.keys() + list.__dict__.keys()))
++        fill_object_contents(doc, tensor_list_element, object=self, 
+blacklist=list(list(self.__class__.__dict__.keys()) + 
+list(list.__dict__.keys())))
+ 
+         # Loop over the tensors.
+         for i in range(len(self)):
+@@ -1128,14 +1129,26 @@
+                 target_obj.append_untouchable_item(fn(*deps))
+ 
+ 
+-    def __update_sim_set(self, param_name, index):
++    def __update_sim_set(self, param_name, slice_obj):
+         &quot;&quot;&quot;Update the Monte Carlo simulation data lists when a simulation 
+value is set.
+ 
+         @param param_name:  The MC sim parameter name which is being set.
+         @type param_name:   str
+-        @param index:       The index of the Monte Carlo simulation which 
+was set.
+-        @type index:        int
++        @param slice_obj:   For Python 2, the index of the Monte Carlo 
+simulation which was set.  Or for Python 3, a slice object.
++        @type slice_obj:    int or slice object
+         &quot;&quot;&quot;
++
++        # Python 3 support.
++        if py_version == 3:
++            if slice_obj.start != slice_obj.stop:
++                raise RelaxError(&quot;The slice object %s cannot be handled.&quot; % 
+slice_obj)
++
++            # The index of the object.
++            index = slice_obj.start
++
++        # Python 2.
++        else:
++            index = slice_obj
+ 
+         # Loop over the targets.
+         for target, update_if_set, depends in dependency_generator():
+@@ -1181,7 +1194,7 @@
+                 target_obj = getattr(self, target+'_sim')
+ 
+                 # Calculate and set the value.
+-                target_obj.set_untouchable_item(index, fn(*deps))
++                target_obj.set_untouchable_item(slice_obj, fn(*deps))
+ 
+ 
+     def __update_object(self, param_name, target, update_if_set, depends, 
+category):
+@@ -1304,14 +1317,14 @@
+         self.align_element = align_element
+ 
+ 
+-    def __setitem__(self, index, value):
++    def __setitem__(self, slice_obj, value):
+         &quot;&quot;&quot;Set the value.&quot;&quot;&quot;
+ 
+         # Set the value.
+-        list.__setitem__(self, index, value)
++        list.__setitem__(self, slice_obj, value)
+ 
+         # Then update the other lists.
+-        self.align_element._AlignTensorData__update_sim_set(self.param_name, 
+index)
++        self.align_element._AlignTensorData__update_sim_set(self.param_name, 
+slice_obj)
+ 
+ 
+     def append(self, value):
+@@ -1331,8 +1344,9 @@
+         self[len(self):len(self)] = [value]
+ 
+ 
+-    def set_untouchable_item(self, index, value):
++    def set_untouchable_item(self, slice_obj, value):
+         &quot;&quot;&quot;Set the value for an untouchable MC data structure.&quot;&quot;&quot;
+ 
+         # Set the value.
+-        list.__setitem__(self, index, value)
++        print(slice_obj)
++        list.__setitem__(self, slice_obj, value)
+
+Modified: trunk/data/data_classes.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/data/data_classes.py?rev=17665&amp;r1=17664&amp;r2=17665&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/data/data_classes.py?rev=17665&amp;r1=17664&amp;r2=17665&amp;view=diff</a>
+==============================================================================
+--- trunk/data/data_classes.py (original)
++++ trunk/data/data_classes.py Tue Oct  2 14:25:52 2012
+@@ -137,7 +137,7 @@
+         cont_element.setAttribute('desc', self.desc)
+ 
+         # Blacklisted objects.
+-        blacklist = ['name', 'desc', 'blacklist'] + 
+list(Element.__dict__.keys() + self.__class__.__dict__.keys() + 
+object.__dict__.keys())
++        blacklist = ['name', 'desc', 'blacklist'] + 
+list(list(Element.__dict__.keys()) + list(self.__class__.__dict__.keys()) + 
+list(object.__dict__.keys()))
+ 
+         # Store and blacklist the objects which have to_xml() methods.
+         to_xml_list = []
+@@ -225,7 +225,7 @@
+         list_element.setAttribute('desc', self.list_desc)
+ 
+         # Blacklisted objects.
+-        blacklist = ['list_name', 'list_desc', 'element_name', 
+'element_desc', 'blacklist'] + list(self.__dict__.keys() + 
+RelaxListType.__dict__.keys() + self.__class__.__dict__.keys() + 
+list.__dict__.keys() + list.__dict__.keys())
++        blacklist = ['list_name', 'list_desc', 'element_name', 
+'element_desc', 'blacklist'] + list(list(self.__dict__.keys()) + 
+list(RelaxListType.__dict__.keys()) + list(self.__class__.__dict__.keys()) + 
+list(list.__dict__.keys()) + list(list.__dict__.keys()))
+ 
+         # Add all simple python objects within the list to the list element.
+         fill_object_contents(doc, list_element, object=self, 
+blacklist=blacklist)
+
+Modified: trunk/data/diff_tensor.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/data/diff_tensor.py?rev=17665&amp;r1=17664&amp;r2=17665&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/data/diff_tensor.py?rev=17665&amp;r1=17664&amp;r2=17665&amp;view=diff</a>
+==============================================================================
+--- trunk/data/diff_tensor.py (original)
++++ trunk/data/diff_tensor.py Tue Oct  2 14:25:52 2012
+@@ -26,6 +26,7 @@
+ from numpy import array, float64, dot, identity, transpose, zeros
+ 
+ # relax module imports.
++from compat import py_version
+ from data.data_classes import Element
+ from data.relax_xml import fill_object_contents, xml_to_object
+ from maths_fns.coord_transform import spherical_to_cartesian
+@@ -734,14 +735,26 @@
+                 target_obj.append_untouchable_item(fn(*deps))
+ 
+ 
+-    def __update_sim_set(self, param_name, index):
++    def __update_sim_set(self, param_name, slice_obj):
+         &quot;&quot;&quot;Update the Monte Carlo simulation data lists when a simulation 
+value is set.
+ 
+         @param param_name:  The MC sim parameter name which is being set.
+         @type param_name:   str
+-        @param index:       The index of the Monte Carlo simulation which 
+was set.
+-        @type index:        int
++        @param slice_obj:   For Python 2, the index of the Monte Carlo 
+simulation which was set.  Or for Python 3, a slice object.
++        @type slice_obj:    int or slice object
+         &quot;&quot;&quot;
++
++        # Python 3 support.
++        if py_version == 3:
++            if slice_obj.start != slice_obj.stop:
++                raise RelaxError(&quot;The slice object %s cannot be handled.&quot; % 
+slice_obj)
++
++            # The index of the object.
++            index = slice_obj.start
++
++        # Python 2.
++        else:
++            index = slice_obj
+ 
+         # Loop over the targets.
+         for target, update_if_set, depends in 
+dependency_generator(self.type):
+@@ -794,7 +807,7 @@
+ 
+                 # Calculate and set the value.
+                 if not skip:
+-                    target_obj.set_untouchable_item(index, fn(*deps))
++                    target_obj.set_untouchable_item(slice_obj, fn(*deps))
+ 
+ 
+     def __update_object(self, param_name, target, update_if_set, depends, 
+category):
+@@ -1033,14 +1046,14 @@
+                 self.append(None)
+ 
+ 
+-    def __setitem__(self, index, value):
++    def __setitem__(self, slice_obj, value):
+         &quot;&quot;&quot;Set the value.&quot;&quot;&quot;
+ 
+         # Set the value.
+-        list.__setitem__(self, index, value)
++        list.__setitem__(self, slice_obj, value)
+ 
+         # Then update the other lists.
+-        self.diff_element._DiffTensorData__update_sim_set(self.param_name, 
+index)
++        self.diff_element._DiffTensorData__update_sim_set(self.param_name, 
+slice_obj)
+ 
+ 
+     def append(self, value):
+@@ -1060,8 +1073,9 @@
+         self[len(self):len(self)] = [value]
+ 
+ 
+-    def set_untouchable_item(self, index, value):
++    def set_untouchable_item(self, slice_obj, value):
+         &quot;&quot;&quot;Set the value for an untouchable MC data structure.&quot;&quot;&quot;
+ 
+         # Set the value.
+-        list.__setitem__(self, index, value)
++        print(slice_obj)
++        list.__setitem__(self, slice_obj, value)
+
+Modified: trunk/data/relax_xml.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/data/relax_xml.py?rev=17665&amp;r1=17664&amp;r2=17665&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/data/relax_xml.py?rev=17665&amp;r1=17664&amp;r2=17665&amp;view=diff</a>
+==============================================================================
+--- trunk/data/relax_xml.py (original)
++++ trunk/data/relax_xml.py Tue Oct  2 14:25:52 2012
+@@ -170,7 +170,7 @@
+         # The converted dict.
+         ieee_obj = {}
+         conv = False
+-        for key in value.keys():
++        for key in list(value.keys()):
+             if arg_check.check_float(value[key]):
+                 ieee_obj[key] = floatAsByteArray(value[key])
+                 conv = True
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Oct 02 14:40:02 2012</div>  
+</body>
+</html>

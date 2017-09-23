@@ -1,0 +1,177 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r4776 &#45; in /branches/N_state_model: maths_fns/n_state_model.py	test_suite/system_tests/scripts/5_state_xz.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 16 Jan 2008 11:18:17 +0100 -->
+<!--X-Message-Id: E1JF5Lc&#45;00071f&#45;TO@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r4776 - in /branches/N_state_model: maths_fns/n_state_model.py	test_suite/system_tests/scripts/5_state_xz.py -- January 16, 2008 - 11:18</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r4776 - in /branches/N_state_model: maths_fns/n_state_model.py	test_suite/system_tests/scripts/5_state_xz.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00535" class="tabs">Index by Date</a> | <a href="threads.html#00535" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00534.html">Date Prev</a>] [<a href="msg00536.html">Date Next</a>] [<a href="msg00534.html">Thread Prev</a>] [<a href="msg00536.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 16 Jan 2008 10:18:16 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00535.html">E1JF5Lc-00071f-TO@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on January 16, 2008 - 11:18:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Jan 16 11:18:14 2008
+New Revision: 4776
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=4776&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=4776&amp;view=rev</a>
+Log:
+The reduced back calculated tensors are now calculated.
+
+The dimensions of the structures red_bc and red_bc_vector have been fixed.
+
+
+Modified:
+    branches/N_state_model/maths_fns/n_state_model.py
+    branches/N_state_model/test_suite/system_tests/scripts/5_state_xz.py
+
+Modified: branches/N_state_model/maths_fns/n_state_model.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/N_state_model/maths_fns/n_state_model.py?rev=4776&amp;r1=4775&amp;r2=4776&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/N_state_model/maths_fns/n_state_model.py?rev=4776&amp;r1=4775&amp;r2=4776&amp;view=diff</a>
+==============================================================================
+--- branches/N_state_model/maths_fns/n_state_model.py (original)
++++ branches/N_state_model/maths_fns/n_state_model.py Wed Jan 16 11:18:14 2008
+@@ -58,6 +58,7 @@
+         self.params = 1.0 * init_params    # Force a copy of the data to be 
+stored.
+         self.total_num_params = len(init_params)
+         self.full_tensors = array(full_tensors, float64)
++        self.num_tensors = len(self.full_tensors)
+         self.red_data = red_data
+         self.red_errors = red_errors
+ 
+@@ -66,10 +67,10 @@
+         # RT:  the transposes of the rotation matricies.
+         # red_bc:  the back-calculated reduced alignment tensors.
+         # red_bc_vector:  the back-calculated reduced alignment tensors in 
+vector form {Sxx, Syy, Sxy, Sxz, Syz}.
+-        self.R = zeros((N,3,3), float64)
+-        self.RT = zeros((N,3,3), float64)
+-        self.red_bc = zeros((N,3,3), float64)
+-        self.red_bc_vector = zeros(N*5, float64)
++        self.R = zeros((self.N,3,3), float64)
++        self.RT = zeros((self.N,3,3), float64)
++        self.red_bc = zeros((self.num_tensors,3,3), float64)
++        self.red_bc_vector = zeros(self.num_tensors*5, float64)
+ 
+ 
+     def func(self, params):
+@@ -88,12 +89,26 @@
+         &quot;&quot;&quot;
+ 
+         # Update the rotation matricies.
+-        for i in xrange(self.N):
++        for c in xrange(self.N):
+             # The matrix itself.
+-            rotation_matrix_zyz(self.R[i], params[self.N-1+3*i], 
+params[self.N-1+3*i+1], params[self.N-1+3*i+2])
++            rotation_matrix_zyz(self.R[c], params[self.N-1+3*c], 
+params[self.N-1+3*c+1], params[self.N-1+3*c+2])
+ 
+             # Its rotation.
+-            self.RT[i] = transpose(self.R[i])
++            self.RT[c] = transpose(self.R[c])
++
++            # The probability of state c.
++            if c &lt; self.N:
++                pc = params[c]
++
++            # The probability of state N (1 minus the pc of all other 
+states).
++            else:
++                pc = 1.0
++                for c2 in xrange(self.N-1):
++                    pc = pc - params[c2]
++
++            # Back-calculate the reduced tensors for sum element c and add 
+these to red_bc.
++            for i in xrange(self.num_tensors):
++                self.red_bc[i] = self.red_bc[i]  +  pc * self.RT[c] * 
+self.full_tensors[i] * self.R[c]
+ 
+         # Return the chi-squared value.
+         return chi2(self.red_data, self.red_bc_vector, self.red_errors)
+
+Modified: branches/N_state_model/test_suite/system_tests/scripts/5_state_xz.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/N_state_model/test_suite/system_tests/scripts/5_state_xz.py?rev=4776&amp;r1=4775&amp;r2=4776&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/N_state_model/test_suite/system_tests/scripts/5_state_xz.py?rev=4776&amp;r1=4775&amp;r2=4776&amp;view=diff</a>
+==============================================================================
+--- branches/N_state_model/test_suite/system_tests/scripts/5_state_xz.py 
+(original)
++++ branches/N_state_model/test_suite/system_tests/scripts/5_state_xz.py Wed 
+Jan 16 11:18:14 2008
+@@ -76,7 +76,7 @@
+ align_tensor.matrix_angles(basis_set=1, tensors=['chi1 N-dom', 'chi2 N-dom', 
+'chi3 N-dom', 'chi4 N-dom', 'chi5 N-dom'])
+ 
+ # Set up the 5-state model.
+-n_state_model.model(N=5)
++n_state_model.model(N=3)
+ 
+ # Grid search.
+ grid_search(inc=2)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Jan 16 11:40:06 2008</div>  
+</body>
+</html>

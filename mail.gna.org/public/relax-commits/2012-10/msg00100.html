@@ -1,0 +1,203 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r17721 &#45; /trunk/generic_fns/state.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Sun, 07 Oct 2012 18:59:12 +0200 -->
+<!--X-Message-Id: E1TKuC8&#45;0003W5&#45;C5@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r17721 - /trunk/generic_fns/state.py -- October 07, 2012 - 18:59</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r17721 - /trunk/generic_fns/state.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00100" class="tabs">Index by Date</a> | <a href="threads.html#00100" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00099.html">Date Prev</a>] [<a href="msg00101.html">Date Next</a>] [<a href="msg00099.html">Thread Prev</a>] [<a href="msg00101.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Sun, 07 Oct 2012 16:59:12 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00100.html">E1TKuC8-0003W5-C5@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on October 07, 2012 - 18:59:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Sun Oct  7 18:59:12 2012
+New Revision: 17721
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=17721&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=17721&amp;view=rev</a>
+Log:
+Removed the ability to save and restore states using the pickle module.
+
+A pickled state is of no use to relax anymore.  It's removal is needed for 
+Python 3 support.  So now
+everything defaults to the XML formatted output.
+
+
+Modified:
+    trunk/generic_fns/state.py
+
+Modified: trunk/generic_fns/state.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/generic_fns/state.py?rev=17721&amp;r1=17720&amp;r2=17721&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/generic_fns/state.py?rev=17721&amp;r1=17720&amp;r2=17721&amp;view=diff</a>
+==============================================================================
+--- trunk/generic_fns/state.py (original)
++++ trunk/generic_fns/state.py Sun Oct  7 18:59:12 2012
+@@ -23,10 +23,6 @@
+ &quot;&quot;&quot;Module for reading and writing the relax program state.&quot;&quot;&quot;
+ 
+ # Python module imports.
+-try:
+-    from cPickle import dump, load    # Python 2 import.
+-except ImportError:
+-    from pickle import dump, load    # Python 3 import.
+ from re import search
+ 
+ # relax module imports.
+@@ -35,33 +31,6 @@
+ from relax_errors import RelaxError
+ from relax_io import open_read_file, open_write_file
+ from status import Status; status = Status()
+-
+-
+-def determine_format(file):
+-    &quot;&quot;&quot;Determine the format of the state file.
+-
+-    @keyword file:  The file object representing the state file.
+-    @type file:     file object
+-    @return:        The state format.  This can be 'xml' or 'pickle'.
+-    @rtype:         str or None
+-    &quot;&quot;&quot;
+-
+-    # 1st line.
+-    header = file.readline()
+-    header = header[:-1]    # Strip the trailing newline.
+-    if hasattr(header, 'decode'):     # Python 3 byte type conversion.
+-        header = header.decode()
+-
+-    # Be nice and go back to the start of the file.
+-    file.seek(0)
+-
+-    # XML.
+-    if search(r&quot;&lt;\?xml&quot;, header):
+-        return 'xml'
+-
+-    # Pickle.
+-    elif search(&quot;ccopy_reg&quot;, header):
+-        return 'pickle'
+ 
+ 
+ def load_pickle(file):
+@@ -120,9 +89,6 @@
+     # Open the file for reading.
+     file = open_read_file(file_name=state, dir=dir, verbosity=verbosity)
+ 
+-    # Determine the format of the file.
+-    format = determine_format(file)
+-
+     # Reset.
+     if force:
+         reset()
+@@ -131,17 +97,8 @@
+     if not ds.is_empty():
+         raise RelaxError(&quot;The relax data store is not empty.&quot;)
+ 
+-    # XML state.
+-    if format == 'xml':
+-        ds.from_xml(file)
+-
+-    # Pickled state.
+-    elif format == 'pickle':
+-        load_pickle(file)
+-
+-    # Bad state file.
+-    else:
+-        raise RelaxError(&quot;The saved state &quot; + repr(state) + &quot; is not 
+compatible with this version of relax.&quot;)
++    # Restore from the XML.
++    ds.from_xml(file)
+ 
+     # Signal a change in the current data pipe.
+     status.observers.pipe_alteration.notify()
+@@ -150,7 +107,7 @@
+     status.observers.state_load.notify()
+ 
+ 
+-def save_state(state=None, dir=None, compress_type=1, verbosity=1, 
+force=False, pickle=False):
++def save_state(state=None, dir=None, compress_type=1, verbosity=1, 
+force=False):
+     &quot;&quot;&quot;Function for saving the program state.
+ 
+     @keyword state:         The saved state file.
+@@ -170,13 +127,8 @@
+     # Open the file for writing.
+     file = open_write_file(file_name=state, dir=dir, verbosity=verbosity, 
+force=force, compress_type=compress_type)
+ 
+-    # Pickle the data class and write it to file
+-    if pickle:
+-        dump(ds, file, 1)
+-
+-    # Otherwise save as XML.
+-    else:
+-        ds.to_xml(file)
++    # Save as XML.
++    ds.to_xml(file)
+ 
+     # Close the file.
+     file.close()
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Sun Oct 07 19:00:02 2012</div>  
+</body>
+</html>

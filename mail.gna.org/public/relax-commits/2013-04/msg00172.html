@@ -1,0 +1,243 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r19453 &#45; in /branches/relax_disp: ./ pipe_control/plotting.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 11 Apr 2013 11:24:01 +0200 -->
+<!--X-Message-Id: E1UQDjd&#45;0006l2&#45;BM@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r19453 - in /branches/relax_disp: ./ pipe_control/plotting.py -- April 11, 2013 - 11:24</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r19453 - in /branches/relax_disp: ./ pipe_control/plotting.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00172" class="tabs">Index by Date</a> | <a href="threads.html#00172" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00171.html">Date Prev</a>] [<a href="msg00173.html">Date Next</a>] [<a href="msg00171.html">Thread Prev</a>] [<a href="msg00173.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 11 Apr 2013 09:24:01 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00172.html">E1UQDjd-0006l2-BM@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on April 11, 2013 - 11:24:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Apr 11 11:24:01 2013
+New Revision: 19453
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=19453&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=19453&amp;view=rev</a>
+Log:
+Merged revisions 19452 via svnmerge from 
+svn+ssh://bugman@xxxxxxxxxxx/svn/relax/trunk
+
+........
+  r19452 | bugman | 2013-04-11 11:23:27 +0200 (Thu, 11 Apr 2013) | 8 lines
+  
+  Modified pipe_control.plotting.assemble_data_series_series() to handle 
+dictionaries with keys as values.
+  
+  This will be useful in, for example, relaxation dispersion for plotting the 
+dispersion curves.  In
+  this case, the R2eff values are in a dictionary where the keys are the 
+values to plot against.  This
+  is different from the current case where the X and Y data dictionaries are 
+required to have the same
+  keys.  These changes expand the capabilities of the grace.write user 
+function.
+........
+
+Modified:
+    branches/relax_disp/   (props changed)
+    branches/relax_disp/pipe_control/plotting.py
+
+Propchange: branches/relax_disp/
+------------------------------------------------------------------------------
+--- svnmerge-integrated (original)
++++ svnmerge-integrated Thu Apr 11 11:24:01 2013
+@@ -1,1 +1,1 @@
+-/trunk:1-19450
++/trunk:1-19452
+
+Modified: branches/relax_disp/pipe_control/plotting.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/pipe_control/plotting.py?rev=19453&amp;r1=19452&amp;r2=19453&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_disp/pipe_control/plotting.py?rev=19453&amp;r1=19452&amp;r2=19453&amp;view=diff</a>
+==============================================================================
+--- branches/relax_disp/pipe_control/plotting.py (original)
++++ branches/relax_disp/pipe_control/plotting.py Thu Apr 11 11:24:01 2013
+@@ -342,6 +342,45 @@
+     x_err_flag = False
+     y_err_flag = False
+ 
++    # Sanity check.
++    if x_type != y_type:
++        raise RelaxError(&quot;The X data type '%s' and Y data type '%s' do not 
+match.&quot; % (x_type, y_type))
++
++    # Check if the dictionary keys are the values to plot.
++    keys_for_values = None
++    base_values = []
++    if x_type == dict:
++        for spin, mol_name, res_num, res_name, id in 
+spin_loop(full_info=True, selection=spin_id, return_id=True, skip_desel=True):
++            # Fetch the series data (ignore simulations).
++            x_val, x_err = fetch_1D_data(plot_data=plot_data, 
+data_name=x_data_name, spin=spin, res_num=res_num)
++            y_val, y_err = fetch_1D_data(plot_data=plot_data, 
+data_name=y_data_name, spin=spin, res_num=res_num)
++
++            # Go to the next spin if there is missing xy data.
++            if x_val == None or y_val == None:
++                continue
++
++            # The keys.
++            x_keys = list(x_val.keys())
++            y_keys = list(y_val.keys())
++
++            # The keys do not match.
++            if x_keys[0] in y_keys:
++                continue
++
++            # Are the X keys in the Y values?
++            if x_keys[0] in y_val.values():
++                keys_for_values = 'x'
++                for key in x_keys:
++                    if key not in base_values:
++                        base_values.append(key)
++
++            # Are the Y keys in the X values?
++            elif y_keys[0] in x_val.values():
++                keys_for_values = 'y'
++                for key in y_keys:
++                    if key not in base_values:
++                        base_values.append(key)
++
+     # Number of data points per spin.
+     if plot_data == 'sim':
+         points = cdp.sim_number
+@@ -361,6 +400,10 @@
+             x_val, x_err = fetch_1D_data(plot_data=plot_data, 
+data_name=x_data_name, spin=spin, res_num=res_num, sim_num=i)
+             y_val, y_err = fetch_1D_data(plot_data=plot_data, 
+data_name=y_data_name, spin=spin, res_num=res_num, sim_num=i)
+ 
++            # The base values to create the curve from.
++            if keys_for_values == None:
++                base_values = x_val
++
+             # Go to the next spin if there is missing xy data.
+             if x_val == None or y_val == None:
+                 continue
+@@ -372,17 +415,15 @@
+                 y_err_flag = True
+ 
+             # Series sanity checks.
+-            if len(x_val) != len(y_val):
++            if keys_for_values == None and len(x_val) != len(y_val):
+                 raise RelaxError(&quot;The series data %s does not have the same 
+number of elements as %s.&quot; % (x_val, y_val))
+-            if x_type != y_type:
+-                raise RelaxError(&quot;The X data type '%s' and Y data type '%s' 
+do not match.&quot; % (x_type, y_type))
+ 
+             # The keys.
+             if x_type == dict:
+                 keys = list(x_val.keys())
+ 
+             # Loop over the list data.
+-            for j in range(len(x_val)):
++            for j in range(len(base_values)):
+                 # The index or key for the data.
+                 if x_type == list:
+                     elem = j
+@@ -390,11 +431,28 @@
+                     elem = keys[j]
+ 
+                 # Append the data.
+-                data[0][spin_index].append([x_val[elem], y_val[elem]])
+-                if x_err_flag:
+-                    data[0][spin_index][-1].append(x_err[elem])
+-                if y_err_flag:
+-                    data[0][spin_index][-1].append(y_err[elem])
++                if keys_for_values == None:
++                    data[0][spin_index].append([x_val[elem], y_val[elem]])
++                    if x_err_flag:
++                        data[0][spin_index][-1].append(x_err[elem])
++                    if y_err_flag:
++                        data[0][spin_index][-1].append(y_err[elem])
++
++                # Append the data (X keys in the Y values).
++                elif keys_for_values == 'x':
++                    data[0][spin_index].append([x_val[base_values[j]], 
+base_values[j]])
++                    if x_err_flag:
++                        data[0][spin_index][-1].append(x_err[base_values[j]])
++                    if y_err_flag:
++                        raise RelaxError(&quot;Y errors are not possible when the 
+Y values are keys.&quot;)
++
++                # Append the data (Y keys in the X values).
++                elif keys_for_values == 'y':
++                    data[0][spin_index].append([base_values[j], 
+y_val[base_values[j]]])
++                    if x_err_flag:
++                        raise RelaxError(&quot;X errors are not possible when the 
+X values are keys.&quot;)
++                    if y_err_flag:
++                        data[0][spin_index][-1].append(y_err[base_values[j]])
+ 
+             # Sort the data for better looking curves.
+             data[0][spin_index].sort()
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Apr 11 13:00:01 2013</div>  
+</body>
+</html>

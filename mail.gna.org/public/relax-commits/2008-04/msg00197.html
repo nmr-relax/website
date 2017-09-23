@@ -1,0 +1,364 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r5431 &#45; in /1.3/generic_fns: sequence.py structure/main.py	structure/scientific.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 08 Apr 2008 15:42:20 +0200 -->
+<!--X-Message-Id: E1JjDae&#45;0001LX&#45;6y@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r5431 - in /1.3/generic_fns: sequence.py structure/main.py	structure/scientific.py -- April 08, 2008 - 15:42</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r5431 - in /1.3/generic_fns: sequence.py structure/main.py	structure/scientific.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00197" class="tabs">Index by Date</a> | <a href="threads.html#00197" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00199.html">Date Prev</a>] [<a href="msg00194.html">Date Next</a>] [<a href="msg00199.html">Thread Prev</a>] [<a href="msg00194.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 08 Apr 2008 13:10:19 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00197.html">E1JjDae-0001LX-6y@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on April 08, 2008 - 15:42:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Apr  8 15:10:12 2008
+New Revision: 5431
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=5431&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=5431&amp;view=rev</a>
+Log:
+Completion of generic_fns.structure.main.load_spins() and allowed atom 
+selections in atom_loop().
+
+The generic_fns.structure.main.load_spins() function now uses the structural 
+data object API method
+atom_loop() to generate the molecule, residue, and spin sequence in the relax 
+data store.  The
+sequence generation code is mainly from the old load_PDB_sequence() function.
+
+The Scientific Python data object atom_loop() generator method has been 
+updated to allow for only
+selected atoms to be yielded.
+
+
+Modified:
+    1.3/generic_fns/sequence.py
+    1.3/generic_fns/structure/main.py
+    1.3/generic_fns/structure/scientific.py
+
+Modified: 1.3/generic_fns/sequence.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/generic_fns/sequence.py?rev=5431&amp;r1=5430&amp;r2=5431&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/generic_fns/sequence.py?rev=5431&amp;r1=5430&amp;r2=5431&amp;view=diff</a>
+==============================================================================
+--- 1.3/generic_fns/sequence.py (original)
++++ 1.3/generic_fns/sequence.py Tue Apr  8 15:10:12 2008
+@@ -22,7 +22,7 @@
+ 
+ # relax module imports.
+ from data import Data as relax_data_store
+-from generic_fns.selection import count_spins, exists_mol_res_spin_data, 
+parse_token, spin_loop, tokenise
++from generic_fns.selection import count_spins, exists_mol_res_spin_data, 
+spin_loop
+ from relax_errors import RelaxError, RelaxFileEmptyError, 
+RelaxNoPdbChainError, RelaxNoPipeError, RelaxNoSequenceError, 
+RelaxSequenceError
+ from relax_io import extract_data, open_write_file, strip
+ import sys
+
+Modified: 1.3/generic_fns/structure/main.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/generic_fns/structure/main.py?rev=5431&amp;r1=5430&amp;r2=5431&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/generic_fns/structure/main.py?rev=5431&amp;r1=5430&amp;r2=5431&amp;view=diff</a>
+==============================================================================
+--- 1.3/generic_fns/structure/main.py (original)
++++ 1.3/generic_fns/structure/main.py Tue Apr  8 15:10:12 2008
+@@ -53,105 +53,40 @@
+     # Alias the current data pipe.
+     cdp = relax_data_store[relax_data_store.current_pipe]
+ 
+-    # Reassign the sequence of the first structure.
+-    if cdp.structure.structures[0].peptide_chains:
+-        chains = cdp.structure.structures[0].peptide_chains
+-        molecule = 'protein'
+-    elif cdp.structure.structures[0].nucleotide_chains:
+-        chains = cdp.structure.structures[0].nucleotide_chains
+-        molecule = 'nucleic acid'
+-    else:
+-        raise RelaxNoPdbChainError
+-
+-    # Split up the selection string.
+-    mol_token, res_token, spin_token = tokenise(spin_id)
+-
+-    # Parse the tokens.
+-    molecules = parse_token(mol_token)
+-    residues = parse_token(res_token)
+-    spins = parse_token(spin_token)
+-
+-    # Init some indecies.
+-    mol_index = 0
+-    res_index = 0
+-    spin_index = 0
+-
+-    # Loop over the molecules.
+-    for chain in chains:
+-        # The name of the molecule.
+-        if chain.chain_id:
+-            mol_name = chain.chain_id
+-        elif chain.segment_id:
+-            mol_name = chain.segment_id
+-        else:
+-            mol_name = None
+-
+-        # Skip non-matching molecules.
+-        if mol_token and mol_name not in molecules:
+-            continue
+-
+-        # Add the molecule if there is a molecule name (otherwise everything 
+goes into the default first MolecularContainer).
+-        if mol_name:
+-            # Replace the first empty molecule.
+-            if mol_index == 0 and cdp.mol[0].name == None:
+-                cdp.mol[0].name = mol_name
+-
+-            # Create a new molecule.
+-            else:
+-                # Add the molecule.
+-                cdp.mol.add_item(mol_name=mol_name)
+-
+-        # Loop over the residues.
+-        for res in chain.residues:
+-            # The residue name and number.
+-            if molecule == 'nucleic acid':
+-                res_name = res.name[-1]
+-            else:
+-                res_name = res.name
+-            res_num = res.number
+-
+-            # Skip non-matching residues.
+-            if res_token and not (res_name in residues or res_num in 
+residues):
+-                continue
+-
+-            # Replace the first empty residue.
+-            if res_index == 0 and cdp.mol[mol_index].res[0].name == None:
+-                cdp.mol[mol_index].res[0].name = res_name
+-                cdp.mol[mol_index].res[0].num = res_num
+-
+-            # Create a new residue.
+-            else:
+-                # Add the residue.
+-                cdp.mol[mol_index].res.add_item(res_name=res_name, 
+res_num=res_num)
+-
+-            # Loop over the spins.
+-            for atom in res.atom_list:
+-                # The spin name and number.
+-                spin_name = atom.name
+-                spin_num = atom.properties['serial_number']
+-
+-                # Skip non-matching spins.
+-                if spin_token and not (spin_name in spins or spin_num in 
+spins):
+-                    continue
+-
+-                # Replace the first empty residue.
+-                if spin_index == 0 and 
+cdp.mol[mol_index].res[res_index].spin[0].name == None:
+-                    cdp.mol[mol_index].res[res_index].spin[0].name = 
+spin_name
+-                    cdp.mol[mol_index].res[res_index].spin[0].num = spin_num
+-
+-                # Create a new residue.
+-                else:
+-                    # Add the residue.
+-                    
+cdp.mol[mol_index].res[res_index].spin.add_item(spin_name=spin_name, 
+spin_num=spin_num)
+-
+-                # Increment the residue index.
+-                spin_index = spin_index + 1
+-
+-            # Increment the residue index.
+-            res_index = res_index + 1
+-
+-        # Increment the molecule index.
+-        mol_index = mol_index + 1
++    # Loop over all atoms of the spin_id selection.
++    for mol_name, res_num, res_name, atom_num, atom_name, pos in 
+cdp.structure.atom_loop(spin_id=spin_id, pos=True):
++        # Get the corresponding molecule container.
++        mol_cont = return_molecule('#' + mol_name)
++
++        # Add the molecule if it doesn't exist.
++        if mol_name and mol_cont == None:
++            # Add the molecule.
++            cdp.mol.add_item(mol_name=mol_name)
++
++            # Get the container.
++            mol_cont = cdp.mol[-1]
++
++        # Get the corresponding residue container (residue name is ignored 
+because only the number is unique).
++        res_cont = return_residue(':' + `res_num`)
++
++        # Add the residue if it doesn't exist.
++        if res_num and res_name and res_cont == None:
++            # Add the residue.
++            mol_cont.res.add_item(res_name=res_name, res_num=res_num)
++
++            # Get the container.
++            res_cont = mol_cont.res[-1]
++
++        # Get the corresponding spin container (spin name is ignored because 
+only the number is unique).
++        spin_cont = return_spin(':' + `spin_num`)
++
++        # Add the spin if it doesn't exist.
++        if spin_name and spin_cont == None:
++            # Add the spin.
++            res_cont.spin.add_item(spin_name=spin_name, spin_num=spin_num)
++
++            # Get the container.
++            spin_cont = res_cont.spin[-1]
+ 
+ 
+ def read_pdb(file=None, dir=None, model=None, parser='scientific', 
+fail=True, verbosity=1):
+
+Modified: 1.3/generic_fns/structure/scientific.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/generic_fns/structure/scientific.py?rev=5431&amp;r1=5430&amp;r2=5431&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/generic_fns/structure/scientific.py?rev=5431&amp;r1=5430&amp;r2=5431&amp;view=diff</a>
+==============================================================================
+--- 1.3/generic_fns/structure/scientific.py (original)
++++ 1.3/generic_fns/structure/scientific.py Tue Apr  8 15:10:12 2008
+@@ -39,6 +39,7 @@
+ # relax module imports.
+ from api_base import Str_object
+ from data import Data as relax_data_store
++from generic_fns.selection import parse_token, tokenise
+ from relax_errors import RelaxNoPdbChainError, RelaxNoResError, 
+RelaxPdbLoadError
+ from relax_warnings import RelaxNoAtomWarning, RelaxZeroVectorWarning
+ 
+@@ -63,15 +64,29 @@
+                         array of len 3)
+         &quot;&quot;&quot;
+ 
++        # Split up the selection string.
++        mol_token, res_token, atom_token = tokenise(atom_id)
++
++        # Parse the tokens.
++        molecules = parse_token(mol_token)
++        residues = parse_token(res_token)
++        atoms = parse_token(atom_token)
++
+         # Loop over the loaded structures.
+         for struct in self.structural_data:
+             # Protein.
+             if struct.peptide_chains:
+                 chains = struct.peptide_chains
++                molecule = 'protein'
+ 
+             # RNA/DNA.
+             elif struct.nucleotide_chains:
+                 chains = struct.nucleotide_chains
++                molecule = 'nucleic acid'
++
++            # We have a problem!
++            else:
++                raise RelaxNoPdbChainError
+ 
+             # Loop over the chains (each of which will be treated as a new 
+molecule).
+             for chain in chains:
+@@ -83,11 +98,22 @@
+                 else:
+                     mol_name = None
+ 
++                # Skip non-matching molecules.
++                if mol_token and mol_name not in molecules:
++                    continue
++
+                 # Loop over the residues of the protein in the PDB file.
+                 for res in chain.residues:
+                     # Residue number and name.
++                    if molecule == 'nucleic acid':
++                        res_name = res.name[-1]
++                    else:
++                        res_name = res.name
+                     res_num = res.number
+-                    res_name = res.name
++
++                    # Skip non-matching residues.
++                    if res_token and not (res_name in residues or res_num in 
+residues):
++                        continue
+ 
+                     # Loop over the atoms of the residue.
+                     for atom in res:
+@@ -95,6 +121,10 @@
+                         atom_num = atom.properties['serial_number']
+                         atom_name = atom.properties['element']
+                         pos = atom.position.array
++
++                        # Skip non-matching atoms.
++                        if atom_token and not (atom_name in atoms or 
+atom_num in atoms):
++                            continue
+ 
+                         # Yield the information.
+                         if pos:
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Apr 08 16:20:16 2008</div>  
+</body>
+</html>

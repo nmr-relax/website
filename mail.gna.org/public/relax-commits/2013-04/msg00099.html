@@ -1,0 +1,176 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r19380 &#45; /branches/relax_disp/specific_analyses/relax_disp.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 05 Apr 2013 09:40:33 +0200 -->
+<!--X-Message-Id: E1UO1GD&#45;0000y7&#45;6L@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r19380 - /branches/relax_disp/specific_analyses/relax_disp.py -- April 05, 2013 - 09:40</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r19380 - /branches/relax_disp/specific_analyses/relax_disp.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00099" class="tabs">Index by Date</a> | <a href="threads.html#00099" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00098.html">Date Prev</a>] [<a href="msg00100.html">Date Next</a>] [<a href="msg00098.html">Thread Prev</a>] [<a href="msg00100.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 05 Apr 2013 07:40:33 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00099.html">E1UO1GD-0000y7-6L@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on April 05, 2013 - 09:40:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Apr  5 09:40:32 2013
+New Revision: 19380
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=19380&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=19380&amp;view=rev</a>
+Log:
+Fixes for the dispersion specific _back_calc() method.
+
+This method still has a long way to go before it is of any use.
+
+
+Modified:
+    branches/relax_disp/specific_analyses/relax_disp.py
+
+Modified: branches/relax_disp/specific_analyses/relax_disp.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp.py?rev=19380&amp;r1=19379&amp;r2=19380&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp.py?rev=19380&amp;r1=19379&amp;r2=19380&amp;view=diff</a>
+==============================================================================
+--- branches/relax_disp/specific_analyses/relax_disp.py (original)
++++ branches/relax_disp/specific_analyses/relax_disp.py Fri Apr  5 09:40:32 
+2013
+@@ -254,34 +254,41 @@
+         return scaling_matrix
+ 
+ 
+-    def _back_calc(self, spin=None, result_index=None):
++    def _back_calc(self, spins=None, result_index=None):
+         &quot;&quot;&quot;Back-calculation of peak intensity for the given CPMG pulse train 
+frequency.
+ 
+-        @keyword spin:            The spin container.
+-        @type spin:               SpinContainer instance
+-        @keyword result_index:    The index for the back-calculated data 
+associated to every CPMG or R1rho frequency, as well as every magnetic field 
+frequency.
+-        @type result_index:       int
+-        @return:                  The R2eff value associated to every CPMG 
+or R1rho frequency, as well as every magnetic field frequency.
+-        @rtype:                   float
++        @keyword spins:         The list of spin data containers for the 
+block.
++        @type spins:            list of SpinContainer instances
++        @keyword result_index:  The index for the back-calculated data 
+associated to every CPMG or R1rho frequency, as well as every magnetic field 
+frequency.
++        @type result_index:     int
++        @return:                The R2eff value associated to every CPMG or 
+R1rho frequency, as well as every magnetic field frequency.
++        @rtype:                 float
+         &quot;&quot;&quot;
+ 
+         # Create the initial parameter vector.
+-        param_vector = self._assemble_param_vector(spin=spin)
++        param_vector = self._assemble_param_vector(spins=spins)
+ 
+         # Create a scaling matrix.
+-        scaling_matrix = self._assemble_scaling_matrix(spin=spin, 
+scaling=False)
++        scaling_matrix = self._assemble_scaling_matrix(spins=spins, 
+scaling=False)
++
++        # The spin count.
++        spin_num = len(spins)
++
++        # Initialise the data structures for the target function.
++        values = zeros((spin_num, cdp.curve_count, cdp.num_time_pts), 
+float64)
++        errors = zeros((spin_num, cdp.curve_count, cdp.num_time_pts), 
+float64)
+ 
+         # Initialise the relaxation dispersion fit functions.
+-        setup(num_params=len(spin.params), num_times=len(cdp.cpmg_frqs), 
+values=spin.intensities, sd=spin.intensity_err, cpmg_frqs=cdp.cpmg_frqs, 
+scaling_matrix=scaling_matrix)
+-
+-        # Make a single function call.  This will cause back calculation and 
+the data will be stored in the C module.
+-        func(param_vector)
++        model = Dispersion(model=cdp.model, 
+num_params=self._param_num(spins=spins), num_spins=spin_num, 
+num_exp_curves=cdp.curve_count, num_times=cdp.num_time_pts, values=values, 
+errors=errors, cpmg_frqs=cdp.cpmg_frqs_list, 
+spin_lock_nu1=cdp.spin_lock_nu1_list, relax_times=cdp.relax_time_list, 
+scaling_matrix=scaling_matrix)
++
++        # Make a single function call.  This will cause back calculation and 
+the data will be stored in the class instance.
++        model.func(param_vector)
+ 
+         # Get the data back.
+-        results = back_calc_I()
++        results = model.back_calc
+ 
+         # Return the correct peak height.
+-        return results[result_index]
++        return results
+ 
+ 
+     def _block_loop(self):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Apr 05 10:00:02 2013</div>  
+</body>
+</html>

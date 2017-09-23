@@ -1,0 +1,368 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r6195 &#45; /1.3/specific_fns/relax_fit.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 21 May 2008 22:00:29 +0200 -->
+<!--X-Message-Id: E1JyuU8&#45;00024z&#45;DE@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r6195 - /1.3/specific_fns/relax_fit.py -- May 21, 2008 - 22:00</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r6195 - /1.3/specific_fns/relax_fit.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00180" class="tabs">Index by Date</a> | <a href="threads.html#00180" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00179.html">Date Prev</a>] [<a href="msg00181.html">Date Next</a>] [<a href="msg00179.html">Thread Prev</a>] [<a href="msg00181.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 21 May 2008 20:00:27 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00180.html">E1JyuU8-00024z-DE@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on May 21, 2008 - 22:00:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed May 21 22:00:23 2008
+New Revision: 6195
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=6195&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=6195&amp;view=rev</a>
+Log:
+Updated the minimise() method to the new relax design.
+
+
+Modified:
+    1.3/specific_fns/relax_fit.py
+
+Modified: 1.3/specific_fns/relax_fit.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/specific_fns/relax_fit.py?rev=6195&amp;r1=6194&amp;r2=6195&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/specific_fns/relax_fit.py?rev=6195&amp;r1=6194&amp;r2=6195&amp;view=diff</a>
+==============================================================================
+--- 1.3/specific_fns/relax_fit.py (original)
++++ 1.3/specific_fns/relax_fit.py Wed May 21 22:00:23 2008
+@@ -655,51 +655,90 @@
+             print &quot;\nStandard deviation (averaged over all spectra):  &quot; + 
+`sd`
+ 
+ 
+-    def minimise(self, run=None, min_algor=None, min_options=None, 
+func_tol=None, grad_tol=None, max_iterations=None, constraints=0, scaling=1, 
+verbosity=0, sim_index=None):
+-        &quot;&quot;&quot;Relaxation curve fitting function.&quot;&quot;&quot;
+-
+-        # Arguments.
+-        self.run = run
+-        self.verbosity = verbosity
+-
+-        # Test if the sequence data for self.run is loaded.
+-        if not relax_data_store.res.has_key(self.run):
+-            raise RelaxNoSequenceError, self.run
++    def minimise(self, min_algor=None, min_options=None, func_tol=None, 
+grad_tol=None, max_iterations=None, constraints=False, scaling=True, 
+verbosity=0, sim_index=None, lower=None, upper=None, inc=None):
++        &quot;&quot;&quot;Relaxation curve fitting function.
++
++        @keyword min_algor:         The minimisation algorithm to use.
++        @type min_algor:            str
++        @keyword min_options:       An array of options to be used by the 
+minimisation algorithm.
++        @type min_options:          array of str
++        @keyword func_tol:          The function tolerence which, when 
+reached, terminates optimisation.
++                                    Setting this to None turns of the check.
++        @type func_tol:             None or float
++        @keyword grad_tol:          The gradient tolerence which, when 
+reached, terminates optimisation.
++                                    Setting this to None turns of the check.
++        @type grad_tol:             None or float
++        @keyword max_iterations:    The maximum number of iterations for the 
+algorithm.
++        @type max_iterations:       int
++        @keyword constraints:       If True, constraints are used during 
+optimisation.
++        @type constraints:          bool
++        @keyword scaling:           If True, diagonal scaling is enabled 
+during optimisation to allow
++                                    the problem to be better conditioned.
++        @type scaling:              bool
++        @keyword verbosity:         The amount of information to print.  The 
+higher the value, the
++                                    greater the verbosity.
++        @type verbosity:            int
++        @keyword sim_index:         The index of the simulation to optimise. 
+ This should be None if
++                                    normal optimisation is desired.
++        @type sim_index:            None or int
++        @keyword lower:             The lower bounds of the grid search 
+which must be equal to the
++                                    number of parameters in the model.  This 
+optional argument is only
++                                    used when doing a grid search.
++        @type lower:                array of numbers
++        @keyword upper:             The upper bounds of the grid search 
+which must be equal to the
++                                    number of parameters in the model.  This 
+optional argument is only
++                                    used when doing a grid search.
++        @type upper:                array of numbers
++        @keyword inc:               The increments for each dimension of the 
+space for the grid search.
++                                    The number of elements in the array must 
+equal to the number of
++                                    parameters in the model.  This argument 
+is only used when doing a
++                                    grid search.
++        @type inc:                  array of int
++        &quot;&quot;&quot;
++
++        # Alias the current data pipe.
++        cdp = relax_data_store[relax_data_store.current_pipe]
++
++        # Test if sequence data is loaded.
++        if not exists_mol_res_spin_data():
++            raise RelaxNoSequenceError
+ 
+         # Loop over the sequence.
+-        for i in xrange(len(relax_data_store.res[self.run])):
+-            # Alias the residue specific data structure.
+-            data = relax_data_store.res[self.run][i]
+-
+-            # Skip deselected residues.
+-            if not data.select:
++        for spin, mol_name, res_num, res_name in spin_loop(full_info=True):
++            # Skip deselected spins.
++            if not spin.select:
+                 continue
+ 
+-            # Skip residues which have no data.
+-            if not hasattr(data, 'intensities'):
++            # Skip spins which have no data.
++            if not hasattr(spin, 'intensities'):
+                 continue
+ 
+             # Create the initial parameter vector.
+-            self.param_vector = self.assemble_param_vector(index=i, 
+sim_index=sim_index)
++            param_vector = self.assemble_param_vector(spin=spin)
+ 
+             # Diagonal scaling.
+-            self.assemble_scaling_matrix(index=i, scaling=scaling)
+-            self.param_vector = dot(inverse(self.scaling_matrix), 
+self.param_vector)
++            scaling_matrix = self.assemble_scaling_matrix(spin=spin, 
+scaling=scaling)
++            if len(scaling_matrix):
++                param_vector = dot(inverse(scaling_matrix), param_vector)
+ 
+             # Get the grid search minimisation options.
+             if match('^[Gg]rid', min_algor):
+-                min_options = self.grid_search_setup(index=i)
++                min_options = self.grid_search_setup(spin=spin, lower=lower, 
+upper=upper, inc=inc, scaling_matrix=scaling_matrix)
+ 
+             # Linear constraints.
+             if constraints:
+-                A, b = self.linear_constraints(index=i)
++                A, b = self.linear_constraints(spin=spin, 
+scaling_matrix=scaling_matrix)
+ 
+             # Print out.
+             if self.verbosity &gt;= 1:
+-                # Individual residue print out.
++                # Get the spin id string.
++                spin_id = generate_spin_id(mol_name, res_num, res_name, 
+spin.num, spin.name)
++
++                # Individual spin print out.
+                 if self.verbosity &gt;= 2:
+                     print &quot;\n\n&quot;
+-                string = &quot;Fitting to residue: &quot; + `data.num` + &quot; &quot; + 
+data.name
++
++                string = &quot;Fitting to spin &quot; + `spin_id`
+                 print &quot;\n\n&quot; + string
+                 print len(string) * '~'
+ 
+@@ -712,11 +751,11 @@
+             ######################################
+ 
+             if sim_index == None:
+-                values = data.ave_intensities
++                values = spin.ave_intensities
+             else:
+-                values = data.sim_intensities[sim_index]
+-
+-            setup(num_params=len(data.params), 
+num_times=len(relax_data_store.relax_times[self.run]), values=values, 
+sd=relax_data_store.sd[self.run], 
+relax_times=relax_data_store.relax_times[self.run], 
+scaling_matrix=self.scaling_matrix)
++                values = spin.sim_intensities[sim_index]
++
++            setup(num_params=len(spin.params), 
+num_times=len(cdp.relax_times), values=values, sd=cdp.sd, 
+relax_times=cdp.relax_times, scaling_matrix=scaling_matrix)
+ 
+ 
+             # Setup the minimisation algorithm when constraints are present.
+@@ -733,9 +772,9 @@
+ 
+             if match('[Ll][Mm]$', algor) or 
+match('[Ll]evenburg-[Mm]arquardt$', algor):
+                 # Reconstruct the error data structure.
+-                lm_error = zeros(len(data.relax_times), float64)
++                lm_error = zeros(len(spin.relax_times), float64)
+                 index = 0
+-                for k in xrange(len(data.relax_times)):
++                for k in xrange(len(spin.relax_times)):
+                     lm_error[index:index+len(relax_error[k])] = 
+relax_error[k]
+                     index = index + len(relax_error[k])
+ 
+@@ -746,60 +785,60 @@
+             ###############
+ 
+             if constraints:
+-                results = generic_minimise(func=func, dfunc=dfunc, 
+d2func=d2func, args=(), x0=self.param_vector, min_algor=min_algor, 
+min_options=min_options, func_tol=func_tol, grad_tol=grad_tol, 
+maxiter=max_iterations, A=A, b=b, full_output=1, print_flag=verbosity)
++                results = generic_minimise(func=func, dfunc=dfunc, 
+d2func=d2func, args=(), x0=param_vector, min_algor=min_algor, 
+min_options=min_options, func_tol=func_tol, grad_tol=grad_tol, 
+maxiter=max_iterations, A=A, b=b, full_output=True, print_flag=verbosity)
+             else:
+-                results = generic_minimise(func=func, dfunc=dfunc, 
+d2func=d2func, args=(), x0=self.param_vector, min_algor=min_algor, 
+min_options=min_options, func_tol=func_tol, grad_tol=grad_tol, 
+maxiter=max_iterations, full_output=1, print_flag=verbosity)
++                results = generic_minimise(func=func, dfunc=dfunc, 
+d2func=d2func, args=(), x0=param_vector, min_algor=min_algor, 
+min_options=min_options, func_tol=func_tol, grad_tol=grad_tol, 
+maxiter=max_iterations, full_output=True, print_flag=verbosity)
+             if results == None:
+                 return
+-            self.param_vector, self.func, self.iter_count, self.f_count, 
+self.g_count, self.h_count, self.warning = results
++            param_vector, func, iter_count, f_count, g_count, h_count, 
+warning = results
+ 
+             # Scaling.
+             if scaling:
+-                self.param_vector = dot(self.scaling_matrix, 
+self.param_vector)
++                param_vector = dot(scaling_matrix, param_vector)
+ 
+             # Disassemble the parameter vector.
+-            self.disassemble_param_vector(index=i, sim_index=sim_index)
++            self.disassemble_param_vector(param_vector=param_vector, 
+spin=spin, sim_index=sim_index)
+ 
+             # Monte Carlo minimisation statistics.
+             if sim_index != None:
+                 # Chi-squared statistic.
+-                data.chi2_sim[sim_index] = self.func
++                spin.chi2_sim[sim_index] = func
+ 
+                 # Iterations.
+-                data.iter_sim[sim_index] = self.iter_count
++                spin.iter_sim[sim_index] = iter_count
+ 
+                 # Function evaluations.
+-                data.f_count_sim[sim_index] = self.f_count
++                spin.f_count_sim[sim_index] = f_count
+ 
+                 # Gradient evaluations.
+-                data.g_count_sim[sim_index] = self.g_count
++                spin.g_count_sim[sim_index] = g_count
+ 
+                 # Hessian evaluations.
+-                data.h_count_sim[sim_index] = self.h_count
++                spin.h_count_sim[sim_index] = h_count
+ 
+                 # Warning.
+-                data.warning_sim[sim_index] = self.warning
++                spin.warning_sim[sim_index] = warning
+ 
+ 
+             # Normal statistics.
+             else:
+                 # Chi-squared statistic.
+-                data.chi2 = self.func
++                spin.chi2 = func
+ 
+                 # Iterations.
+-                data.iter = self.iter_count
++                spin.iter = iter_count
+ 
+                 # Function evaluations.
+-                data.f_count = self.f_count
++                spin.f_count = f_count
+ 
+                 # Gradient evaluations.
+-                data.g_count = self.g_count
++                spin.g_count = g_count
+ 
+                 # Hessian evaluations.
+-                data.h_count = self.h_count
++                spin.h_count = h_count
+ 
+                 # Warning.
+-                data.warning = self.warning
++                spin.warning = warning
+ 
+ 
+     def model_setup(self, model, params):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed May 21 22:20:22 2008</div>  
+</body>
+</html>

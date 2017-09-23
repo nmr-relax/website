@@ -1,0 +1,150 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r25759 &#45; /trunk/auto_analyses/relax_fit.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 11 Sep 2014 21:31:49 +0200 -->
+<!--X-Message-Id: E1XSA5t&#45;0002eO&#45;3j@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r25759 - /trunk/auto_analyses/relax_fit.py -- September 11, 2014 - 21:31</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r25759 - /trunk/auto_analyses/relax_fit.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00265" class="tabs">Index by Date</a> | <a href="threads.html#00265" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00264.html">Date Prev</a>] [<a href="msg00266.html">Date Next</a>] [<a href="msg00264.html">Thread Prev</a>] [<a href="msg00266.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 11 Sep 2014 19:31:49 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00265.html">E1XSA5t-0002eO-3j@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on September 11, 2014 - 21:31:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Thu Sep 11 21:31:48 2014
+New Revision: 25759
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=25759&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=25759&amp;view=rev</a>
+Log:
+Implemented the writing out of a &quot;grace2images.py&quot; script file, when 
+performing auto analysis of exponential fits.
+
+Modified:
+    trunk/auto_analyses/relax_fit.py
+
+Modified: trunk/auto_analyses/relax_fit.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/auto_analyses/relax_fit.py?rev=25759&amp;r1=25758&amp;r2=25759&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/auto_analyses/relax_fit.py?rev=25759&amp;r1=25758&amp;r2=25759&amp;view=diff</a>
+==============================================================================
+--- trunk/auto_analyses/relax_fit.py    (original)
++++ trunk/auto_analyses/relax_fit.py    Thu Sep 11 21:31:48 2014
+@@ -23,16 +23,19 @@
+ &quot;&quot;&quot;The automatic relaxation curve fitting protocol.&quot;&quot;&quot;
+ 
+ # Python module imports.
+-from os import sep
++from os import chmod, sep
++from os.path import expanduser
++from stat import S_IRWXU, S_IRGRP, S_IROTH
+ import sys
+ 
+ # relax module imports.
++from lib.io import get_file_path, open_write_file
++from lib.software.grace import script_grace2images
+ from lib.text.sectioning import section
+ from pipe_control.mol_res_spin import spin_loop
+ from pipe_control.pipes import cdp_name, has_pipe, switch
+ from prompt.interpreter import Interpreter
+ from status import Status; status = Status()
+-
+ 
+ 
+ class Relax_fit:
+@@ -138,6 +141,26 @@
+         self.interpreter.grace.write(x_data_type='relax_times', 
+y_data_type='peak_intensity', file='intensities.agr', dir=self.grace_dir, 
+force=True)    # Average peak intensities.
+         self.interpreter.grace.write(x_data_type='relax_times', 
+y_data_type='peak_intensity', norm=True, file='intensities_norm.agr', 
+dir=self.grace_dir, force=True)    # Average peak intensities (normalised).
+ 
++        # Write a python &quot;grace to PNG/EPS/SVG...&quot; conversion script.
++        # Open the file for writing.
++        file_name = &quot;grace2images.py&quot;
++        file_path = get_file_path(file_name=file_name, dir=self.grace_dir)
++        file = open_write_file(file_name=file_name, dir=self.grace_dir, 
+force=True)
++
++        # Write the file.
++        script_grace2images(file=file)
++
++        # Close the batch script, then make it executable (expanding any ~ 
+characters).
++        file.close()
++
++        if self.grace_dir:
++            dir = expanduser(self.grace_dir)
++            chmod(dir + sep + file_name, S_IRWXU|S_IRGRP|S_IROTH)
++        else:
++            file_name = expanduser(file_name)
++            chmod(file_name, S_IRWXU|S_IRGRP|S_IROTH)
++
++
+         # Display the Grace plots if selected.
+         if self.view_plots:
+             self.interpreter.grace.view(file='chi2.agr', dir=self.grace_dir)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Sep 11 22:00:02 2014</div>  
+</body>
+</html>

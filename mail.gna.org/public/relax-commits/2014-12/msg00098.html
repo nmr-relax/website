@@ -1,0 +1,183 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r26975 &#45; /trunk/pipe_control/spectrum.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Sat, 06 Dec 2014 14:45:17 +0100 -->
+<!--X-Message-Id: E1XxFfh&#45;0006Ew&#45;31@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r26975 - /trunk/pipe_control/spectrum.py -- December 06, 2014 - 14:45</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r26975 - /trunk/pipe_control/spectrum.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00098" class="tabs">Index by Date</a> | <a href="threads.html#00098" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00097.html">Date Prev</a>] [<a href="msg00099.html">Date Next</a>] [<a href="msg00097.html">Thread Prev</a>] [<a href="msg00099.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Sat, 06 Dec 2014 13:45:17 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00098.html">E1XxFfh-0006Ew-31@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on December 06, 2014 - 14:45:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Sat Dec  6 14:45:16 2014
+New Revision: 26975
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=26975&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=26975&amp;view=rev</a>
+Log:
+Added the pipe_control.spectrum.signal_noise_ratio() backend function, for 
+calculation of the signal to noise ratio per spin.
+
+Modified:
+    trunk/pipe_control/spectrum.py
+
+Modified: trunk/pipe_control/spectrum.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/pipe_control/spectrum.py?rev=26975&amp;r1=26974&amp;r2=26975&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/pipe_control/spectrum.py?rev=26975&amp;r1=26974&amp;r2=26975&amp;view=diff</a>
+==============================================================================
+--- trunk/pipe_control/spectrum.py      (original)
++++ trunk/pipe_control/spectrum.py      Sat Dec  6 14:45:16 2014
+@@ -32,7 +32,7 @@
+ 
+ # relax module imports.
+ from lib.errors import RelaxError, RelaxImplementError, RelaxNoSpectraError
+-from lib.io import write_data
++from lib.io import sort_filenames, write_data
+ from lib.text.sectioning import section
+ from lib.spectrum.peak_list import read_peak_list
+ from lib.statistics import std
+@@ -865,3 +865,73 @@
+ 
+     # Return the list.
+     return repl
++
++
++def signal_noise_ratio(verbose=True):
++    &quot;&quot;&quot;Calculate the signal to noise ratio per spin.
++
++    @keyword verbose:       A flag which if True will print additional 
+information out.
++    @type verbose:          bool
++    &quot;&quot;&quot;
++
++    # Tests.
++    check_pipe()
++    check_mol_res_spin_data()
++
++    # Test if spectra have been loaded.
++    if not hasattr(cdp, 'spectrum_ids'):
++        raise RelaxError(&quot;No spectra have been loaded.&quot;)
++
++    # Possible print.
++    if verbose:
++        print(&quot;\nThe following signal to noise ratios has been 
+calculated:\n&quot;)
++
++    # Set the spin specific signal to noise ratio.
++    for spin, spin_id in spin_loop(return_id=True):
++        # Skip deselected spins.
++        if not spin.select:
++            continue
++
++        # Skip spins missing intensity data.
++        if not hasattr(spin, 'peak_intensity'):
++            continue
++
++        # Test if error analysis has been performed.
++        if not hasattr(spin, 'peak_intensity_err'):
++            raise RelaxError(&quot;Intensity error analysis has not been 
+performed.  Please see spectrum.error_analysis().&quot;)
++
++        # If necessary, create the dictionary.
++        if not hasattr(spin, 'sn_ratio'):
++            spin.sn_ratio = {}
++
++        # Loop over the ID.
++        ids = []
++        for id in spin.peak_intensity:
++            # Append the ID to the list.
++            ids.append(id)
++
++            # Calculate the sn_ratio.
++            pint = spin.peak_intensity[id]
++            pint_err = spin.peak_intensity_err[id]
++            sn_ratio = pint / pint_err
++
++            # Assign the sn_ratio.
++            spin.sn_ratio[id] = sn_ratio
++
++        # Sort the ids alphanumeric.
++        ids = sort_filenames(filenames=ids, rev=False)
++
++        # Collect the data under sorted ids.
++        data_i = []
++        for id in ids:
++            # Get the values.
++            pint = spin.peak_intensity[id]
++            pint_err = spin.peak_intensity_err[id]
++            sn_ratio = spin.sn_ratio[id]
++
++            # Store the data.
++            data_i.append([id, repr(pint), repr(pint_err), repr(sn_ratio)])
++
++        if verbose:
++            section(file=sys.stdout, text=&quot;Signal to noise ratio for spin ID 
+'%s'&quot;%spin_id, prespace=1)
++            write_data(out=sys.stdout, headings=[&quot;Spectrum ID&quot;, &quot;Signal&quot;, 
+&quot;Noise&quot;, &quot;S/N&quot;], data=data_i)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Sat Dec 06 15:00:02 2014</div>  
+</body>
+</html>

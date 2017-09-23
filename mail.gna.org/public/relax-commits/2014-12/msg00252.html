@@ -1,0 +1,259 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r27129 &#45; in /trunk: pipe_control/structure/main.py user_functions/structure.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 18 Dec 2014 12:13:08 +0100 -->
+<!--X-Message-Id: E1Y1Z11&#45;0000WR&#45;Ri@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r27129 - in /trunk: pipe_control/structure/main.py user_functions/structure.py -- December 18, 2014 - 12:13</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r27129 - in /trunk: pipe_control/structure/main.py user_functions/structure.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00252" class="tabs">Index by Date</a> | <a href="threads.html#00252" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00251.html">Date Prev</a>] [<a href="msg00253.html">Date Next</a>] [<a href="msg00251.html">Thread Prev</a>] [<a href="msg00253.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 18 Dec 2014 11:13:07 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00252.html">E1Y1Z11-0000WR-Ri@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on December 18, 2014 - 12:13:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Dec 18 12:13:07 2014
+New Revision: 27129
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=27129&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=27129&amp;view=rev</a>
+Log:
+Enabled the gnuplot format for the structure.atomic_fluctuations user 
+function.
+
+This uses the plotting API correlation_matrix() function for visualisation.  
+The change allows the
+Structure.test_atomic_fluctuations_gnuplot system test to pass.
+
+
+Modified:
+    trunk/pipe_control/structure/main.py
+    trunk/user_functions/structure.py
+
+Modified: trunk/pipe_control/structure/main.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/pipe_control/structure/main.py?rev=27129&amp;r1=27128&amp;r2=27129&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/pipe_control/structure/main.py?rev=27129&amp;r1=27128&amp;r2=27129&amp;view=diff</a>
+==============================================================================
+--- trunk/pipe_control/structure/main.py        (original)
++++ trunk/pipe_control/structure/main.py        Thu Dec 18 12:13:07 2014
+@@ -32,6 +32,7 @@
+ from lib.check_types import is_float
+ from lib.errors import RelaxError, RelaxFileError
+ from lib.io import get_file_path, open_write_file, write_data
++from lib.plotting.api import correlation_matrix
+ from lib.selection import tokenise
+ from lib.sequence import write_spin_data
+ from lib.structure.internal.coordinates import assemble_coord_array, 
+loop_coord_structures
+@@ -237,11 +238,11 @@
+     @type molecules:    None or list of lists of str
+     @keyword atom_id:   The atom identification string of the coordinates of 
+interest.  This matches the spin ID string format.
+     @type atom_id:      str or None
+-    @keyword file:      The name of the PDB file to write.
++    @keyword file:      The name of the file to write.
+     @type file:         str
+-    @keyword format:    The output format.  This is currently only &quot;text&quot; 
+for text file output.
++    @keyword format:    The output format.  This can be set to &quot;text&quot; for 
+text file output, or &quot;gnuplot&quot; for creating a gnuplot script.
+     @type format:       str
+-    @keyword dir:       The directory where the PDB file will be placed.  If 
+set to None, then the file will be placed in the current directory.
++    @keyword dir:       The directory where the file will be placed.  If set 
+to None, then the file will be placed in the current directory.
+     @type dir:          str or None
+     @keyword force:     The force flag which if True will cause the file to 
+be overwritten.
+     @type force:        bool
+@@ -250,7 +251,7 @@
+     # Checks.
+     check_pipe()
+     check_structure()
+-    format_list = ['text']
++    format_list = ['text', 'gnuplot']
+     if format not in format_list:
+         raise RelaxError(&quot;The format '%s' must be one of %s.&quot; % (format, 
+format_list))
+ 
+@@ -262,20 +263,21 @@
+         raise RelaxError(&quot;Two or more structures are required.&quot;)
+ 
+     # The output file.
+-    file = open_write_file(file, dir=dir, force=force)
++    output = open_write_file(file, dir=dir, force=force)
+ 
+     # The header line.
+-    file.write('#')
++    output.write('#')
++    labels = []
+     for i in range(len(atom_names)):
+         # The spin identification string.
+-        id = generate_spin_id_unique(mol_name=mol_names[i], 
+res_num=res_nums[i], res_name=res_names[i], spin_name=atom_names[i])
++        labels.append(generate_spin_id_unique(mol_name=mol_names[i], 
+res_num=res_nums[i], res_name=res_names[i], spin_name=atom_names[i]))
+ 
+         # Output the spin ID.
+         if i == 0:
+-            file.write(&quot; %18s&quot; % id)
++            output.write(&quot; %18s&quot; % labels[i])
+         else:
+-            file.write(&quot; %20s&quot; % id)
+-    file.write('\n')
++            output.write(&quot; %20s&quot; % labels[i])
++    output.write('\n')
+ 
+     # Generate the pairwise matrix.
+     n = len(atom_names)
+@@ -292,12 +294,20 @@
+ 
+             # Output the matrix.
+             if j == 0:
+-                file.write(&quot;%20.15f&quot; % matrix[i, j])
++                output.write(&quot;%20.15f&quot; % matrix[i, j])
+             else:
+-                file.write(&quot; %20.15f&quot; % matrix[i, j])
++                output.write(&quot; %20.15f&quot; % matrix[i, j])
+ 
+         # End of the current line.
+-        file.write('\n')
++        output.write('\n')
++
++    # Close the file.
++    output.close()
++
++    # The gnuplot script.
++    if format == 'gnuplot':
++        # Call the plotting API.
++        correlation_matrix(format=format, matrix=matrix, labels=labels, 
+file=file, dir=dir, force=force)
+ 
+ 
+ def connect_atom(index1=None, index2=None):
+
+Modified: trunk/user_functions/structure.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/user_functions/structure.py?rev=27129&amp;r1=27128&amp;r2=27129&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/user_functions/structure.py?rev=27129&amp;r1=27128&amp;r2=27129&amp;view=diff</a>
+==============================================================================
+--- trunk/user_functions/structure.py   (original)
++++ trunk/user_functions/structure.py   Thu Dec 18 12:13:07 2014
+@@ -298,7 +298,7 @@
+     py_type = &quot;str_or_inst&quot;,
+     arg_type = &quot;file sel&quot;,
+     desc_short = &quot;file name&quot;,
+-    desc = &quot;The name of the text file.&quot;,
++    desc = &quot;The name of the text file to create.&quot;,
+     wiz_filesel_style = FD_SAVE
+ )
+ uf.add_keyarg(
+@@ -306,10 +306,10 @@
+     py_type = &quot;str&quot;,
+     default = &quot;text&quot;,
+     desc_short = &quot;output format&quot;,
+-    desc = &quot;The output format.&quot;,
++    desc = &quot;The output format.  For all formats other than the text file, a 
+second file will be created with the same name as the text file but with the 
+appropriate file extension added.&quot;,
+     wiz_element_type = &quot;combo&quot;,
+-    wiz_combo_choices = [&quot;Text file&quot;],
+-    wiz_combo_data = [&quot;text&quot;]
++    wiz_combo_choices = [&quot;Text file&quot;, &quot;Gnuplot script&quot;],
++    wiz_combo_data = [&quot;text&quot;, &quot;gnuplot&quot;]
+ )
+ uf.add_keyarg(
+     name = &quot;dir&quot;,
+@@ -329,6 +329,9 @@
+ # Description.
+ uf.desc.append(Desc_container())
+ uf.desc[-1].add_paragraph(&quot;This is used to visualise the interatomic 
+distance fluctuations between different structures.  The corrected sample 
+standard deviation (SD) is calculated for the distances between all atom 
+pairs, resulting in a pairwise matrix of SD values.  The matrix will be 
+output into a text file.&quot;)
++uf.desc[-1].add_paragraph(&quot;In addition to creating the text file, a second 
+file will be created if the format argument is set to anything other than the 
+text file.  It will have the same name as the text file, however the file 
+extension will be changed to match the format.  The currently supported 
+formats are:&quot;)
++uf.desc[-1].add_item_list_element(&quot;'text'&quot;, &quot;This is the default value and 
+will result in a single text file being created.&quot;)
++uf.desc[-1].add_item_list_element(&quot;'gnuplot'&quot;, &quot;This will create a script 
+for visualising the correlation matrix using gnuplot.&quot;)
+ uf.desc[-1].add_paragraph(paragraph_multi_struct)
+ uf.desc[-1].add_paragraph(paragraph_atom_id)
+ # Prompt examples.
+@@ -339,7 +342,7 @@
+ uf.desc[-1].add_prompt(&quot;relax&gt; 
+structure.atomic_fluctuations(molecules=[['A', 'B', 'C', 'D']], 
+file='atomic_fluctuation_matrix')&quot;)
+ uf.backend = pipe_control.structure.main.atomic_fluctuations
+ uf.menu_text = &quot;&amp;atomic_fluctuations&quot;
+-uf.wizard_height_desc = 450
++uf.wizard_height_desc = 400
+ uf.wizard_size = (1000, 750)
+ uf.wizard_apply_button = False
+ uf.wizard_image = WIZARD_IMAGE_PATH + 'structure' + sep + '2JK4.png'
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Dec 18 12:40:02 2014</div>  
+</body>
+</html>

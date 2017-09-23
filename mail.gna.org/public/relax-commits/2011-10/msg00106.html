@@ -1,0 +1,242 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r14874 &#45; in /1.3/generic_fns: pcs.py rdc.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 17 Oct 2011 14:09:52 +0200 -->
+<!--X-Message-Id: E1RFm0t&#45;0005oo&#45;Td@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r14874 - in /1.3/generic_fns: pcs.py rdc.py -- October 17, 2011 - 14:09</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r14874 - in /1.3/generic_fns: pcs.py rdc.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00106" class="tabs">Index by Date</a> | <a href="threads.html#00106" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00105.html">Date Prev</a>] [<a href="msg00107.html">Date Next</a>] [<a href="msg00105.html">Thread Prev</a>] [<a href="msg00107.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 17 Oct 2011 12:09:51 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00106.html">E1RFm0t-0005oo-Td@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on October 17, 2011 - 14:09:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Mon Oct 17 14:09:51 2011
+New Revision: 14874
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=14874&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=14874&amp;view=rev</a>
+Log:
+Updated the RDC and PCS display and write user function backends for the new 
+bc flag.
+
+This allows access to the back-calculated rather than measured data.
+
+
+Modified:
+    1.3/generic_fns/pcs.py
+    1.3/generic_fns/rdc.py
+
+Modified: 1.3/generic_fns/pcs.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/generic_fns/pcs.py?rev=14874&amp;r1=14873&amp;r2=14874&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/generic_fns/pcs.py?rev=14874&amp;r1=14873&amp;r2=14874&amp;view=diff</a>
+==============================================================================
+--- 1.3/generic_fns/pcs.py (original)
++++ 1.3/generic_fns/pcs.py Mon Oct 17 14:09:51 2011
+@@ -315,15 +315,17 @@
+         grace.write_xy_data(data=data, file=file, graph_type=graph_type)
+ 
+ 
+-def display(align_id=None):
++def display(align_id=None, bc=False):
+     &quot;&quot;&quot;Display the PCS data corresponding to the alignment ID.
+ 
+     @keyword align_id:  The alignment tensor ID string.
+     @type align_id:     str
++    @keyword bc:        The back-calculation flag which if True will cause 
+the back-calculated rather than measured data to be displayed.
++    @type bc:           bool
+     &quot;&quot;&quot;
+ 
+     # Call the write method with sys.stdout as the file.
+-    write(align_id=align_id, file=sys.stdout)
++    write(align_id=align_id, file=sys.stdout, bc=bc)
+ 
+ 
+ def q_factors(spin_id=None):
+@@ -548,7 +550,7 @@
+         spin.pcs_weight[align_id] = weight
+ 
+ 
+-def write(align_id=None, file=None, dir=None, force=False):
++def write(align_id=None, file=None, dir=None, bc=False, force=False):
+     &quot;&quot;&quot;Display the PCS data corresponding to the alignment ID.
+ 
+     @keyword align_id:  The alignment tensor ID string.
+@@ -557,6 +559,8 @@
+     @type file:         str or file object
+     @keyword dir:       The name of the directory to place the file into 
+(defaults to the current directory).
+     @type dir:          str
++    @keyword bc:        The back-calculation flag which if True will cause 
+the back-calculated rather than measured data to be written.
++    @type bc:           bool
+     @keyword force:     A flag which if True will cause any pre-existing 
+file to be overwritten.
+     @type force:        bool
+     &quot;&quot;&quot;
+@@ -581,12 +585,21 @@
+     errors = []
+     for spin, spin_id in spin_loop(return_id=True):
+         # Skip spins with no PCSs.
+-        if not hasattr(spin, 'pcs') or not align_id in spin.pcs.keys():
++        if not bc and (not hasattr(spin, 'pcs') or not align_id in 
+spin.pcs.keys()):
+             continue
+-
+-        # Store the data.
++        elif bc and (not hasattr(spin, 'pcs_bc') or align_id not in 
+spin.pcs_bc.keys()):
++            continue
++
++        # Store the spin ID.
+         spin_ids.append(spin_id)
+-        values.append(spin.pcs[align_id])
++
++        # The value.
++        if bc:
++            values.append(spin.pcs_bc[align_id])
++        else:
++            values.append(spin.pcs[align_id])
++
++        # The error.
+         if hasattr(spin, 'pcs_err') and align_id in spin.pcs_err.keys():
+             errors.append(spin.pcs_err[align_id])
+         else:
+
+Modified: 1.3/generic_fns/rdc.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/generic_fns/rdc.py?rev=14874&amp;r1=14873&amp;r2=14874&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/generic_fns/rdc.py?rev=14874&amp;r1=14873&amp;r2=14874&amp;view=diff</a>
+==============================================================================
+--- 1.3/generic_fns/rdc.py (original)
++++ 1.3/generic_fns/rdc.py Mon Oct 17 14:09:51 2011
+@@ -242,15 +242,17 @@
+         grace.write_xy_data(data=data, file=file, graph_type=graph_type)
+ 
+ 
+-def display(align_id=None):
++def display(align_id=None, bc=False):
+     &quot;&quot;&quot;Display the RDC data corresponding to the alignment ID.
+ 
+     @keyword align_id:  The alignment tensor ID string.
+     @type align_id:     str
++    @keyword bc:        The back-calculation flag which if True will cause 
+the back-calculated rather than measured data to be displayed.
++    @type bc:           bool
+     &quot;&quot;&quot;
+ 
+     # Call the write method with sys.stdout as the file.
+-    write(align_id=align_id, file=sys.stdout)
++    write(align_id=align_id, file=sys.stdout, bc=bc)
+ 
+ 
+ def q_factors(spin_id=None):
+@@ -525,7 +527,7 @@
+         spin.rdc_weight[align_id] = weight
+ 
+ 
+-def write(align_id=None, file=None, dir=None, force=False):
++def write(align_id=None, file=None, dir=None, bc=False, force=False):
+     &quot;&quot;&quot;Display the RDC data corresponding to the alignment ID.
+ 
+     @keyword align_id:  The alignment tensor ID string.
+@@ -534,6 +536,8 @@
+     @type file:         str or file object
+     @keyword dir:       The name of the directory to place the file into 
+(defaults to the current directory).
+     @type dir:          str
++    @keyword bc:        The back-calculation flag which if True will cause 
+the back-calculated rather than measured data to be written.
++    @type bc:           bool
+     @keyword force:     A flag which if True will cause any pre-existing 
+file to be overwritten.
+     @type force:        bool
+     &quot;&quot;&quot;
+@@ -561,14 +565,19 @@
+     errors = []
+     for spin, spin_id in spin_loop(return_id=True):
+         # Skip spins with no RDCs.
+-        if not hasattr(spin, 'rdc') or align_id not in spin.rdc.keys():
++        if not bc and (not hasattr(spin, 'rdc') or align_id not in 
+spin.rdc.keys()):
++            continue
++        elif bc and (not hasattr(spin, 'rdc_bc') or align_id not in 
+spin.rdc_bc.keys()):
+             continue
+ 
+         # Store the spin ID.
+         spin_ids.append(spin_id)
+ 
+         # The value.
+-        values.append(convert(spin.rdc[align_id], align_id))
++        if bc:
++            values.append(convert(spin.rdc_bc[align_id], align_id))
++        else:
++            values.append(convert(spin.rdc[align_id], align_id))
+ 
+         # The error.
+         if hasattr(spin, 'rdc_err') and align_id in spin.rdc_err.keys():
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Oct 17 18:40:02 2011</div>  
+</body>
+</html>

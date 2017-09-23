@@ -1,0 +1,338 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: Shifting the consistency testing code to the new relax design. -->
+<!--X-From-R13: Sqjneq q'Ohiretar <rqjneq.qnhiretarNtznvy.pbz> -->
+<!--X-Date: Tue, 08 Jan 2008 20:51:23 +0100 -->
+<!--X-Message-Id: 1199821867.8905.7.camel@localhost -->
+<!--X-Content-Type: text/plain -->
+<!--X-Reference: E1JBzLL&#45;0007X1&#45;PY@subversion.gna.org -->
+<!--X-Reference: 7f080ed10801080038h13e11b2aqd291517cd4066289@mail.gmail.com -->
+<!--X-Reference: 4783C167.9040403@ulaval.ca -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>Shifting the consistency testing code to the new relax design. -- January 08, 2008 - 20:51</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />Shifting the consistency testing code to the new relax design.</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00012" class="tabs">Index by Date</a> | <a href="threads.html#00012" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00011.html">Date Prev</a>] [<a href="msg00013.html">Date Next</a>] [<a href="msg00008.html">Thread Prev</a>] [<a href="msg00027.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: Sebastien Morin &lt;sebastien.morin.1@xxxxxxxxx&gt;</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 08 Jan 2008 20:51:07 +0100</li>
+<li class="menuitem">
+<em>Cc</em>: relax-devel@xxxxxxx</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00012.html">1199821867.8905.7.camel@localhost</a>&gt;</li>
+<li class="menuitem">
+<em>References</em>: &lt;E1JBzLL-0007X1-PY@xxxxxxxxxxxxxxxxxx&gt;	&lt;7f080ed10801080038h13e11b2aqd291517cd4066289@xxxxxxxxxxxxxx&gt;	&lt;4783C167.9040403@xxxxxxxxx&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>Edward d'Auvergne</strong> on January 08, 2008 - 20:51:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">There are a number of significant changes required, so don't feel
+obliged to do this.  Maybe if I make the changes to the reduced spectral
+density mapping code first, you can then see what is needed.  But if you
+would like to make this code fully functional in the 1.3 line and would
+like a challenge, then the run argument is the most important of these.
+The 'run' no longer exists, it is now replaced by the concept of the
+data pipe or simply pipe.  The mode of operation of relax is that there
+is a current pipe (stored in 'relax_data_store.current_pipe') and that
+that is what the code should access.  So for the functions that require
+access to the data structures of this data pipe, a common piece of code
+I have been using is:
+
+# Alias the current data pipe.
+cdp = relax_data_store[relax_data_store.current_pipe]
+
+The structure 'cdp' then contains all the data you need (technically it
+is a PipeContainer instance).  The only functions which should require a
+data pipe other than the current one are things like copying between
+data pipes, model selection, and hybridization of data pipes.
+
+Another change is:
+
+        # Test the sequence data exists:
+        if not relax_data_store.res.has_key(run):
+            raise RelaxNoSequenceError, run
+
+to:
+
+        # Test if the sequence data is loaded.
+        if not exists_mol_res_spin_data():
+            raise RelaxNoSequenceError
+
+Looping over residues should now not be done.  So the code:
+
+        for i in xrange(len(relax_data_store.res[self.run])):
+            # Skip unselected residues.
+            if not relax_data_store.res[self.run][i].select:
+                continue
+
+should be replaced by the spin loop:
+
+        for spin in spin_loop(spin_id):
+            # Skip unselected spins.
+            if not spin.select:
+                continue
+
+The spin_id (spin identification string) I don't think will be required
+by the consistency tests.  As you can probably see the spin_loop makes
+the code much simpler.  The epydoc '@param x:' and '@type x:' parts of
+the docstring would be useful as well.  Oh, I also just noticed that
+there is a tab in one place in specific_fns/consistency_tests.py.  This
+is in the set_doc() method where something strange has happened.  I
+think some lines and the start of a function have been lost somewhere.
+
+What else is there?  Oh, all functions which previously accepted the
+'index' argument should be changed.  Instead the SpinContainer instance
+(the object returned by the spin loop) should be passed in instead.
+Then all lines such as:
+
+if not hasattr(relax_data_store.res[self.run][index], 'csa') or not
+hasattr(relax_data_store.res[self.run][index], 'r') or not
+hasattr(self.relax.data.res[self.run][index], 'orientation') or not
+hasattr(self.relax.data.res[self.run][index], 'tc'):
+    self.data_init(relax_data_store.res[self.run][index])
+
+should be replace by something such as:
+
+if not hasattr(spin, 'csa') or not hasattr(spin, 'r') or not
+hasattr(spin, 'orientation') or not hasattr(spin, 'tc'):
+    self.data_init(spin)
+
+For the writing of results files, this will be more difficult as a few
+extra columns will be necessary.  Maybe it's best if I implement the
+idea somewhere else first, because I'm not sure exactly what I want here
+yet.  In the 1.2 line there was a residue number and residue name
+column.  In the 1.3 line there should be 5 columns:  1st, mol name; 2nd,
+res num; 3rd, res name; 4th, spin num; 5th, spin name.  These can be
+accessed from the spin_loop() function (well iterator actually) by
+setting the full_info argument to True. For most protein systems the
+molecule and spin columns are likely to be filled by None, so I'm not
+sure whether this info should be pre-parsed and columns dropped if there
+is no info.  For example for a small organic molecule, the residue info
+is likely to be useless.  For protein NH backbone data, the spin columns
+are useless.  For single molecule systems the molecule column is
+useless.  I will drop these columns when writing other data to file, but
+in the results file maybe it's ok to keep them.  I'm not sure yet.
+
+I think that comprehensively covers everything!  If you see anything
+else, don't hesitate to ask.  Don't forget that unit tests will uncover
+almost every last bug in the code.  Also for the system tests, if you
+have a small data subset and a consistency testing script to analyse
+this data then you can include these directly now.  The data must be
+very small in size if it is to be distributed together with relax.
+
+Regards,
+
+Edward
+
+
+On Tue, 2008-01-08 at 13:31 -0500, Sebastien Morin wrote:
+</pre><blockquote class="blockquote"><pre style="margin: 0em;">Hi,
+
+Could you tell me what will be the change so I can try to make it for
+the consistency_test code and, if good, port it to the jw_mapping
+code ?
+
+Maybe some old posts in the mailing lists talked about this...
+
+Cheers
+
+
+Séb
+
+
+
+
+Edward d'Auvergne wrote: 
+</pre><blockquote class="blockquote"><pre style="margin: 0em;">An important note here is that the run arguments will be removed from
+the 1.3 line.  I haven't done this for the J(w) mapping code yet
+though.  I'm slowly converting the whole code base to remove this
+argument, so I should get to it one day soon.
+
+Regards,
+
+Edward
+
+
+
+On Jan 7, 2008 10:17 PM,  &amp;lt;sebastien.morin.1@xxxxxxxxx&amp;gt; wrote:
+  
+</pre><blockquote class="blockquote"><pre style="margin: 0em;">Author: semor
+Date: Mon Jan  7 22:17:10 2008
+New Revision: 4467
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=4467&amp;amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=4467&amp;amp;view=rev</a>
+Log:
+Modified the consistency tests prompt so it is not a simple copy of the 
+jw mapping code anymore.
+
+
+Modified:
+    branches/consistency_tests_1.3/prompt/consistency_tests.py
+
+Modified: branches/consistency_tests_1.3/prompt/consistency_tests.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/consistency_tests_1.3/prompt/consistency_tests.py?rev=4467&amp;amp;r1=4466&amp;amp;r2=4467&amp;amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/consistency_tests_1.3/prompt/consistency_tests.py?rev=4467&amp;amp;r1=4466&amp;amp;r2=4467&amp;amp;view=diff</a>
+==============================================================================
+--- branches/consistency_tests_1.3/prompt/consistency_tests.py 
+(original)
++++ branches/consistency_tests_1.3/prompt/consistency_tests.py Mon Jan  
+7 22:17:10 2008
+@@ -27,11 +27,12 @@
+ from relax_errors import RelaxStrError
+
+
+-class Jw_mapping:
++class Consistency_tests:
+     def __init__(self, relax):
+         # Help.
+         self.__relax_help__ = \
+-        &quot;&quot;&quot;Class containing functions specific to reduced spectral 
+density mapping.&quot;&quot;&quot;
++        &quot;&quot;&quot;Class containing functions specific to consistency tests 
+for datasets from different
++        fields.&quot;&quot;&quot;
+
+         # Add the generic help string.
+         self.__relax_help__ = self.__relax_help__ + &quot;\n&quot; + 
+help.relax_class_help
+@@ -41,7 +42,7 @@
+
+
+     def set_frq(self, run=None, frq=None):
+-        &quot;&quot;&quot;Function for selecting which relaxation data to use in the 
+J(w) mapping.
++        &quot;&quot;&quot;Function for selecting which relaxation data to use in the 
+consistency tests.
+
+         Keyword Arguments
+         ~~~~~~~~~~~~~~~~~
+@@ -54,20 +55,20 @@
+         Description
+         ~~~~~~~~~~~
+
+-        This function will select the relaxation data to use in the 
+reduced spectral density mapping
+-        corresponding to the given frequency.
++        This function will select the relaxation data to use in the 
+consistency tests corresponding
++        to the given frequencies.
+
+
+         Examples
+         ~~~~~~~~
+
+-        relax&gt; jw_mapping.set_frq('jw', 600.0 * 1e6)
+-        relax&gt; jw_mapping.set_frq(run='jw', frq=600.0 * 1e6)
++        relax&gt; consistency_tests.set_frq('ct', 600.0 * 1e6)
++        relax&gt; consistency_tests.set_frq(run='ct', frq=600.0 * 1e6)
+         &quot;&quot;&quot;
+
+         # Function intro text.
+         if self.__relax__.interpreter.intro:
+-            text = sys.ps3 + &quot;jw_mapping.set_frq(&quot;
++            text = sys.ps3 + &quot;consistency_tests.set_frq(&quot;
+             text = text + &quot;run=&quot; + `run`
+             text = text + &quot;, frq=&quot; + `frq` + &quot;)&quot;
+             print text
+@@ -81,4 +82,4 @@
+             raise RelaxStrError, ('frq', frq)
+
+         # Execute the functional code.
+-        self.__relax__.specific.jw_mapping.set_frq(run=run, frq=frq)
++        self.__relax__.specific.consistency_tests.set_frq(run=run, 
+frq=frq)
+
+
+_______________________________________________
+relax (<a  rel="nofollow" href="http://nmr-relax.com">http://nmr-relax.com</a>)
+
+This is the relax-commits mailing list
+relax-commits@xxxxxxx
+
+To unsubscribe from this list, get a password
+reminder, or change your subscription options,
+visit the list information page at
+<a  rel="nofollow" href="https://mail.gna.org/listinfo/relax-commits">https://mail.gna.org/listinfo/relax-commits</a>
+
+    
+</pre></blockquote><pre style="margin: 0em;">
+
+  
+</pre></blockquote><pre style="margin: 0em;">
+
+-- 
+Sebastien Morin
+Etudiant au PhD en biochimie
+Laboratoire de resonance magnetique nucleaire
+Dr Stephane Gagne
+CREFSIP (Universite Laval, Quebec, CANADA)
+1-418-656-2131 #4530
+</pre></blockquote><pre style="margin: 0em;">
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<ul><li><strong>Follow-Ups</strong>:
+<ul>
+<li><strong><a name="00027" href="msg00027.html">Re: Shifting the consistency testing code to the new relax design.</a></strong>
+<ul><li><em>From:</em> Sebastien Morin</li></ul></li>
+</ul></li></ul>
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<ul><li><strong>References</strong>:
+<ul>
+<li><strong><a name="00004" href="msg00004.html">Re: r4467 -	/branches/consistency_tests_1.3/prompt/consistency_tests.py</a></strong>
+<ul><li><em>From:</em> Edward d'Auvergne</li></ul></li>
+<li><strong><a name="00008" href="msg00008.html">Re: r4467 -	/branches/consistency_tests_1.3/prompt/consistency_tests.py</a></strong>
+<ul><li><em>From:</em> Sebastien Morin</li></ul></li>
+</ul></li></ul>
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Jan 09 21:41:50 2008</div>  
+</body>
+</html>

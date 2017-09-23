@@ -1,0 +1,300 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r9183 &#45; in /branches/frame_order: maths_fns/frame_order_models.py	specific_fns/frame_order.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 02 Jul 2009 23:13:13 +0200 -->
+<!--X-Message-Id: E1MMTaj&#45;0002x0&#45;QJ@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r9183 - in /branches/frame_order: maths_fns/frame_order_models.py	specific_fns/frame_order.py -- July 02, 2009 - 23:13</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r9183 - in /branches/frame_order: maths_fns/frame_order_models.py	specific_fns/frame_order.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00016" class="tabs">Index by Date</a> | <a href="threads.html#00016" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00015.html">Date Prev</a>] [<a href="msg00017.html">Date Next</a>] [<a href="msg00015.html">Thread Prev</a>] [<a href="msg00017.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 02 Jul 2009 21:13:13 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00016.html">E1MMTaj-0002x0-QJ@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on July 02, 2009 - 23:13:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Jul  2 23:13:13 2009
+New Revision: 9183
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=9183&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=9183&amp;view=rev</a>
+Log:
+Created and now using the full_in_ref_frame data structure (copy of N-state 
+model).
+
+
+Modified:
+    branches/frame_order/maths_fns/frame_order_models.py
+    branches/frame_order/specific_fns/frame_order.py
+
+Modified: branches/frame_order/maths_fns/frame_order_models.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order/maths_fns/frame_order_models.py?rev=9183&amp;r1=9182&amp;r2=9183&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order/maths_fns/frame_order_models.py?rev=9183&amp;r1=9182&amp;r2=9183&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order/maths_fns/frame_order_models.py (original)
++++ branches/frame_order/maths_fns/frame_order_models.py Thu Jul  2 23:13:13 
+2009
+@@ -39,7 +39,7 @@
+ class Frame_order:
+     &quot;&quot;&quot;Class containing the target function of the optimisation of Frame 
+Order matrix components.&quot;&quot;&quot;
+ 
+-    def __init__(self, model=None, init_params=None, full_tensors=None, 
+red_tensors=None, red_errors=None, frame_order_2nd=None):
++    def __init__(self, model=None, init_params=None, full_tensors=None, 
+red_tensors=None, red_errors=None, full_in_ref_frame=None, 
+frame_order_2nd=None):
+         &quot;&quot;&quot;Set up the target functions for the Frame Order theories.
+         
+         @keyword model:             The name of the Frame Order model.
+@@ -57,6 +57,9 @@
+         @keyword red_errors:        An array of the {Sxx, Syy, Sxy, Sxz, 
+Syz} errors for all reduced
+                                     tensors.  The array format is the same 
+as for full_tensors.
+         @type red_errors:           numpy nx5D, rank-1 float64 array
++        @keyword full_in_ref_frame: An array of flags specifying if the 
+tensor in the reference
++                                    frame is the full or reduced tensor.
++        @type full_in_ref_frame:    numpy rank-1 array
+         @keyword frame_order_2nd:   The numerical values of the 2nd degree 
+Frame Order matrix.  If
+                                     supplied, the target functions will 
+optimise directly to these
+                                     values.
+@@ -72,13 +75,21 @@
+ 
+         # Isotropic cone model.
+         if model == 'iso cone':
++            # Some checks.
++            if red_tensors == None or not len(red_tensors):
++                raise RelaxError, &quot;The red_tensors argument &quot; + 
+`red_tensors` + &quot; must be supplied.&quot;
++            if red_errors == None or not len(red_errors):
++                raise RelaxError, &quot;The red_errors argument &quot; + `red_errors` 
++ &quot; must be supplied.&quot;
++            if full_in_ref_frame == None or not len(full_in_ref_frame):
++                raise RelaxError, &quot;The full_in_ref_frame argument &quot; + 
+`full_in_ref_frame` + &quot; must be supplied.&quot;
++
+             # Mix up.
+             if full_tensors != None and frame_order_2nd != None:
+                 raise RelaxError, &quot;Tensors and Frame Order matrices cannot 
+be supplied together.&quot;
+ 
+             # Tensor optimisation.
+             elif full_tensors != None:
+-                self.__init_iso_cone(full_tensors, red_tensors, red_errors)
++                self.__init_iso_cone(full_tensors, red_tensors, red_errors, 
+full_in_ref_frame)
+ 
+             # Optimisation to the 2nd degree Frame Order matrix components 
+directly.
+             elif frame_order_2nd != None:
+@@ -115,6 +126,7 @@
+         self.red_tensors = red_tensors
+         self.red_errors = red_errors
+         self.red_tensors_bc = zeros(self.num_tensors*5, float64)
++        self.full_in_ref_frame = full_in_ref_frame
+ 
+         # The cone axis storage and molecular frame z-axis.
+         self.cone_axis = zeros(3, float64)
+@@ -192,9 +204,19 @@
+             # Reduce the tensor.
+             reduce_alignment_tensor(self.frame_order_2nd, 
+self.full_tensors[index1:index2], self.red_tensors_bc[index1:index2])
+ 
+-            # Rotate the tensor.
++            # Convert the tensor to 3D, rank-2 form.
+             to_tensor(self.tensor_3D, self.red_tensors_bc[index1:index2])
+-            to_5D(self.red_tensors_bc[index1:index2], dot(self.rot, 
+dot(self.tensor_3D, transpose(self.rot))))
++
++            # Rotate the tensor (normal R.X.RT rotation).
++            if self.full_in_ref_frame[i]:
++                self.tensor_3D = dot(self.rot, dot(self.tensor_3D, 
+transpose(self.rot)))
++
++            # Rotate the tensor (inverse RT.X.R rotation).
++            else:
++                self.tensor_3D = dot(transpose(self.rot), 
+dot(self.tensor_3D, self.rot))
++
++            # Convert the tensor back to 5D, rank-1 form.
++            to_5D(self.red_tensors_bc[index1:index2], self.tensor_3D)
+ 
+         # Return the chi-squared value.
+         return chi2(self.red_tensors, self.red_tensors_bc, self.red_errors)
+
+Modified: branches/frame_order/specific_fns/frame_order.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order/specific_fns/frame_order.py?rev=9183&amp;r1=9182&amp;r2=9183&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order/specific_fns/frame_order.py?rev=9183&amp;r1=9182&amp;r2=9183&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order/specific_fns/frame_order.py (original)
++++ branches/frame_order/specific_fns/frame_order.py Thu Jul  2 23:13:13 2009
+@@ -68,6 +68,7 @@
+         full_tensors = zeros(n*5, float64)
+         red_tensors  = zeros(n*5, float64)
+         red_err = ones(n*5, float64) * 1e-5
++        full_in_ref_frame = zeros(n, float64)
+ 
+         # Loop over the full tensors.
+         for i, tensor in self.__tensor_loop(red=False):
+@@ -77,6 +78,10 @@
+             full_tensors[5*i + 2] = tensor.Axy
+             full_tensors[5*i + 3] = tensor.Axz
+             full_tensors[5*i + 4] = tensor.Ayz
++
++            # The full tensor corresponds to the frame of reference.
++            if cdp.ref_domain == tensor.domain:
++                full_in_ref_frame[i] = 1
+ 
+         # Loop over the reduced tensors.
+         for i, tensor in self.__tensor_loop(red=True):
+@@ -105,7 +110,7 @@
+                 red_err[5*i + 4] = tensor.Ayz_err
+ 
+         # Return the data structures.
+-        return full_tensors, red_tensors, red_err
++        return full_tensors, red_tensors, red_err, full_in_ref_frame
+ 
+ 
+     def __tensor_loop(self, red=False):
+@@ -268,10 +273,10 @@
+             param_vector = array([cdp.alpha, cdp.beta, cdp.gamma, 
+cdp.theta_axis, cdp.phi_axis, cdp.theta_cone], float64)
+ 
+             # Get the data structures for optimisation using the tensors as 
+base data sets.
+-            full_tensors, red_tensors, red_tensor_err = 
+self.__minimise_setup_tensors()
++            full_tensors, red_tensors, red_tensor_err, full_in_ref_frame = 
+self.__minimise_setup_tensors()
+ 
+             # Set up the optimisation function.
+-            target = frame_order_models.Frame_order(model=cdp.model, 
+full_tensors=full_tensors, red_tensors=red_tensors, red_errors=red_tensor_err)
++            target = frame_order_models.Frame_order(model=cdp.model, 
+full_tensors=full_tensors, red_tensors=red_tensors, 
+red_errors=red_tensor_err, full_in_ref_frame=full_in_ref_frame)
+ 
+             # Make a single function call.  This will cause back calculation 
+and the data will be stored in the class instance.
+             target.func(param_vector)
+@@ -304,10 +309,10 @@
+             param_vector = array([cdp.alpha, cdp.beta, cdp.gamma, 
+cdp.theta_axis, cdp.phi_axis, cdp.theta_cone], float64)
+ 
+             # Get the data structures for optimisation using the tensors as 
+base data sets.
+-            full_tensors, red_tensors, red_tensor_err = 
+self.__minimise_setup_tensors()
++            full_tensors, red_tensors, red_tensor_err, full_in_ref_frame = 
+self.__minimise_setup_tensors()
+ 
+             # Set up the optimisation function.
+-            target = frame_order_models.Frame_order(model=cdp.model, 
+full_tensors=full_tensors, red_tensors=red_tensors, red_errors=red_tensor_err)
++            target = frame_order_models.Frame_order(model=cdp.model, 
+full_tensors=full_tensors, red_tensors=red_tensors, 
+red_errors=red_tensor_err, full_in_ref_frame=full_in_ref_frame)
+ 
+             # Make a single function call.  This will cause back calculation 
+and the data will be stored in the class instance.
+             chi2 = target.func(param_vector)
+@@ -623,10 +628,10 @@
+             param_vector = array([cdp.alpha, cdp.beta, cdp.gamma, 
+cdp.theta_axis, cdp.phi_axis, cdp.theta_cone], float64)
+ 
+             # Get the data structures for optimisation using the tensors as 
+base data sets.
+-            full_tensors, red_tensors, red_tensor_err = 
+self.__minimise_setup_tensors(sim_index)
++            full_tensors, red_tensors, red_tensor_err, full_in_ref_frame = 
+self.__minimise_setup_tensors(sim_index)
+ 
+             # Set up the optimisation function.
+-            target = frame_order_models.Frame_order(model=cdp.model, 
+full_tensors=full_tensors, red_tensors=red_tensors, red_errors=red_tensor_err)
++            target = frame_order_models.Frame_order(model=cdp.model, 
+full_tensors=full_tensors, red_tensors=red_tensors, 
+red_errors=red_tensor_err, full_in_ref_frame=full_in_ref_frame)
+ 
+         # Minimisation.
+         results = generic_minimise(func=target.func, args=(), 
+x0=param_vector, min_algor=min_algor, min_options=min_options, 
+func_tol=func_tol, grad_tol=grad_tol, maxiter=max_iterations, full_output=1, 
+print_flag=verbosity)
+@@ -682,7 +687,7 @@
+         &quot;&quot;&quot;
+ 
+         # Get the tensor data structures.
+-        full_tensors, red_tensors, red_tensor_err = 
+self.__minimise_setup_tensors()
++        full_tensors, red_tensors, red_tensor_err, full_in_ref_frame = 
+self.__minimise_setup_tensors()
+ 
+         # Return the errors.
+         return red_tensor_err
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Jul 02 23:40:04 2009</div>  
+</body>
+</html>

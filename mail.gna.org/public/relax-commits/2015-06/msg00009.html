@@ -1,0 +1,271 @@
+<!-- MHonArc v2.6.19+ -->
+<!--X-Subject: r27857 &#45; in /trunk/specific_analyses/n_state_model: api.py optimisation.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 24 Jun 2015 14:39:43 +0200 -->
+<!--X-Message-Id: E1Z7jxv&#45;0005v4&#45;GW@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r27857 - in /trunk/specific_analyses/n_state_model: api.py optimisation.py -- June 24, 2015 - 14:39</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r27857 - in /trunk/specific_analyses/n_state_model: api.py optimisation.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00009" class="tabs">Index by Date</a> | <a href="threads.html#00009" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00008.html">Date Prev</a>] [<a href="msg00010.html">Date Next</a>] [<a href="msg00008.html">Thread Prev</a>] [<a href="msg00010.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 24 Jun 2015 12:39:43 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00009.html">E1Z7jxv-0005v4-GW@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on June 24, 2015 - 14:39:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Jun 24 14:39:42 2015
+New Revision: 27857
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=27857&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=27857&amp;view=rev</a>
+Log:
+Added simulation support for the RDC and PCS Q factors in the N-state model 
+analysis.
+
+This is for both Monte Carlo and Bootstrap simulation.  The simulation RDC 
+and PCS values, as well
+as the simulation back calculated values are now stored via the 
+minimise_bc_data() function of
+specific_analyses.n_state_model.optimisation in the respective spin or 
+interatomic data containers.
+The analysis specific API methods now send the sim_index value into 
+minimise_bc_data(), as well as
+the pipe_control.rdc.q_factors() and pipe_control.pcs.q_factors() functions.
+
+
+Modified:
+    trunk/specific_analyses/n_state_model/api.py
+    trunk/specific_analyses/n_state_model/optimisation.py
+
+Modified: trunk/specific_analyses/n_state_model/api.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/n_state_model/api.py?rev=27857&amp;r1=27856&amp;r2=27857&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/n_state_model/api.py?rev=27857&amp;r1=27856&amp;r2=27857&amp;view=diff</a>
+==============================================================================
+--- trunk/specific_analyses/n_state_model/api.py        (original)
++++ trunk/specific_analyses/n_state_model/api.py        Wed Jun 24 14:39:42 
+2015
+@@ -1,6 +1,6 @@
+ 
+###############################################################################
+ #                                                                            
+ #
+-# Copyright (C) 2007-2014 Edward d'Auvergne                                  
+ #
++# Copyright (C) 2007-2015 Edward d'Auvergne                                  
+ #
+ #                                                                            
+ #
+ # This file is part of the program relax (<a  rel="nofollow" href="http://www.nmr-relax.com">http://www.nmr-relax.com</a>).         
+ #
+ #                                                                            
+ #
+@@ -163,15 +163,15 @@
+             cdp.chi2 = chi2
+ 
+             # Store the back-calculated data.
+-            minimise_bc_data(model)
++            minimise_bc_data(model, sim_index=sim_index)
+ 
+             # Calculate the RDC Q factors.
+             if 'rdc' in data_types:
+-                rdc.q_factors()
++                rdc.q_factors(sim_index=sim_index, verbosity=verbosity)
+ 
+             # Calculate the PCS Q factors.
+             if 'pcs' in data_types:
+-                pcs.q_factors()
++                pcs.q_factors(sim_index=sim_index, verbosity=verbosity)
+ 
+         # NOE potential.
+         if hasattr(cdp, 'noe_restraints'):
+@@ -579,17 +579,17 @@
+             cdp.warning = warning
+ 
+         # Statistical analysis.
+-        if sim_index == None and ('rdc' in data_types or 'pcs' in 
+data_types):
++        if 'rdc' in data_types or 'pcs' in data_types:
+             # Get the final back calculated data (for the Q factor and
+-            minimise_bc_data(model)
++            minimise_bc_data(model, sim_index=sim_index)
+ 
+             # Calculate the RDC Q factors.
+             if 'rdc' in data_types:
+-                rdc.q_factors()
++                rdc.q_factors(sim_index=sim_index, verbosity=verbosity)
+ 
+             # Calculate the PCS Q factors.
+             if 'pcs' in data_types:
+-                pcs.q_factors()
++                pcs.q_factors(sim_index=sim_index, verbosity=verbosity)
+ 
+ 
+     def model_statistics(self, model_info=None, spin_id=None, 
+global_stats=None):
+
+Modified: trunk/specific_analyses/n_state_model/optimisation.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/n_state_model/optimisation.py?rev=27857&amp;r1=27856&amp;r2=27857&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/n_state_model/optimisation.py?rev=27857&amp;r1=27856&amp;r2=27857&amp;view=diff</a>
+==============================================================================
+--- trunk/specific_analyses/n_state_model/optimisation.py       (original)
++++ trunk/specific_analyses/n_state_model/optimisation.py       Wed Jun 24 
+14:39:42 2015
+@@ -1,6 +1,6 @@
+ 
+###############################################################################
+ #                                                                            
+ #
+-# Copyright (C) 2007-2014 Edward d'Auvergne                                  
+ #
++# Copyright (C) 2007-2015 Edward d'Auvergne                                  
+ #
+ #                                                                            
+ #
+ # This file is part of the program relax (<a  rel="nofollow" href="http://www.nmr-relax.com">http://www.nmr-relax.com</a>).         
+ #
+ #                                                                            
+ #
+@@ -40,16 +40,21 @@
+ from target_functions.n_state_model import N_state_opt
+ 
+ 
+-def minimise_bc_data(model):
++def minimise_bc_data(model, sim_index=None):
+     &quot;&quot;&quot;Extract and unpack the back calculated data.
+ 
+-    @param model:   The instantiated class containing the target function.
+-    @type model:    class instance
++    @param model:       The instantiated class containing the target 
+function.
++    @type model:        class instance
++    @keyword sim_index: The optional Monte Carlo simulation index.
++    @type sim_index:    None or int
+     &quot;&quot;&quot;
+ 
+     # No alignment tensors, so nothing to do.
+     if not hasattr(cdp, 'align_tensors'):
+         return
++
++    # Simulation flag.
++    sim_flag = (sim_index != None)
+ 
+     # Loop over each alignment.
+     align_index = 0
+@@ -79,11 +84,20 @@
+             # Spins with PCS data.
+             if pcs_flag and hasattr(spin, 'pcs'):
+                 # Initialise the data structure if necessary.
+-                if not hasattr(spin, 'pcs_bc'):
+-                    spin.pcs_bc = {}
++                if sim_flag:
++                    if not hasattr(spin, 'pcs_sim_bc'):
++                        spin.pcs_sim_bc = {}
++                    if align_id not in spin.pcs_sim_bc:
++                        spin.pcs_sim_bc[align_id] = [None] * cdp.sim_number
++                else:
++                    if not hasattr(spin, 'pcs_bc'):
++                        spin.pcs_bc = {}
+ 
+                 # Add the back calculated PCS (in ppm).
+-                spin.pcs_bc[align_id] = model.deltaij_theta[align_index, 
+pcs_index] * 1e6
++                if sim_flag:
++                    spin.pcs_sim_bc[align_id][sim_index] = 
+model.deltaij_theta[align_index, pcs_index] * 1e6
++                else:
++                    spin.pcs_bc[align_id] = model.deltaij_theta[align_index, 
+pcs_index] * 1e6
+ 
+                 # Increment the data index if the spin container has data.
+                 pcs_index = pcs_index + 1
+@@ -102,11 +116,20 @@
+             # Containers with RDC data.
+             if rdc_flag and hasattr(interatom, 'rdc'):
+                 # Initialise the data structure if necessary.
+-                if not hasattr(interatom, 'rdc_bc'):
+-                    interatom.rdc_bc = {}
++                if sim_flag:
++                    if not hasattr(interatom, 'rdc_sim_bc'):
++                        interatom.rdc_sim_bc = {}
++                    if align_id not in interatom.rdc_sim_bc:
++                        interatom.rdc_sim_bc[align_id] = [0.0] * 
+cdp.sim_number
++                else:
++                    if not hasattr(interatom, 'rdc_bc'):
++                        interatom.rdc_bc = {}
+ 
+                 # Append the back calculated PCS.
+-                interatom.rdc_bc[align_id] = model.rdc_theta[align_index, 
+rdc_index]
++                if sim_flag:
++                    interatom.rdc_sim_bc[align_id][sim_index] = 
+model.rdc_theta[align_index, rdc_index]
++                else:
++                    interatom.rdc_bc[align_id] = 
+model.rdc_theta[align_index, rdc_index]
+ 
+                 # Increment the data index if the interatom container has 
+data.
+                 rdc_index = rdc_index + 1
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Jun 24 15:00:08 2015</div>  
+</body>
+</html>

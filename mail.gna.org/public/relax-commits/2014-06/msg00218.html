@@ -1,0 +1,216 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r23831 &#45; /branches/disp_spin_speed/lib/dispersion/cr72.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 11 Jun 2014 13:12:22 +0200 -->
+<!--X-Message-Id: E1WugS6&#45;00039y&#45;5N@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r23831 - /branches/disp_spin_speed/lib/dispersion/cr72.py -- June 11, 2014 - 13:12</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r23831 - /branches/disp_spin_speed/lib/dispersion/cr72.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00218" class="tabs">Index by Date</a> | <a href="threads.html#00218" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00217.html">Date Prev</a>] [<a href="msg00219.html">Date Next</a>] [<a href="msg00217.html">Thread Prev</a>] [<a href="msg00219.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 11 Jun 2014 11:12:22 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00218.html">E1WugS6-00039y-5N@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on June 11, 2014 - 13:12:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Wed Jun 11 13:12:21 2014
+New Revision: 23831
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=23831&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=23831&amp;view=rev</a>
+Log:
+Made the lib/cr72.py to a numpy multi dimensional numpy array calculation.
+
+Task #7807 (<a  rel="nofollow" href="https://gna.org/task/index.php?7807">https://gna.org/task/index.php?7807</a>): Speed-up of dispersion 
+models for Clustered analysis.
+
+Modified:
+    branches/disp_spin_speed/lib/dispersion/cr72.py
+
+Modified: branches/disp_spin_speed/lib/dispersion/cr72.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/disp_spin_speed/lib/dispersion/cr72.py?rev=23831&amp;r1=23830&amp;r2=23831&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/disp_spin_speed/lib/dispersion/cr72.py?rev=23831&amp;r1=23830&amp;r2=23831&amp;view=diff</a>
+==============================================================================
+--- branches/disp_spin_speed/lib/dispersion/cr72.py     (original)
++++ branches/disp_spin_speed/lib/dispersion/cr72.py     Wed Jun 11 13:12:21 
+2014
+@@ -105,19 +105,19 @@
+ 
+ 
+     @keyword r20a:          The R20 parameter value of state A (R2 with no 
+exchange).
+-    @type r20a:             float
++    @type r20a:             numpy float array of rank [NE][NS][[NM][NO][ND]
+     @keyword r20b:          The R20 parameter value of state B (R2 with no 
+exchange).
+-    @type r20b:             float
++    @type r20b:             numpy float array of rank [NE][NS][[NM][NO][ND]
+     @keyword pA:            The population of state A.
+     @type pA:               float
+     @keyword dw:            The chemical exchange difference between states 
+A and B in rad/s.
+-    @type dw:               float
++    @type dw:               numpy array of rank [NE][NS][[NM][NO][ND]
+     @keyword kex:           The kex parameter value (the exchange rate in 
+rad/s).
+     @type kex:              float
+     @keyword cpmg_frqs:     The CPMG nu1 frequencies.
+-    @type cpmg_frqs:        numpy rank-1 float array
++    @type cpmg_frqs:        numpy float array of rank [NE][NS][[NM][NO][ND]
+     @keyword back_calc:     The array for holding the back calculated R2eff 
+values.  Each element corresponds to one of the CPMG nu1 frequencies.
+-    @type back_calc:        numpy rank-1 float array
++    @type back_calc:        numpy float array of rank [NE][NS][[NM][NO][ND]
+     @keyword num_points:    The number of points on the dispersion curve, 
+equal to the length of the cpmg_frqs and back_calc arguments.
+     @type num_points:       int
+     &quot;&quot;&quot;
+@@ -125,34 +125,16 @@
+     # Flag to tell if values should be replaced if max_etapos in cosh 
+function is violated.
+     t_max_etapos = False
+ 
+-    # Determine if calculating in numpy rank-1 float array, of higher 
+dimensions.
+-    rank_1 = True
+-    if isinstance(num_points, ndarray):
+-        rank_1 = False
+-
+     # Catch parameter values that will result in no exchange, returning flat 
+R2eff = R20 lines (when kex = 0.0, k_AB = 0.0).
+-    # For rank-1 float array.
+-    if rank_1:
+-        if dw == 0.0 or pA == 1.0 or kex == 0.0:
+-            back_calc[:] = array([r20a]*num_points)
+-            return
+-
+-    # For higher dimensions, return same structure.
+-    else:
+-       # Test if kex is zero.       
+-        if kex == 1.0:
++    # Test if pA or kex is zero.
++    if kex == 1.0 or pA == 1:
+             back_calc[:] = r20a
+             return
+ 
+-        # Test if pA is 1.
+-        if pA == 1.0:
+-            back_calc[:] = r20a
+-            return      
+-
+-        # Test if dw is zero.
+-        if allclose(dw, zeros(dw.shape)):
+-            back_calc[:] = r20a
+-            return
++    # Test if dw is zero.
++    if allclose(dw, zeros(dw.shape)):
++        back_calc[:] = r20a
++        return
+ 
+     # The B population.
+     pB = 1.0 - pA
+@@ -187,28 +169,20 @@
+     # Catch math domain error of cosh(val &gt; 710).
+     # This is when etapos &gt; 710.
+     if max(etapos) &gt; 700:
+-        if rank_1:
+-            back_calc[:] = array([r20a]*num_points)
+-            return
+         # For higher dimensions, find the mask to replace values.
+         # Reset to 1.0 and wait for replacement to later.
+-        else:
+-            # Set the flag to tell to replace values.
+-            t_max_etapos = True
+-            # Find the mask, where to replace values.            
+-            mask_max_etapos = masked_greater_equal(etapos, 700.0)
+-            # To prevent math errors, set etapos to 1.
+-            etapos[mask_max_etapos.mask] = 1.0
++        # Set the flag to tell to replace values.
++        t_max_etapos = True
++        # Find the mask, where to replace values.
++        mask_max_etapos = masked_greater_equal(etapos, 700.0)
++        # To prevent math errors, set etapos to 1.
++        etapos[mask_max_etapos.mask] = 1.0
+ 
+     # The arccosh argument - catch invalid values.
+     fact = Dpos * cosh(etapos) - Dneg * cos(etaneg)
+     if min(fact) &lt; 1.0:
+-        if rank_1:
+-            back_calc[:] = array([r20_kex]*num_points)
+-            return
+-        else:
+-            back_calc[:] = r20_kex
+-            return
++        back_calc[:] = r20_kex
++        return
+ 
+     # Calculate R2eff.
+     R2eff = r20_kex - cpmg_frqs * arccosh( fact )
+@@ -224,4 +198,4 @@
+         mask = isnan(R2eff)
+         R2eff[mask] = 1e100
+ 
+-    back_calc[:] = R2eff
++    back_calc[:] = R2eff
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Jun 11 14:20:02 2014</div>  
+</body>
+</html>

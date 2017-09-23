@@ -1,0 +1,207 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: Re: CST branch -->
+<!--X-From-R13: "Sqjneq q'Ohiretar" <rqjneqNaze&#45;erynk.pbz> -->
+<!--X-Date: Thu, 25 Mar 2010 18:03:17 +0100 -->
+<!--X-Message-Id: 7f080ed11003251002s1f450015qc768bd4e7a4d3c71@mail.gmail.com -->
+<!--X-Content-Type: text/plain -->
+<!--X-Reference: 6052a51003242356k573e4802y53337a37219230ef@mail.gmail.com -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>Re: CST branch -- March 25, 2010 - 18:03</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />Re: CST branch</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00057" class="tabs">Index by Date</a> | <a href="threads.html#00057" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00056.html">Date Prev</a>] [<a href="msg00058.html">Date Next</a>] [<a href="msg00056.html">Thread Prev</a>] [Thread Next]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: Pavel Kaderavek &lt;pavel.kaderavek@xxxxxxxxx&gt;</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 25 Mar 2010 18:02:31 +0100</li>
+<li class="menuitem">
+<em>Cc</em>: relax-devel@xxxxxxx</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00057.html">7f080ed11003251002s1f450015qc768bd4e7a4d3c71@mail.gmail.com</a>&gt;</li>
+<li class="menuitem">
+<em>References</em>: &lt;6052a51003242356k573e4802y53337a37219230ef@xxxxxxxxxxxxxx&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>Edward d'Auvergne</strong> on March 25, 2010 - 18:03:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Hi,
+
+Please see below for my responses.
+
+
+On 25 March 2010 07:56, Pavel Kaderavek &lt;pavel.kaderavek@xxxxxxxxx&gt; wrote:
+</pre><blockquote class="blockquote"><pre style="margin: 0em;">Hi,
+I looked for the possible simplification of the code construction of the in
+the CST branch. Because you emphasize several times, that everything must be
+discussed I would first suggest a general idea of the changes and then I
+would start to make them step by step.
+</pre></blockquote><pre style="margin: 0em;">
+
+This is just so that we start with a good code design and not have to
+rewrite a large amount of work.  The problem is that the design might
+be good by itself, but in the context of the rest of relax and what
+people use relax for, it might actually be jumping on peoples toes.
+
+
+</pre><blockquote class="blockquote"><pre style="margin: 0em;">Just to recall, Edward didn't like the fact, that I kept the code which was
+already written and just add the functions dealing with asymmetric CST and
+other features . That means that many similar mathematical functions were
+abundantly repeated within the code.
+</pre></blockquote><pre style="margin: 0em;">
+
+This was just very bad coding style.  If I would like to perform a
+complex operation 100 times, I don't copy the code 100 times, I create
+a loop over the 100 elements and call that one piece of code 100
+times.
+
+
+</pre><blockquote class="blockquote"><pre style="margin: 0em;">Lets start with the first step in the calculation procedure:
+direction_cosine.py file
+the &quot;standard&quot; version operates just with one dipole-dipole interaction to
+attached proton and axially symmetric CST collinear with the XH bond . Our
+idea was to add the possibility to calculate also with other nuclei in
+proximity. Hence there would be necessary to change the scalar variable
+defined by functions within the direction_cosine.py to vectors of the
+dimensionality equal to all nuclei which dipole-dipole interaction should be
+taken into the account. Additionally +2 if the asymmetric CS tensor should
+be considered. Following the philosophy of this file the analogy of
+xh_unit_vector for two eigenvectors of CST tensor should be calculated
+outside this file.
+Any comment? Do you agree?
+</pre></blockquote><pre style="margin: 0em;">
+
+A direction cosine is a direction cosine, independent of which
+interaction we are looking at.  Therefore direction_cosine.py should
+be called multiple times for each of these interactions - well
+whenever the interaction vector is different.  Hence the file should
+not change (much).  Let's look at the calc_spheroid_di() function.
+There are 2 containers passed into here, one general one for data, the
+other containing the diffusion tensor.  To use this for vector X from
+interaction Y, you just need to pass the diffusion tensor structure in
+and the data container.  There are 3 places in mf.py where this
+function is called, all in the func_*() methods at the lines:
+
+self.diff_data.calc_di(data, self.diff_data)
+
+I would suggest in this case that we change the functions in
+direction_cosine.py to accept any unit vector.  So in all places in
+the file where 'data.xh_unit_vector' appears, this can be changed to
+'data.unit_vector'.  Then to access this many times, you have in the
+equivalent place in func_*() in mf.py the following lines:
+
+for i in range(len(data)):
+    self.diff_data.calc_di(data[i], self.diff_data)
+
+The key here is that there are multiple containers of data for each
+interaction.  You can think of it like:
+
+self.diff_data.calc_di(data[0], self.diff_data)    # The normal XH
+dipole interaction.
+self.diff_data.calc_di(data[1], self.diff_data)    # Additional
+dipole, i.e. dipY.
+self.diff_data.calc_di(data[2], self.diff_data)    # CSA part 1 (csa1).
+self.diff_data.calc_di(data[3], self.diff_data)    # CSA part 2 (csa2).
+
+If the self.data container in mf.py is properly designed, then that
+will be the only file that needs changing in the entire 'maths_fns/'
+directory.  We can then loop over any physical interactions (even ones
+you don't currently use) inside the func_*() methods, and that's it.
+For a different physical interactions, the equations for direction
+cosines inside the diffusion frame, diffusion tensor correlation
+times, the model-free spectral density functions, Abragam's relaxation
+equations, and the chi-squared function do not change.  So the code
+implementing these functions has no reason to change.  The changes in
+your original code
+(<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/cst_1.2.10/">http://svn.gna.org/viewcvs/relax/branches/cst_1.2.10/</a>) to all files
+excluding mf.py was just changing variable names for these different
+interactions.  The operation of the code is identical in each case.
+Because the code operation does not change (and neither do the
+physical equationsl), then code duplication N times to perform these
+identical operations N times is not acceptable.  The solution is to
+create a loop over the N elements and call the math_fns modules once.
+
+Regards,
+
+Edward
+
+
+
+
+
+</pre><blockquote class="blockquote"><pre style="margin: 0em;">Pavel
+
+
+
+_______________________________________________
+relax (<a  rel="nofollow" href="http://nmr-relax.com">http://nmr-relax.com</a>)
+
+This is the relax-devel mailing list
+relax-devel@xxxxxxx
+
+To unsubscribe from this list, get a password
+reminder, or change your subscription options,
+visit the list information page at
+<a  rel="nofollow" href="https://mail.gna.org/listinfo/relax-devel">https://mail.gna.org/listinfo/relax-devel</a>
+
+
+</pre></blockquote><pre style="margin: 0em;">
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<ul><li><strong>References</strong>:
+<ul>
+<li><strong><a name="00056" href="msg00056.html">CST branch</a></strong>
+<ul><li><em>From:</em> Pavel Kaderavek</li></ul></li>
+</ul></li></ul>
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Mar 26 02:20:17 2010</div>  
+</body>
+</html>

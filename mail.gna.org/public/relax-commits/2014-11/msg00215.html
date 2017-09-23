@@ -1,0 +1,307 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r26611 &#45; in /trunk: pipe_control/align_tensor.py user_functions/align_tensor.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 18 Nov 2014 11:54:23 +0100 -->
+<!--X-Message-Id: E1XqgQQ&#45;0001FX&#45;Qy@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r26611 - in /trunk: pipe_control/align_tensor.py user_functions/align_tensor.py -- November 18, 2014 - 11:54</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r26611 - in /trunk: pipe_control/align_tensor.py user_functions/align_tensor.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00215" class="tabs">Index by Date</a> | <a href="threads.html#00215" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00214.html">Date Prev</a>] [<a href="msg00216.html">Date Next</a>] [<a href="msg00214.html">Thread Prev</a>] [<a href="msg00216.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 18 Nov 2014 10:54:22 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00215.html">E1XqgQQ-0001FX-Qy@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on November 18, 2014 - 11:54:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Nov 18 11:54:21 2014
+New Revision: 26611
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=26611&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=26611&amp;view=rev</a>
+Log:
+Implemented a new default basis set for the align_tensor.matrix_angles user 
+function.
+
+This is uses standard definition of the inter-matrix angle using the 
+Euclidean inner product of the
+two matrices divided by the product of the Frobenius norm of each matrix.  As 
+this is a linear map,
+it should produce the most correct definition of inter-tensor angles.
+
+
+Modified:
+    trunk/pipe_control/align_tensor.py
+    trunk/user_functions/align_tensor.py
+
+Modified: trunk/pipe_control/align_tensor.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/pipe_control/align_tensor.py?rev=26611&amp;r1=26610&amp;r2=26611&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/pipe_control/align_tensor.py?rev=26611&amp;r1=26610&amp;r2=26611&amp;view=diff</a>
+==============================================================================
+--- trunk/pipe_control/align_tensor.py  (original)
++++ trunk/pipe_control/align_tensor.py  Tue Nov 18 11:54:21 2014
+@@ -24,8 +24,8 @@
+ 
+ # Python module imports.
+ from copy import deepcopy
+-from math import pi, sqrt
+-from numpy import arccos, dot, float64, linalg, zeros
++from math import acos, pi, sqrt
++from numpy import arccos, dot, float64, inner, linalg, zeros
+ from numpy.linalg import norm
+ import sys
+ from warnings import warn
+@@ -907,7 +907,8 @@
+         tensor_num = tensor_num + 1
+ 
+     # Create the matrix which contains the 5D vectors.
+-    matrix = zeros((tensor_num, 5), float64)
++    matrix_3D = zeros((tensor_num, 3, 3), float64)
++    matrix_5D = zeros((tensor_num, 5), float64)
+ 
+     # Loop over the tensors.
+     i = 0
+@@ -919,24 +920,29 @@
+         # Unitary basis set.
+         if basis_set == 0:
+             # Pack the elements.
+-            matrix[i, 0] = tensor.Sxx
+-            matrix[i, 1] = tensor.Syy
+-            matrix[i, 2] = tensor.Sxy
+-            matrix[i, 3] = tensor.Sxz
+-            matrix[i, 4] = tensor.Syz
++            matrix_5D[i, 0] = tensor.Sxx
++            matrix_5D[i, 1] = tensor.Syy
++            matrix_5D[i, 2] = tensor.Sxy
++            matrix_5D[i, 3] = tensor.Sxz
++            matrix_5D[i, 4] = tensor.Syz
+ 
+         # Geometric basis set.
+         elif basis_set == 1:
+             # Pack the elements.
+-            matrix[i, 0] = tensor.Szz
+-            matrix[i, 1] = tensor.Sxxyy
+-            matrix[i, 2] = tensor.Sxy
+-            matrix[i, 3] = tensor.Sxz
+-            matrix[i, 4] = tensor.Syz
++            matrix_5D[i, 0] = tensor.Szz
++            matrix_5D[i, 1] = tensor.Sxxyy
++            matrix_5D[i, 2] = tensor.Sxy
++            matrix_5D[i, 3] = tensor.Sxz
++            matrix_5D[i, 4] = tensor.Syz
++
++        # Full matrix.
++        elif basis_set == 2:
++            matrix_3D[i] = tensor.A
+ 
+         # Normalisation.
+-        norm = linalg.norm(matrix[i])
+-        matrix[i] = matrix[i] / norm
++        if basis_set in [0, 1]:
++            norm_5D = linalg.norm(matrix_5D[i])
++            matrix_5D[i] = matrix_5D[i] / norm_5D
+ 
+         # Increment the index.
+         i = i + 1
+@@ -945,12 +951,15 @@
+     cdp.align_tensors.angles = zeros((tensor_num, tensor_num), float64)
+ 
+     # Header printout.
+-    sys.stdout.write(&quot;\nData pipe: &quot; + repr(pipes.cdp_name()) + &quot;\n&quot;)
+-    sys.stdout.write(&quot;\n5D angles in deg between the vectors &quot;)
+     if basis_set == 0:
++        sys.stdout.write(&quot;5d angles in deg between the vectors &quot;)
+         sys.stdout.write(&quot;{Sxx, Syy, Sxy, Sxz, Syz}&quot;)
+     elif basis_set == 1:
++        sys.stdout.write(&quot;5d angles in deg between the vectors &quot;)
+         sys.stdout.write(&quot;{Szz, Sxx-yy, Sxy, Sxz, Syz}&quot;)
++    elif basis_set == 2:
++        sys.stdout.write(&quot;Angles in deg between the matrices &quot;)
++        sys.stdout.write(&quot;(using the Euclidean inner product and Frobenius 
+norm)&quot;)
+     sys.stdout.write(&quot;:\n&quot;)
+ 
+     # Initialise the table of data.
+@@ -974,15 +983,35 @@
+ 
+         # Second loop over the columns.
+         for j in range(tensor_num):
+-            # Dot product.
+-            delta = dot(matrix[i], matrix[j])
+-
+-            # Check.
+-            if delta &gt; 1:
+-                delta = 1
+-
+-            # The angle (in rad).
+-            cdp.align_tensors.angles[i, j] = arccos(delta)
++            # The 5D angles.
++            if basis_set in [0, 1]:
++                # Dot product.
++                delta = dot(matrix_5D[i], matrix_5D[j])
++
++                # Check.
++                if delta &gt; 1:
++                    delta = 1
++
++                # The angle.
++                theta = arccos(delta)
++
++            # The full matrix angle.
++            elif basis_set in [2]:
++                # The Euclidean inner product.
++                nom = inner(matrix_3D[i].flatten(), matrix_3D[j].flatten())
++
++                # The Frobenius norms.
++                denom = norm(matrix_3D[i]) * norm(matrix_3D[j])
++
++                # The angle.
++                ratio = nom / denom
++                if ratio &lt;= 1.0:
++                    theta = arccos(nom / denom)
++                else:
++                    theta = 0.0
++
++            # Store the angle (in rad).
++            cdp.align_tensors.angles[i, j] = theta
+ 
+             # Add to the table as degrees.
+             table[i+1].append(&quot;%8.1f&quot; % (cdp.align_tensors.angles[i, 
+j]*180.0/pi))
+
+Modified: trunk/user_functions/align_tensor.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/user_functions/align_tensor.py?rev=26611&amp;r1=26610&amp;r2=26611&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/user_functions/align_tensor.py?rev=26611&amp;r1=26610&amp;r2=26611&amp;view=diff</a>
+==============================================================================
+--- trunk/user_functions/align_tensor.py        (original)
++++ trunk/user_functions/align_tensor.py        Tue Nov 18 11:54:21 2014
+@@ -297,18 +297,18 @@
+ 
+ # The align_tensor.matrix_angles user function.
+ uf = uf_info.add_uf('align_tensor.matrix_angles')
+-uf.title = &quot;Calculate the 5D angles between all alignment tensors.&quot;
++uf.title = &quot;Calculate the angles between all alignment tensors.&quot;
+ uf.title_short = &quot;Alignment tensor angle calculation.&quot;
+ uf.display = True
+ uf.add_keyarg(
+     name = &quot;basis_set&quot;,
+-    default = 0,
++    default = 2,
+     py_type = &quot;int&quot;,
+     desc_short = &quot;basis set&quot;,
+     desc = &quot;The basis set to operate with.&quot;,
+     wiz_element_type = &quot;combo&quot;,
+-    wiz_combo_choices = [&quot;{Sxx, Syy, Sxy, Sxz, Syz}&quot;, &quot;{Szz, Sxxyy, Sxy, 
+Sxz, Syz}&quot;],
+-    wiz_combo_data = [0, 1]
++    wiz_combo_choices = [&quot;{Sxx, Syy, Sxy, Sxz, Syz}&quot;, &quot;{Szz, Sxxyy, Sxy, 
+Sxz, Syz}&quot;, &quot;Full matrix angles using the Euclidean inner product&quot;],
++    wiz_combo_data = [0, 1, 2]
+ )
+ uf.add_keyarg(
+     name = &quot;tensors&quot;,
+@@ -322,11 +322,23 @@
+ )
+ # Description.
+ uf.desc.append(Desc_container())
+-uf.desc[-1].add_paragraph(&quot;This will calculate the angles between all loaded 
+alignment tensors for the current data pipe.  The matrices are first 
+converted to a 5D vector form and then then angles are calculated.  The 
+angles are dependent on the basis set.  If the basis set is set to the 
+default of 0, the vectors {Sxx, Syy, Sxy, Sxz, Syz} are used.  If the basis 
+set is set to 1, the vectors {Szz, Sxxyy, Sxy, Sxz, Syz} are used instead.&quot;)
++uf.desc[-1].add_paragraph(&quot;This will calculate the angles between all loaded 
+alignment tensors for the current data pipe.  Depending upon the basis set, 
+the matrices are first converted to a 5D vector form and then then angles are 
+calculated.  The angles are dependent upon the basis set:&quot;)
++uf.desc[-1].add_item_list_element(&quot;0&quot;, &quot;The basis set {Sxx, Syy, Sxy, Sxz, 
+Syz},&quot;)
++uf.desc[-1].add_item_list_element(&quot;1&quot;, &quot;The basis set {Szz, Sxxyy, Sxy, Sxz, 
+Syz} of the Pales standard notation,&quot;)
++uf.desc[-1].add_item_list_element(&quot;2&quot;, &quot;The full matrix angle via the 
+Euclidean inner product of the alignment matrices together with the Frobenius 
+norm ||A||_F.&quot;)
++uf.desc[-1].add_paragraph(&quot;The full matrix angle via the Euclidean inner 
+product is defined as:&quot;)
++uf.desc[-1].add_verbatim(&quot;&quot;&quot;
++                   /   &lt;A1 , A2&gt;   \ 
++    theta = arccos | ------------- | ,
++                   \ ||A1|| ||A2|| /
++&quot;&quot;&quot;)
++uf.desc[-1].add_paragraph(&quot;where &lt;a,b&gt; is the Euclidean inner product and 
+||a|| is the Frobenius norm of the matrix.&quot;)
++uf.desc[-1].add_paragraph(&quot;Note that the inner product solution is a linear 
+map which hence preserves angles, whereas the {Sxx, Syy, Sxy, Sxz, Syz} and 
+{Szz, Sxxyy, Sxy, Sxz, Syz} basis sets are non-linear maps which do not 
+preserve angles.  Therefore the angles from all three basis sets will be 
+different.&quot;)
+ uf.backend = align_tensor.matrix_angles
+ uf.menu_text = &quot;&amp;matrix_angles&quot;
+ uf.gui_icon = &quot;oxygen.categories.applications-education&quot;
+-uf.wizard_size = (800, 600)
++uf.wizard_height_desc = 500
++uf.wizard_size = (1000, 700)
+ uf.wizard_image = WIZARD_IMAGE_PATH + 'align_tensor.png'
+ 
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Nov 18 14:00:03 2014</div>  
+</body>
+</html>

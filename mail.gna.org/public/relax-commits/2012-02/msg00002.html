@@ -1,0 +1,168 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r15287 &#45; /branches/frame_order_testing/maths_fns/frame_order.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 01 Feb 2012 13:29:33 +0100 -->
+<!--X-Message-Id: E1RsZJd&#45;0003Xx&#45;N8@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r15287 - /branches/frame_order_testing/maths_fns/frame_order.py -- February 01, 2012 - 13:29</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r15287 - /branches/frame_order_testing/maths_fns/frame_order.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00002" class="tabs">Index by Date</a> | <a href="threads.html#00002" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00001.html">Date Prev</a>] [<a href="msg00003.html">Date Next</a>] [<a href="msg00001.html">Thread Prev</a>] [<a href="msg00003.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 01 Feb 2012 12:29:33 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00002.html">E1RsZJd-0003Xx-N8@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on February 01, 2012 - 13:29:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Feb  1 13:29:33 2012
+New Revision: 15287
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=15287&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=15287&amp;view=rev</a>
+Log:
+The frame order create_sobol_data() method has been redesigned to handle all 
+model types.
+
+
+Modified:
+    branches/frame_order_testing/maths_fns/frame_order.py
+
+Modified: branches/frame_order_testing/maths_fns/frame_order.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_testing/maths_fns/frame_order.py?rev=15287&amp;r1=15286&amp;r2=15287&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_testing/maths_fns/frame_order.py?rev=15287&amp;r1=15286&amp;r2=15287&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_testing/maths_fns/frame_order.py (original)
++++ branches/frame_order_testing/maths_fns/frame_order.py Wed Feb  1 13:29:33 
+2012
+@@ -273,7 +273,7 @@
+         # The Sobol' sequence data and target function aliases (quasi-random 
+integration).
+         if mcint:
+             if model == 'pseudo-ellipse':
+-                self.create_sobol_data(m=3, n=self.num_int_pts)
++                self.create_sobol_data(n=self.num_int_pts, dims=['theta', 
+'phi', 'sigma'])
+                 self.func = self.func_pseudo_ellipse_qrint
+             elif model == 'pseudo-ellipse, torsionless':
+                 self.func = self.func_pseudo_ellipse_torsionless_mcint
+@@ -292,7 +292,7 @@
+             elif model == 'line, free rotor':
+                 self.func = self.func_line_free_rotor_mcint
+             elif model == 'rotor':
+-                self.create_sobol_data(m=1, n=self.num_int_pts)
++                self.create_sobol_data(n=self.num_int_pts, dims=['sigma'])
+                 self.func = self.func_rotor_qrint
+             elif model == 'rigid':
+                 self.func = self.func_rigid
+@@ -1707,17 +1707,20 @@
+             self.r_pivot_atom_rev[:, j] = dot(RT_ave, self.pcs_atoms[j] - 
+pivot)
+ 
+ 
+-    def create_sobol_data(self, m=3, n=10000):
++    def create_sobol_data(self, n=10000, dims=None):
+         &quot;&quot;&quot;Create the Sobol' quasi-random data for numerical integration.
+ 
+         This uses the external sobol_lib module to create the data.  The 
+algorithm is that modified by Antonov and Saleev.
+ 
+ 
+-        @keyword m:     The number of dimensions to generate.
+-        @type m:        int
+-        @keyword n:     The number of points to generate.
+-        @type n:        int
+-        &quot;&quot;&quot;
++        @keyword n:         The number of points to generate.
++        @type n:            int
++        @keyword dims:      The list of parameters.
++        @type dims:         list of str
++        &quot;&quot;&quot;
++
++        # The number of dimensions.
++        m = len(dims)
+ 
+         # Initialise.
+         self.sobol_raw = zeros((n, m), float64)
+@@ -1728,10 +1731,14 @@
+             # The raw point.
+             self.sobol_raw[i], seed = i4_sobol(m, i)
+ 
+-            # Convert to angles.
+-            self.sobol_angles[i, 0] = 2.0 * pi * self.sobol_raw[i, 0]
+-            self.sobol_angles[i, 1] = acos(2.0*self.sobol_raw[i, 1] - 1.0)
+-            self.sobol_angles[i, 2] = 2.0 * pi * (self.sobol_raw[i, 2] - 0.5)
++            # Loop over the dimensions, converting the points to angles.
++            for j in range(m):
++                if dims[j] in ['theta']:
++                    self.sobol_angles[i, j] = 2.0 * pi * self.sobol_raw[i, j]
++                if dims[j] in ['phi']:
++                    self.sobol_angles[i, j] = acos(2.0*self.sobol_raw[i, j] 
+- 1.0)
++                if dims[j] in ['sigma']:
++                    self.sobol_angles[i, j] = 2.0 * pi * (self.sobol_raw[i, 
+j] - 0.5)
+ 
+ 
+     def reduce_and_rot(self, ave_pos_alpha=None, ave_pos_beta=None, 
+ave_pos_gamma=None, daeg=None):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Feb 02 15:20:01 2012</div>  
+</body>
+</html>

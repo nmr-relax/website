@@ -1,0 +1,179 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r6285 &#45; /1.3/specific_fns/model_free/results.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 28 May 2008 22:47:42 +0200 -->
+<!--X-Message-Id: E1K1SRY&#45;0000Vv&#45;CD@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r6285 - /1.3/specific_fns/model_free/results.py -- May 28, 2008 - 22:47</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r6285 - /1.3/specific_fns/model_free/results.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00271" class="tabs">Index by Date</a> | <a href="threads.html#00271" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00270.html">Date Prev</a>] [<a href="msg00272.html">Date Next</a>] [<a href="msg00270.html">Thread Prev</a>] [<a href="msg00272.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 28 May 2008 20:40:19 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00271.html">E1K1SRY-0000Vv-CD@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on May 28, 2008 - 22:47:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed May 28 22:40:12 2008
+New Revision: 6285
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=6285&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=6285&amp;view=rev</a>
+Log:
+Fixed the sequence generation.
+
+
+Modified:
+    1.3/specific_fns/model_free/results.py
+
+Modified: 1.3/specific_fns/model_free/results.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/specific_fns/model_free/results.py?rev=6285&amp;r1=6284&amp;r2=6285&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/specific_fns/model_free/results.py?rev=6285&amp;r1=6284&amp;r2=6285&amp;view=diff</a>
+==============================================================================
+--- 1.3/specific_fns/model_free/results.py (original)
++++ 1.3/specific_fns/model_free/results.py Wed May 28 22:40:12 2008
+@@ -26,11 +26,12 @@
+ from numpy import float64, array, transpose
+ from re import search
+ from string import replace, split
++import sys
+ 
+ # relax module imports.
+ from data import Relax_data_store; ds = Relax_data_store()
+-from generic_fns import diffusion_tensor
+-from generic_fns.mol_res_spin import spin_loop
++from generic_fns import diffusion_tensor, selection, sequence
++from generic_fns.mol_res_spin import generate_spin_id, spin_loop
+ from relax_errors import RelaxError, RelaxInvalidDataError
+ 
+ 
+@@ -809,6 +810,9 @@
+         ri_labels = None
+ 
+         # Generate the sequence.
++        if verbosity:
++            print &quot;\nGenerating the sequence.&quot;
++            sequence.write_header(sys.stdout, mol_name_flag=True, 
+res_num_flag=True, res_name_flag=True, spin_num_flag=True, 
+spin_name_flag=True)
+         for file_line in file_data:
+             # The data set.
+             data_set = file_line[col['data_set']]
+@@ -818,7 +822,7 @@
+                 break
+ 
+             # Sequence.
+-            self.__generate_sequence()
++            self.__generate_1_2_sequence(file_line, col, verbosity)
+ 
+ 
+         # Loop over the lines of the file data.
+@@ -906,18 +910,37 @@
+             ds.sim_state[self.run] = False
+ 
+ 
+-    def __generate_sequence(self):
+-        &quot;&quot;&quot;Function for generating the sequence.&quot;&quot;&quot;
++    def __generate_1_2_sequence(self, file_line, col, verbosity=1):
++        &quot;&quot;&quot;Generate the sequence.
++
++        @param file_line:   The line of data for a single spin.
++        @type file_line:    list of str
++        @param col:         The column indecies.
++        @type col:          dict of int
++        @keyword verbosity: A variable specifying the amount of information 
+to print.  The higher
++                            the value, the greater the verbosity.
++        @type verbosity:    int
++        &quot;&quot;&quot;
+ 
+         # Residue number and name.
+         try:
+-            res_num = int(self.file_line[col['num']])
++            res_num = int(file_line[col['num']])
+         except ValueError:
+-            raise RelaxError, &quot;The residue number &quot; + 
+self.file_line[col['num']] + &quot; is not an integer.&quot;
+-        res_name = self.file_line[col['name']]
++            raise RelaxError, &quot;The residue number &quot; + file_line[col['num']] 
++ &quot; is not an integer.&quot;
++        res_name = file_line[col['name']]
+ 
+         # Generate the sequence.
+-        self.relax.generic.sequence.add(self.run, res_num, res_name, 
+select=int(self.file_line[col['select']]))
++        sequence.generate(res_num=res_num, res_name=res_name)
++
++        # Get the spin identification string.
++        spin_id = generate_spin_id(res_num=res_num, res_name=res_name)
++
++        # Set the selection status.
++        select = bool(file_line[col['select']])
++        if select:
++            selection.sel_spin(spin_id)
++        else:
++            selection.desel_spin(spin_id)
+ 
+ 
+     def read_columnar_xh_vect(self):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed May 28 23:00:22 2008</div>  
+</body>
+</html>

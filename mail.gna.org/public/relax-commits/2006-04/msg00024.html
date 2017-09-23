@@ -1,0 +1,154 @@
+<!-- MHonArc v2.6.10 -->
+<!--X-Subject: r2452 &#45; in /1.2/specific_fns: hybrid.py model_free.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 07 Apr 2006 04:26:50 +0200 -->
+<!--X-Message-Id: E1FRgg0&#45;0006Lk&#45;5u@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r2452 - in /1.2/specific_fns: hybrid.py model_free.py -- April 07, 2006 - 04:26</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r2452 - in /1.2/specific_fns: hybrid.py model_free.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00024" class="tabs">Index by Date</a> | <a href="threads.html#00024" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00023.html">Date Prev</a>] [<a href="msg00025.html">Date Next</a>] [<a href="msg00023.html">Thread Prev</a>] [<a href="msg00025.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 07 Apr 2006 02:26:18 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00024.html">E1FRgg0-0006Lk-5u@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on April 07, 2006 - 04:26:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Apr  7 04:26:16 2006
+New Revision: 2452
+
+URL: <a  href="http://svn.gna.org/viewcvs/relax?rev=2452&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=2452&amp;view=rev</a>
+Log:
+The run type 'hybrid' model-statistic returning function now handles numerous 
+instances.
+
+
+Modified:
+    1.2/specific_fns/hybrid.py
+    1.2/specific_fns/model_free.py
+
+Modified: 1.2/specific_fns/hybrid.py
+URL: 
+<a  href="http://svn.gna.org/viewcvs/relax/1.2/specific_fns/hybrid.py?rev=2452&amp;r1=2451&amp;r2=2452&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.2/specific_fns/hybrid.py?rev=2452&amp;r1=2451&amp;r2=2452&amp;view=diff</a>
+==============================================================================
+--- 1.2/specific_fns/hybrid.py (original)
++++ 1.2/specific_fns/hybrid.py Fri Apr  7 04:26:16 2006
+@@ -110,16 +110,26 @@
+             # Function type.
+             function_type = 
+self.relax.data.run_types[self.relax.data.run_names.index(run)]
+ 
+-            # Specific model statistics functions.
++            # Specific model statistics and number of instances functions.
+             model_statistics = 
+self.relax.specific_setup.setup('model_stats', function_type)
++            num_instances = self.relax.specific_setup.setup('num_instances', 
+function_type)
+ 
+-            # Get the statistics.
+-            k, n, chi2 = model_statistics(run, instance=0, min_instances=1)
++            # Number of instances.
++            num = num_instances(run)
+ 
+-            # Sum the stats.
+-            k_total = k_total + k
+-            n_total = n_total + n
+-            chi2_total = chi2_total + chi2
++            # Loop over the instances.
++            for i in xrange(num):
++                # Get the statistics.
++                k, n, chi2 = model_statistics(run, instance=i, 
+num_instances=num)
++
++                # Bad stats.
++                if k == None or n == None or chi2 == None:
++                    continue
++
++                # Sum the stats.
++                k_total = k_total + k
++                n_total = n_total + n
++                chi2_total = chi2_total + chi2
+ 
+         # Return the totals.
+         return k_total, n_total, chi2_total
+
+Modified: 1.2/specific_fns/model_free.py
+URL: 
+<a  href="http://svn.gna.org/viewcvs/relax/1.2/specific_fns/model_free.py?rev=2452&amp;r1=2451&amp;r2=2452&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.2/specific_fns/model_free.py?rev=2452&amp;r1=2451&amp;r2=2452&amp;view=diff</a>
+==============================================================================
+--- 1.2/specific_fns/model_free.py (original)
++++ 1.2/specific_fns/model_free.py Fri Apr  7 04:26:16 2006
+@@ -2513,6 +2513,10 @@
+         # Sequence specific data.
+         # Statistics for a single residue.
+         if not global_stats and not combine:
++            # Skip unselected residues.
++            if not self.relax.data.res[self.run][instance].select:
++                return None, None, None
++
+             # Missing data sets.
+             if not hasattr(self.relax.data.res[self.run][instance], 
+'relax_data'):
+                 return None, None, None
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Apr 07 06:20:05 2006</div>  
+</body>
+</html>

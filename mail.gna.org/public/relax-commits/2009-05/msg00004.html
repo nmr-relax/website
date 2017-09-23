@@ -1,0 +1,355 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r9040 &#45; /1.3/generic_fns/xplor.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 06 May 2009 17:03:01 +0200 -->
+<!--X-Message-Id: E1M1ieC&#45;0004Wd&#45;Vt@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r9040 - /1.3/generic_fns/xplor.py -- May 06, 2009 - 17:03</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r9040 - /1.3/generic_fns/xplor.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00004" class="tabs">Index by Date</a> | <a href="threads.html#00004" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00003.html">Date Prev</a>] [<a href="msg00005.html">Date Next</a>] [<a href="msg00003.html">Thread Prev</a>] [<a href="msg00005.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 06 May 2009 15:03:00 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00004.html">E1M1ieC-0004Wd-Vt@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on May 06, 2009 - 17:03:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed May  6 17:03:00 2009
+New Revision: 9040
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=9040&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=9040&amp;view=rev</a>
+Log:
+Rewrote how the Xplor NOE restraints are read.
+
+Two new functions, first_parse() and second_parse() have been written to 
+first extract all assign
+statements and then handle pseudoatoms.
+
+
+Modified:
+    1.3/generic_fns/xplor.py
+
+Modified: 1.3/generic_fns/xplor.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/generic_fns/xplor.py?rev=9040&amp;r1=9039&amp;r2=9040&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/generic_fns/xplor.py?rev=9040&amp;r1=9039&amp;r2=9040&amp;view=diff</a>
+==============================================================================
+--- 1.3/generic_fns/xplor.py (original)
++++ 1.3/generic_fns/xplor.py Wed May  6 17:03:00 2009
+@@ -74,59 +74,84 @@
+ 
+     @param lines:   The Xplor formatted file, or file fragment, split into 
+lines.
+     @type lines:    list of str
+-    @return:        The NOE restraint list in the format of two atom 
+identification strings and the
+-                    lower and upper restraints.
+-    @rtype:         list of lists of [str, str, float, float]
++    @return:        The NOE restraint list in the format of two atom 
+identification strings (or list
++                    of str for pseudoatoms) and the lower and upper 
+restraints.
++    @rtype:         list of lists of str, str, float, float
+     &quot;&quot;&quot;
+ 
+     # Strip all comments from the data.
+     lines = strip_comments(lines)
+ 
++    # Init.
++    data = []
++
++    # First level pass (assign statements).
++    for id1, id2, noe, lower, upper in first_parse(lines):
++        # Second parse (pseudoatoms).
++        id1 = second_parse(id1)
++        id2 = second_parse(id2)
++
++        # Convert to relax spin IDs.
++        if type(id1) == list:
++            relax_id1 = []
++            for i in range(len(id1)):
++                relax_id1.append(__convert_to_id(id1[i]))
++        else:
++            relax_id1 = __convert_to_id(id1)
++
++        if type(id2) == list:
++            relax_id2 = []
++            for i in range(len(id2)):
++                relax_id2.append(__convert_to_id(id2[i]))
++        else:
++            relax_id2 = __convert_to_id(id2)
++
++        # Convert to upper and lower bounds.
++        lower_bound = noe - lower
++        upper_bound = noe + upper
++
++        # Add the data to the list.
++        data.append([relax_id1, relax_id2, lower_bound, upper_bound])
++
++    # Return the data.
++    return data
++
++
++def first_parse(lines):
++    &quot;&quot;&quot;Generator function to parse and extract the 2 atom IDs and NOE info 
+from the lines.
++
++    The first parse loops over and returns the data from assign statements, 
+returning pseudo atoms
++    as single strings.  The second parse splits the pseudoatoms.
++
++    @param lines:   The Xplor formatted file, or file fragment, split into 
+lines.
++    @type lines:    list of str
++    @return:        The 2 atom IDs, and NOE info (NOE, upper, and lower 
+bounds).
++    @rtype:         str, str, float, float, float
++    &quot;&quot;&quot;
++
+     # Extract the data.
+-    data = []
+     line_index = 0
+     while 1:
+         # Break out!
+         if line_index &gt;= len(lines):
+             break
+ 
+-        # Find the starting assign.
++        # Find the assign statements.
+         if search('^assign', lines[line_index]):
+-            # Add a new data line.
+-            data.append([None, None, None, None])
+-
+             # Init.
+             char_index = -1
+ 
+-            # Extract the first atom string.
+-            atom = ''
+-            inside = False
++            # Extract the atom ID strings.
++            id = ['', '']
++            id_index = 0
++            inside = 0
+             while 1:
+                 # Inc the character index.
+                 char_index = char_index + 1
+ 
+-                # Start.
+-                if not inside:
+-                    if lines[line_index][char_index] == '(':
+-                        inside = True
+-                    continue
+-
+-                # End.
+-                if inside and lines[line_index][char_index] == ')':
++                # Break out!
++                if line_index &gt;= len(lines):
+                     break
+-
+-                # Append the character.
+-                atom = atom + lines[line_index][char_index]
+-
+-            # Convert the atom data to a relax atom id.
+-            data[-1][0] = __convert_to_id(atom)
+-
+-            # Extract the second atom string.
+-            atom = ''
+-            inside = False
+-            while 1:
+-                # Inc the character index.
+-                char_index = char_index + 1
+ 
+                 # Check if we need to go to the next line.
+                 if char_index &gt;= len(lines[line_index]):
+@@ -134,21 +159,36 @@
+                     char_index = -1
+                     continue
+ 
+-                # Start.
++                # A starting bracket, so increment the inside counter.
++                if lines[line_index][char_index] == '(':
++                    inside = inside + 1
++
++                    # Don't include the first bracket in the ID string.
++                    if inside == 1:
++                        continue
++
++                # Not inside, so jump to the next character.
+                 if not inside:
+-                    if lines[line_index][char_index] == '(':
+-                        inside = True
+                     continue
+ 
+-                # End.
+-                if inside and lines[line_index][char_index] == ')':
+-                    break
++                # An ending bracket.
++                elif lines[line_index][char_index] == ')':
++                    inside = inside - 1
++
++                # A logical test (debugging).
++                if inside &lt; 0:
++                    raise RelaxError, &quot;Improperly formatted Xplor file, 
+unmatched ')'.&quot;
+ 
+                 # Append the character.
+-                atom = atom + lines[line_index][char_index]
+-
+-            # Convert the atom data to a relax atom id.
+-            data[-1][1] = __convert_to_id(atom)
++                if inside:
++                    id[id_index] = id[id_index] + 
+lines[line_index][char_index]
++
++                # Go to the second id_index, or break.
++                if inside == 0:
++                    if id_index == 1:
++                        break
++                    else:
++                        id_index = 1
+ 
+             # The rest of the data (NOE restraint info).
+             info = split(lines[line_index][char_index+1:])
+@@ -158,15 +198,73 @@
+             lower = float(info[1])
+             upper = float(info[2])
+ 
+-            # Convert to upper and lower bounds.
+-            data[-1][2] = noe - lower
+-            data[-1][3] = noe + upper
+-
+         # Line index.
+         line_index = line_index + 1
+ 
++        # Return the data.
++        yield id[0], id[1], noe, lower, upper
++
++
++def second_parse(id):
++    &quot;&quot;&quot;Split up pseudoatoms.
++
++    @param id:  The Xplor atom id without outer brackets, i.e. a single atom 
+or a list of atoms in
++                the case of pseudoatoms.
++    @type id:   str
++    @return:    For normal atoms, the id string is returned unmodified.  For 
+pseudoatoms, a list of
++                strings, with brackets removed, is returned.
++    @rtype:     str or list of str
++    &quot;&quot;&quot;
++
++    # Loop over the characters.
++    atoms = ['']
++    index = -1
++    inside = False
++    while 1:
++        # Inc the character index.
++        index = index + 1
++
++        # Break out.
++        if index &gt;= len(id):
++            break
++
++        # A starting bracket, so flip the inside flag.
++        if id[index] == '(':
++            # 2 brackets?!?
++            if inside:
++                raise RelaxError, &quot;The Xplor pseudoatom ID string '%s' is 
+invalid.&quot; % id
++
++            # The flag.
++            inside = True
++
++            # Don't include the first bracket in the ID string.
++            continue
++
++        # Not inside, so jump to the next character.
++        if not inside:
++            continue
++
++        # An ending bracket.
++        if id[index] == ')':
++            inside = False
++
++        # Append the character.
++        if inside:
++            atoms[-1] = atoms[-1] + id[index]
++
++        # Add another atom.
++        if not inside:
++            atoms.append('')
++
++    # Remove the last empty atom string.
++    if atoms[0] and atoms[-1] == '':
++        atoms = atoms[:-1]
++
+     # Return the data.
+-    return data
++    if not atoms[0]:
++        return id
++    else:
++        return atoms
+ 
+ 
+ def strip_comments(lines):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Sat May 09 18:20:02 2009</div>  
+</body>
+</html>

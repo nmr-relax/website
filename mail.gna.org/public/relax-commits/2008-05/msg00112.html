@@ -1,0 +1,275 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r6127 &#45; /1.3/generic_fns/selection.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 07 May 2008 16:46:54 +0200 -->
+<!--X-Message-Id: E1Jtkv0&#45;0000cl&#45;Gj@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r6127 - /1.3/generic_fns/selection.py -- May 07, 2008 - 16:46</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r6127 - /1.3/generic_fns/selection.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00112" class="tabs">Index by Date</a> | <a href="threads.html#00112" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00110.html">Date Prev</a>] [<a href="msg00113.html">Date Next</a>] [<a href="msg00110.html">Thread Prev</a>] [<a href="msg00113.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 07 May 2008 14:46:54 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00112.html">E1Jtkv0-0000cl-Gj@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on May 07, 2008 - 16:46:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed May  7 16:46:52 2008
+New Revision: 6127
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=6127&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=6127&amp;view=rev</a>
+Log:
+Updated the desel_read() function to the new relax design.
+
+
+Modified:
+    1.3/generic_fns/selection.py
+
+Modified: 1.3/generic_fns/selection.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/generic_fns/selection.py?rev=6127&amp;r1=6126&amp;r2=6127&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/generic_fns/selection.py?rev=6127&amp;r1=6126&amp;r2=6127&amp;view=diff</a>
+==============================================================================
+--- 1.3/generic_fns/selection.py (original)
++++ 1.3/generic_fns/selection.py Wed May  7 16:46:52 2008
+@@ -22,8 +22,9 @@
+ 
+ # relax module imports.
+ from data import Data as relax_data_store
+-from generic_fns.mol_res_spin import spin_loop
+-from relax_errors import RelaxError, RelaxNoPipeError, RelaxNoSequenceError
++from generic_fns.mol_res_spin import exists_mol_res_spin_data, 
+generate_spin_id_data_array, return_spin, spin_loop
++from relax_errors import RelaxError, RelaxNoPipeError, RelaxNoSequenceError, 
+RelaxNoSpinError
++from relax_io import extract_data, strip
+ 
+ 
+ def desel_all():
+@@ -42,17 +43,52 @@
+         spin.select = 0
+ 
+ 
+-def desel_read(self, run=None, file=None, dir=None, change_all=None, 
+column=None):
+-    &quot;&quot;&quot;Function for deselecting the residues contained in a file.&quot;&quot;&quot;
++def desel_read(file=None, dir=None, mol_name_col=None, res_num_col=None, 
+res_name_col=None, spin_num_col=None, spin_name_col=None, sep=None, 
+change_all=False):
++    &quot;&quot;&quot;Deselect the spins contained in a file.
++
++    @keyword file:          The name of the file to open.
++    @type file:             str
++    @keyword dir:           The directory containing the file (defaults to 
+the current directory if
++                            None).
++    @type dir:              str or None
++    @keyword file_data:     An alternative opening a file, if the data 
+already exists in the correct
++                            format.  The format is a list of lists where the 
+first index corresponds
++                            to the row and the second the column.
++    @type file_data:        list of lists
++    @keyword mol_name_col:  The column containing the molecule name 
+information.
++    @type mol_name_col:     int or None
++    @keyword res_name_col:  The column containing the residue name 
+information.
++    @type res_name_col:     int or None
++    @keyword res_num_col:   The column containing the residue number 
+information.
++    @type res_num_col:      int or None
++    @keyword spin_name_col: The column containing the spin name information.
++    @type spin_name_col:    int or None
++    @keyword spin_num_col:  The column containing the spin number 
+information.
++    @type spin_num_col:     int or None
++    @keyword sep:           The column separator which, if None, defaults to 
+whitespace.
++    @type sep:              str or None
++    @keyword change_all:    A flag which if True will cause all spins not 
+specified in the file to
++                            be selected.
++    @type change_all:       bool
++    &quot;&quot;&quot;
++
++    # Test if the current data pipe exists.
++    if not relax_data_store.current_pipe:
++        raise RelaxNoPipeError
++
++    # Test if sequence data is loaded.
++    if not exists_mol_res_spin_data():
++        raise RelaxNoSequenceError
+ 
+     # Extract the data from the file.
+-    file_data = self.relax.IO.extract_data(file, dir)
++    file_data = extract_data(file, dir)
+ 
+     # Count the number of header lines.
+     header_lines = 0
++    num_col = max(res_num_col, spin_num_col)
+     for i in xrange(len(file_data)):
+         try:
+-            int(file_data[i][column])
++            int(file_data[i][num_col])
+         except:
+             header_lines = header_lines + 1
+         else:
+@@ -62,49 +98,32 @@
+     file_data = file_data[header_lines:]
+ 
+     # Strip the data.
+-    file_data = self.relax.IO.strip(file_data)
+-
+-    # Create the list of residues to deselect.
+-    deselect = []
++    file_data = strip(file_data)
++
++    # Minimum number of columns.
++    min_col_num = max(mol_name_col, res_num_col, res_name_col, spin_num_col, 
+spin_name_col)
++
++    # First select all spins if desired.
++    if change_all:
++        for spin in spin_loop():
++            spin.select = 1
++
++    # Then deselect the spins in the file.
+     for i in xrange(len(file_data)):
+-        try:
+-            deselect.append(int(file_data[i][column]))
+-        except:
+-            raise RelaxError, &quot;Improperly formatted file.&quot;
+-
+-    # Create the list of runs.
+-    self.runs = self.relax.generic.runs.list_of_runs(run)
+-
+-    # Loop over the runs.
+-    no_match = 1
+-    for self.run in self.runs:
+-        # Test if the run exists.
+-        if not self.run in relax_data_store.run_names:
+-            raise RelaxNoPipeError, self.run
+-
+-        # Test if sequence data is loaded.
+-        if not len(relax_data_store.res[self.run]):
+-            raise RelaxNoSequenceError, self.run
+-
+-        # Loop over the sequence.
+-        for i in xrange(len(relax_data_store.res[self.run])):
+-            # Remap the data structure 'relax_data_store.res[self.run][i]'.
+-            data = relax_data_store.res[self.run][i]
+-
+-            # Select all residues.
+-            if change_all:
+-                data.select = 1
+-
+-            # Deselect the residue if it is in the list deselect.
+-            if data.num in deselect:
+-                data.select = 0
+-
+-            # Match flag.
+-            no_match = 0
+-
+-    # No residue matched.
+-    if no_match:
+-        print &quot;No residues match.&quot;
++        # Skip missing data.
++        if len(file_data[i]) &lt;= min_col_num:
++            continue
++
++        # Generate the spin identification string.
++        id = generate_spin_id_data_array(data=file_data[i], 
+mol_name_col=mol_name_col, res_num_col=res_num_col, 
+res_name_col=res_name_col, spin_num_col=spin_num_col, 
+spin_name_col=spin_name_col)
++
++        # Get the corresponding spin container.
++        spin = return_spin(id)
++        if spin == None:
++            raise RelaxNoSpinError, id
++
++        # Deselect the spin.
++        spin.select = 0
+ 
+ 
+ def desel_res(self, run=None, num=None, name=None, change_all=None):
+@@ -224,7 +243,7 @@
+     &quot;&quot;&quot;
+ 
+     # Extract the data from the file.
+-    file_data = self.relax.IO.extract_data(file, dir)
++    file_data = extract_data(file, dir)
+ 
+     # Count the number of header lines.
+     header_lines = 0
+@@ -240,7 +259,7 @@
+     file_data = file_data[header_lines:]
+ 
+     # Strip the data.
+-    file_data = self.relax.IO.strip(file_data)
++    file_data = strip(file_data)
+ 
+     # Create the list of residues to select.
+     select = []
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed May 07 17:00:18 2008</div>  
+</body>
+</html>

@@ -1,0 +1,347 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r21572 &#45; in /branches/relax_disp: specific_analyses/relax_disp/	target_functions/ -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 21 Nov 2013 11:42:46 +0100 -->
+<!--X-Message-Id: E1VjRif&#45;0002ry&#45;Ld@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r21572 - in /branches/relax_disp: specific_analyses/relax_disp/	target_functions/ -- November 21, 2013 - 11:42</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r21572 - in /branches/relax_disp: specific_analyses/relax_disp/	target_functions/</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00230" class="tabs">Index by Date</a> | <a href="threads.html#00230" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00229.html">Date Prev</a>] [<a href="msg00231.html">Date Next</a>] [<a href="msg00229.html">Thread Prev</a>] [<a href="msg00231.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 21 Nov 2013 10:42:45 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00230.html">E1VjRif-0002ry-Ld@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on November 21, 2013 - 11:42:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Nov 21 11:42:43 2013
+New Revision: 21572
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=21572&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=21572&amp;view=rev</a>
+Log:
+Bug fix for the multiple quantum relaxation dispersion models.
+
+These require both the heteronuclear and proton chemical shift differences.  
+But the proton
+difference was being scaled by the heteronuclear Larmor frequency and not the 
+proton frequency.
+       
+
+Modified:
+    branches/relax_disp/specific_analyses/relax_disp/api.py
+    branches/relax_disp/specific_analyses/relax_disp/disp_data.py
+    branches/relax_disp/specific_analyses/relax_disp/optimisation.py
+    branches/relax_disp/target_functions/relax_disp.py
+
+Modified: branches/relax_disp/specific_analyses/relax_disp/api.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp/api.py?rev=21572&amp;r1=21571&amp;r2=21572&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp/api.py?rev=21572&amp;r1=21571&amp;r2=21572&amp;view=diff</a>
+==============================================================================
+--- branches/relax_disp/specific_analyses/relax_disp/api.py (original)
++++ branches/relax_disp/specific_analyses/relax_disp/api.py Thu Nov 21 
+11:42:43 2013
+@@ -134,7 +134,7 @@
+             field_count = cdp.spectrometer_frq_count
+ 
+         # Initialise the data structures for the target function.
+-        values, errors, missing, frqs, exp_types, relax_times = 
+return_r2eff_arrays(spins=[spin], spin_ids=[spin_id], fields=fields, 
+field_count=field_count)
++        values, errors, missing, frqs, frqs_H, exp_types, relax_times = 
+return_r2eff_arrays(spins=[spin], spin_ids=[spin_id], fields=fields, 
+field_count=field_count)
+ 
+         # The offset and R1 data for R1rho off-resonance models.
+         chemical_shifts, offsets, tilt_angles, r1 = None, None, None, None
+@@ -147,7 +147,7 @@
+         spin_lock_nu1 = return_spin_lock_nu1(ref_flag=False)
+ 
+         # Initialise the relaxation dispersion fit functions.
+-        model = Dispersion(model=spin.model, 
+num_params=param_num(spins=[spin]), num_spins=1, num_frq=field_count, 
+exp_types=exp_types, values=values, errors=errors, missing=missing, 
+frqs=frqs, cpmg_frqs=cpmg_frqs, spin_lock_nu1=spin_lock_nu1, 
+chemical_shifts=chemical_shifts, spin_lock_offsets=offsets, 
+tilt_angles=tilt_angles, r1=r1, relax_times=relax_times, 
+scaling_matrix=scaling_matrix)
++        model = Dispersion(model=spin.model, 
+num_params=param_num(spins=[spin]), num_spins=1, num_frq=field_count, 
+exp_types=exp_types, values=values, errors=errors, missing=missing, 
+frqs=frqs, frqs_H=frqs_H, cpmg_frqs=cpmg_frqs, spin_lock_nu1=spin_lock_nu1, 
+chemical_shifts=chemical_shifts, spin_lock_offsets=offsets, 
+tilt_angles=tilt_angles, r1=r1, relax_times=relax_times, 
+scaling_matrix=scaling_matrix)
+ 
+         # Make a single function call.  This will cause back calculation and 
+the data will be stored in the class instance.
+         chi2 = model.func(param_vector)
+
+Modified: branches/relax_disp/specific_analyses/relax_disp/disp_data.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp/disp_data.py?rev=21572&amp;r1=21571&amp;r2=21572&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp/disp_data.py?rev=21572&amp;r1=21571&amp;r2=21572&amp;view=diff</a>
+==============================================================================
+--- branches/relax_disp/specific_analyses/relax_disp/disp_data.py (original)
++++ branches/relax_disp/specific_analyses/relax_disp/disp_data.py Thu Nov 21 
+11:42:43 2013
+@@ -528,7 +528,7 @@
+ 
+         # Get all the data.
+         try:
+-            values, errors, missing, frqs, exp_types, relax_times = 
+return_r2eff_arrays(spins=[spin], spin_ids=[spin_id], fields=fields, 
+field_count=field_count)
++            values, errors, missing, frqs, frqs_H, exp_types, relax_times = 
+return_r2eff_arrays(spins=[spin], spin_ids=[spin_id], fields=fields, 
+field_count=field_count)
+ 
+         # No R2eff data, so skip the rest.
+         except RelaxError:
+@@ -2084,23 +2084,27 @@
+     errors = []
+     missing = []
+     frqs = []
++    frqs_H = []
+     relax_times = []
+     for exp_i in range(exp_num):
+         values.append([])
+         errors.append([])
+         missing.append([])
+         frqs.append([])
++        frqs_H.append([])
+         relax_times.append([])
+         for spin_i in range(spin_num):
+             values[-1].append([])
+             errors[-1].append([])
+             missing[-1].append([])
+             frqs[-1].append([])
++            frqs_H[-1].append([])
+             for field_i in range(field_count):
+                 values[-1][-1].append([])
+                 errors[-1][-1].append([])
+                 missing[-1][-1].append([])
+                 frqs[-1][-1].append(None)
++                frqs_H[-1][-1].append(None)
+         for field_i in range(field_count):
+             relax_times[-1].append(None)
+ 
+@@ -2151,9 +2155,10 @@
+             # The key.
+             key = return_param_key_from_data(exp_type=exp_type, frq=frq, 
+point=point)
+ 
+-            # The Larmor frequency for this spin and field strength (in 
+MHz*2pi to speed up the ppm to rad/s conversion).
++            # The Larmor frequency for this spin (and that of an attached 
+proton for the MMQ models) and field strength (in MHz*2pi to speed up the ppm 
+to rad/s conversion).
+             if frq != None:
+-                frqs[exp_type_index][spin_index][frq_index] = 2.0 * pi * frq 
+/ g1H * return_gyromagnetic_ratio(current_spin.isotope) * 1e-6
++                frqs[exp_type_index][spin_index][frq_index] = 2.0 * pi * frq 
+/ g1H * return_gyromagnetic_ratio(spin.isotope) * 1e-6
++                frqs_H[exp_type_index][spin_index][frq_index] = 2.0 * pi * 
+frq * 1e-6
+ 
+             # Missing data.
+             if key not in current_spin.r2eff.keys():
+@@ -2214,7 +2219,7 @@
+                 missing[exp_type_index][spin_index][frq_index] = 
+array(missing[exp_type_index][spin_index][frq_index], int32)
+ 
+     # Return the structures.
+-    return values, errors, missing, frqs, exp_types, relax_times
++    return values, errors, missing, frqs, frqs_H, exp_types, relax_times
+ 
+ 
+ def return_spin_lock_nu1(ref_flag=True):
+
+Modified: branches/relax_disp/specific_analyses/relax_disp/optimisation.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp/optimisation.py?rev=21572&amp;r1=21571&amp;r2=21572&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp/optimisation.py?rev=21572&amp;r1=21571&amp;r2=21572&amp;view=diff</a>
+==============================================================================
+--- branches/relax_disp/specific_analyses/relax_disp/optimisation.py 
+(original)
++++ branches/relax_disp/specific_analyses/relax_disp/optimisation.py Thu Nov 
+21 11:42:43 2013
+@@ -297,7 +297,7 @@
+             raise RelaxError(&quot;The spectrometer frequency information has not 
+been specified.&quot;)
+ 
+         # The R2eff/R1rho data.
+-        self.values, self.errors, self.missing, self.frqs, self.exp_types, 
+self.relax_times = return_r2eff_arrays(spins=spins, spin_ids=spin_ids, 
+fields=fields, field_count=len(fields), sim_index=sim_index)
++        self.values, self.errors, self.missing, self.frqs, self.frqs_H, 
+self.exp_types, self.relax_times = return_r2eff_arrays(spins=spins, 
+spin_ids=spin_ids, fields=fields, field_count=len(fields), 
+sim_index=sim_index)
+ 
+         # The offset and R1 data for R1rho off-resonance models.
+         self.chemical_shifts, self.offsets, self.tilt_angles, self.r1 = 
+None, None, None, None
+@@ -330,7 +330,7 @@
+                 print(&quot;Unconstrained grid search size: %s (constraints may 
+decrease this size).\n&quot; % self.grid_size)
+ 
+         # Initialise the function to minimise.
+-        model = Dispersion(model=self.spins[0].model, 
+num_params=self.param_num, num_spins=len(self.spins), 
+num_frq=len(self.fields), exp_types=self.exp_types, values=self.values, 
+errors=self.errors, missing=self.missing, frqs=self.frqs, 
+cpmg_frqs=self.cpmg_frqs, spin_lock_nu1=self.spin_lock_nu1, 
+chemical_shifts=self.chemical_shifts, spin_lock_offsets=self.offsets, 
+tilt_angles=self.tilt_angles, r1=self.r1, relax_times=self.relax_times, 
+scaling_matrix=self.scaling_matrix)
++        model = Dispersion(model=self.spins[0].model, 
+num_params=self.param_num, num_spins=len(self.spins), 
+num_frq=len(self.fields), exp_types=self.exp_types, values=self.values, 
+errors=self.errors, missing=self.missing, frqs=self.frqs, frqs_H=self.frqs_H, 
+cpmg_frqs=self.cpmg_frqs, spin_lock_nu1=self.spin_lock_nu1, 
+chemical_shifts=self.chemical_shifts, spin_lock_offsets=self.offsets, 
+tilt_angles=self.tilt_angles, r1=self.r1, relax_times=self.relax_times, 
+scaling_matrix=self.scaling_matrix)
+ 
+         # Grid search.
+         if search('^[Gg]rid', self.min_algor):
+
+Modified: branches/relax_disp/target_functions/relax_disp.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/target_functions/relax_disp.py?rev=21572&amp;r1=21571&amp;r2=21572&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_disp/target_functions/relax_disp.py?rev=21572&amp;r1=21571&amp;r2=21572&amp;view=diff</a>
+==============================================================================
+--- branches/relax_disp/target_functions/relax_disp.py (original)
++++ branches/relax_disp/target_functions/relax_disp.py Thu Nov 21 11:42:43 
+2013
+@@ -53,7 +53,7 @@
+ 
+ 
+ class Dispersion:
+-    def __init__(self, model=None, num_params=None, num_spins=None, 
+num_frq=None, exp_types=None, values=None, errors=None, missing=None, 
+frqs=None, cpmg_frqs=None, spin_lock_nu1=None, chemical_shifts=None, 
+spin_lock_offsets=None, tilt_angles=None, r1=None, relax_times=None, 
+scaling_matrix=None):
++    def __init__(self, model=None, num_params=None, num_spins=None, 
+num_frq=None, exp_types=None, values=None, errors=None, missing=None, 
+frqs=None, frqs_H=None, cpmg_frqs=None, spin_lock_nu1=None, 
+chemical_shifts=None, spin_lock_offsets=None, tilt_angles=None, r1=None, 
+relax_times=None, scaling_matrix=None):
+         &quot;&quot;&quot;Relaxation dispersion target functions for optimisation.
+ 
+         Models
+@@ -103,6 +103,8 @@
+         @type missing:              list of lists of lists of numpy rank-1 
+int arrays
+         @keyword frqs:              The spin Larmor frequencies (in MHz*2pi 
+to speed up the ppm to rad/s conversion).  The dimensions correspond to the 
+first three of the value, error and missing structures.
+         @type frqs:                 list of lists of numpy rank-1 float 
+arrays
++        @keyword frqs_H:            The proton spin Larmor frequencies for 
+the MMQ-type models (in MHz*2pi to speed up the ppm to rad/s conversion).  
+The dimensions correspond to the first three of the value, error and missing 
+structures.
++        @type frqs_H:               list of lists of numpy rank-1 float 
+arrays
+         @keyword cpmg_frqs:         The CPMG frequencies in Hertz for each 
+separate dispersion point.  This will be ignored for R1rho experiments.
+         @type cpmg_frqs:            list of lists of lists of floats
+         @keyword spin_lock_nu1:     The spin-lock field strengths in Hertz 
+for each separate dispersion point.  This will be ignored for CPMG 
+experiments.
+@@ -146,6 +148,7 @@
+         self.errors = errors
+         self.missing = missing
+         self.frqs = frqs
++        self.frqs_H = frqs_H
+         self.cpmg_frqs = cpmg_frqs
+         self.spin_lock_nu1 = spin_lock_nu1
+         self.chemical_shifts = chemical_shifts
+@@ -947,7 +950,7 @@
+ 
+                     # Convert dw from ppm to rad/s.
+                     dw_frq = dw[spin_index] * 
+self.frqs[exp_index][spin_index][frq_index]
+-                    dwH_frq = dwH[spin_index] * 
+self.frqs[exp_index][spin_index][frq_index]
++                    dwH_frq = dwH[spin_index] * 
+self.frqs_H[exp_index][spin_index][frq_index]
+ 
+                     # Alias the dw frequency combinations.
+                     if self.exp_types[exp_index] == EXP_TYPE_CPMG_SQ:
+@@ -1017,7 +1020,7 @@
+ 
+                 # Convert dw from ppm to rad/s.
+                 dw_frq = dw[spin_index] * self.frqs[0][spin_index][frq_index]
+-                dwH_frq = dwH[spin_index] * 
+self.frqs[0][spin_index][frq_index]
++                dwH_frq = dwH[spin_index] * 
+self.frqs_H[0][spin_index][frq_index]
+ 
+                 # Back calculate the R2eff values.
+                 r2eff_mq_cr72(r20=R20[r20_index], pA=pA, pB=pB, dw=dw_frq, 
+dwH=dwH_frq, kex=kex, k_AB=k_AB, k_BA=k_BA, 
+cpmg_frqs=self.cpmg_frqs[0][frq_index], tcp=self.tau_cpmg[0][frq_index], 
+back_calc=self.back_calc[spin_index][frq_index], 
+num_points=self.num_disp_points[0][frq_index], power=self.power[0][frq_index])
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Nov 21 14:00:05 2013</div>  
+</body>
+</html>

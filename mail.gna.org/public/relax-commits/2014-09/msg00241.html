@@ -1,0 +1,209 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r25735 &#45; /branches/frame_order_cleanup/specific_analyses/frame_order/uf.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 10 Sep 2014 14:24:59 +0200 -->
+<!--X-Message-Id: E1XRgxG&#45;0003dT&#45;Pt@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r25735 - /branches/frame_order_cleanup/specific_analyses/frame_order/uf.py -- September 10, 2014 - 14:24</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r25735 - /branches/frame_order_cleanup/specific_analyses/frame_order/uf.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00241" class="tabs">Index by Date</a> | <a href="threads.html#00241" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00240.html">Date Prev</a>] [<a href="msg00242.html">Date Next</a>] [<a href="msg00240.html">Thread Prev</a>] [<a href="msg00242.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 10 Sep 2014 12:24:58 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00241.html">E1XRgxG-0003dT-Pt@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on September 10, 2014 - 14:24:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Sep 10 14:24:58 2014
+New Revision: 25735
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=25735&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=25735&amp;view=rev</a>
+Log:
+Many fixes for the frame_order.permute_axes user function.
+
+The z-axis inversion is now encoded into a 3D numpy array as the index of the 
+new z-axis position
+needs to be stored.  The cone_theta_x, cone_theta_y and cone_sigma_max 
+parameters are now permuted
+in reverse 'perm' data structure by calling its index() method.  And the 
+cone_theta_x - cone_theta_y
+to y-axis - x-axis switch has been removed (this may need to be reintroduced 
+later).
+
+
+Modified:
+    branches/frame_order_cleanup/specific_analyses/frame_order/uf.py
+
+Modified: branches/frame_order_cleanup/specific_analyses/frame_order/uf.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/specific_analyses/frame_order/uf.py?rev=25735&amp;r1=25734&amp;r2=25735&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/specific_analyses/frame_order/uf.py?rev=25735&amp;r1=25734&amp;r2=25735&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/specific_analyses/frame_order/uf.py    
+(original)
++++ branches/frame_order_cleanup/specific_analyses/frame_order/uf.py    Wed 
+Sep 10 14:24:58 2014
+@@ -23,7 +23,7 @@
+ &quot;&quot;&quot;Module for all of the frame order specific user functions.&quot;&quot;&quot;
+ 
+ # Python module imports.
+-from numpy import array, float64, transpose, zeros
++from numpy import array, float64, ones, transpose, zeros
+ from warnings import warn
+ 
+ # relax module imports.
+@@ -116,12 +116,12 @@
+     if not hasattr(cdp, 'cone_theta_y') or not is_float(cdp.cone_theta_y):
+         raise RelaxError(&quot;The parameter values are not set up.&quot;)
+ 
+-    # The angles.  Note that cone_theta_x corresponds to a rotation about 
+the y-axis!
++    # The angles.
+     cone_sigma_max = 0.0
+     if cdp.model == MODEL_PSEUDO_ELLIPSE:
+         cone_sigma_max = cdp.cone_sigma_max
+-    angles = array([cdp.cone_theta_y, cdp.cone_theta_x, cone_sigma_max], 
+float64)
+-    y, x, z = angles
++    angles = array([cdp.cone_theta_x, cdp.cone_theta_y, cone_sigma_max], 
+float64)
++    x, y, z = angles
+ 
+     # Generate the eigenframe of the motion.
+     frame = zeros((3, 3), float64)
+@@ -138,6 +138,9 @@
+     print(&quot;%-20s\n%s&quot; % (&quot;eigenframe&quot;, frame))
+     print(&quot;\nPermutation '%s':&quot; % permutation)
+ 
++    # The axis inversion structure.
++    inv = ones(3, float64)
++
+     # The starting condition x &lt;= y &lt;= z.
+     if x &lt;= y and y &lt;= z:
+         # Printout.
+@@ -146,10 +149,10 @@
+         # The permutation and axis inversion.
+         if permutation == 'A':
+             perm = [0, 2, 1]
+-            z_factor = -1.0
++            inv[1] = -1.0
+         else:
+             perm = [2, 0, 1]
+-            z_factor = 1.0
++            inv[0] = 1.0
+ 
+     # The starting condition x &lt;= z &lt;= y.
+     elif x &lt;= z and z &lt;= y:
+@@ -159,10 +162,10 @@
+         # The permutation and axis inversion.
+         if permutation == 'A':
+             perm = [0, 2, 1]
+-            z_factor = -1.0
++            inv[1] = -1.0
+         else:
+-            perm = [1, 2, 0]
+-            z_factor = -1.0
++            perm = [2, 1, 0]
++            inv[0] = -1.0
+ 
+     # The starting condition z &lt;= x &lt;= y.
+     elif z &lt;= x  and x &lt;= y:
+@@ -172,10 +175,10 @@
+         # The permutation and axis inversion.
+         if permutation == 'A':
+             perm = [1, 2, 0]
+-            z_factor = 1.0
++            inv[1] = 1.0
+         else:
+             perm = [2, 1, 0]
+-            z_factor = -1.0
++            inv[0] = -1.0
+ 
+     # Cannot be here.
+     else:
+@@ -183,16 +186,16 @@
+ 
+     # Printout.
+     print(&quot;%-20s %-20s&quot; % (&quot;permutation&quot;, perm))
+-    print(&quot;%-20s %-20s&quot; % (&quot;z-axis inversion&quot;, z_factor))
++    print(&quot;%-20s %-20s&quot; % (&quot;z-axis inversion&quot;, inv))
+ 
+     # Permute the angles.
+-    cdp.cone_theta_y = angles[perm[0]]
+-    cdp.cone_theta_x = angles[perm[1]]
++    cdp.cone_theta_x = angles[perm.index(0)]
++    cdp.cone_theta_y = angles[perm.index(1)]
+     if cdp.model == MODEL_PSEUDO_ELLIPSE:
+-        cdp.cone_sigma_max = angles[perm[2]]
++        cdp.cone_sigma_max = angles[perm.index(2)]
+ 
+     # Permute the axes and invert the z-axis as necessary.
+-    frame_new = transpose(array([frame[:, perm[0]], frame[:, perm[1]], 
+z_factor*frame[:, perm[2]]], float64))
++    frame_new = transpose(array([inv[0]*frame[:, perm[0]], inv[1]*frame[:, 
+perm[1]], inv[2]*frame[:, perm[2]]], float64))
+ 
+     # Convert the permuted frame to Euler angles and store them.
+     cdp.eigen_alpha, cdp.eigen_beta, cdp.eigen_gamma = 
+R_to_euler_zyz(frame_new)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Sep 10 15:00:03 2014</div>  
+</body>
+</html>

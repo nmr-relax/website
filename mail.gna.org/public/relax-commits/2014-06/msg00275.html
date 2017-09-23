@@ -1,0 +1,163 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r23888 &#45; /branches/disp_spin_speed/lib/dispersion/dpl94.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 12 Jun 2014 20:07:59 +0200 -->
+<!--X-Message-Id: E1Wv9Pr&#45;0000Tm&#45;HQ@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r23888 - /branches/disp_spin_speed/lib/dispersion/dpl94.py -- June 12, 2014 - 20:07</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r23888 - /branches/disp_spin_speed/lib/dispersion/dpl94.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00275" class="tabs">Index by Date</a> | <a href="threads.html#00275" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00274.html">Date Prev</a>] [<a href="msg00276.html">Date Next</a>] [<a href="msg00274.html">Thread Prev</a>] [<a href="msg00276.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 12 Jun 2014 18:07:59 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00275.html">E1Wv9Pr-0000Tm-HQ@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on June 12, 2014 - 20:07:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Thu Jun 12 20:07:59 2014
+New Revision: 23888
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=23888&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=23888&amp;view=rev</a>
+Log:
+Replacing math domain checking in model DPL94, with masked array replacement.
+
+Task #7807 (<a  rel="nofollow" href="https://gna.org/task/index.php?7807">https://gna.org/task/index.php?7807</a>): Speed-up of dispersion 
+models for Clustered analysis.
+
+Modified:
+    branches/disp_spin_speed/lib/dispersion/dpl94.py
+
+Modified: branches/disp_spin_speed/lib/dispersion/dpl94.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/disp_spin_speed/lib/dispersion/dpl94.py?rev=23888&amp;r1=23887&amp;r2=23888&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/disp_spin_speed/lib/dispersion/dpl94.py?rev=23888&amp;r1=23887&amp;r2=23888&amp;view=diff</a>
+==============================================================================
+--- branches/disp_spin_speed/lib/dispersion/dpl94.py    (original)
++++ branches/disp_spin_speed/lib/dispersion/dpl94.py    Thu Jun 12 20:07:59 
+2014
+@@ -64,7 +64,7 @@
+ 
+ # Python module imports.
+ from numpy import abs, array, cos, isfinite, min, sin, sum
+-
++from numpy.ma import fix_invalid, masked_where
+ 
+ def r1rho_DPL94(r1rho_prime=None, phi_ex=None, kex=None, theta=None, R1=0.0, 
+spin_lock_fields2=None, back_calc=None, num_points=None):
+     &quot;&quot;&quot;Calculate the R1rho values for the DPL94 model.
+@@ -90,6 +90,10 @@
+     @type num_points:           int
+     &quot;&quot;&quot;
+ 
++    # Flag to tell if values should be replaced if numer is zero.
++    t_numer_zero = False
++    t_denom_zero = False
++
+     # Repetitive calculations (to speed up calculations).
+     kex2 = kex**2
+ 
+@@ -103,24 +107,33 @@
+     # Catch zeros (to avoid pointless mathematical operations).
+     # This will result in no exchange, returning flat lines.
+     if min(numer) == 0.0:
+-        back_calc[:] = R1_R2
+-        return
++        t_numer_zero = True
++        mask_numer_zero = masked_where(numer == 0.0, numer)
+ 
+     # Denominator.
+     denom = kex2 + spin_lock_fields2
+ 
+     # Catch math domain error of dividing with 0.
+     # This is when denom =0.
+-    if min(abs(denom)) == 0:
+-        back_calc[:] = array([1e100]*num_points)
+-        return
++    mask_denom_zero = denom == 0.0
++    if any(mask_denom_zero):
++        t_denom_zero = True
++        denom[mask_denom_zero] = 1.0
+ 
+     # R1rho calculation.
+-    R1rho = R1_R2 + numer / denom
++    back_calc[:] = R1_R2 + numer / denom
++
++    # Replace data in array.
++    # If numer is zero.
++    if t_numer_zero:
++        back_calc[mask_numer_zero.mask] = R1_R2[mask_numer_zero.mask]
++
++    # If denom is zero.
++    if t_denom_zero:
++        back_calc[mask_denom_zero] = 1e100
+ 
+     # Catch errors, taking a sum over array is the fastest way to check for
+     # +/- inf (infinity) and nan (not a number).
+-    if not isfinite(sum(R1rho)):
+-        R1rho = array([1e100]*num_points)
+-
+-    back_calc[:] = R1rho
++    if not isfinite(sum(back_calc)):
++        # Replaces nan, inf, etc. with fill value.
++        fix_invalid(back_calc, copy=False, fill_value=1e100)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Jun 12 20:20:02 2014</div>  
+</body>
+</html>

@@ -1,0 +1,314 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r20196 &#45; in /branches/relax_disp: lib/software/grace.py	specific_analyses/relax_disp/disp_data.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 18 Jun 2013 17:29:17 +0200 -->
+<!--X-Message-Id: E1UoxqP&#45;0004V6&#45;7T@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r20196 - in /branches/relax_disp: lib/software/grace.py	specific_analyses/relax_disp/disp_data.py -- June 18, 2013 - 17:29</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r20196 - in /branches/relax_disp: lib/software/grace.py	specific_analyses/relax_disp/disp_data.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00385" class="tabs">Index by Date</a> | <a href="threads.html#00385" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00384.html">Date Prev</a>] [<a href="msg00386.html">Date Next</a>] [<a href="msg00384.html">Thread Prev</a>] [<a href="msg00386.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 18 Jun 2013 15:29:17 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00385.html">E1UoxqP-0004V6-7T@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on June 18, 2013 - 17:29:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Jun 18 17:29:16 2013
+New Revision: 20196
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=20196&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=20196&amp;view=rev</a>
+Log:
+Fix for bug #20916, (<a  rel="nofollow" href="https://gna.org/bugs/?20916">https://gna.org/bugs/?20916</a>) - Suggestion for python 
+script for PNG/EPS/SVG conversion of grace files.
+
+Troels Linnet provided this patch, and was discovered during work on a 
+Windows 7 system: telinnet
+aaattt bio_dot_ku_dot _dk
+
+This patch will provide a grace2images.py file in each folder where a call to
+specific_analyses/relax_disp/disp_data.py is called.
+
+It is called in: def plot_disp_curves(dir=None, force=None):
+and call the function: lib.software.grace.script_grace2images()
+
+The conversion script can be executed in linux and windows, if the PATH to 
+xmgrace has been
+specified. It will look in a folder for grace files of ending *.agr and by 
+default convert to PNG.
+
+One can also convert to EPS and SVG. Propably more options could be added, as 
+PDF. The conversion
+depends on xmgrace compilation, and so PNG conversion is for fast inspection 
+of graphs in folder,
+and EPS for further external conversion to PDF etc.
+
+The patch, the output file, and small script to test is attached.
+
+I miss to make the file executable in relax, so the script can be executed 
+directly in Linux.
+
+
+Modified:
+    branches/relax_disp/lib/software/grace.py
+    branches/relax_disp/specific_analyses/relax_disp/disp_data.py
+
+Modified: branches/relax_disp/lib/software/grace.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/lib/software/grace.py?rev=20196&amp;r1=20195&amp;r2=20196&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_disp/lib/software/grace.py?rev=20196&amp;r1=20195&amp;r2=20196&amp;view=diff</a>
+==============================================================================
+--- branches/relax_disp/lib/software/grace.py (original)
++++ branches/relax_disp/lib/software/grace.py Tue Jun 18 17:29:16 2013
+@@ -1,6 +1,7 @@
+ 
+###############################################################################
+ #                                                                            
+ #
+ # Copyright (C) 2003-2013 Edward d'Auvergne                                  
+ #
++# Copyright (C) 2013 Troels E. Linnet                                        
+ #
+ #                                                                            
+ #
+ # This file is part of the program relax (<a  rel="nofollow" href="http://www.nmr-relax.com">http://www.nmr-relax.com</a>).         
+ #
+ #                                                                            
+ #
+@@ -26,6 +27,86 @@
+ import pipe_control
+ from pipe_control import pipes
+ import specific_analyses
++
++
++def script_grace2images(file=None):
++    &quot;&quot;&quot;Write a python &quot;grace to PNG/EPS/SVG...&quot; conversion script..
++
++    The makes a conversion script to image types as PNG/EPS/SVG. The 
+conversion is looping over a directory list of *.agr files, and making 
+function calls to xmgrace. Successful conversion of images depends on the 
+compilation of xmgrace. The input is a list of image types which is wanted, 
+f.ex: PNG EPS SVG. PNG is default.
++
++    @keyword file:          The file object to write the data to.
++    @type file:             file object
++    &quot;&quot;&quot;
++
++    # Write to file
++    file.write(&quot;#!/usr/bin/env python\n&quot;)
++    file.write(&quot;\n&quot;)
++    file.write(&quot;import glob, os, sys\n&quot;)
++    file.write(&quot;import shlex,subprocess\n&quot;)
++    file.write(&quot;import argparse\n&quot;)
++    file.write(&quot;from itertools import chain\n&quot;)
++    file.write(&quot;\n&quot;)
++    file.write(&quot;# Add functioning for argument parsing\n&quot;)
++    file.write(&quot;parser = argparse.ArgumentParser(description='Process grace 
+files to images')\n&quot;)
++    file.write(&quot;# Add argument type. Destination instance is set to 
+types.\n&quot;)
++    file.write(&quot;parser.add_argument('-g', action='store_true', 
+dest='relax_gui', help='Make it possible to run script through relax GUI. Run 
+by using User-functions -&gt; script')\n&quot;)
++    file.write(&quot;parser.add_argument('-l', nargs='+', action='append', 
+dest='l', help='Make in possible to run scriptif relax has logfile turned on. 
+Run by using User-functions -&gt; script')\n&quot;)
++    file.write(&quot;parser.add_argument('-t', nargs='+', action='append', 
+dest='types', help='List image types for conversion. Execute script with: 
+python %s -t PNG EPS ...'%(sys.argv[0]), default=[])\n&quot;)
++    file.write(&quot;\n&quot;)
++    file.write(&quot;# Lets stop the execution and print help if no arguments are 
+passed\n&quot;)
++    file.write(&quot;if len(sys.argv)==1:\n&quot;)
++    file.write(&quot;    print('system argument is:',sys.argv)\n&quot;)
++    file.write(&quot;    parser.print_help()\n&quot;)
++    file.write(&quot;    print('Performing a default PNG conversion')\n&quot;)
++    file.write(&quot;\n&quot;)
++    file.write(&quot;# Parse the arguments to a Class instance object\n&quot;)
++    file.write(&quot;args = parser.parse_args()\n&quot;)
++    file.write(&quot;# If we run through the GUI, we cannot pass input arguments, 
+so we make a default PNG option\n&quot;)
++    file.write(&quot;if args.relax_gui:\n&quot;)
++    file.write(&quot;    args.types = [['PNG']]\n&quot;)
++    file.write(&quot;# If no input arguments, we make a default PNG option\n&quot;)
++    file.write(&quot;if len(args.types) == 0:\n&quot;)
++    file.write(&quot;    args.types = [['PNG']]\n&quot;)
++    file.write(&quot;\n&quot;)
++    file.write(&quot;# The instance object will contain a list of lists. We 
+convert this to one list.\n&quot;)
++    file.write(&quot;types = list(chain.from_iterable(args.types))\n&quot;)
++    file.write(&quot;\n&quot;)
++    file.write(&quot;# A easy search for files with *.agr, is to use glob, which 
+is pathnames matching a specified pattern according to the rules used by the 
+Unix shell, not opening a shell\n&quot;)
++    file.write(&quot;gracefiles = glob.glob(\&quot;*.agr\&quot;)\n&quot;)
++    file.write(&quot;\n&quot;)
++    file.write(&quot;# For png conversion, several parameters can be passed to 
+xmgrace. These can be altered later afterwards, and the script rerun. \n&quot;)
++    file.write(&quot;# The option for transparent is good for poster or insertion 
+in color backgrounds. The ability for this, still depends on xmgrace 
+compilation\n&quot;)
++    file.write(&quot;if \&quot;PNG\&quot; in types:\n&quot;)
++    file.write(&quot;    pngpar = \&quot;png.par\&quot;\n&quot;)
++    file.write(&quot;    if not os.path.isfile(pngpar):\n&quot;)
++    file.write(&quot;        wpngpar = open(pngpar,\&quot;w\&quot;)\n&quot;)
++    file.write(&quot;        wpngpar.write(\&quot;DEVICE \\\&quot;PNG\\\&quot; FONT ANTIALIASING 
+on\\n\&quot;)\n&quot;)
++    file.write(&quot;        wpngpar.write(\&quot;DEVICE \\\&quot;PNG\\\&quot; OP 
+\\\&quot;transparent:on\\\&quot;\\n\&quot;)\n&quot;)
++    file.write(&quot;        wpngpar.write(\&quot;DEVICE \\\&quot;PNG\\\&quot; OP 
+\\\&quot;compression:9\\\&quot;\\n\&quot;)\n&quot;)
++    file.write(&quot;        wpngpar.close()\n&quot;)
++    file.write(&quot;\n&quot;)
++    file.write(&quot;# Now loop over the grace files\n&quot;)
++    file.write(&quot;for grace in gracefiles:\n&quot;)
++    file.write(&quot;    # Get the filename without extension\n&quot;)
++    file.write(&quot;    fname = grace.split(\&quot;.agr\&quot;)[0]\n&quot;)
++    file.write(&quot;    if \&quot;PNG\&quot; in types:\n&quot;)
++    file.write(&quot;        # Produce the argument string\n&quot;)
++    file.write(&quot;        im_args = r\&quot;xmgrace -hdevice PNG -hardcopy -param 
+%s -printfile %s.png %s\&quot;%(pngpar,fname,grace)\n&quot;)
++    file.write(&quot;        # Split the arguments the right way, to call 
+xmgrace\n&quot;)
++    file.write(&quot;        im_args = shlex.split(im_args)\n&quot;)
++    file.write(&quot;        return_code = subprocess.call(im_args)\n&quot;)
++    file.write(&quot;    if \&quot;EPS\&quot; in types:\n&quot;)
++    file.write(&quot;        im_args = r\&quot;xmgrace -hdevice EPS -hardcopy 
+-printfile %s.eps %s\&quot;%(fname,grace)\n&quot;)
++    file.write(&quot;        im_args = shlex.split(im_args)\n&quot;)
++    file.write(&quot;        return_code = subprocess.call(im_args)\n&quot;)
++    file.write(&quot;    if (\&quot;JPG\&quot; or \&quot;JPEG\&quot;) in types:\n&quot;)
++    file.write(&quot;        im_args = r\&quot;xmgrace -hdevice JPEG -hardcopy 
+-printfile %s.jpg %s\&quot;%(fname,grace)\n&quot;)
++    file.write(&quot;        im_args = shlex.split(im_args)\n&quot;)
++    file.write(&quot;        return_code = subprocess.call(im_args)\n&quot;)
++    file.write(&quot;    if \&quot;SVG\&quot; in types:\n&quot;)
++    file.write(&quot;        im_args = r\&quot;xmgrace -hdevice SVG -hardcopy 
+-printfile %s.svg %s\&quot;%(fname,grace)\n&quot;)
++    file.write(&quot;        im_args = shlex.split(im_args)\n&quot;)
++    file.write(&quot;        return_code = subprocess.call(im_args)\n&quot;)
+ 
+ 
+ def write_xy_data(data, file=None, graph_type=None, norm=False):
+
+Modified: branches/relax_disp/specific_analyses/relax_disp/disp_data.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp/disp_data.py?rev=20196&amp;r1=20195&amp;r2=20196&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp/disp_data.py?rev=20196&amp;r1=20195&amp;r2=20196&amp;view=diff</a>
+==============================================================================
+--- branches/relax_disp/specific_analyses/relax_disp/disp_data.py (original)
++++ branches/relax_disp/specific_analyses/relax_disp/disp_data.py Tue Jun 18 
+17:29:16 2013
+@@ -2,6 +2,7 @@
+ #                                                                            
+ #
+ # Copyright (C) 2004-2013 Edward d'Auvergne                                  
+ #
+ # Copyright (C) 2009 Sebastien Morin                                         
+ #
++# Copyright (C) 2013 Troels E. Linnet                                        
+ #
+ #                                                                            
+ #
+ # This file is part of the program relax (<a  rel="nofollow" href="http://www.nmr-relax.com">http://www.nmr-relax.com</a>).         
+ #
+ #                                                                            
+ #
+@@ -40,7 +41,7 @@
+ from lib.io import get_file_path, open_write_file
+ from lib.list import count_unique_elements, unique_elements
+ from lib.physical_constants import g1H, return_gyromagnetic_ratio
+-from lib.software.grace import write_xy_data, write_xy_header
++from lib.software.grace import write_xy_data, write_xy_header, 
+script_grace2images
+ from pipe_control import pipes
+ from pipe_control.mol_res_spin import exists_mol_res_spin_data, return_spin, 
+spin_loop
+ from pipe_control.result_files import add_result_file
+@@ -365,6 +366,7 @@
+ 
+     One file will be created per spin system.
+ 
++    A python &quot;grace to PNG/EPS/SVG...&quot; conversion script is created at the 
+end
+ 
+     @keyword dir:           The optional directory to place the file into.
+     @type dir:              str
+@@ -504,6 +506,17 @@
+ 
+         # Add the file to the results file list.
+         add_result_file(type='grace', label='Grace', file=file_path)
++
++    # Write a python &quot;grace to PNG/EPS/SVG...&quot; conversion script.
++    # Open the file for writing.
++    file_name = &quot;grace2images.py&quot;
++    file = open_write_file(file_name, dir, force)
++
++    # Write the file.
++    script_grace2images(file=file)
++
++    # Close the file.
++    file.close()
+ 
+ 
+ def plot_exp_curves(file=None, dir=None, force=None, norm=None):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Jun 18 17:40:02 2013</div>  
+</body>
+</html>

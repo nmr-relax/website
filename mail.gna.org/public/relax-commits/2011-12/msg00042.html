@@ -1,0 +1,198 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r15055 &#45; /branches/frame_order_testing/specific_fns/frame_order.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 08 Dec 2011 10:45:51 +0100 -->
+<!--X-Message-Id: E1RYaY3&#45;0006Kz&#45;LA@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r15055 - /branches/frame_order_testing/specific_fns/frame_order.py -- December 08, 2011 - 10:45</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r15055 - /branches/frame_order_testing/specific_fns/frame_order.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00042" class="tabs">Index by Date</a> | <a href="threads.html#00042" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00041.html">Date Prev</a>] [<a href="msg00043.html">Date Next</a>] [<a href="msg00041.html">Thread Prev</a>] [<a href="msg00043.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 08 Dec 2011 09:45:51 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00042.html">E1RYaY3-0006Kz-LA@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on December 08, 2011 - 10:45:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Dec  8 10:45:51 2011
+New Revision: 15055
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=15055&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=15055&amp;view=rev</a>
+Log:
+Fix for the frame order analysis - the parameter vector is now diagonally 
+scaled after optimisation.
+
+The scaling was not being performed so that the pivot position was 
+incorrectly stored.
+
+
+Modified:
+    branches/frame_order_testing/specific_fns/frame_order.py
+
+Modified: branches/frame_order_testing/specific_fns/frame_order.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_testing/specific_fns/frame_order.py?rev=15055&amp;r1=15054&amp;r2=15055&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_testing/specific_fns/frame_order.py?rev=15055&amp;r1=15054&amp;r2=15055&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_testing/specific_fns/frame_order.py (original)
++++ branches/frame_order_testing/specific_fns/frame_order.py Thu Dec  8 
+10:45:51 2011
+@@ -1213,14 +1213,17 @@
+                 setattr(cdp, param, 0.0)
+ 
+ 
+-    def _unpack_opt_results(self, results, sim_index=None):
++    def _unpack_opt_results(self, results, scaling=False, 
+scaling_matrix=None, sim_index=None):
+         &quot;&quot;&quot;Unpack and store the Frame Order optimisation results.
+ 
+-        @param results:     The results tuple returned by the minfx 
+generic_minimise() function.
+-        @type results:      tuple
+-        @param sim_index:   The index of the simulation to optimise.  This 
+should be None for normal
+-                            optimisation.
+-        @type sim_index:    None or int
++        @param results:             The results tuple returned by the minfx 
+generic_minimise() function.
++        @type results:              tuple
++        @keyword scaling:           If True, diagonal scaling is enabled 
+during optimisation to allow the problem to be better conditioned.
++        @type scaling:              bool
++        @keyword scaling_matrix:    The scaling matrix.
++        @type scaling_matrix:       numpy rank-2 array
++        @keyword sim_index:         The index of the simulation to optimise. 
+ This should be None for normal optimisation.
++        @type sim_index:            None or int
+          &quot;&quot;&quot;
+ 
+         # Disassemble the results.
+@@ -1239,6 +1242,10 @@
+         # Catch chi-squared values of NaN.
+         if isNaN(func):
+             raise RelaxNaNError('chi-squared')
++
++        # Scaling.
++        if scaling:
++            param_vector = dot(scaling_matrix, param_vector)
+ 
+         # Pivot point.
+         if not self._pivot_fixed():
+@@ -1742,24 +1749,19 @@
+         @type min_algor:        str
+         @param min_options:     An array of options to be used by the 
+minimisation algorithm.
+         @type min_options:      array of str
+-        @param func_tol:        The function tolerance which, when reached, 
+terminates optimisation.
+-                                Setting this to None turns of the check.
++        @param func_tol:        The function tolerance which, when reached, 
+terminates optimisation.  Setting this to None turns of the check.
+         @type func_tol:         None or float
+-        @param grad_tol:        The gradient tolerance which, when reached, 
+terminates optimisation.
+-                                Setting this to None turns of the check.
++        @param grad_tol:        The gradient tolerance which, when reached, 
+terminates optimisation.  Setting this to None turns of the check.
+         @type grad_tol:         None or float
+         @param max_iterations:  The maximum number of iterations for the 
+algorithm.
+         @type max_iterations:   int
+         @param constraints:     If True, constraints are used during 
+optimisation.
+         @type constraints:      bool
+-        @param scaling:         If True, diagonal scaling is enabled during 
+optimisation to allow
+-                                the problem to be better conditioned.
++        @param scaling:         If True, diagonal scaling is enabled during 
+optimisation to allow the problem to be better conditioned.
+         @type scaling:          bool
+-        @param verbosity:       A flag specifying the amount of information 
+to print.  The higher
+-                                the value, the greater the verbosity.
++        @param verbosity:       A flag specifying the amount of information 
+to print.  The higher the value, the greater the verbosity.
+         @type verbosity:        int
+-        @param sim_index:       The index of the simulation to optimise.  
+This should be None if
+-                                normal optimisation is desired.
++        @param sim_index:       The index of the simulation to optimise.  
+This should be None if normal optimisation is desired.
+         @type sim_index:        None or int
+         @keyword lower:         The lower bounds of the grid search which 
+must be equal to the number of parameters in the model.  This optional 
+argument is only used when doing a grid search.
+         @type lower:            array of numbers
+@@ -1794,7 +1796,7 @@
+             results = generic_minimise(func=model.func, args=(), 
+x0=param_vector, min_algor=min_algor, min_options=min_options, 
+func_tol=func_tol, grad_tol=grad_tol, maxiter=max_iterations, 
+full_output=True, print_flag=verbosity)
+ 
+         # Unpack the results.
+-        self._unpack_opt_results(results, sim_index)
++        self._unpack_opt_results(results, scaling, scaling_matrix, sim_index)
+ 
+         # Store the back-calculated tensors.
+         self._store_bc_data(model)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Dec 08 11:40:02 2011</div>  
+</body>
+</html>

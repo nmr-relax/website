@@ -1,0 +1,403 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r7716 &#45; in /branches/multi_processor_merge: multi/mpi4py_processor.py	relax -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 15 Oct 2008 22:05:14 +0200 -->
+<!--X-Message-Id: E1KqCcM&#45;0004Wj&#45;BK@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r7716 - in /branches/multi_processor_merge: multi/mpi4py_processor.py	relax -- October 15, 2008 - 22:05</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r7716 - in /branches/multi_processor_merge: multi/mpi4py_processor.py	relax</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00245" class="tabs">Index by Date</a> | <a href="threads.html#00245" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00244.html">Date Prev</a>] [<a href="msg00246.html">Date Next</a>] [<a href="msg00244.html">Thread Prev</a>] [<a href="msg00246.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 15 Oct 2008 20:05:14 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00245.html">E1KqCcM-0004Wj-BK@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on October 15, 2008 - 22:05:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Oct 15 22:05:14 2008
+New Revision: 7716
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=7716&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=7716&amp;view=rev</a>
+Log:
+Manually ported r3239 from the multi_processor branch.
+
+The command used was:
+svn merge -r3238:3239 
+svn+ssh://bugman@xxxxxxxxxxx/svn/relax/branches/multi_processor .
+
+.....
+  r3239 | varioustoxins | 2007-03-22 09:20:55 +0100 (Thu, 22 Mar 2007) | 3 
+lines
+  Changed paths:
+     M /branches/multi_processor/multi/mpi4py_processor.py
+     M /branches/multi_processor/relax
+
+  multi processor fixes for proper command queing with optional
+  load balancing iexception support and segmented results
+.....
+
+
+Modified:
+    branches/multi_processor_merge/multi/mpi4py_processor.py
+    branches/multi_processor_merge/relax
+
+Modified: branches/multi_processor_merge/multi/mpi4py_processor.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/multi_processor_merge/multi/mpi4py_processor.py?rev=7716&amp;r1=7715&amp;r2=7716&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/multi_processor_merge/multi/mpi4py_processor.py?rev=7716&amp;r1=7715&amp;r2=7716&amp;view=diff</a>
+==============================================================================
+--- branches/multi_processor_merge/multi/mpi4py_processor.py (original)
++++ branches/multi_processor_merge/multi/mpi4py_processor.py Wed Oct 15 
+22:05:14 2008
+@@ -1,7 +1,9 @@
+ #!/usr/bin/env python
+ 
++#TODO clone communicators &amp; resize
+ import sys
+ import os
++import math
+ 
+ 
+ # load mpi
+@@ -15,27 +17,80 @@
+ if MPI.rank == 0:
+     _sys_exit =  sys.exit
+ 
++
++def rank_format_string():
++    digits  = math.ceil(math.log10(MPI.size))
++    format = '%%%di' % digits
++    return format
++
++RANK_FORMAT_STRING = rank_format_string
++
+ # wrapper sys.exit function
+ def exit(status=None):
+ 
+     exit_mpi()
+     _sys_exit(status)
+ 
++def broadcast_command(command):
++    for i in range(1,MPI.size):
++        if i != 0:
++            MPI.COMM_WORLD.Send(buf=command,dest=i)
++
++def ditch_all_results():
++    for i in range(1,MPI.size):
++        if i != 0:
++            while 1:
++                result = MPI.COMM_WORLD.Recv(source=i)
++                if result.completed:
++                    break
+ def exit_mpi():
+     if MPI.Is_initialized() and not MPI.Is_finalized() and MPI.rank == 0:
+-        sendbuf = Exit_command()
+-        for i in range(MPI.size):
+-            if i != 0:
+-                MPI.COMM_WORLD.Send(buf=sendbuf,dest=i)
++        broadcast_command(Exit_command())
++        ditch_all_results()
++
++
++class Result(object):
++    def __init__(self):
++        self.rank=MPI.rank
++
++class Result_string(Result):
++    #FIXME move result up a level
++    def __init__(self,string,completed):
++        super(Result_string,self).__init__()
++        self.string=string
++        self.completed=completed
++
++class Result_command(Result):
++    def __init__(self,completed):
++        super(Result_command,self).__init__()
++        self.completed=completed
++
++    def run(self,relax,processor):
++        pass
++
++class Null_result_command(Result_command):
++    def __init__(self):
++        super(Null_result_command,self).__init__(completed=True)
++
++NULL_RESULT=Null_result_command()
++
++class Slave_command(object):
++    def run(self,processor):
++        pass
+ 
+ #FIXME do some inheritance
+-class Exit_command(object):
+-    def run(self,relax,processor):
++
++class Exit_command(Slave_command):
++    def run(self,processor):
++        processor.return_object(NULL_RESULT)
+         processor.do_quit=True
+ 
+-class Get_name_command(object):
+-    def run(self,relax,processor):
+-        result = '%s-%s' % (MPI.Get_processor_name(),os.getpid())
++
++
++class Get_name_command(Slave_command):
++    def run(self,processor):
++        msg = processor.get_name()
++        result = Result_string(msg,True)
+         processor.return_object(result)
+ 
+ #FIXME do some inheritance
+@@ -50,25 +105,78 @@
+         sys.exit= exit
+         self.do_quit=False
+ 
++    def assert_on_master(self):
++        if MPI.rank != 0:
++            msg = 'running on slave when expected master with MPI.rank == 0, 
+rank was %d'% MPI.rank
++            raise Exception(msg)
++
++
++    def get_name(self):
++        return '%s-%s' % (MPI.Get_processor_name(),os.getpid())
++
+     def exit(self):
+         exit_mpi()
+ 
+     def return_object(self,result):
+         MPI.COMM_WORLD.Send(buf=result, dest=0)
+ 
+-    def run_command(self,command):
++    def run_command_queue(self,commands):
++        self.assert_on_master()
++
+         for i in range(1,MPI.size):
+-            if i != 0:
+-                MPI.COMM_WORLD.Send(buf=command,dest=i)
+-        for i in range(1,MPI.size):
+-            buf=[]
+-            if i !=0:
+-                elem = MPI.COMM_WORLD.Recv(source=i)
+-                if type(elem) == 'object':
+-                    elem.run(relax_instance, relax_instance.processor)
++            MPI.COMM_WORLD.Send(buf=command,dest=i)
++
++    def run_command_globally(self,command):
++        queue = [command for i in range(1,MPI.size)]
++        self.run_command_queue(queue)
++
++    def run_command_queue(self,queue):
++        self.assert_on_master()
++
++#        for i in range(1,MPI.size):
++#                MPI.COMM_WORLD.Send(buf=command,dest=i)
++#        for i in range(1,MPI.size):
++#            elem = MPI.COMM_WORLD.Recv(source=i)
++#            if type(elem) == 'object':
++#                elem.run(relax_instance, relax_instance.processor)
++#            else:
++#                #FIXME can't cope with multiple lines
++#                print i,elem
++        #queue = [command for i in range(1,MPI.size*2)]
++
++        running_set=set()
++        idle_set=set([i for i in range(1,MPI.size)])
++
++        while len(queue) != 0:
++
++            while len(idle_set) != 0:
++                if len(queue) != 0:
++                    command = queue.pop()
++                    dest=idle_set.pop()
++                    MPI.COMM_WORLD.Send(buf=command,dest=dest)
++                    running_set.add(dest)
+                 else:
+-                    #FIXME can't cope with multiple lines
+-                    print i,elem
++                    break
++
++
++            while len(running_set) !=0:
++                result = MPI.COMM_WORLD.Recv(source=MPI.ANY_SOURCE)
++                if isinstance(result, Exception):
++                    raise result
++
++                if isinstance(result, Result):
++                    if result.completed:
++                        idle_set.add(result.rank)
++                        running_set.remove(result.rank)
++
++                    if isinstance(result, Result_command):
++                        result.run(self.relax,self)
++                    elif isinstance(result, Result_string):
++                        #FIXME can't cope with multiple lines
++                        print result.rank,result.string
++                    else:
++                        message = 'Unexpected result type \n%s \nvalue%s' 
+%(result.__class__.__name__,result)
++                        raise Exception(message)
+ 
+ 
+ #        for i in range(MPI.size):
+@@ -84,14 +192,14 @@
+ 
+     def run(self):
+ 
+-        if MPI.rank == 0:
+-            self.relax_instance.multi_mode='multi_master'
+-        else:
+-            self.relax_instance.multi_mode='multi_slave'
+-            self.relax_instance.mode='slave'
+-            self.relax_instance.script_file=None
+-            self.relax_instance.dummy_mode=True
+-            self.relax_instance.run()
++#        if MPI.rank == 0:
++#            self.relax_instance.multi_mode='multi_master'
++#        else:
++#            self.relax_instance.multi_mode='multi_slave'
++#            self.relax_instance.mode='slave'
++#            self.relax_instance.script_file=None
++#            self.relax_instance.dummy_mode=True
++#            #self.relax_instance.run()
+ 
+ 
+         if MPI.rank ==0:
+@@ -101,7 +209,11 @@
+             #self.relax_instance.run(deamon=True)
+             while not self.do_quit:
+                 command = MPI.COMM_WORLD.Recv(source=0)
+-                command.run(self.relax_instance, 
+self.relax_instance.processor)
++                try:
++                    command.run(self)
++                except Exception,e:
++                    self.return_object(e)
++
+ 
+ 
+             #if data=='close':
+
+Modified: branches/multi_processor_merge/relax
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/multi_processor_merge/relax?rev=7716&amp;r1=7715&amp;r2=7716&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/multi_processor_merge/relax?rev=7716&amp;r1=7715&amp;r2=7716&amp;view=diff</a>
+==============================================================================
+--- branches/multi_processor_merge/relax (original)
++++ branches/multi_processor_merge/relax Wed Oct 15 22:05:14 2008
+@@ -107,12 +107,14 @@
+ 
+         #FIXME use self.mode all over
+         mode = self.mode
++        print mode
+ 
+         # Show the version number and exit.
+         if mode == 'version':
+             print 'relax ' + self.version
+             sys.exit()
+ 
++        # FIXME threading
+         # Logging.
+         if self.log_file:
+             log(self.log_file)
+@@ -129,7 +131,7 @@
+             # Run the interpreter.
+             self.interpreter = interpreter.Interpreter(self, intro_string)
+             self.interpreter.run(self.script_file)
+-            print 'exit'
++
+ 
+         elif mode == 'slave':
+             self.interpreter = Interpreter(self)
+@@ -466,14 +468,14 @@
+     module = None
+     result = None
+ 
+-    try:
+-        module = __import__(module_path,globals(),  locals(), [])
+-        if verbose:
+-            print 'loaded module %s' % module_path
+-    except Exception, e:
+-        if verbose:
+-            print 'failed to load module_path %s' % module_path
+-            print 'exception:',e
++    #try:
++    module = __import__(module_path,globals(),  locals(), [])
++    if verbose:
++        print 'loaded module %s' % module_path
++    #except Exception, e:
++    #    if verbose:
++    #        print 'failed to load module_path %s' % module_path
++    #        print 'exception:',e
+ 
+     #FIXME: needs more failure checking
+     if module != None:
+@@ -494,6 +496,7 @@
+ 
+     modules = import_module(module_path)
+     #print modules
++
+     if hasattr(modules[-1],class_name):
+         clazz =  getattr(modules[-1], class_name)
+     else:
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Oct 15 22:20:03 2008</div>  
+</body>
+</html>

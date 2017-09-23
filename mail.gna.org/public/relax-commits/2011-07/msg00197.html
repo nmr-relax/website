@@ -1,0 +1,253 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r13554 &#45; /branches/gui_testing/gui/user_functions/base.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 12 Jul 2011 11:47:07 +0200 -->
+<!--X-Message-Id: E1QgZYZ&#45;0008GV&#45;T9@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r13554 - /branches/gui_testing/gui/user_functions/base.py -- July 12, 2011 - 11:47</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r13554 - /branches/gui_testing/gui/user_functions/base.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00197" class="tabs">Index by Date</a> | <a href="threads.html#00197" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00196.html">Date Prev</a>] [<a href="msg00198.html">Date Next</a>] [<a href="msg00196.html">Thread Prev</a>] [<a href="msg00198.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 12 Jul 2011 09:47:07 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00197.html">E1QgZYZ-0008GV-T9@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on July 12, 2011 - 11:47:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Jul 12 11:47:07 2011
+New Revision: 13554
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=13554&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=13554&amp;view=rev</a>
+Log:
+Improvements to the user function window descriptions.
+
+The process_doc() method has been added to isolate text elements such as 
+tables to allow
+differential formatting.
+
+
+Modified:
+    branches/gui_testing/gui/user_functions/base.py
+
+Modified: branches/gui_testing/gui/user_functions/base.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/gui_testing/gui/user_functions/base.py?rev=13554&amp;r1=13553&amp;r2=13554&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/gui_testing/gui/user_functions/base.py?rev=13554&amp;r1=13553&amp;r2=13554&amp;view=diff</a>
+==============================================================================
+--- branches/gui_testing/gui/user_functions/base.py (original)
++++ branches/gui_testing/gui/user_functions/base.py Tue Jul 12 11:47:07 2011
+@@ -24,6 +24,8 @@
+ &quot;&quot;&quot;Base class module for the user function GUI elements.&quot;&quot;&quot;
+ 
+ # Python module imports.
++from re import search
++from string import split
+ import wx
+ from wx.lib import scrolledpanel
+ 
+@@ -165,40 +167,43 @@
+         panel_sizer = wx.BoxSizer(wx.VERTICAL)
+ 
+         # Initialise the text elements.
+-        text_list = [[self.uf._doc_title, None]]
++        text_list = []
++
++        # The description.
+         if hasattr(self.uf, '_doc_desc'):
+-            text_list[0][1] = self.uf._doc_desc
++            for element, type in self.process_doc([self.uf._doc_title, 
+self.uf._doc_desc]):
++                text_list.append([element, type])
+ 
+         # Additional documentation.
+         if hasattr(self.uf, '_doc_additional'):
+-            text_list = text_list + self.uf._doc_additional
++            for i in range(len(self.uf._doc_additional)):
++                for element, type in 
+self.process_doc(self.uf._doc_additional[i]):
++                    text_list.append([element, type])
+ 
+         # Loop over the elements.
+         tot_x = 0
+         tot_y = 0
+         text_elements = []
+         i = 0
+-        for title, desc in text_list:
+-            # A new element.
+-            text_elements.append([None, None])
+-
+-            # The title.
+-            text_elements[-1][0] = wx.StaticText(panel, -1, title, 
+style=wx.TE_MULTILINE)
+-            text_elements[-1][0].SetFont(self.gui.font_subtitle)
+-
+-            # The description.
+-            text_elements[-1][1] = wx.StaticText(panel, -1, desc, 
+style=wx.TE_MULTILINE)
+-            text_elements[-1][1].SetFont(self.gui.font_10_modern)
++        for text, type in text_list:
++            # The text.
++            text_elements.append(wx.StaticText(panel, -1, text, 
+style=wx.TE_MULTILINE))
++
++            # Format.
++            if type == 'title':
++                text_elements[-1].SetFont(self.gui.font_subtitle)
++            elif type == 'desc':
++                text_elements[-1].SetFont(self.gui.font_normal)
++            elif type == 'table':
++                text_elements[-1].SetFont(self.gui.font_8_modern)
+ 
+             # Wrap the text.
+-            text_elements[-1][0].Wrap(self._main_size - 20)
+-            text_elements[-1][1].Wrap(self._main_size - 20)
++            text_elements[-1].Wrap(self._main_size - 20)
+ 
+             # The text size.
+-            for j in range(2):
+-                x, y = text_elements[-1][j].GetSizeTuple()
+-                tot_x += x
+-                tot_y += y
++            x, y = text_elements[-1].GetSizeTuple()
++            tot_x += x
++            tot_y += y
+ 
+             # Size for the spacing.
+             tot_y += spacing
+@@ -217,8 +222,7 @@
+         else:
+             # Rewrap the text.
+             for i in range(len(text_elements)):
+-                text_elements[i][0].Wrap(self._main_size)
+-                text_elements[i][1].Wrap(self._main_size)
++                text_elements[i].Wrap(self._main_size)
+ 
+             # Set the panel size.
+             panel.SetInitialSize((tot_x, tot_y))
+@@ -229,14 +233,12 @@
+             if i != 0:
+                 panel_sizer.AddSpacer(spacing)
+ 
+-            # The title.
+-            panel_sizer.Add(text_elements[i][0], 0, wx.ALIGN_LEFT, 0)
+-
+-            # Spacer.
+-            panel_sizer.AddSpacer(spacing)
+-
+-            # The description.
+-            panel_sizer.Add(text_elements[i][1], 0, wx.ALIGN_LEFT, 0)
++            # The text.
++            panel_sizer.Add(text_elements[i], 0, wx.ALIGN_LEFT, 0)
++
++            # Spacer after titles.
++            if text_list[i][1] == 'title':
++                panel_sizer.AddSpacer(spacing)
+ 
+         # Set up and add the panel to the sizer.
+         panel.SetSizer(panel_sizer)
+@@ -255,3 +257,43 @@
+ 
+         # Notify.
+         self.gui.user_functions.notify_observers()
++
++
++    def process_doc(self, doc):
++        &quot;&quot;&quot;Process the documentation list.
++
++        @param doc:     The documentation in the form of a list of the title 
+and description.
++        @type doc:      list of str
++        &quot;&quot;&quot;
++
++        # The title.
++        yield doc[0], 'title'
++
++        # Split up the description.
++        docstring_lines = split(doc[1], &quot;\n&quot;)
++
++        # Initialise.
++        text = [&quot;&quot;]
++        type = ['desc']
++        in_table = False
++
++        # Loop over the lines of the docstring.
++        for line in docstring_lines:
++            # Start of the table.
++            if not in_table and search('___', line):
++                in_table = True
++                text.append(&quot;&quot;)
++                type.append(&quot;table&quot;)
++
++            # Add the line to the text.
++            text[-1] = &quot;%s%s\n&quot; % (text[-1], line)
++
++            # End of the table.
++            if in_table and search('^\\|_', line):
++                in_table = False
++                text.append(&quot;&quot;)
++                type.append(&quot;desc&quot;)
++
++        # Yield the bits.
++        for i in range(len(text)):
++            yield text[i], type[i]
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Jul 12 12:00:02 2011</div>  
+</body>
+</html>

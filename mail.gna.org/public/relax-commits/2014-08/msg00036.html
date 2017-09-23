@@ -1,0 +1,160 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r24902 &#45; /trunk/lib/dispersion/matrix_exponential.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 01 Aug 2014 18:09:24 +0200 -->
+<!--X-Message-Id: E1XDFOV&#45;0007kB&#45;QO@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r24902 - /trunk/lib/dispersion/matrix_exponential.py -- August 01, 2014 - 18:09</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r24902 - /trunk/lib/dispersion/matrix_exponential.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00036" class="tabs">Index by Date</a> | <a href="threads.html#00036" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00035.html">Date Prev</a>] [<a href="msg00037.html">Date Next</a>] [<a href="msg00035.html">Thread Prev</a>] [<a href="msg00037.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 01 Aug 2014 16:09:23 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00036.html">E1XDFOV-0007kB-QO@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on August 01, 2014 - 18:09:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Fri Aug  1 18:09:23 2014
+New Revision: 24902
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=24902&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=24902&amp;view=rev</a>
+Log:
+Created function to create the helper index numpy array, to help figuring out 
+the indices to store in the exchange data matrix.
+
+This is for striding through data and store the data correct in the data 
+matrix.
+
+This is for a special situation where numpy version is &lt; 1.8, and where the 
+numpy.linalg.eig() function can only
+be performed on square matrices, and not on higher dimensional data.
+
+For this situation, it is necessary to stride through the data.
+
+Modified:
+    trunk/lib/dispersion/matrix_exponential.py
+
+Modified: trunk/lib/dispersion/matrix_exponential.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/lib/dispersion/matrix_exponential.py?rev=24902&amp;r1=24901&amp;r2=24902&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/lib/dispersion/matrix_exponential.py?rev=24902&amp;r1=24901&amp;r2=24902&amp;view=diff</a>
+==============================================================================
+--- trunk/lib/dispersion/matrix_exponential.py  (original)
++++ trunk/lib/dispersion/matrix_exponential.py  Fri Aug  1 18:09:23 2014
+@@ -28,6 +28,50 @@
+ from numpy.linalg import eig, inv
+ 
+ 
++def create_index(NE=None, NS=None, NM=None, NO=None, ND=None):
++    &quot;&quot;&quot;Method to create the helper index numpy array, to help figuring out 
+the indices to store in the exchange data matrix.
++
++    @keyword NE:  The total number of experiment types.
++    @type NE:     None or int
++    @keyword NS:  The total number of spins of the spin cluster.
++    @type NS:     int
++    @keyword NM:  The total number of magnetic field strengths.
++    @type NM:     int
++    @keyword NO:  The total number of spin-lock offsets.
++    @type NO:     int
++    @keyword ND:  The total number of dispersion points (either the 
+spin-lock field strength or the nu_CPMG frequency).
++    @type ND:     int
++    @return:      The numpy array for containing index indices for storing 
+in the strided exchange data matrix.
++    @rtype:       numpy int array of rank [NE][NS][NM][NO][ND][5] or 
+[NS][NM][NO][ND][4].
++    &quot;&quot;&quot;
++
++    # Make array to store index.
++    if NE != None:
++        index = zeros([NE, NS, NM, NO, ND, 5], int16)
++
++    else:
++        # Make array to store index.
++        index = zeros([NS, NM, NO, ND, 4], int16)
++
++    # Make indices for storing in data matrix.
++    if NE != None:
++        for ei in range(NE):
++            for si in range(NS):
++                for mi in range(NM):
++                    for oi in range(NO):
++                        for di in range(ND):
++                            index[ei, si, mi, oi, di] = ei, si, mi, oi, di
++
++    else:
++        for si in range(NS):
++            for mi in range(NM):
++                for oi in range(NO):
++                    for di in range(ND):
++                        index[si, mi, oi, di] = si, mi, oi, di
++
++    return index
++
++
+ def create_index_rank_NE_NS_NM_NO_ND_x_x(data):
+     &quot;&quot;&quot; Method to create the helper index matrix, to help figuring out the 
+index to store in the data matrix. &quot;&quot;&quot;
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Aug 01 18:20:03 2014</div>  
+</body>
+</html>

@@ -1,0 +1,187 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r23758 &#45; /branches/disp_spin_speed/target_functions/relax_disp.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 09 Jun 2014 19:46:25 +0200 -->
+<!--X-Message-Id: E1Wu3eL&#45;0002JI&#45;K5@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r23758 - /branches/disp_spin_speed/target_functions/relax_disp.py -- June 09, 2014 - 19:46</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r23758 - /branches/disp_spin_speed/target_functions/relax_disp.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00145" class="tabs">Index by Date</a> | <a href="threads.html#00145" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00144.html">Date Prev</a>] [<a href="msg00146.html">Date Next</a>] [<a href="msg00144.html">Thread Prev</a>] [<a href="msg00146.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 09 Jun 2014 17:46:25 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00145.html">E1Wu3eL-0002JI-K5@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on June 09, 2014 - 19:46:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Mon Jun  9 19:46:25 2014
+New Revision: 23758
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=23758&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=23758&amp;view=rev</a>
+Log:
+Moved the calculation of dw_frq out of spin and spectrometer loop.
+
+This is done by having a special 1/0 spin numpy array, which turns on or off 
+the values in the numpy array multiplication.
+
+The multiplication needs to first axis expand dw, and then tile the arrays 
+according to the numpy structure.
+
+Task #7807 (<a  rel="nofollow" href="https://gna.org/task/index.php?7807">https://gna.org/task/index.php?7807</a>): Speed-up of dispersion 
+models for Clustered analysis.
+
+Modified:
+    branches/disp_spin_speed/target_functions/relax_disp.py
+
+Modified: branches/disp_spin_speed/target_functions/relax_disp.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/disp_spin_speed/target_functions/relax_disp.py?rev=23758&amp;r1=23757&amp;r2=23758&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/disp_spin_speed/target_functions/relax_disp.py?rev=23758&amp;r1=23757&amp;r2=23758&amp;view=diff</a>
+==============================================================================
+--- branches/disp_spin_speed/target_functions/relax_disp.py     (original)
++++ branches/disp_spin_speed/target_functions/relax_disp.py     Mon Jun  9 
+19:46:25 2014
+@@ -29,6 +29,7 @@
+ from copy import deepcopy
+ from math import pi
+ from numpy import array, asarray, complex64, dot, float64, int16, max, ones, 
+sqrt, sum, zeros
++import numpy as np
+ 
+ # relax module imports.
+ from lib.dispersion.b14 import r2eff_B14
+@@ -405,9 +406,12 @@
+             # To let the numpy array operate well together, the broadcast 
+size has to be equal for all shapes.
+             self.max_num_disp_points = max(self.num_disp_points)
+ 
++            # Define the shape of all the numpy arrays.
++            self.numpy_array_shape = back_calc_shape + 
+[self.max_num_disp_points]
++
+             # Create zero and one numpy structure.
+-            self.zeros_a = zeros(back_calc_shape + 
+[self.max_num_disp_points], float64)
+-            self.ones_a = ones(back_calc_shape + [self.max_num_disp_points], 
+float64)
++            self.zeros_a = zeros(self.numpy_array_shape, float64)
++            self.ones_a = ones(self.numpy_array_shape, float64)
+ 
+             # Create numpy arrays to pass to the lib function.
+             # All numpy arrays have to have same shape to allow to multiply 
+together.
+@@ -425,6 +429,7 @@
+             self.values_a = deepcopy(self.ones_a)
+             self.has_missing = False
+             self.frqs_a = deepcopy(self.zeros_a)
++            self.spins_a = deepcopy(self.zeros_a)
+ 
+ 
+             # Loop over the experiment types.
+@@ -448,6 +453,9 @@
+ 
+                             # Extract the frequencies to numpy array.
+                             self.frqs_a[ei][si][mi][oi][:num_disp_points] = 
+self.frqs[ei][si][mi]
++                            
++                            # Make a spin 1/0 file.
++                            self.spins_a[ei][si][mi][oi][:num_disp_points] = 
+ones(num_disp_points)
+ 
+                             for di in 
+range(self.num_disp_points[ei][si][mi][oi]):
+                                 if self.missing[ei][si][mi][oi][di]:
+@@ -530,6 +538,14 @@
+         @rtype:         float
+         &quot;&quot;&quot;
+ 
++        # Expand dw to number of axis.
++        dw_axis = dw[None,:,None,None,None]
++        # Tile tw according to dimensions.
++        dw_axis = np.tile(dw_axis, (self.numpy_array_shape[0], 
+self.numpy_array_shape[2],self.numpy_array_shape[3], 
+self.numpy_array_shape[4]))
++
++        # Convert dw from ppm to rad/s.
++        self.dw_frq_a = dw_axis*self.spins_a*self.frqs_a
++
+         # Loop over the spectrometer frequencies.
+         for mi in range(self.num_frq):
+             # Extract number of dispersion points. Always the same per sin.
+@@ -547,12 +563,6 @@
+                 # Store r20a and r20b values per disp point.
+                 self.R20A_a[0][si][mi][0][:num_disp_points] = array( 
+[R20A[r20_index]] * num_disp_points, float64)
+                 self.R20B_a[0][si][mi][0][:num_disp_points]  = array( 
+[R20B[r20_index]] * num_disp_points, float64)
+-
+-                # Convert dw from ppm to rad/s.
+-                dw_frq = dw[si] * self.frqs[0][si][mi]
+-
+-                # Store dw_frq per disp point.
+-                self.dw_frq_a[0][si][mi][0][:num_disp_points] = array( 
+[dw_frq] * num_disp_points, float64)
+ 
+                 # Store pA and kex per disp point.
+                 self.pA_a[0][si][mi][0][:num_disp_points] = pA_arr
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Jun 09 20:00:02 2014</div>  
+</body>
+</html>

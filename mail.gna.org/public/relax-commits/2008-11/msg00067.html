@@ -1,0 +1,209 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r8037 &#45; /branches/spectral_errors/generic_fns/spectrum.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 27 Nov 2008 14:02:42 +0100 -->
+<!--X-Message-Id: E1L5gW2&#45;0004wy&#45;3G@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r8037 - /branches/spectral_errors/generic_fns/spectrum.py -- November 27, 2008 - 14:02</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r8037 - /branches/spectral_errors/generic_fns/spectrum.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00067" class="tabs">Index by Date</a> | <a href="threads.html#00067" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00066.html">Date Prev</a>] [<a href="msg00068.html">Date Next</a>] [<a href="msg00066.html">Thread Prev</a>] [<a href="msg00068.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 27 Nov 2008 13:02:42 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00067.html">E1L5gW2-0004wy-3G@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on November 27, 2008 - 14:02:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Nov 27 14:02:41 2008
+New Revision: 8037
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=8037&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=8037&amp;view=rev</a>
+Log:
+Partial implementation of the error_analysis() code
+
+The 2 categories now supported are both peak height and volumes when no 
+spectra are replicated.
+
+
+Modified:
+    branches/spectral_errors/generic_fns/spectrum.py
+
+Modified: branches/spectral_errors/generic_fns/spectrum.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/spectral_errors/generic_fns/spectrum.py?rev=8037&amp;r1=8036&amp;r2=8037&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/spectral_errors/generic_fns/spectrum.py?rev=8037&amp;r1=8036&amp;r2=8037&amp;view=diff</a>
+==============================================================================
+--- branches/spectral_errors/generic_fns/spectrum.py (original)
++++ branches/spectral_errors/generic_fns/spectrum.py Thu Nov 27 14:02:41 2008
+@@ -34,7 +34,7 @@
+ # relax module imports.
+ from generic_fns.mol_res_spin import exists_mol_res_spin_data, 
+generate_spin_id, return_spin, spin_loop
+ from generic_fns import pipes
+-from relax_errors import RelaxError, RelaxArgNotInListError, 
+RelaxNoSequenceError
++from relax_errors import RelaxError, RelaxArgNotInListError, 
+RelaxImplementError, RelaxNoSequenceError
+ from relax_io import extract_data, strip
+ from relax_warnings import RelaxWarning, RelaxNoSpinWarning
+ 
+@@ -162,6 +162,78 @@
+ 
+     # Get the current data pipe.
+     cdp = pipes.get_pipe()
++
++    # Test if spectra have been loaded.
++    if not hasattr(cdp, 'spectrum_ids'):
++        raise RelaxError, &quot;Error analysis is not possible, no spectra have 
+been loaded.&quot;
++
++    # Peak height category.
++    if cdp.int_method == 'height':
++        # Print out.
++        print &quot;Intensity measure:  Peak heights.&quot;
++
++        # Do we have replicated spectra?
++        if hasattr(cdp, 'replicated'):
++            # Print out.
++            print &quot;Replicated spectra:  Yes.&quot;
++            raise RelaxImplementError
++
++        # No replicated spectra.
++        else:
++            # Print out.
++            print &quot;Replicated spectra:  No.&quot;
++
++            # Loop over the spins and set the error to the RMSD of the base 
+plane noise.
++            for spin, spin_id in spin_loop(return_id=True):
++                # Skip deselected spins.
++                if not spin.select:
++                    continue
++
++                # Skip spins missing intensity data.
++                if not hasattr(spin, 'intensities'):
++                    continue
++
++                # Test if the RMSD has been set.
++                if not hasattr(spin, 'baseplane_rmsd'):
++                    print spin
++                    raise RelaxError, &quot;The RMSD of the base plane noise for 
+spin '%s' has not been set.&quot; % spin_id
++
++                # Set the error to the RMSD.
++                spin.intensity_err = spin.baseplane_rmsd
++
++
++    # Peak volume category.
++    if cdp.int_method == 'volume':
++        # Print out.
++        print &quot;Intensity measure:  Peak volumes.&quot;
++
++        # Do we have replicated spectra?
++        if hasattr(cdp, 'replicated'):
++            # Print out.
++            print &quot;Replicated spectra:  Yes.&quot;
++            raise RelaxImplementError
++
++        # No replicated spectra.
++        else:
++            # Print out.
++            print &quot;Replicated spectra:  No.&quot;
++
++            # Loop over the spins and set the error to the RMSD of the base 
+plane noise.
++            for spin, spin_id in spin_loop(return_id=True):
++                # Skip deselected spins.
++                if not spin.select:
++                    continue
++
++                # Skip spins missing intensity data.
++                if not hasattr(spin, 'intensities'):
++                    continue
++
++                # Test if the RMSD has been set.
++                if not hasattr(spin, 'baseplane_rmsd'):
++                    raise RelaxError, &quot;The RMSD of the base plane noise for 
+spin '%s' has not been set.&quot; % spin_id
++
++                # Set the error to the RMSD.
++                spin.intensity_err = spin.baseplane_rmsd
+ 
+ 
+ def intensity_generic(line, int_col):
+@@ -441,6 +513,13 @@
+     # Get the current data pipe.
+     cdp = pipes.get_pipe()
+ 
++    # Test that the intensity measures are identical.
++    if hasattr(cdp, 'int_method') and cdp.int_method != int_method:
++        raise RelaxError, &quot;The '%s' measure of peak intensities does not 
+match '%s' of the previously loaded spectra.&quot; % (int_method, cdp.int_method)
++
++    # Set the peak intensity measure.
++    cdp.int_method = int_method
++
+     # Extract the data from the file.
+     file_data = extract_data(file, dir)
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Nov 27 14:20:04 2008</div>  
+</body>
+</html>

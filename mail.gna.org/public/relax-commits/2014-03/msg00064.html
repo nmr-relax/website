@@ -1,0 +1,161 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r22454 &#45; /trunk/specific_analyses/relax_disp/api.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 12 Mar 2014 10:32:09 +0100 -->
+<!--X-Message-Id: E1WNfWD&#45;0001wz&#45;OC@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r22454 - /trunk/specific_analyses/relax_disp/api.py -- March 12, 2014 - 10:32</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r22454 - /trunk/specific_analyses/relax_disp/api.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00064" class="tabs">Index by Date</a> | <a href="threads.html#00064" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00063.html">Date Prev</a>] [<a href="msg00065.html">Date Next</a>] [<a href="msg00063.html">Thread Prev</a>] [<a href="msg00065.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 12 Mar 2014 09:32:09 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00064.html">E1WNfWD-0001wz-OC@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on March 12, 2014 - 10:32:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Wed Mar 12 10:32:09 2014
+New Revision: 22454
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=22454&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=22454&amp;view=rev</a>
+Log:
+Replaced API function in specific_analysis.relax_disp.api to calculate and 
+return values for parameter theta() when this is requested.
+
+Regarding sr #3124, (<a  rel="nofollow" href="https://gna.org/support/index.php?3124">https://gna.org/support/index.php?3124</a>) - Grace graphs 
+production for R1rho analysis with R2_eff as function of Omega_eff.
+
+Implemented according to 
+<a  rel="nofollow" href="http://www.mail-archive.com/relax-devel@xxxxxxx/msg05082.html">http://www.mail-archive.com/relax-devel@xxxxxxx/msg05082.html</a>.
+
+Modified:
+    trunk/specific_analyses/relax_disp/api.py
+
+Modified: trunk/specific_analyses/relax_disp/api.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/relax_disp/api.py?rev=22454&amp;r1=22453&amp;r2=22454&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/relax_disp/api.py?rev=22454&amp;r1=22453&amp;r2=22454&amp;view=diff</a>
+==============================================================================
+--- trunk/specific_analyses/relax_disp/api.py   (original)
++++ trunk/specific_analyses/relax_disp/api.py   Wed Mar 12 10:32:09 2014
+@@ -72,7 +72,7 @@
+         self.data_init = self._data_init_spin
+         self.model_type = self._model_type_local
+         self.return_conversion_factor = self._return_no_conversion_factor
+-        self.return_value = self._return_value_general
++        self.return_value = self.return_value
+         self.set_param_values = self._set_param_values_spin
+ 
+         # Set up the spin parameters.
+@@ -1409,6 +1409,38 @@
+     set_doc.add_paragraph(&quot;Only three parameters can be set for either the 
+slow- or the fast-exchange regime. For the slow-exchange regime, these 
+parameters include the transversal relaxation rate for state A (R2A), the 
+exchange rate from state A to state (k_AB) and the chemical shift difference 
+between states A and B (dw). For the fast-exchange regime, these include the 
+transversal relaxation rate (R2), the chemical exchange contribution to R2 
+(Rex) and the exchange rate (kex). Setting parameters for a non selected 
+model has no effect.&quot;)
+ 
+ 
++    def return_value(self, spin, param, sim=None, bc=False):
++        &quot;&quot;&quot;Return the value and error corresponding to the parameter.
++
++        If sim is set to an integer, return the value of the simulation and 
+None.
++
++
++        @param spin:    The SpinContainer object.
++        @type spin:     SpinContainer
++        @param param:   The name of the parameter to return values for.
++        @type param:    str
++        @keyword sim:   The Monte Carlo simulation index.
++        @type sim:      None or int
++        @keyword bc:    The back-calculated data flag.  If True, then the 
+back-calculated data will be returned rather than the actual data.
++        @type bc:       bool
++        @return:        The value and error corresponding to
++        @rtype:         tuple of length 2 of floats or None
++        &quot;&quot;&quot;
++
++        # Define list of special parameters.
++        special_parameters = ['theta']
++
++        # Use api_common function for paramets not defined in 
+special_parameters.
++        if param not in special_parameters:
++            returnval = self._return_value_general(spin=spin, param=param, 
+sim=sim, bc=bc)
++            return returnval
++
++        # If parameter in special_parameters, the do the following.
++        else:
++            returnval = self._return_value_general(spin=spin, param=param, 
+sim=sim, bc=bc)
++            return returnval
++
++
+     def set_error(self, model_info, index, error):
+         &quot;&quot;&quot;Set the parameter errors.
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Mar 12 11:20:03 2014</div>  
+</body>
+</html>

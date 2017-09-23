@@ -1,0 +1,360 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r9837 &#45; in /branches/bmrb: generic_fns/mol_res_spin.py	prompt/molecule.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 28 Oct 2009 18:59:01 +0100 -->
+<!--X-Message-Id: E1N3CnU&#45;0003BZ&#45;Vl@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r9837 - in /branches/bmrb: generic_fns/mol_res_spin.py	prompt/molecule.py -- October 28, 2009 - 18:59</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r9837 - in /branches/bmrb: generic_fns/mol_res_spin.py	prompt/molecule.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00273" class="tabs">Index by Date</a> | <a href="threads.html#00273" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00272.html">Date Prev</a>] [<a href="msg00274.html">Date Next</a>] [<a href="msg00272.html">Thread Prev</a>] [<a href="msg00274.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 28 Oct 2009 17:59:00 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00273.html">E1N3CnU-0003BZ-Vl@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on October 28, 2009 - 18:59:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Oct 28 18:59:00 2009
+New Revision: 9837
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=9837&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=9837&amp;view=rev</a>
+Log:
+The polymer type and one letter code sequence are being placed into the BMRB 
+file.
+
+The new molecule.type() user function has been created for this.
+
+
+Modified:
+    branches/bmrb/generic_fns/mol_res_spin.py
+    branches/bmrb/prompt/molecule.py
+
+Modified: branches/bmrb/generic_fns/mol_res_spin.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/bmrb/generic_fns/mol_res_spin.py?rev=9837&amp;r1=9836&amp;r2=9837&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/bmrb/generic_fns/mol_res_spin.py?rev=9837&amp;r1=9836&amp;r2=9837&amp;view=diff</a>
+==============================================================================
+--- branches/bmrb/generic_fns/mol_res_spin.py (original)
++++ branches/bmrb/generic_fns/mol_res_spin.py Wed Oct 28 18:59:00 2009
+@@ -38,7 +38,7 @@
+ # Python module imports.
+ from numpy import array
+ from re import split
+-from string import count, strip
++from string import count, strip, upper
+ from textwrap import fill
+ from warnings import warn
+ 
+@@ -514,28 +514,31 @@
+     @type version:      str
+     &quot;&quot;&quot;
+ 
+-    # Get the molecule names.
+-    mol_names = get_molecule_names()
+-
+-    # Loop over the names.
+-    for i in range(len(mol_names)):
++    # Loop over the molecules.
++    for mol in molecule_loop():
+         # Test that the molecule has a name!
+-        if not mol_names[i]:
++        if not mol.name:
+             raise RelaxError(&quot;All molecules must be named.&quot;)
+ 
++        # Test that the molecule has a type!
++        if not hasattr(mol, 'type') or not mol.type:
++            raise RelaxError(&quot;The molecule type for the '%s' molecule must 
+be specified, please use the appropriate molecule user function to set this.&quot; 
+% mol.name)
++
+         # Get the residue names and numbers.
+-        res_names = get_residue_names(&quot;#&quot; + mol_names[i])
+-        res_nums = get_residue_nums(&quot;#&quot; + mol_names[i])
++        res_names = get_residue_names(&quot;#&quot; + mol.name)
++        res_nums = get_residue_nums(&quot;#&quot; + mol.name)
++
++        # Get the one letter codes.
++        polymer_seq_code = one_letter_code(res_names)
+ 
+         # Find the molecule type.
+-        if len(res_nums) &lt; 4:
++        if mol.type in ['organic molecule', 'other']:
+             mol_type = 'non-polymer'
+-            warn(RelaxWarning(&quot;The molecule '%s' is assumed to be a 
+non-polymer, i.e. an organic molecule, ligand, metal ion, etc.  It should not 
+be a solvent molecule!&quot;))
+         else:
+             mol_type = 'polymer'
+ 
+         # Add the entity.
+-        star.entity.add(mol_name=mol_names[i], mol_type=mol_type, 
+res_nums=res_nums, res_names=res_names)
++        star.entity.add(mol_name=mol.name, mol_type=mol_type, 
+polymer_type=mol.type, polymer_seq_code=polymer_seq_code, res_nums=res_nums, 
+res_names=res_names)
+ 
+ 
+ def copy_molecule(pipe_from=None, mol_from=None, pipe_to=None, mol_to=None):
+@@ -1693,6 +1696,61 @@
+             warn(RelaxWarning(&quot;The spin '%s' is already numbered.  Set the 
+force flag to renumber.&quot; % id))
+         else:
+             spin.num = number
++
++
++def one_letter_code(res_names):
++    &quot;&quot;&quot;Convert the list of residue names into a string of one letter residue 
+codes.
++
++    Standard amino acids are converted to the one letter code.  Unknown 
+residues are labelled as 'X'.
++
++
++    @param res_names:   A list of residue names.
++    @type res_names:    list or str
++    @return:            The one letter codes for the residues.
++    @rtype:             str
++    &quot;&quot;&quot;
++
++    # The amino acid translation table.
++    aa_table = [
++                ['Alanine',         'ALA', 'A'],
++                ['Arginine',        'ARG', 'R'],
++                ['Asparagine',      'ASN', 'N'],
++                ['Aspartic acid',   'ASP', 'D'],
++                ['Cysteine',        'CYS', 'C'],
++                ['Glutamic acid',   'GLU', 'E'],
++                ['Glutamine',       'GLN', 'Q'],
++                ['Glycine',         'GLY', 'G'],
++                ['Histidine',       'HIS', 'H'],
++                ['Isoleucine',      'ILE', 'I'],
++                ['Leucine',         'LEU', 'L'],
++                ['Lysine',          'LYS', 'K'],
++                ['Methionine',      'MET', 'M'],
++                ['Phenylalanine',   'PHE', 'F'],
++                ['Proline',         'PRO', 'P'],
++                ['Serine',          'SER', 'S'],
++                ['Threonine',       'THR', 'T'],
++                ['Tryptophan',      'TRP', 'W'],
++                ['Tyrosine',        'TYR', 'Y'],
++                ['Valine',          'VAL', 'V']
++    ]
++
++    # Translate.
++    seq = ''
++    for res in res_names:
++        # Aa match.
++        match = False
++        for i in range(len(aa_table)):
++            if upper(res) == aa_table[i][1]:
++                seq = seq + aa_table[i][2]
++                match = True
++                break
++
++        # No match.
++        if not match:
++            seq = seq + 'X'
++
++    # Return the sequence.
++    return seq
+ 
+ 
+ def parse_token(token, verbosity=False):
+@@ -2622,3 +2680,46 @@
+ 
+     # Return the three tokens.
+     return mol_token, res_token, spin_token
++
++
++def type_molecule(mol_id, type=None, force=False):
++    &quot;&quot;&quot;Set the molecule type.
++
++    @param mol_id:      The molecule identification string.
++    @type mol_id:       str
++    @param type:        The molecule type.
++    @type type:         str
++    @keyword force:     A flag which if True will cause the molecule type to 
+be overwritten.
++    @type force:        bool
++    &quot;&quot;&quot;
++
++    # Check.
++    allowed = ['organic molecule',
++               'DNA/RNA hybrid',
++               'polydeoxyribonucleotide',
++               'polypeptide(D)',
++               'polypeptide(L)',
++               'polyribonucleotide',
++               'polysaccharide(D)',
++               'polysaccharide(L)'
++               'other'
++    ]
++    if type not in allowed:
++        raise RelaxError(&quot;The molecule type '%s' must be one of %s.&quot; % 
+(type, allowed))
++
++    # Disallow residue and spin selections.
++    select_obj = Selection(mol_id)
++    if select_obj.has_residues():
++        raise RelaxResSelectDisallowError
++    if select_obj.has_spins():
++        raise RelaxSpinSelectDisallowError
++
++    # Change the molecule types.
++    for mol in molecule_loop(mol_id):
++        if hasattr(mol, 'type') and not force:
++            warn(RelaxWarning(&quot;The molecule '%s' already has its type set.  
+Set the force flag to change.&quot; % mol_id))
++        else:
++            mol.type = type
++
++
++
+
+Modified: branches/bmrb/prompt/molecule.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/bmrb/prompt/molecule.py?rev=9837&amp;r1=9836&amp;r2=9837&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/bmrb/prompt/molecule.py?rev=9837&amp;r1=9836&amp;r2=9837&amp;view=diff</a>
+==============================================================================
+--- branches/bmrb/prompt/molecule.py (original)
++++ branches/bmrb/prompt/molecule.py Wed Oct 28 18:59:00 2009
+@@ -30,7 +30,7 @@
+ # relax module imports.
+ from base_class import User_fn_class
+ import check
+-from generic_fns.mol_res_spin import copy_molecule, create_molecule, 
+delete_molecule, display_molecule, id_string_doc, name_molecule
++from generic_fns.mol_res_spin import copy_molecule, create_molecule, 
+delete_molecule, display_molecule, id_string_doc, name_molecule, type_molecule
+ 
+ 
+ class Molecule(User_fn_class):
+@@ -230,6 +230,62 @@
+         name_molecule(mol_id=mol_id, name=name, force=force)
+ 
+ 
++    def type(self, mol_id=None, type=None, force=False):
++        &quot;&quot;&quot;Set the molecule type (mainly used for BMRB submission).
++
++        Keyword Arguments
++        ~~~~~~~~~~~~~~~~~
++
++        mol_id:  The molecule identification string corresponding to one or 
+more molecules.
++
++        type:  The molecule type.
++
++        force:  A flag which if True will cause the molecule to type to be 
+overwritten.
++
++
++        Description
++        ~~~~~~~~~~~
++
++        This function allows the type of the molecule to be specified.  It 
+can be one of:
++
++            'organic molecule',
++            'DNA/RNA hybrid',
++            'polydeoxyribonucleotide',
++            'polypeptide(D)',
++            'polypeptide(L)',
++            'polyribonucleotide',
++            'polysaccharide(D)',
++            'polysaccharide(L)',
++            'other'.
++
++
++
++        Examples
++        ~~~~~~~~
++
++        To set the molecule 'Ap4Aase' to the 'polypeptide(L)' type, type one 
+of:
++
++        relax&gt; molecule.type('#Ap4Aase', 'polypeptide(L)', True)
++        relax&gt; molecule.type(mol_id='#Ap4Aase', type='polypeptide(L)', 
+force=True)
++        &quot;&quot;&quot;
++
++        # Function intro text.
++        if self.__relax__.interpreter.intro:
++            text = sys.ps3 + &quot;molecule.type(&quot;
++            text = text + &quot;mol_id=&quot; + repr(mol_id)
++            text = text + &quot;, type=&quot; + repr(type)
++            text = text + &quot;, force=&quot; + repr(force) + &quot;)&quot;
++            print(text)
++
++        # The argument checks.
++        check.is_str(mol_id, 'molecule identification string', 
+can_be_none=True)
++        check.is_str(type, 'molecule type')
++        check.is_bool(force, 'force flag')
++
++        # Execute the functional code.
++        type_molecule(mol_id=mol_id, type=type, force=force)
++
++
+ 
+     # Docstring modification.
+     #########################
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Oct 29 11:40:03 2009</div>  
+</body>
+</html>

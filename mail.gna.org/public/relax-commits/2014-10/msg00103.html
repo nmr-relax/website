@@ -1,0 +1,388 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r26207 &#45; /branches/frame_order_cleanup/auto_analyses/frame_order.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 08 Oct 2014 12:10:05 +0200 -->
+<!--X-Message-Id: E1XboC5&#45;0000Af&#45;A2@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r26207 - /branches/frame_order_cleanup/auto_analyses/frame_order.py -- October 08, 2014 - 12:10</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r26207 - /branches/frame_order_cleanup/auto_analyses/frame_order.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00103" class="tabs">Index by Date</a> | <a href="threads.html#00103" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00102.html">Date Prev</a>] [<a href="msg00104.html">Date Next</a>] [<a href="msg00102.html">Thread Prev</a>] [<a href="msg00104.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 08 Oct 2014 10:10:05 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00103.html">E1XboC5-0000Af-A2@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on October 08, 2014 - 12:10:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Oct  8 12:10:04 2014
+New Revision: 26207
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=26207&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=26207&amp;view=rev</a>
+Log:
+Intermediate optimisation results are now stored by the frame order 
+auto-analysis.
+
+The results from each minimise.grid_search and minimise.execute user function 
+call are now stored in
+specially named directories located in the 'intermediate_results' directory, 
+which itself is located
+in the auto-analysis results_dir directory.  This allows intermediate results 
+to be more easily
+analysed later on, which can be useful for optimising the optimisation steps. 
+ These directories can
+also be used for the pre_run_dir auto-analysis argument for subsequent 
+refinements from earlier
+steps in the optimisation.  The results stored include everything from the 
+results_output() method
+and the count_sobol_points() and summarise() functions.
+
+To allow this to work, the auto-analysis functions count_sobol_points() and 
+summarise() required
+modification.  Results files are now always loaded into a temporary data 
+pipe, rather switching to
+the corresponding pipe, and the temporary data pipe is deleted after the data 
+has been extracted.
+The original data pipe name is also stored and a switch back to that pipe 
+occurs at the end of each
+function.
+
+
+Modified:
+    branches/frame_order_cleanup/auto_analyses/frame_order.py
+
+Modified: branches/frame_order_cleanup/auto_analyses/frame_order.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/auto_analyses/frame_order.py?rev=26207&amp;r1=26206&amp;r2=26207&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/auto_analyses/frame_order.py?rev=26207&amp;r1=26206&amp;r2=26207&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/auto_analyses/frame_order.py   (original)
++++ branches/frame_order_cleanup/auto_analyses/frame_order.py   Wed Oct  8 
+12:10:04 2014
+@@ -89,6 +89,9 @@
+     @type force:            bool
+     &quot;&quot;&quot;
+ 
++    # Store the current data pipe name.
++    original_pipe = pipes.cdp_name()
++
+     # The model names, titles and directories, including axis permutations.
+     models = []
+     model_titles = []
+@@ -126,17 +129,12 @@
+         if not access(dirs[i]+sep+'results.bz2', F_OK):
+             continue
+ 
+-        # Switch to the data pipe if it already exists.
+-        if pipes.has_pipe(models[i]):
+-            pipes.switch(models[i])
+-
+-        # Otherwise load the data.
+-        else:
+-            # Create a data pipe.
+-            pipes.create(models[i], 'frame order')
+-
+-            # Load the data.
+-            results.read(file='results', dir=dirs[i])
++        # Create a data pipe.
++        pipe_name = 'temp %s' % models[i]
++        pipes.create(pipe_name, 'frame order')
++
++        # Load the data.
++        results.read(file='results', dir=dirs[i])
+ 
+         # SciPy quadratic integration has been used.
+         if hasattr(cdp, 'quad_int') and cdp.quad_int:
+@@ -151,6 +149,9 @@
+         count[models[i]] = cdp.sobol_points_used
+         count_total[models[i]] = cdp.sobol_max_points
+         percentage[models[i]] = &quot;%10.3f&quot; % (float(cdp.sobol_points_used) / 
+float(cdp.sobol_max_points) * 100.0) + '%'
++
++        # Delete the temporary data pipe.
++        pipes.delete(pipe_name)
+ 
+     # Initialise the output string.
+     string = &quot;Quasi-random Sobol' numerical PCS integration point 
+counting:\n\n&quot;
+@@ -175,6 +176,10 @@
+     file.write(string)
+     file.close()
+ 
++    # Switch back to the original data pipe, if it exists.
++    if original_pipe:
++        pipes.switch(original_pipe)
++
+ 
+ def model_directory(model, base_dir=None):
+     &quot;&quot;&quot;Return the directory to be used for the model.
+@@ -212,6 +217,9 @@
+     @keyword force:         A flag which if True will cause any preexisting 
+file to be overwritten.
+     @type force:            bool
+     &quot;&quot;&quot;
++
++    # Store the current data pipe name.
++    original_pipe = pipes.cdp_name()
+ 
+     # The model names, titles and directories, including axis permutations.
+     models = []
+@@ -260,17 +268,12 @@
+         if not access(dirs[i]+sep+'results.bz2', F_OK):
+             continue
+ 
+-        # Switch to the data pipe if it already exists.
+-        if pipes.has_pipe(models[i]):
+-            pipes.switch(models[i])
+-
+-        # Otherwise load the data.
+-        else:
+-            # Create a data pipe.
+-            pipes.create(models[i], 'frame order')
+-
+-            # Load the data.
+-            results.read(file='results', dir=dirs[i])
++        # Create a data pipe.
++        pipe_name = 'temp %s' % models[i]
++        pipes.create(pipe_name, 'frame order')
++
++        # Load the data.
++        results.read(file='results', dir=dirs[i])
+ 
+         # Number of params.
+         k = len(cdp.params)
+@@ -297,7 +300,7 @@
+ 
+         # Convert the axis alpha angle to spherical angles for comparison.
+         if hasattr(cdp, 'axis_alpha') and cdp.model in [MODEL_ROTOR, 
+MODEL_FREE_ROTOR]:
+-            axis_theta, axis_phi = 
+convert_axis_alpha_to_spherical(alpha=cdp.axis_alpha, 
+pivot=generate_pivot(order=1, pipe_name=models[i]), 
+point=pipe_centre_of_mass(verbosity=0))
++            axis_theta, axis_phi = 
+convert_axis_alpha_to_spherical(alpha=cdp.axis_alpha, 
+pivot=generate_pivot(order=1, pipe_name=pipe_name), 
+point=pipe_centre_of_mass(verbosity=0))
+             contents1[-1][5] = wrap_angles(axis_theta, 0.0, 2.0*pi)
+             contents1[-1][6] = wrap_angles(axis_phi, 0.0, 2.0*pi)
+ 
+@@ -338,6 +341,9 @@
+         contents2[-1][8] = cdp.pivot_y
+         contents2[-1][9] = cdp.pivot_z
+ 
++        # Delete the temporary data pipe.
++        pipes.delete(pipe_name)
++
+     # Add the tables.
+     string += format_table(headings=headings1, contents=contents1, 
+custom_format=[None, None, &quot;%.2f&quot;, &quot;%.2f&quot;, &quot;%.3f&quot;, &quot;%.3f&quot;, &quot;%.3f&quot;, &quot;%.2f&quot;, 
+&quot;%.2f&quot;, &quot;%.2f&quot;, &quot;%.2f&quot;])
+     string += format_table(headings=headings2, contents=contents2, 
+custom_format=[None, &quot;%.3f&quot;, &quot;%.3f&quot;, &quot;%.3f&quot;, &quot;%.3f&quot;, &quot;%.3f&quot;, &quot;%.3f&quot;, &quot;%.3f&quot;, 
+&quot;%.3f&quot;, &quot;%.3f&quot;])
+@@ -350,6 +356,10 @@
+     file = open_write_file(file_name=file_name, dir=dir, force=force)
+     file.write(string)
+     file.close()
++
++    # Switch back to the original data pipe, if it exists.
++    if original_pipe:
++        pipes.switch(original_pipe)
+ 
+ 
+ 
+@@ -923,34 +933,72 @@
+                 # Printout.
+                 subsubtitle(file=sys.stdout, text=&quot;Optimisation using the 
+PCS subset&quot;)
+ 
++                # Results directory stub for intermediate results.
++                intermediate_stub = self.results_dir + sep + 
+'intermediate_results' + sep + 'pcs_subset'
++
+                 # Zooming grid search.
+                 for i in opt.loop_grid():
++                    # The intermediate results directory.
++                    intermediate_dir = intermediate_stub + '_grid%i' % i
++
+                     # Set the zooming grid search level.
+                     zoom = opt.get_grid_zoom_level(i)
+                     if zoom != None:
+                         self.interpreter.minimise.grid_zoom(level=zoom)
+-
+-                    # The numerical optimisation settings.
+-                    
+self.interpreter.frame_order.quad_int(opt.get_grid_quad_int(i))
+-                    self.sobol_setup(opt.get_grid_sobol_info(i))
++                        intermediate_dir += '_zoom%i' % zoom
+ 
+                     # Set up the custom grid increments.
+                     incs = self.custom_grid_incs(model, 
+inc=opt.get_grid_inc(i))
++                    intermediate_dir += '_inc%i' % opt.get_grid_inc(i)
++
++                    # The numerical optimisation settings.
++                    quad_int = opt.get_grid_quad_int(i)
++                    if quad_int:
++                        self.interpreter.frame_order.quad_int()
++                        intermediate_dir += '_quad_int'
++                    else:
++                        sobol_num = opt.get_grid_sobol_info(i)
++                        self.sobol_setup(sobol_num)
++                        intermediate_dir += '_sobol%i' % sobol_num[0]
+ 
+                     # Perform the grid search.
+                     self.interpreter.minimise.grid_search(inc=incs)
+ 
++                    # Store the intermediate results and statistics.
++                    self.results_output(model=model, 
+dir=model_directory(model, base_dir=intermediate_dir), results_file=True)
++                    count_sobol_points(dir=intermediate_dir, force=True)
++                    summarise(dir=intermediate_dir, force=True)
++
+                 # Minimise (for the PCS data subset and full RDC set).
+                 for i in opt.loop_min():
++                    # The intermediate results directory.
++                    func_tol = opt.get_min_func_tol(i)
++                    max_iter = opt.get_min_max_iter(i)
++                    intermediate_dir = intermediate_stub + 
+'_min%i_ftol%g_max_iter%i' % (i, func_tol, max_iter)
++
+                     # The numerical optimisation settings.
+-                    
+self.interpreter.frame_order.quad_int(opt.get_min_quad_int(i))
+-                    self.sobol_setup(opt.get_min_sobol_info(i))
++                    quad_int = opt.get_min_quad_int(i)
++                    if quad_int:
++                        self.interpreter.frame_order.quad_int()
++                        intermediate_dir += '_quad_int'
++                    else:
++                        sobol_num = opt.get_min_sobol_info(i)
++                        self.sobol_setup(sobol_num)
++                        intermediate_dir += '_sobol%i' % sobol_num[0]
+ 
+                     # Perform the optimisation.
+-                    
+self.interpreter.minimise.execute(min_algor=opt.get_min_algor(i), 
+func_tol=opt.get_min_func_tol(i), max_iter=opt.get_min_max_iter(i))
++                    
+self.interpreter.minimise.execute(min_algor=opt.get_min_algor(i), 
+func_tol=func_tol, max_iter=max_iter)
++
++                    # Store the intermediate results.
++                    self.results_output(model=model, 
+dir=model_directory(model, base_dir=intermediate_dir), results_file=True)
++                    count_sobol_points(dir=intermediate_dir, force=True)
++                    summarise(dir=intermediate_dir, force=True)
+ 
+             # Printout.
+             subsubtitle(file=sys.stdout, text=&quot;Optimisation using the full 
+data set&quot;)
++
++            # Results directory stub for intermediate results.
++            intermediate_stub = self.results_dir + sep + 
+'intermediate_results' + sep + 'all_data'
+ 
+             # Copy the PCS data.
+             self.interpreter.pcs.copy(pipe_from=self.data_pipe_full, 
+pipe_to=self.pipe_name_dict[model])
+@@ -967,12 +1015,28 @@
+             opt = self.opt_full
+             if opt != None:
+                 for i in opt.loop_min():
++                    # The intermediate results directory.
++                    func_tol = opt.get_min_func_tol(i)
++                    max_iter = opt.get_min_max_iter(i)
++                    intermediate_dir = intermediate_stub + 
+'_min%i_ftol%g_max_iter%i' % (i, func_tol, max_iter)
++
+                     # The numerical optimisation settings.
+-                    
+self.interpreter.frame_order.quad_int(opt.get_min_quad_int(i))
+-                    self.sobol_setup(opt.get_min_sobol_info(i))
++                    quad_int = opt.get_min_quad_int(i)
++                    if quad_int:
++                        self.interpreter.frame_order.quad_int()
++                        intermediate_dir += '_quad_int'
++                    else:
++                        sobol_num = opt.get_min_sobol_info(i)
++                        self.sobol_setup(sobol_num)
++                        intermediate_dir += '_sobol%i' % sobol_num[0]
+ 
+                     # Perform the optimisation.
+-                    
+self.interpreter.minimise.execute(min_algor=opt.get_min_algor(i), 
+func_tol=opt.get_min_func_tol(i), max_iter=opt.get_min_max_iter(i))
++                    
+self.interpreter.minimise.execute(min_algor=opt.get_min_algor(i), 
+func_tol=func_tol, max_iter=max_iter)
++
++                    # Store the intermediate results.
++                    self.results_output(model=model, 
+dir=model_directory(model, base_dir=intermediate_dir), results_file=True)
++                    count_sobol_points(dir=intermediate_dir, force=True)
++                    summarise(dir=intermediate_dir, force=True)
+ 
+             # Results printout.
+             self.print_results()
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Oct 09 09:00:06 2014</div>  
+</body>
+</html>

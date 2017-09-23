@@ -1,0 +1,395 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r17789 &#45; in /trunk: ./ generic_fns/ -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 09 Oct 2012 14:28:30 +0200 -->
+<!--X-Message-Id: E1TLYvG&#45;0005uM&#45;JN@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r17789 - in /trunk: ./ generic_fns/ -- October 09, 2012 - 14:28</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r17789 - in /trunk: ./ generic_fns/</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00168" class="tabs">Index by Date</a> | <a href="threads.html#00168" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00167.html">Date Prev</a>] [<a href="msg00169.html">Date Next</a>] [<a href="msg00167.html">Thread Prev</a>] [<a href="msg00169.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 09 Oct 2012 12:28:30 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00168.html">E1TLYvG-0005uM-JN@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on October 09, 2012 - 14:28:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Oct  9 14:28:30 2012
+New Revision: 17789
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=17789&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=17789&amp;view=rev</a>
+Log:
+Reactivated support for Python 2.3.
+
+This mainly skips the missing 'subprocess' module.  This however decreases 
+relax's functionality a
+little.
+
+
+Modified:
+    trunk/dep_check.py
+    trunk/generic_fns/dasha.py
+    trunk/generic_fns/diffusion_tensor.py
+    trunk/generic_fns/molmol.py
+    trunk/generic_fns/palmer.py
+    trunk/generic_fns/pymol_control.py
+    trunk/info.py
+    trunk/relax_io.py
+    trunk/version.py
+
+Modified: trunk/dep_check.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/dep_check.py?rev=17789&amp;r1=17788&amp;r2=17789&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/dep_check.py?rev=17789&amp;r1=17788&amp;r2=17789&amp;view=diff</a>
+==============================================================================
+--- trunk/dep_check.py (original)
++++ trunk/dep_check.py Tue Oct  9 14:28:30 2012
+@@ -205,6 +205,15 @@
+         xml_version = ''
+         xml_type = ''
+ 
++# subprocess module.
++try:
++    import subprocess
++    subprocess_module = True
++except ImportError:
++    message = sys.exc_info()[1]
++    subprocess_module = False
++    subprocess_module_message = message.args[0]
++
+ # ctypes module.
+ try:
+     import ctypes
+
+Modified: trunk/generic_fns/dasha.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/generic_fns/dasha.py?rev=17789&amp;r1=17788&amp;r2=17789&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/generic_fns/dasha.py?rev=17789&amp;r1=17788&amp;r2=17789&amp;view=diff</a>
+==============================================================================
+--- trunk/generic_fns/dasha.py (original)
++++ trunk/generic_fns/dasha.py Tue Oct  9 14:28:30 2012
+@@ -22,10 +22,15 @@
+ # Module docstring.
+ &quot;&quot;&quot;Module for interfacing with Dasha.&quot;&quot;&quot;
+ 
++# Dependencies.
++import dep_check
++
+ # Python module imports.
+ from math import pi
+ from os import F_OK, access, chdir, getcwd, sep
+-from subprocess import PIPE, Popen
++PIPE, Popen = None, None
++if dep_check.subprocess_module:
++    from subprocess import PIPE, Popen
+ import sys
+ 
+ # relax module imports.
+@@ -413,6 +418,10 @@
+         if not access('dasha_script', F_OK):
+             raise RelaxFileError('dasha script', 'dasha_script')
+ 
++        # Python 2.3 and earlier.
++        if Popen == None:
++            raise RelaxError(&quot;The subprocess module is not available in this 
+version of Python.&quot;)
++
+         # Execute Dasha.
+         pipe = Popen(binary, shell=True, stdin=PIPE, stdout=PIPE, 
+stderr=PIPE, close_fds=False)
+ 
+
+Modified: trunk/generic_fns/diffusion_tensor.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/generic_fns/diffusion_tensor.py?rev=17789&amp;r1=17788&amp;r2=17789&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/generic_fns/diffusion_tensor.py?rev=17789&amp;r1=17788&amp;r2=17789&amp;view=diff</a>
+==============================================================================
+--- trunk/generic_fns/diffusion_tensor.py (original)
++++ trunk/generic_fns/diffusion_tensor.py Tue Oct  9 14:28:30 2012
+@@ -27,7 +27,10 @@
+ from math import cos, pi, sin
+ from numpy import cross, float64, int32, ones, transpose, zeros
+ from numpy.linalg import norm, svd
+-from operator import itemgetter
++try:
++    from operator import itemgetter
++except ImportError:
++    pass
+ from re import search
+ import string
+ 
+
+Modified: trunk/generic_fns/molmol.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/generic_fns/molmol.py?rev=17789&amp;r1=17788&amp;r2=17789&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/generic_fns/molmol.py?rev=17789&amp;r1=17788&amp;r2=17789&amp;view=diff</a>
+==============================================================================
+--- trunk/generic_fns/molmol.py (original)
++++ trunk/generic_fns/molmol.py Tue Oct  9 14:28:30 2012
+@@ -22,9 +22,14 @@
+ # Module docstring.
+ &quot;&quot;&quot;Module for interfacing with Molmol.&quot;&quot;&quot;
+ 
++# Dependencies.
++import dep_check
++
+ # Python module imports.
+ from os import sep
+-from subprocess import PIPE, Popen
++PIPE, Popen = None, None
++if dep_check.subprocess_module:
++    from subprocess import PIPE, Popen
+ from time import sleep
+ 
+ # relax module imports.
+@@ -83,6 +88,10 @@
+ 
+         # Test that the Molmol binary exists.
+         test_binary('molmol')
++
++        # Python 2.3 and earlier.
++        if Popen == None:
++            raise RelaxError(&quot;The subprocess module is not available in this 
+version of Python.&quot;)
+ 
+         # Open Molmol as a pipe.
+         self.molmol = Popen(['molmol', '-f', '-'], stdin=PIPE).stdin
+
+Modified: trunk/generic_fns/palmer.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/generic_fns/palmer.py?rev=17789&amp;r1=17788&amp;r2=17789&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/generic_fns/palmer.py?rev=17789&amp;r1=17788&amp;r2=17789&amp;view=diff</a>
+==============================================================================
+--- trunk/generic_fns/palmer.py (original)
++++ trunk/generic_fns/palmer.py Tue Oct  9 14:28:30 2012
+@@ -23,12 +23,17 @@
+ &quot;&quot;&quot;Module for interfacing with Art Palmer's Modelfree 4 program.&quot;&quot;&quot;
+ 
+ 
++# Dependencies.
++import dep_check
++
+ # Python module imports.
+ from math import pi
+ from os import F_OK, access, chdir, chmod, getcwd, listdir, remove, sep, 
+system
+ from re import match, search
+ from stat import S_IEXEC
+-from subprocess import PIPE, Popen
++PIPE, Popen = None, None
++if dep_check.subprocess_module:
++    from subprocess import PIPE, Popen
+ import sys
+ 
+ # relax module imports.
+@@ -554,6 +559,10 @@
+ 
+     # Catch failures and return to the correct directory.
+     try:
++        # Python 2.3 and earlier.
++        if Popen == None:
++            raise RelaxError(&quot;The subprocess module is not available in this 
+version of Python.&quot;)
++
+         # Test if the 'mfin' input file exists.
+         if not access('mfin', F_OK):
+             raise RelaxFileError('mfin input', 'mfin')
+
+Modified: trunk/generic_fns/pymol_control.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/generic_fns/pymol_control.py?rev=17789&amp;r1=17788&amp;r2=17789&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/generic_fns/pymol_control.py?rev=17789&amp;r1=17788&amp;r2=17789&amp;view=diff</a>
+==============================================================================
+--- trunk/generic_fns/pymol_control.py (original)
++++ trunk/generic_fns/pymol_control.py Tue Oct  9 14:28:30 2012
+@@ -31,7 +31,9 @@
+ from math import pi
+ from numpy import float64, transpose, zeros
+ from os import sep
+-from subprocess import PIPE, Popen
++PIPE, Popen = None, None
++if dep_check.subprocess_module:
++    from subprocess import PIPE, Popen
+ from tempfile import mktemp
+ from time import sleep
+ 
+@@ -113,6 +115,10 @@
+         if self.exec_mode == 'external':
+             # Test that the PyMOL binary exists.
+             test_binary('pymol')
++
++            # Python 2.3 and earlier.
++            if Popen == None:
++                raise RelaxError(&quot;The subprocess module is not available in 
+this version of Python.&quot;)
+ 
+             # Open PyMOL as a pipe.
+             self.pymol = Popen(['pymol', '-qpK'], stdin=PIPE).stdin
+
+Modified: trunk/info.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/info.py?rev=17789&amp;r1=17788&amp;r2=17789&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/info.py?rev=17789&amp;r1=17788&amp;r2=17789&amp;view=diff</a>
+==============================================================================
+--- trunk/info.py (original)
++++ trunk/info.py Tue Oct  9 14:28:30 2012
+@@ -37,7 +37,9 @@
+ import numpy
+ from os import environ, waitpid
+ import platform
+-from subprocess import PIPE, Popen
++PIPE, Popen = None, None
++if dep_check.subprocess_module:
++    from subprocess import PIPE, Popen
+ import sys
+ from textwrap import wrap
+ 
+@@ -156,6 +158,10 @@
+         @rtype:         str
+         &quot;&quot;&quot;
+ 
++        # Python 2.3 and earlier.
++        if Popen == None:
++            return ''
++
+         # MS Windows (has no 'file' command or libmagic, so return nothing).
+         if hasattr(ctypes, 'windll'):
+             return ''
+@@ -501,6 +507,10 @@
+         @return:            The info string.
+         @rtype:             str
+         &quot;&quot;&quot;
++
++        # Python 2.3 and earlier.
++        if Popen == None:
++            return ''
+ 
+         # Init.
+         text = ''
+
+Modified: trunk/relax_io.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/relax_io.py?rev=17789&amp;r1=17788&amp;r2=17789&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/relax_io.py?rev=17789&amp;r1=17788&amp;r2=17789&amp;view=diff</a>
+==============================================================================
+--- trunk/relax_io.py (original)
++++ trunk/relax_io.py Tue Oct  9 14:28:30 2012
+@@ -32,6 +32,9 @@
+ # Python module imports.
+ if dep_check.bz2_module:
+     import bz2
++    from bz2 import BZ2File
++else:
++    BZ2File = object
+ if dep_check.gzip_module:
+     import gzip
+ if dep_check.devnull_import:
+@@ -1149,7 +1152,7 @@
+ 
+ 
+ 
+-class Bzip2Fixed(bz2.BZ2File):
++class Bzip2Fixed(BZ2File):
+     &quot;&quot;&quot;Incredibly nasty hack for bzip2 files support in Python 3.0, 3.1 and 
+3.2.&quot;&quot;&quot;
+ 
+     def flush(self):
+
+Modified: trunk/version.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/version.py?rev=17789&amp;r1=17788&amp;r2=17789&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/version.py?rev=17789&amp;r1=17788&amp;r2=17789&amp;view=diff</a>
+==============================================================================
+--- trunk/version.py (original)
++++ trunk/version.py Tue Oct  9 14:28:30 2012
+@@ -22,9 +22,14 @@
+ # Module docstring.
+ &quot;&quot;&quot;Module for relax version information.&quot;&quot;&quot;
+ 
++# Dependencies.
++import dep_check
++
+ # Python module imports.
+ from os import F_OK, access, sep
+-from subprocess import PIPE, Popen
++PIPE, Popen = None, None
++if dep_check.subprocess_module:
++    from subprocess import PIPE, Popen
+ 
+ # relax module imports.
+ from status import Status; status = Status()
+@@ -42,6 +47,10 @@
+ 
+     # Does the base directory exist (i.e. is this a checked out copy).
+     if not access(status.install_path+sep+'.svn', F_OK):
++        return
++
++    # Python 2.3 and earlier.
++    if Popen == None:
+         return
+ 
+     # Try to run 'svn info'.
+@@ -70,6 +79,10 @@
+ 
+     # Does the base directory exist (i.e. is this a checked out copy).
+     if not access(status.install_path+sep+'.svn', F_OK):
++        return
++
++    # Python 2.3 and earlier.
++    if Popen == None:
+         return
+ 
+     # Try to run 'svn info'.
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Oct 09 14:40:03 2012</div>  
+</body>
+</html>

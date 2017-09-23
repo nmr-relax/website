@@ -1,0 +1,157 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r16961 &#45; /branches/interatomic/specific_fns/model_free/main.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 19 Jun 2012 16:21:59 +0200 -->
+<!--X-Message-Id: E1SgzJf&#45;0001PD&#45;LL@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r16961 - /branches/interatomic/specific_fns/model_free/main.py -- June 19, 2012 - 16:21</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r16961 - /branches/interatomic/specific_fns/model_free/main.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00406" class="tabs">Index by Date</a> | <a href="threads.html#00406" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00405.html">Date Prev</a>] [<a href="msg00407.html">Date Next</a>] [<a href="msg00405.html">Thread Prev</a>] [<a href="msg00407.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 19 Jun 2012 14:21:59 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00406.html">E1SgzJf-0001PD-LL@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on June 19, 2012 - 16:21:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Jun 19 16:21:59 2012
+New Revision: 16961
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=16961&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=16961&amp;view=rev</a>
+Log:
+Fix for the model-free duplicate_data() method for interatomic data.
+
+This is used by the model_selection user function.  The problem was that no 
+proton spins where being
+copied as previously there were no proton spins in a model-free analysis.  
+This spins are now needed
+to define the dipolar relaxation mechanism.
+
+
+Modified:
+    branches/interatomic/specific_fns/model_free/main.py
+
+Modified: branches/interatomic/specific_fns/model_free/main.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/interatomic/specific_fns/model_free/main.py?rev=16961&amp;r1=16960&amp;r2=16961&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/interatomic/specific_fns/model_free/main.py?rev=16961&amp;r1=16960&amp;r2=16961&amp;view=diff</a>
+==============================================================================
+--- branches/interatomic/specific_fns/model_free/main.py (original)
++++ branches/interatomic/specific_fns/model_free/main.py Tue Jun 19 16:21:59 
+2012
+@@ -34,7 +34,7 @@
+ from data.diff_tensor import DiffTensorSimList
+ from float import isNaN, isInf
+ from generic_fns import diffusion_tensor, interatomic, pipes, relax_data, 
+sequence
+-from generic_fns.mol_res_spin import convert_from_global_index, count_spins, 
+exists_mol_res_spin_data, find_index, return_spin, return_spin_from_index, 
+spin_index_loop, spin_loop
++from generic_fns.mol_res_spin import convert_from_global_index, count_spins, 
+exists_mol_res_spin_data, find_index, return_spin, return_spin_from_index, 
+return_spin_indices, spin_index_loop, spin_loop
+ from maths_fns.mf import Mf
+ from minfx.generic import generic_minimise
+ import specific_fns
+@@ -1487,12 +1487,31 @@
+         model_type = self._determine_model_type()
+ 
+         # Sequence specific data.
++        spin, spin_id = return_spin_from_index(model_info, pipe=pipe_from, 
+return_spin_id=True)
+         if model_type == 'mf' or (model_type == 'local_tm' and not 
+global_stats):
+             # Get the spin container indices.
+             mol_index, res_index, spin_index = 
+convert_from_global_index(global_index=model_info, pipe=pipe_from)
+ 
+             # Duplicate the spin specific data.
+-            dp_to.mol[mol_index].res[res_index].spin[spin_index] = 
+deepcopy(dp_from.mol[mol_index].res[res_index].spin[spin_index])
++            dp_to.mol[mol_index].res[res_index].spin[spin_index] = 
+deepcopy(spin)
++
++            # Duplicate the relaxation active spins which have not been 
+copied yet.
++            interatoms = interatomic.return_interatom(spin_id)
++            for interatom in interatoms:
++                # No relaxation mechanism.
++                if not interatom.dipole_pair:
++                    continue
++
++                # The interacting spin.
++                if spin_id != interatom.spin_id1:
++                    spin_id2 = interatom.spin_id1
++                else:
++                    spin_id2 = interatom.spin_id2
++                spin2 = return_spin(spin_id2)
++
++                # Duplicate the spin specific data.
++                mol_index, res_index, spin_index = 
+return_spin_indices(spin_id2)
++                dp_to.mol[mol_index].res[res_index].spin[spin_index] = 
+deepcopy(spin2)
+ 
+         # Other data types.
+         else:
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Jun 19 16:40:02 2012</div>  
+</body>
+</html>

@@ -1,0 +1,204 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r12542 &#45; /branches/bruker_import/generic_fns/pdc.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 17 Feb 2011 17:30:24 +0100 -->
+<!--X-Message-Id: E1Pq6kK&#45;0003CT&#45;U6@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r12542 - /branches/bruker_import/generic_fns/pdc.py -- February 17, 2011 - 17:30</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r12542 - /branches/bruker_import/generic_fns/pdc.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00063" class="tabs">Index by Date</a> | <a href="threads.html#00063" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00062.html">Date Prev</a>] [<a href="msg00064.html">Date Next</a>] [<a href="msg00062.html">Thread Prev</a>] [<a href="msg00064.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 17 Feb 2011 16:30:24 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00063.html">E1Pq6kK-0003CT-U6@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on February 17, 2011 - 17:30:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Feb 17 17:30:24 2011
+New Revision: 12542
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=12542&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=12542&amp;view=rev</a>
+Log:
+Implemented the reading of relaxation data from the PDC file.
+
+
+Modified:
+    branches/bruker_import/generic_fns/pdc.py
+
+Modified: branches/bruker_import/generic_fns/pdc.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/bruker_import/generic_fns/pdc.py?rev=12542&amp;r1=12541&amp;r2=12542&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/bruker_import/generic_fns/pdc.py?rev=12542&amp;r1=12541&amp;r2=12542&amp;view=diff</a>
+==============================================================================
+--- branches/bruker_import/generic_fns/pdc.py (original)
++++ branches/bruker_import/generic_fns/pdc.py Thu Feb 17 17:30:24 2011
+@@ -23,10 +23,61 @@
+ # Module docstring.
+ &quot;&quot;&quot;Module for the reading of Bruker Protein Dynamics Centre (PDC) files.&quot;&quot;&quot;
+ 
++# Python module imports.
++from re import search, split
++
+ # relax module imports.
+ from generic_fns import pipes
+ from generic_fns.mol_res_spin import exists_mol_res_spin_data, spin_loop
++from generic_fns.relax_data import pack_data
+ from relax_errors import RelaxError
++from relax_io import extract_data
++
++
++def get_relax_data(data):
++    &quot;&quot;&quot;Determine the relaxation data from the given PDC data.
++
++    @param data:    The list of Tx, Tx error, and scaling factor for a given 
+residue from the PDC file.
++    @type data:     list of str
++    &quot;&quot;&quot;
++
++    # Convert the value from Tx to Rx.
++    rx = 1.0 / float(data[0])
++
++    # Remove the scaling.
++    rx_err = float(data[1]) / float(data[2])
++
++    # Convert the Tx error to an Rx error.
++    rx_err = rx**2 * rx_err
++
++    # Return the value and error.
++    return rx, rx_err
++
++
++def get_res_num(data):
++    &quot;&quot;&quot;Determine the residue number from the given PDC data.
++
++    @param data:    The list of residue info, split by whitespace, from the 
+PDC file.
++    @type data:     list of str
++    &quot;&quot;&quot;
++
++    # Init.
++    res_num = None
++
++    # Loop over the list.
++    for i in range(len(data)):
++        # Split the data.
++        row = split('([0-9]+)', data[i])
++
++        # Loop over the new list.
++        for j in range(len(row)):
++            try:
++                res_num = int(row[j])
++            except ValueError:
++                pass
++
++    # Return the value.
++    return &quot;:%s&quot; % res_num
+ 
+ 
+ def read(file=None, dir=None):
+@@ -44,3 +95,43 @@
+     # Test if sequence data is loaded.
+     if not exists_mol_res_spin_data():
+         raise RelaxNoSequenceError
++
++    # Extract the data from the file.
++    file_data = extract_data(file, dir)
++
++    # Init.
++    values = []
++    errors = []
++    res_nums = []
++
++    # Loop over the data.
++    in_ri_data = False
++    for line in file_data:
++        # The data type.
++        if len(line) == 3 and search('T1', line[2]):
++            ri_label = 'R1'
++            continue
++
++        # Get the frequency.
++        if len(line) == 3 and line[0] == 'Proton' and line[1] == 
+'frequency[MHz]:':
++            frq = float(line[2])
++            frq_label = str(int(round(float(line[2])/10)*10))
++            continue
++
++        # Inside the relaxation data section.
++        if len(line) == 2 and line[0] == 'SECTION:' and line[1] == 'results':
++            in_ri_data = True
++            continue
++
++        # The relaxation data.
++        if in_ri_data and line[0] != 'Peak':
++            # The residue info.
++            res_nums.append(get_res_num(line[:-5]))
++
++            # Get the relaxation data.
++            rx, rx_err = get_relax_data(line[-3:])
++            values.append(rx)
++            errors.append(rx_err)
++
++    # Pack the data.
++    pack_data(ri_label, frq_label, frq, values, errors, ids=res_nums)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Feb 17 17:40:01 2011</div>  
+</body>
+</html>

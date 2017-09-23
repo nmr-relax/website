@@ -1,0 +1,227 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r22176 &#45; in /branches/double_rotor:	specific_analyses/frame_order/user_functions.py	user_functions/frame_order.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 12 Feb 2014 14:56:21 +0100 -->
+<!--X-Message-Id: E1WDaIX&#45;0004yq&#45;Hj@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r22176 - in /branches/double_rotor:	specific_analyses/frame_order/user_functions.py	user_functions/frame_order.py -- February 12, 2014 - 14:56</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r22176 - in /branches/double_rotor:	specific_analyses/frame_order/user_functions.py	user_functions/frame_order.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00068" class="tabs">Index by Date</a> | <a href="threads.html#00068" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00067.html">Date Prev</a>] [<a href="msg00069.html">Date Next</a>] [<a href="msg00067.html">Thread Prev</a>] [<a href="msg00069.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 12 Feb 2014 13:56:21 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00068.html">E1WDaIX-0004yq-Hj@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on February 12, 2014 - 14:56:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Feb 12 14:56:21 2014
+New Revision: 22176
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=22176&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=22176&amp;view=rev</a>
+Log:
+Changes to the frame_order.pivot user function.
+
+The 'order' argument has been added to allow for multiple pivots to be 
+present.  The user function
+backend will store these as cdp.pivot, cdp.pivot2, cdp.pivot3, etc.  The 
+'fix' argument is now
+defaulting to False to make sure it is always boolean.
+
+
+Modified:
+    branches/double_rotor/specific_analyses/frame_order/user_functions.py
+    branches/double_rotor/user_functions/frame_order.py
+
+Modified: 
+branches/double_rotor/specific_analyses/frame_order/user_functions.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/double_rotor/specific_analyses/frame_order/user_functions.py?rev=22176&amp;r1=22175&amp;r2=22176&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/double_rotor/specific_analyses/frame_order/user_functions.py?rev=22176&amp;r1=22175&amp;r2=22176&amp;view=diff</a>
+==============================================================================
+--- branches/double_rotor/specific_analyses/frame_order/user_functions.py 
+(original)
++++ branches/double_rotor/specific_analyses/frame_order/user_functions.py Wed 
+Feb 12 14:56:21 2014
+@@ -29,6 +29,7 @@
+ import sys
+ 
+ # relax module imports.
++from lib.arg_check import is_float_array
+ from lib.errors import RelaxError
+ from lib.geometry.coord_transform import spherical_to_cartesian
+ from lib.geometry.rotations import euler_to_R_zyz, two_vect_to_R
+@@ -395,11 +396,13 @@
+     pdb_distribution(file=dist_file, dir=dir, force=force)
+ 
+ 
+-def pivot(pivot=None, fix=None):
++def pivot(pivot=None, order=1, fix=False):
+     &quot;&quot;&quot;Set the pivot point for the 2 body motion.
+ 
+     @keyword pivot: The pivot point of the two bodies (domains, etc.) in the 
+structural coordinate system.
+     @type pivot:    list of num
++    @keyword order: The ordinal number of the pivot point.  The value of 1 
+is for the first pivot point, the value of 2 for the second pivot point, and 
+so on.
++    @type order:    int
+     @keyword fix:   A flag specifying if the pivot point should be fixed 
+during optimisation.
+     @type fix:      bool
+     &quot;&quot;&quot;
+@@ -407,13 +410,24 @@
+     # Test if the current data pipe exists.
+     pipes.test()
+ 
+-    # Set the pivot point and fixed flag.
+-    cdp.pivot = pivot
++    # Convert the pivot to a numpy array.
++    pivot = array(pivot, float64)
++
++    # Check the pivot validity.
++    is_float_array(pivot, name='pivot point', size=3)
++
++    # Store the pivot point. and fixed flag.
++    if order == 1:
++        cdp.pivot = pivot
++    else:
++        # The variable name.
++        name = 'pivot%i' % order
++
++        # Store the variable.
++        setattr(cdp, name, pivot)
++
++    # Store the fixed flag.
+     cdp.pivot_fixed = fix
+-
+-    # Convert to floats.
+-    for i in range(3):
+-        cdp.pivot[i] = float(cdp.pivot[i])
+ 
+ 
+ def quad_int(flag=False):
+
+Modified: branches/double_rotor/user_functions/frame_order.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/double_rotor/user_functions/frame_order.py?rev=22176&amp;r1=22175&amp;r2=22176&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/double_rotor/user_functions/frame_order.py?rev=22176&amp;r1=22175&amp;r2=22176&amp;view=diff</a>
+==============================================================================
+--- branches/double_rotor/user_functions/frame_order.py (original)
++++ branches/double_rotor/user_functions/frame_order.py Wed Feb 12 14:56:21 
+2014
+@@ -172,7 +172,7 @@
+ 
+ # The frame_order.pivot user function.
+ uf = uf_info.add_uf('frame_order.pivot')
+-uf.title = &quot;Set the pivot point for the two body motion in the structural 
+coordinate system.&quot;
++uf.title = &quot;Set the pivot points for the two body motion in the structural 
+coordinate system.&quot;
+ uf.title_short = &quot;Pivot point setting.&quot;
+ uf.add_keyarg(
+     name = &quot;pivot&quot;,
+@@ -182,14 +182,25 @@
+     desc = &quot;The pivot point for the motion (e.g. the position between the 2 
+domains in PDB coordinates).&quot;
+ )
+ uf.add_keyarg(
++    name = &quot;order&quot;,
++    default = 1,
++    min = 1,
++    max = 100,
++    py_type = &quot;int&quot;,
++    desc_short = &quot;pivot point number&quot;,
++    desc = &quot;The ordinal number of the pivot point.  The value of 1 is for 
+the first pivot point, the value of 2 for the second pivot point, and so on.&quot;,
++    wiz_element_type = &quot;spin&quot;
++)
++uf.add_keyarg(
+     name = &quot;fix&quot;,
+     py_type = &quot;bool&quot;,
++    default = False,
+     desc_short = &quot;fixed flag&quot;,
+     desc = &quot;A flag specifying if the pivot point should be fixed during 
+optimisation.&quot;
+ )
+ # Description.
+ uf.desc.append(Desc_container())
+-uf.desc[-1].add_paragraph(&quot;This will set the pivot point for the two domain 
+system within the PDB coordinate system.  This is required for interpreting 
+PCS data as well as for the generation of cone or other PDB representations 
+of the domain motions.&quot;)
++uf.desc[-1].add_paragraph(&quot;This will set the pivot points for the two domain 
+system within the PDB coordinate system.  This is required for interpreting 
+PCS data as well as for the generation of cone or other PDB representations 
+of the domain motions.&quot;)
+ # Prompt examples.
+ uf.desc.append(Desc_container(&quot;Prompt examples&quot;))
+ uf.desc[-1].add_paragraph(&quot;To set the pivot point, type one of:&quot;)
+@@ -197,6 +208,7 @@
+ uf.desc[-1].add_prompt(&quot;relax&gt; frame_order.pivot(pivot=[12.067, 14.313, 
+-3.2675])&quot;)
+ uf.backend = pivot
+ uf.menu_text = &quot;&amp;pivot&quot;
++uf.wizard_size = (900, 500)
+ uf.wizard_image = WIZARD_IMAGE_PATH + 'frame_order.png'
+ 
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Feb 12 16:40:02 2014</div>  
+</body>
+</html>

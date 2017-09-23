@@ -1,0 +1,476 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r27070 &#45; in /trunk: lib/structure/internal/__init__.py lib/structure/internal/coordinates.py pipe_control/structure/main.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 11 Dec 2014 09:44:54 +0100 -->
+<!--X-Message-Id: E1XyzMk&#45;0005EC&#45;4E@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r27070 - in /trunk: lib/structure/internal/__init__.py lib/structure/internal/coordinates.py pipe_control/structure/main.py -- December 11, 2014 - 09:44</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r27070 - in /trunk: lib/structure/internal/__init__.py lib/structure/internal/coordinates.py pipe_control/structure/main.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00193" class="tabs">Index by Date</a> | <a href="threads.html#00193" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00192.html">Date Prev</a>] [<a href="msg00194.html">Date Next</a>] [<a href="msg00192.html">Thread Prev</a>] [<a href="msg00194.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 11 Dec 2014 08:44:54 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00193.html">E1XyzMk-0005EC-4E@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on December 11, 2014 - 09:44:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Dec 11 09:44:53 2014
+New Revision: 27070
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=27070&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=27070&amp;view=rev</a>
+Log:
+Shift of the atomic coordinate assembly code into the relax library.
+
+Most of the pipe_control.structure.main.assemble_coordinates() function has 
+been shifted into the
+assemble_coord_array() function of the new lib.structure.internal.coordinates 
+module.  The
+pipe_control function now only checks the arguments and assembles the 
+structural objects from the
+relax data store, and then calls assemble_coord_array() to do all of the work.
+
+This code abstraction increases the usefulness of the atomic coordinate 
+assembly and allows it to be
+significantly expanded in the future, for example by being able to take 
+sequence alignments into
+consideration.
+
+
+Added:
+    trunk/lib/structure/internal/coordinates.py
+Modified:
+    trunk/lib/structure/internal/__init__.py
+    trunk/pipe_control/structure/main.py
+
+Modified: trunk/lib/structure/internal/__init__.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/lib/structure/internal/__init__.py?rev=27070&amp;r1=27069&amp;r2=27070&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/lib/structure/internal/__init__.py?rev=27070&amp;r1=27069&amp;r2=27070&amp;view=diff</a>
+==============================================================================
+--- trunk/lib/structure/internal/__init__.py    (original)
++++ trunk/lib/structure/internal/__init__.py    Thu Dec 11 09:44:53 2014
+@@ -23,6 +23,7 @@
+ &quot;&quot;&quot;The relax-lib structure.internal package - the internal structural 
+object.&quot;&quot;&quot;
+ 
+ __all__ = [
++    'coordinates',
+     'displacements',
+     'models',
+     'molecules',
+
+Added: trunk/lib/structure/internal/coordinates.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/lib/structure/internal/coordinates.py?rev=27070&amp;view=auto">http://svn.gna.org/viewcvs/relax/trunk/lib/structure/internal/coordinates.py?rev=27070&amp;view=auto</a>
+==============================================================================
+--- trunk/lib/structure/internal/coordinates.py (added)
++++ trunk/lib/structure/internal/coordinates.py Thu Dec 11 09:44:53 2014
+@@ -0,0 +1,140 @@
++###############################################################################
++#                                                                            
+ #
++# Copyright (C) 2014 Edward d'Auvergne                                       
+ #
++#                                                                            
+ #
++# This file is part of the program relax (<a  rel="nofollow" href="http://www.nmr-relax.com">http://www.nmr-relax.com</a>).         
+ #
++#                                                                            
+ #
++# This program is free software: you can redistribute it and/or modify       
+ #
++# it under the terms of the GNU General Public License as published by       
+ #
++# the Free Software Foundation, either version 3 of the License, or          
+ #
++# (at your option) any later version.                                        
+ #
++#                                                                            
+ #
++# This program is distributed in the hope that it will be useful,            
+ #
++# but WITHOUT ANY WARRANTY; without even the implied warranty of             
+ #
++# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the              
+ #
++# GNU General Public License for more details.                               
+ #
++#                                                                            
+ #
++# You should have received a copy of the GNU General Public License          
+ #
++# along with this program.  If not, see &lt;<a  rel="nofollow" href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.      
+ #
++#                                                                            
+ #
++###############################################################################
++
++# Module docstring.
++&quot;&quot;&quot;Module for handling atomic coordinate information.&quot;&quot;&quot;
++
++# Python module imports.
++from numpy import array, float64
++
++
++def assemble_coord_array(objects=None, object_names=None, molecules=None, 
+models=None, atom_id=None, elements_flag=False):
++    &quot;&quot;&quot;Assemble the atomic coordinates 
++ 
++    @keyword objects:       The list of internal structural objects to 
+assemble the coordinates from.
++    @type objects:          list of str
++    @keyword object_names:  The list of names for each structural object to 
+use in printouts.
++    @type object_names:     list of str
++    @keyword models:        The list of models for each structural object.  
+The number of elements must match the objects argument.  If set to None, then 
+all models will be used.
++    @type models:           None or list of lists of int
++    @keyword molecules:     The list of molecules for each structural 
+object.  The number of elements must match the objects argument.  If set to 
+None, then all molecules will be used.
++    @type molecules:        None or list of lists of str
++    @keyword atom_id:       The molecule, residue, and atom identifier 
+string of the coordinates of interest.  This matches the spin ID string 
+format.
++    @type atom_id:          None or str
++    @return:                The array of atomic coordinates (first dimension 
+is the model and/or molecule, the second are the atoms, and the third are the 
+coordinates), and the list of element names for each atom (if the elements 
+flag is set).
++    @rtype:                 numpy rank-3 float64 array, list of str
++    &quot;&quot;&quot;
++
++    # Assemble the atomic coordinates of all structures.
++    print(&quot;Assembling all atomic coordinates:&quot;)
++    atom_ids = []
++    atom_pos = []
++    atom_elem = []
++    for struct_index in range(len(objects)):
++        # Printout.
++        print(&quot;    Data pipe: %s&quot; % object_names[struct_index])
++
++        # Validate the models.
++        objects[struct_index].validate_models(verbosity=0)
++
++        # The selection object.
++        selection = objects[struct_index].selection(atom_id=atom_id)
++
++        # Loop over the models.
++        for model in objects[struct_index].model_loop():
++            # No model match.
++            if models != None and model.num not in models[struct_index]:
++                continue
++
++            # Printout.
++            print(&quot;        Model: %s&quot; % model.num)
++
++            # Extend the lists.
++            if molecules == None:
++                atom_ids.append([])
++                atom_pos.append({})
++                atom_elem.append({})
++
++            # Add all coordinates and elements.
++            current_mol = ''
++            for mol_name, res_num, res_name, atom_name, elem, pos in 
+objects[struct_index].atom_loop(selection=selection, model_num=model.num, 
+mol_name_flag=True, res_num_flag=True, res_name_flag=True, 
+atom_name_flag=True, pos_flag=True, element_flag=True):
++                # No molecule match, so skip.
++                if molecules != None and mol_name not in 
+molecules[struct_index]:
++                    continue
++
++                # A new molecule.
++                if mol_name != current_mol:
++                    # Printout.
++                    print(&quot;            Molecule: %s&quot; % mol_name)
++
++                    # Change the current molecule name.
++                    current_mol = mol_name
++
++                    # Extend the lists.
++                    if molecules != None:
++                        atom_ids.append([])
++                        atom_pos.append({})
++                        atom_elem.append({})
++
++                # A unique identifier.
++                if molecules != None:
++                    id = &quot;:%s&amp;%s@%s&quot; % (res_num, res_name, atom_name)
++                else:
++                    id = &quot;#%s:%s&amp;%s@%s&quot; % (mol_name, res_num, res_name, 
+atom_name)
++
++                atom_ids[-1].append(id)
++                atom_pos[-1][id] = pos[0]
++                atom_elem[-1][id] = elem
++
++    # Set up the structures for the superimposition algorithm.
++    num = len(atom_ids)
++    coord = []
++    elements = []
++    for i in range(num):
++        coord.append([])
++        elements.append([])
++
++    # Find the common atoms and create the coordinate data structure.
++    for id in atom_ids[0]:
++        # Is the atom ID present in all other structures?
++        present = True
++        for i in range(num):
++            if id not in atom_ids[i]:
++                present = False
++                break
++
++        # Not present, so skip the atom.
++        if not present:
++            continue
++
++        # Add the atomic position to the coordinate list and the element to 
+the element list.
++        for i in range(num):
++            coord[i].append(atom_pos[i][id])
++            elements[i].append(atom_elem[i][id])
++
++    # Convert to a numpy array.
++    coord = array(coord, float64)
++
++    # Return the information.
++    if elements_flag:
++        return coord, elements
++    else:
++        return coord
+
+Modified: trunk/pipe_control/structure/main.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/pipe_control/structure/main.py?rev=27070&amp;r1=27069&amp;r2=27070&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/pipe_control/structure/main.py?rev=27070&amp;r1=27069&amp;r2=27070&amp;view=diff</a>
+==============================================================================
+--- trunk/pipe_control/structure/main.py        (original)
++++ trunk/pipe_control/structure/main.py        Thu Dec 11 09:44:53 2014
+@@ -34,6 +34,7 @@
+ from lib.io import get_file_path, open_write_file, write_data
+ from lib.selection import tokenise
+ from lib.sequence import write_spin_data
++from lib.structure.internal.coordinates import assemble_coord_array
+ from lib.structure.internal.displacements import Displacements
+ from lib.structure.internal.object import Internal
+ from lib.structure.represent.diffusion_tensor import diffusion_tensor
+@@ -186,14 +187,14 @@
+ def assemble_coordinates(pipes=None, molecules=None, models=None, 
+atom_id=None, elements_flag=False):
+     &quot;&quot;&quot;Assemble the atomic coordinates 
+  
+-    @keyword pipes:         The data pipes to include in the alignment and 
+superimposition.
++    @keyword pipes:         The data pipes to assemble the coordinates from.
+     @type pipes:            None or list of str
+-    @keyword models:        The list of models to for each data pipe 
+superimpose.  The number of elements must match the pipes argument.  If set 
+to None, then all models will be used.
++    @keyword models:        The list of models for each data pipe.  The 
+number of elements must match the pipes argument.  If set to None, then all 
+models will be used.
+     @type models:           None or list of lists of int
+-    @keyword molecules:     The molecule names to include in the alignment 
+and superimposition.  The number of elements must match the pipes argument.
++    @keyword molecules:     The list of molecules for each data pipe.  The 
+number of elements must match the pipes argument.
+     @type molecules:        None or list of lists of str
+-    @keyword atom_id:       The molecule, residue, and atom identifier 
+string.  This matches the spin ID string format.
+-    @type atom_id:          str or None
++    @keyword atom_id:       The molecule, residue, and atom identifier 
+string of the coordinates of interest.  This matches the spin ID string 
+format.
++    @type atom_id:          None or str
+     @return:                The array of atomic coordinates (first dimension 
+is the model and/or molecule, the second are the atoms, and the third are the 
+coordinates), and the list of element names for each atom (if the elements 
+flag is set).
+     @rtype:                 numpy rank-3 float64 array, list of str
+     &quot;&quot;&quot;
+@@ -215,104 +216,16 @@
+         if len(molecules) != num_pipes:
+             raise RelaxError(&quot;The %i elements of the molecules argument does 
+not match the %i data pipes.&quot; % (len(molecules), num_pipes))
+ 
+-    # Assemble the atomic coordinates of all structures.
+-    print(&quot;Assembling all atomic coordinates:&quot;)
+-    atom_ids = []
+-    atom_pos = []
+-    atom_elem = []
++    # Assemble the structural objects.
++    objects = []
++    object_names = []
+     for pipe_index in range(len(pipes)):
+-        # Printout.
+-        print(&quot;    Data pipe: %s&quot; % pipes[pipe_index])
+-
+-        # The data pipe object.
+         dp = get_pipe(pipes[pipe_index])
+-
+-        # Validate the models.
+-        dp.structure.validate_models(verbosity=0)
+-
+-        # The selection object.
+-        selection = dp.structure.selection(atom_id=atom_id)
+-
+-        # Loop over the models.
+-        for model in dp.structure.model_loop():
+-            # No model match.
+-            if models != None and model.num not in models[pipe_index]:
+-                continue
+-
+-            # Printout.
+-            print(&quot;        Model: %s&quot; % model.num)
+-
+-            # Extend the lists.
+-            if molecules == None:
+-                atom_ids.append([])
+-                atom_pos.append({})
+-                atom_elem.append({})
+-
+-            # Add all coordinates and elements.
+-            current_mol = ''
+-            for mol_name, res_num, res_name, atom_name, elem, pos in 
+dp.structure.atom_loop(selection=selection, model_num=model.num, 
+mol_name_flag=True, res_num_flag=True, res_name_flag=True, 
+atom_name_flag=True, pos_flag=True, element_flag=True):
+-                # No molecule match, so skip.
+-                if molecules != None and mol_name not in 
+molecules[pipe_index]:
+-                    continue
+-
+-                # A new molecule.
+-                if mol_name != current_mol:
+-                    # Printout.
+-                    print(&quot;            Molecule: %s&quot; % mol_name)
+-
+-                    # Change the current molecule name.
+-                    current_mol = mol_name
+-
+-                    # Extend the lists.
+-                    if molecules != None:
+-                        atom_ids.append([])
+-                        atom_pos.append({})
+-                        atom_elem.append({})
+-
+-                # A unique identifier.
+-                if molecules != None:
+-                    id = &quot;:%s&amp;%s@%s&quot; % (res_num, res_name, atom_name)
+-                else:
+-                    id = &quot;#%s:%s&amp;%s@%s&quot; % (mol_name, res_num, res_name, 
+atom_name)
+-
+-                atom_ids[-1].append(id)
+-                atom_pos[-1][id] = pos[0]
+-                atom_elem[-1][id] = elem
+-
+-    # Set up the structures for the superimposition algorithm.
+-    num = len(atom_ids)
+-    coord = []
+-    elements = []
+-    for i in range(num):
+-        coord.append([])
+-        elements.append([])
+-
+-    # Find the common atoms and create the coordinate data structure.
+-    for id in atom_ids[0]:
+-        # Is the atom ID present in all other structures?
+-        present = True
+-        for i in range(num):
+-            if id not in atom_ids[i]:
+-                present = False
+-                break
+-
+-        # Not present, so skip the atom.
+-        if not present:
+-            continue
+-
+-        # Add the atomic position to the coordinate list and the element to 
+the element list.
+-        for i in range(num):
+-            coord[i].append(atom_pos[i][id])
+-            elements[i].append(atom_elem[i][id])
+-
+-    # Convert to a numpy array.
+-    coord = array(coord, float64)
+-
+-    # Return the information.
+-    if elements_flag:
+-        return coord, elements
+-    else:
+-        return coord
++        objects.append(dp.structure)
++        object_names.append(pipes[pipe_index])
++
++    # Call the library method to do all of the work.
++    return assemble_coord_array(objects=objects, object_names=object_names, 
+molecules=molecules, models=models, atom_id=atom_id, 
+elements_flag=elements_flag)
+ 
+ 
+ def connect_atom(index1=None, index2=None):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Dec 11 10:00:02 2014</div>  
+</body>
+</html>

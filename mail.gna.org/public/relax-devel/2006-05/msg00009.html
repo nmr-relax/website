@@ -1,0 +1,148 @@
+<!-- MHonArc v2.6.10 -->
+<!--X-Subject: Re: [bug #5977] Failures in diffusion tensor only Monte Carlo -->
+<!--X-From-R13: "Sqjneq q'Ohiretar" <rqjneqNaze&#45;erynk.pbz> -->
+<!--X-Date: Wed, 24 May 2006 10:12:04 +0200 -->
+<!--X-Message-Id: 7f080ed10605240111p20cf24eewd08f45e2b3a7c59c@mail.gmail.com -->
+<!--X-Content-Type: text/plain -->
+<!--X-Reference: 20060522&#45;161450.sv4125.92562@gna.org -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>Re: [bug #5977] Failures in diffusion tensor only Monte Carlo -- May 24, 2006 - 10:12</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />Re: [bug #5977] Failures in diffusion tensor only Monte Carlo</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00009" class="tabs">Index by Date</a> | <a href="threads.html#00009" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00008.html">Date Prev</a>] [<a href="msg00010.html">Date Next</a>] [<a href="msg00008.html">Thread Prev</a>] [Thread Next]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-devel@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 24 May 2006 18:11:27 +1000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00009.html">7f080ed10605240111p20cf24eewd08f45e2b3a7c59c@mail.gmail.com</a>&gt;</li>
+<li class="menuitem">
+<em>References</em>: &lt;20060522-161450.sv4125.92562@gna.org&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>Edward d'Auvergne</strong> on May 24, 2006 - 10:12:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">In reference to bug #5977
+&lt;<a  href="http://gna.org/bugs/?func=detailitem&amp;item_id=5977">http://gna.org/bugs/?func=detailitem&amp;item_id=5977</a>&gt;, see below.</pre><br>
+<pre style="margin: 0em;">On 5/23/06, Chris MacRaild &lt;NO-REPLY.INVALID-ADDRESS@xxxxxxx&gt; wrote:
+...
+</pre><blockquote class="blockquote"><pre style="margin: 0em;"><br>Details:</pre><br>
+<pre style="margin: 0em;">There seems to be several problems affecting Monte Carlo sims of diffusion
+tensor parameters only. These problems don't seem to affect sims of
+residue-specific parameters, or sims of all parameters (diffusion tensor and
+residue-specific parameters together).</pre><br>
+<pre style="margin: 0em;">The first issue surfaces after all the Monte Carlo setup steps, on issuing
+minimise():</pre><br>
+<pre style="margin: 0em;">  File &quot;relax_diff_mc.py&quot;, line 114, in ?
+    minimise('newton', run=runName)
+  File &quot;/home/chris/relax_devel/1.2/prompt/minimisation.py&quot;, line 365, in
+minimise
+  File &quot;/home/chris/relax_devel/1.2/generic_fns/minimise.py&quot;, line 135, in
+minimise
+    minimise(run=run, min_algor=min_algor, min_options=min_options,
+func_tol=func_tol, grad_tol=grad_tol, max_iterations=max_iteratio
+          ns, constraints=constraints, scaling=scaling,
+print_flag=print_flag-1, sim_index=i)
+  File &quot;/home/chris/relax_devel/1.2/specific_fns/model_free.py&quot;, line 2261,
+in minimise
+    r.append(data.r_sim[sim_index])
+AttributeError: Element instance has no attribute 'r_sim'</pre><br>
+<pre style="margin: 0em;"><br>The fix which seems to make most sense to me is in 
+specific_fns/model_free.py
+at line 2257:
+change
+if sim_index == None:
+to
+if sim_index == None or self.param_set == 'diff':
+</pre></blockquote><pre style="margin: 0em;"><br>That was a tough one to track down.  But the fix is exact.  As the
+bond length and CSA value are never parameters when the parameter set
+is 'diff', in this MC case only, the data structures are 'data.r' and
+'data.csa' rather than 'data.r_sim' and 'data.csa_sim'.  The OR
+statement catches it and matches the data structure creation in
+self.relax.specific.model_free.sim_init_values().</pre><br>
+<blockquote class="blockquote"><pre style="margin: 0em;"><br></pre><br>
+<pre style="margin: 0em;">This prompts the following, again on minimise():</pre><br>
+<pre style="margin: 0em;">  File &quot;/home/chris/relax_devel/1.2_5698_fix/prompt/minimisation.py&quot;, line
+365, in minimise
+  File &quot;/home/chris/relax_devel/1.2/generic_fns/minimise.py&quot;, line 135, in
+minimise
+    minimise(run=run, min_algor=min_algor, min_options=min_options,
+func_tol=func_tol, grad_tol=grad_tol, max_iterations=max_iterations,
+constraints=constraints, scaling=scaling, print_flag=print_flag-1,
+sim_index=i)
+  File &quot;/home/chris/relax_devel/1.2/specific_fns/model_free.py&quot;, line 2403,
+in minimise
+    self.relax.data.chi2_sim[self.run][sim_index] = self.func
+IndexError: list assignment index out of range</pre><br>
+<pre style="margin: 0em;">At this point self.relax.data.chi2_sim[self.run] is an empty list</pre><br>
+<pre style="margin: 0em;">This seems to be a simple typo. Again in specific_fns/model_free.py at line
+4252 (in sim_init_values()) we have:</pre><br>
+<pre style="margin: 0em;"># Test if the object has the key self.run.
+if not object.has_key(self.relax):
+    continue
+</pre></blockquote><pre style="margin: 0em;"><br>Whoops!</pre><br>
+<blockquote class="blockquote"><pre style="margin: 0em;">I presume the comment is correct and this should read:</pre><br>
+<pre style="margin: 0em;"># Test if the object has the key self.run.
+if not object.has_key(self.run):
+    continue
+</pre></blockquote><pre style="margin: 0em;"><br>Yep, it was just a typo.  Hopefully the future shift of the
+'self.relax.data' data structure described at
+<a  href="https://mail.gna.org/public/relax-devel/2006-05/msg00008.html">https://mail.gna.org/public/relax-devel/2006-05/msg00008.html</a> will
+eliminate the repetitiveness and hopefully any more of these types of
+inconsistencies.</pre><br>
+<pre style="margin: 0em;">Thanks,</pre><br>
+<pre style="margin: 0em;">Edward</pre><br>
+<br>
+
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu May 25 04:21:17 2006</div>  
+</body>
+</html>

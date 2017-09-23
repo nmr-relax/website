@@ -1,0 +1,292 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r11317 &#45; /1.3/maths_fns/frame_order_matrix_ops.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 19 Jul 2010 15:35:25 +0200 -->
+<!--X-Message-Id: E1OaqVB&#45;00009V&#45;BU@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r11317 - /1.3/maths_fns/frame_order_matrix_ops.py -- July 19, 2010 - 15:35</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r11317 - /1.3/maths_fns/frame_order_matrix_ops.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00048" class="tabs">Index by Date</a> | <a href="threads.html#00048" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00047.html">Date Prev</a>] [<a href="msg00049.html">Date Next</a>] [<a href="msg00047.html">Thread Prev</a>] [<a href="msg00049.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 19 Jul 2010 13:35:25 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00048.html">E1OaqVB-00009V-BU@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on July 19, 2010 - 15:35:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Mon Jul 19 15:35:24 2010
+New Revision: 11317
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=11317&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=11317&amp;view=rev</a>
+Log:
+Created compile_1st_matrix_pseudo_ellipse() for numerically making the 1st 
+degree frame order matrix.
+
+A number of new supplementary functions have been added for this numerical 
+approximation:
+    part_int_daeg1_pseudo_ellipse_xx()
+    part_int_daeg1_pseudo_ellipse_yy()
+    part_int_daeg1_pseudo_ellipse_zz()
+    tmax_pseudo_ellipse()
+
+
+Modified:
+    1.3/maths_fns/frame_order_matrix_ops.py
+
+Modified: 1.3/maths_fns/frame_order_matrix_ops.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/maths_fns/frame_order_matrix_ops.py?rev=11317&amp;r1=11316&amp;r2=11317&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/maths_fns/frame_order_matrix_ops.py?rev=11317&amp;r1=11316&amp;r2=11317&amp;view=diff</a>
+==============================================================================
+--- 1.3/maths_fns/frame_order_matrix_ops.py (original)
++++ 1.3/maths_fns/frame_order_matrix_ops.py Mon Jul 19 15:35:24 2010
+@@ -24,15 +24,39 @@
+ &quot;&quot;&quot;Module for the handling of Frame Order.&quot;&quot;&quot;
+ 
+ # Python module imports.
+-from math import cos, sin
++from math import cos, pi, sin, sqrt
+ from numpy import cross, dot, transpose
+ from numpy.linalg import norm
++from scipy.integrate import quad
+ 
+ # relax module imports.
+ from float import isNaN
+ from maths_fns import order_parameters
+ from maths_fns.kronecker_product import kron_prod, transpose_23
++from maths_fns.pseudo_ellipse import pec
+ from maths_fns.rotation_matrix import two_vect_to_R
++
++
++def compile_1st_matrix_pseudo_ellipse(matrix, theta_x, theta_y, sigma_max):
++    &quot;&quot;&quot;Generate the rotated 1st degree Frame Order matrix for the pseudo 
+ellipse.
++
++    @param matrix:      The Frame Order matrix, 1st degree to be populated.
++    @type matrix:       numpy 3D, rank-2 array
++    @param theta_x:     The cone opening angle along x.
++    @type theta_x:      float
++    @param theta_y:     The cone opening angle along y.
++    @type theta_y:      float
++    @param sigma_max:   The maximum torsion angle.
++    @type sigma_max:    float
++    &quot;&quot;&quot;
++
++    # The surface area normalisation factor.
++    fact = 1.0 / (2.0 * sigma_max * pec(theta_x, theta_y))
++
++    # Numerical integration of phi of each element.
++    matrix[0, 0] = fact * quad(part_int_daeg1_pseudo_ellipse_xx, -pi, pi, 
+args=(theta_x, theta_y, sigma_max))[0]
++    matrix[1, 1] = fact * quad(part_int_daeg1_pseudo_ellipse_yy, -pi, pi, 
+args=(theta_x, theta_y, sigma_max))[0]
++    matrix[2, 2] = fact * quad(part_int_daeg1_pseudo_ellipse_zz, -pi, pi, 
+args=(theta_x, theta_y, sigma_max))[0]
+ 
+ 
+ def compile_2nd_matrix_iso_cone(matrix, R, z_axis, cone_axis, theta_axis, 
+phi_axis, s1):
+@@ -157,6 +181,48 @@
+     vector[2] = cos(theta)
+ 
+ 
++def part_int_daeg1_pseudo_ellipse_xx(phi, x, y, smax):
++    &quot;&quot;&quot;The theta-sigma partial integral of the 1st degree Frame Order matrix 
+element xx for the pseudo ellipse.
++
++    @param phi: The azimuthal tilt-torsion angle.
++    @type phi:  float
++    &quot;&quot;&quot;
++
++    # Theta max.
++    tmax = tmax_pseudo_ellipse(phi, x, y)
++
++    # The theta-sigma integral.
++    return sin(smax) * (2 * (1 - cos(tmax)) * sin(phi)**2 + cos(phi)**2 * 
+sin(tmax)**2)
++
++
++def part_int_daeg1_pseudo_ellipse_yy(phi, x, y, smax):
++    &quot;&quot;&quot;The theta-sigma partial integral of the 1st degree Frame Order matrix 
+element yy for the pseudo ellipse.
++
++    @param phi: The azimuthal tilt-torsion angle.
++    @type phi:  float
++    &quot;&quot;&quot;
++
++    # Theta max.
++    tmax = tmax_pseudo_ellipse(phi, x, y)
++
++    # The theta-sigma integral.
++    return sin(smax) * (2.0 * cos(phi)**2 * (1.0 - cos(tmax)) + sin(phi)**2 
+* sin(tmax)**2)
++
++
++def part_int_daeg1_pseudo_ellipse_zz(phi, x, y, smax):
++    &quot;&quot;&quot;The theta-sigma partial integral of the 1st degree Frame Order matrix 
+element zz for the pseudo ellipse.
++
++    @param phi: The azimuthal tilt-torsion angle.
++    @type phi:  float
++    &quot;&quot;&quot;
++
++    # Theta max.
++    tmax = tmax_pseudo_ellipse(phi, x, y)
++
++    # The theta-sigma integral.
++    return smax * sin(tmax)**2
++
++
+ def populate_1st_eigenframe_iso_cone(matrix, angle):
+     &quot;&quot;&quot;Populate the 1st degree Frame Order matrix in the eigenframe for an 
+isotropic cone.
+ 
+@@ -249,24 +315,24 @@
+     red_tensor[1] = red_tensor[1] + 2.0*D[4, 5]*A[4]
+ 
+     # The reduced tensor element A2.
+-    red_tensor[2] =                 (D[0, 3] - D[2, 5])*A[0] 
+-    red_tensor[2] = red_tensor[2] + (D[1, 4] - D[2, 5])*A[1] 
+-    red_tensor[2] = red_tensor[2] + (D[0, 4] + D[1, 3])*A[2] 
+-    red_tensor[2] = red_tensor[2] + (D[0, 5] + D[2, 3])*A[3] 
++    red_tensor[2] =                 (D[0, 3] - D[2, 5])*A[0]
++    red_tensor[2] = red_tensor[2] + (D[1, 4] - D[2, 5])*A[1]
++    red_tensor[2] = red_tensor[2] + (D[0, 4] + D[1, 3])*A[2]
++    red_tensor[2] = red_tensor[2] + (D[0, 5] + D[2, 3])*A[3]
+     red_tensor[2] = red_tensor[2] + (D[1, 5] + D[2, 4])*A[4]
+ 
+     # The reduced tensor element A3.
+-    red_tensor[3] =                 (D[0, 6] - D[2, 8])*A[0] 
+-    red_tensor[3] = red_tensor[3] + (D[1, 7] - D[2, 8])*A[1] 
+-    red_tensor[3] = red_tensor[3] + (D[0, 7] + D[1, 6])*A[2] 
+-    red_tensor[3] = red_tensor[3] + (D[0, 8] + D[2, 6])*A[3] 
++    red_tensor[3] =                 (D[0, 6] - D[2, 8])*A[0]
++    red_tensor[3] = red_tensor[3] + (D[1, 7] - D[2, 8])*A[1]
++    red_tensor[3] = red_tensor[3] + (D[0, 7] + D[1, 6])*A[2]
++    red_tensor[3] = red_tensor[3] + (D[0, 8] + D[2, 6])*A[3]
+     red_tensor[3] = red_tensor[3] + (D[1, 8] + D[2, 7])*A[4]
+ 
+     # The reduced tensor element A4.
+-    red_tensor[4] =                 (D[3, 6] - D[5, 8])*A[0] 
+-    red_tensor[4] = red_tensor[4] + (D[4, 7] - D[5, 8])*A[1] 
+-    red_tensor[4] = red_tensor[4] + (D[3, 7] + D[4, 6])*A[2] 
+-    red_tensor[4] = red_tensor[4] + (D[3, 8] + D[5, 6])*A[3] 
++    red_tensor[4] =                 (D[3, 6] - D[5, 8])*A[0]
++    red_tensor[4] = red_tensor[4] + (D[4, 7] - D[5, 8])*A[1]
++    red_tensor[4] = red_tensor[4] + (D[3, 7] + D[4, 6])*A[2]
++    red_tensor[4] = red_tensor[4] + (D[3, 8] + D[5, 6])*A[3]
+     red_tensor[4] = red_tensor[4] + (D[4, 8] + D[5, 7])*A[4]
+ 
+ 
+@@ -299,22 +365,38 @@
+     red_tensor[1] = red_tensor[1] + 2.0*D[4, 7]*A[4]
+ 
+     # The reduced tensor element A2.
+-    red_tensor[2] =                 (D[0, 1] - D[6, 7])*A[0] 
+-    red_tensor[2] = red_tensor[2] + (D[3, 4] - D[6, 7])*A[1] 
+-    red_tensor[2] = red_tensor[2] + (D[0, 4] + D[1, 3])*A[2] 
+-    red_tensor[2] = red_tensor[2] + (D[0, 7] + D[1, 6])*A[3] 
++    red_tensor[2] =                 (D[0, 1] - D[6, 7])*A[0]
++    red_tensor[2] = red_tensor[2] + (D[3, 4] - D[6, 7])*A[1]
++    red_tensor[2] = red_tensor[2] + (D[0, 4] + D[1, 3])*A[2]
++    red_tensor[2] = red_tensor[2] + (D[0, 7] + D[1, 6])*A[3]
+     red_tensor[2] = red_tensor[2] + (D[3, 7] + D[4, 6])*A[4]
+ 
+     # The reduced tensor element A3.
+-    red_tensor[3] =                 (D[0, 2] - D[6, 8])*A[0] 
+-    red_tensor[3] = red_tensor[3] + (D[3, 5] - D[6, 8])*A[1] 
+-    red_tensor[3] = red_tensor[3] + (D[0, 5] + D[2, 3])*A[2] 
+-    red_tensor[3] = red_tensor[3] + (D[0, 8] + D[2, 6])*A[3] 
++    red_tensor[3] =                 (D[0, 2] - D[6, 8])*A[0]
++    red_tensor[3] = red_tensor[3] + (D[3, 5] - D[6, 8])*A[1]
++    red_tensor[3] = red_tensor[3] + (D[0, 5] + D[2, 3])*A[2]
++    red_tensor[3] = red_tensor[3] + (D[0, 8] + D[2, 6])*A[3]
+     red_tensor[3] = red_tensor[3] + (D[3, 8] + D[5, 6])*A[4]
+ 
+     # The reduced tensor element A4.
+-    red_tensor[4] =                 (D[1, 2] - D[7, 8])*A[0] 
+-    red_tensor[4] = red_tensor[4] + (D[4, 5] - D[7, 8])*A[1] 
+-    red_tensor[4] = red_tensor[4] + (D[1, 5] + D[2, 4])*A[2] 
+-    red_tensor[4] = red_tensor[4] + (D[1, 8] + D[2, 7])*A[3] 
++    red_tensor[4] =                 (D[1, 2] - D[7, 8])*A[0]
++    red_tensor[4] = red_tensor[4] + (D[4, 5] - D[7, 8])*A[1]
++    red_tensor[4] = red_tensor[4] + (D[1, 5] + D[2, 4])*A[2]
++    red_tensor[4] = red_tensor[4] + (D[1, 8] + D[2, 7])*A[3]
+     red_tensor[4] = red_tensor[4] + (D[4, 8] + D[5, 7])*A[4]
++
++
++def tmax_pseudo_ellipse(phi, theta_x, theta_y):
++    &quot;&quot;&quot;The pseudo ellipse tilt-torsion polar angle.
++
++    @param phi:     The azimuthal tilt-torsion angle.
++    @type phi:      float
++    @param theta_x: The cone opening angle along x.
++    @type theta_x:  float
++    @param theta_y: The cone opening angle along y.
++    @type theta_y:  float
++    @return:        The theta max angle for the given phi angle.
++    @rtype:         float
++    &quot;&quot;&quot;
++
++    return sqrt(1.0 / (cos(phi)**2/theta_x**2 + sin(phi)**2/theta_y**2))
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Jul 19 17:40:01 2010</div>  
+</body>
+</html>

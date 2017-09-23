@@ -1,0 +1,157 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r7628 &#45; /1.3/generic_fns/palmer.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Sun, 12 Oct 2008 00:51:38 +0200 -->
+<!--X-Message-Id: E1KonJC&#45;0000Cb&#45;Bh@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r7628 - /1.3/generic_fns/palmer.py -- October 12, 2008 - 00:51</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r7628 - /1.3/generic_fns/palmer.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00157" class="tabs">Index by Date</a> | <a href="threads.html#00157" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00156.html">Date Prev</a>] [<a href="msg00158.html">Date Next</a>] [<a href="msg00156.html">Thread Prev</a>] [<a href="msg00158.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Sat, 11 Oct 2008 22:51:38 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00157.html">E1KonJC-0000Cb-Bh@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on October 12, 2008 - 00:51:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Sun Oct 12 00:51:36 2008
+New Revision: 7628
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=7628&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=7628&amp;view=rev</a>
+Log:
+Switched from os.spawnlp to os.popen3 for proper IO redirection.
+
+This allows the system tests to capture Modelfree4's STDOUT and STDERR 
+streams, as they are fused
+into relax's.
+
+
+Modified:
+    1.3/generic_fns/palmer.py
+
+Modified: 1.3/generic_fns/palmer.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/generic_fns/palmer.py?rev=7628&amp;r1=7627&amp;r2=7628&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/generic_fns/palmer.py?rev=7628&amp;r1=7627&amp;r2=7628&amp;view=diff</a>
+==============================================================================
+--- 1.3/generic_fns/palmer.py (original)
++++ 1.3/generic_fns/palmer.py Sun Oct 12 00:51:36 2008
+@@ -26,15 +26,10 @@
+ 
+ # Python module imports.
+ from math import pi
+-from os import F_OK, P_WAIT, access, chdir, chmod, getcwd, listdir, remove, 
+system
++from os import F_OK, access, chdir, chmod, getcwd, listdir, popen3, remove, 
+system
+ from re import match, search
+ from string import count, find, split
+-
+-# UNIX only functions from the os module (Modelfree4 only runs under UNIX 
+anyway).
+-try:
+-    from os import spawnlp
+-except ImportError:
+-    pass
++import sys
+ 
+ # relax module imports.
+ from generic_fns.mol_res_spin import exists_mol_res_spin_data, spin_loop
+@@ -567,18 +562,21 @@
+         # Test the binary file string corresponds to a valid executable.
+         test_binary(binary)
+ 
+-        # Execute Modelfree4 (inputting a PDB file).
++        # Execute Modelfree4.
+         if pdb:
+-            status = spawnlp(P_WAIT, binary, binary, '-i', 'mfin', '-d', 
+'mfdata', '-p', 'mfpar', '-m', 'mfmodel', '-o', 'mfout', '-e', 'out', '-s', 
+pdb)
+-            if status:
+-                raise RelaxProgFailError, 'Modelfree4'
+-
+-
+-        # Execute Modelfree4 (without a PDB file).
++            cmd = binary + ' -i mfin -d mfdata -p mfpar -m mfmodel -o mfout 
+-e out -s ' + pdb
+         else:
+-            status = spawnlp(P_WAIT, binary, binary, '-i', 'mfin', '-d', 
+'mfdata', '-p', 'mfpar', '-m', 'mfmodel', '-o', 'mfout', '-e', 'out')
+-            if status:
+-                raise RelaxProgFailError, 'Modelfree4'
++            cmd = binary + ' -i mfin -d mfdata -p mfpar -m mfmodel -o mfout 
+-e out'
++        stdin, stdout, stderr = popen3(cmd)
++
++        # Close the pipe.
++        stdin.close()
++
++        # Write to stdout and stderr.
++        for line in stdout.readlines():
++            sys.stdout.write(line)
++        for line in stderr.readlines():
++            sys.stderr.write(line)
+ 
+     # Failure.
+     except:
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Sun Oct 12 01:00:01 2008</div>  
+</body>
+</html>

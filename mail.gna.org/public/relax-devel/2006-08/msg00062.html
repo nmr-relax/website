@@ -1,0 +1,194 @@
+<!-- MHonArc v2.6.10 -->
+<!--X-Subject: Re: r2533 &#45; in /1.2: errors.py prompt/interpreter.py relax -->
+<!--X-From-R13: "Sqjneq q'Ohiretar" <rqjneqNaze&#45;erynk.pbz> -->
+<!--X-Date: Fri, 11 Aug 2006 19:02:00 +0200 -->
+<!--X-Message-Id: 7f080ed10608111001r4e3ff7e5qacd8ecff2156481f@mail.gmail.com -->
+<!--X-Content-Type: text/plain -->
+<!--X-Reference: E1GB7jy&#45;0002oT&#45;Rz@subversion.gna.org -->
+<!--X-Reference: 7f080ed10608100351k224db22ftb3f5ebc1ecc7b452@mail.gmail.com -->
+<!--X-Reference: 1155209240.28764.489.camel@fbsdpcu021 -->
+<!--X-Reference: 1155311362.28764.560.camel@fbsdpcu021 -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>Re: r2533 - in /1.2: errors.py prompt/interpreter.py relax -- August 11, 2006 - 19:02</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />Re: r2533 - in /1.2: errors.py prompt/interpreter.py relax</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00062" class="tabs">Index by Date</a> | <a href="threads.html#00062" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00061.html">Date Prev</a>] [<a href="msg00063.html">Date Next</a>] [<a href="msg00061.html">Thread Prev</a>] [<a href="msg00060.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: &quot;Chris MacRaild&quot; &lt;c.a.macraild@xxxxxxxxxxx&gt;</li>
+<li class="menuitem">
+<em>Date</em>: Sat, 12 Aug 2006 03:01:22 +1000</li>
+<li class="menuitem">
+<em>Cc</em>: relax-devel@xxxxxxx</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00062.html">7f080ed10608111001r4e3ff7e5qacd8ecff2156481f@mail.gmail.com</a>&gt;</li>
+<li class="menuitem">
+<em>References</em>: &lt;E1GB7jy-0002oT-Rz@subversion.gna.org&gt;	&lt;<a href="msg00053.html">7f080ed10608100351k224db22ftb3f5ebc1ecc7b452@mail.gmail.com</a>&gt;	&lt;<a href="msg00054.html">1155209240.28764.489.camel@fbsdpcu021</a>&gt;	&lt;<a href="msg00061.html">1155311362.28764.560.camel@fbsdpcu021</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>Edward d'Auvergne</strong> on August 11, 2006 - 19:02:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<blockquote class="blockquote"><pre style="margin: 0em;">I've been thinking some more about this, and wonder if there is a better
+way of doing it. The problem is that Python exceptions are generally
+pretty minimalist constructions, and it seems hard to avoid very crude
+hacks when getting them to do anything more sophisticated.
+</pre></blockquote><pre style="margin: 0em;"><br>I know, you can get some very weird behaviour if you try any fancy
+modifications.</pre><br>
+<blockquote class="blockquote"><pre style="margin: 0em;">this is historical - in early versions of Python, there was no special
+Exception class, and raise could act on any object. This is still the
+case, though it's deprecated, so there is nothing the Exception itself
+can do to change the way raise handles it. The way around it is to do
+the appropriate handling tasks in the program code itself. The sort of
+thing I'm thinking about would have:</pre><br>
+<pre style="margin: 0em;">class BaseError(Exception):
+    # -1 =&gt; never, 0 =&gt; if Debug, 1 =&gt; always
+    save_state = 0
+    def __str__(self):
+        return (&quot;RelaxError: &quot; + self.text + &quot;\n&quot;)</pre><br>
+<pre style="margin: 0em;">class RelaxFault(BaseError):
+    save_state = 1
+    def __init__(self):
+        ...</pre><br>
+<pre style="margin: 0em;">Then in the main program script, around line 151 (in the if mode ==
+'prompt' or mode == 'script' block) we would have:</pre><br>
+<pre style="margin: 0em;">try:
+    self.interpreter.run()
+except BaseError:
+    err = sys.exc_info()
+    exception = err[1]
+    if exception.save_state == 1
+        state.save()
+    elif exception.save_state == 0
+        if Debug:
+            self.interpreter._State.save()
+    del err, exception
+    raise
+</pre></blockquote><pre style="margin: 0em;"><br>That is a good setup!!!  I just wonder if this should be at the level
+of the interpreter/scripting or higher level.  I suppose for other
+interfaces you may want different behaviours for the RelaxErrors and
+RelaxWarnings.</pre><br>
+<blockquote class="blockquote"><pre style="margin: 0em;">The logic here is that BaseError simply defines a flag indicating the
+default behaviour, and subclasses can override this as appropriate. Then
+we use the more normal exception handling machinery to ensure that the
+behaviour occurs, rather than coding that into the exception itself.
+</pre></blockquote><pre style="margin: 0em;"><br>The flexibility is perfect for say the (possible future) MPI
+interface, a GUI, a web interface, or as you say below the test-suite.</pre><br>
+<blockquote class="blockquote"><pre style="margin: 0em;">This gives us even more flexibility, because we might want (around line
+180):</pre><br>
+<pre style="margin: 0em;"># Run the tests.
+elif mode == 'test suite':
+    try:
+        Test_suite(self)
+    except BaseError:
+        err = sys.exc_info()
+        exception = err[1]
+        if exception.save_state &gt;= 0
+            self.interpreter._State.save()
+        del err, exception
+        raise</pre><br>
+<pre style="margin: 0em;">Here exceptions will cause a state.save(), irrespective of Debug status,
+because we will always want to know about about errors during testing.
+</pre></blockquote><pre style="margin: 0em;"><br>state.save() only pickles the contents of 'self.relax.data' and so for
+many tests may not be very useful.  It would be best if the user just
+sent the traceback first as the saved state is relatively large
+(compared to the text of the traceback) and in most cases won't be
+necessary.  If necessary we could then tell the user to run the tests
+with --debug (unless someone thinks otherwise) and then tell them to
+attach the saved state to the bug report (this should save space on
+the bug tracker or mailing lists).</pre><br>
+<blockquote class="blockquote"><pre style="margin: 0em;">The other advantage of this approach is that the state.save() only
+happens if the exception has propagated all the way to the top of the
+stack. With the save_state() function in __init__(), the state is saved
+when the exception class is instantiated ie. when it is raised, even if
+it is subsequently caught and dealt with.
+</pre></blockquote><pre style="margin: 0em;"><br>One of my thoughts from a few years back was to completely redo the
+entire Error system into something a little easier to understand.  For
+example to print a RelaxError you type something like:</pre><br>
+<pre style="margin: 0em;">if bad:
+   RelaxBadError.raise('This is a bad error')</pre><br>
+<pre style="margin: 0em;">if vect_len == 0:
+   RelaxZeroVectorWarning.raise(res = 1)</pre><br>
+<pre style="margin: 0em;">The RelaxBadError is a class, except it isn't subclassed from
+'Exception'.  It has a simple 'raise()' function which takes the
+string, formats it, etc (there maybe a better name for this function).
+'raise()' could also call a special error function which say takes
+the formatted string, prints a traceback to stderr, prints
+'RelaxError: ' followed by the formatted string to stderr, then
+executes 'sys.exit()'.</pre><br>
+<pre style="margin: 0em;">A similar system could be used for the RelaxWarnings except the
+traceback isn't printed and 'sys.exit()' is not called.  These very
+simple objects remove the need for using the 'raise' statement and
+attempting to catch it with 'try:' statements.  I don't think that
+this change will be too much of a challenge.  It will also allow the
+upgrading of warnings to errors (by calling the special error function
+rather than the special warning function) using the '--pedantic' flag
+and the downgrading of errors to warnings using the '--ignore-errors'
+flag.  It will make the fine control you suggest in you post much
+easier and will make the entire error/warning system much cleaner.  Is
+there any error behaviour I have missed?  It also allows a cleaner
+implementation of the state.save() function and anything else we may
+want to add in the future for the other UIs (GUI, web, MPI,
+test-suite, threading, etc).</pre><br>
+<pre style="margin: 0em;">Edward</pre><br>
+<br>
+
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<ul><li><strong>References</strong>:
+<ul>
+<li><strong><a name="00053" href="msg00053.html">Re: r2533 - in /1.2: errors.py prompt/interpreter.py relax</a></strong>
+<ul><li><em>From:</em> Edward d'Auvergne</li></ul></li>
+<li><strong><a name="00054" href="msg00054.html">Re: r2533 - in /1.2: errors.py prompt/interpreter.py relax</a></strong>
+<ul><li><em>From:</em> Chris MacRaild</li></ul></li>
+<li><strong><a name="00061" href="msg00061.html">Re: r2533 - in /1.2: errors.py prompt/interpreter.py relax</a></strong>
+<ul><li><em>From:</em> Chris MacRaild</li></ul></li>
+</ul></li></ul>
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Aug 11 20:20:29 2006</div>  
+</body>
+</html>

@@ -1,0 +1,228 @@
+<!-- MHonArc v2.6.19+ -->
+<!--X-Subject: r27838 &#45; /trunk/auto_analyses/relax_disp_repeat_cpmg.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 27 May 2015 03:09:45 +0200 -->
+<!--X-Message-Id: E1YxPqq&#45;0002oZ&#45;Ui@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r27838 - /trunk/auto_analyses/relax_disp_repeat_cpmg.py -- May 27, 2015 - 03:09</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r27838 - /trunk/auto_analyses/relax_disp_repeat_cpmg.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00006" class="tabs">Index by Date</a> | <a href="threads.html#00006" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00005.html">Date Prev</a>] [<a href="msg00007.html">Date Next</a>] [<a href="msg00005.html">Thread Prev</a>] [<a href="msg00007.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 27 May 2015 01:09:44 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00006.html">E1YxPqq-0002oZ-Ui@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on May 27, 2015 - 03:09:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Wed May 27 03:09:44 2015
+New Revision: 27838
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=27838&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=27838&amp;view=rev</a>
+Log:
+Adding option to minimise class function, to perform monte carlo error 
+analysis.
+
+Task #7826 (<a  rel="nofollow" href="https://gna.org/task/?7826">https://gna.org/task/?7826</a>): Write an python class for the 
+repeated analysis of dispersion data.
+
+Modified:
+    trunk/auto_analyses/relax_disp_repeat_cpmg.py
+
+Modified: trunk/auto_analyses/relax_disp_repeat_cpmg.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/auto_analyses/relax_disp_repeat_cpmg.py?rev=27838&amp;r1=27837&amp;r2=27838&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/auto_analyses/relax_disp_repeat_cpmg.py?rev=27838&amp;r1=27837&amp;r2=27838&amp;view=diff</a>
+==============================================================================
+--- trunk/auto_analyses/relax_disp_repeat_cpmg.py       (original)
++++ trunk/auto_analyses/relax_disp_repeat_cpmg.py       Wed May 27 03:09:44 
+2015
+@@ -781,7 +781,7 @@
+             print(&quot;Clustered spins are:&quot;, cdp.clustering)
+ 
+ 
+-    def minimise_execute(self, verbosity=1, methods=None, model=None, 
+model_from=None, analysis=None, analysis_from=None, list_glob_ini=None, 
+force=False):
++    def minimise_execute(self, verbosity=1, methods=None, model=None, 
+model_from=None, analysis=None, analysis_from=None, list_glob_ini=None, 
+force=False, mc_err_analysis=False):
+         &quot;&quot;&quot;Use value.set on all pipes.&quot;&quot;&quot;
+ 
+         # Set default
+@@ -825,6 +825,10 @@
+ 
+                 # Do the minimisation.
+                 self.interpreter.minimise.execute(min_algor=self.min_algor, 
+func_tol=self.opt_func_tol, max_iter=self.opt_max_iterations, 
+constraints=self.constraints, scaling=True, verbosity=verbosity)
++
++                # Do Monte-Carlo error analysis
++                if mc_err_analysis:
++                    self.interpreter.monte_carlo.error_analysis()
+ 
+                 # Save results, and store the current settings dic to pipe.
+                 cdp.settings = self.settings
+@@ -2666,7 +2670,7 @@
+             plt.show()
+ 
+ 
+-    def write_results(self, method=None, model=None, analysis=None, 
+list_glob_ini=None, selection=None):
++    def write_results(self, method=None, model=None, analysis=None, 
+list_glob_ini=None, selection=None, write_disp=True):
+ 
+         for glob_ini in list_glob_ini:
+             # Check previous, and get the pipe name.
+@@ -2686,9 +2690,10 @@
+             path = self.results_dir+sep+model_path+sep+analysis_path
+ 
+             # Dispersion curves.
+-            path_disp = path+sep+&quot;disp_curves&quot;+sep+method+sep+str(glob_ini)
+-            self.interpreter.relax_disp.plot_disp_curves(dir=path_disp, 
+force=True)
+-            self.interpreter.relax_disp.write_disp_curves(dir=path_disp, 
+force=True)
++            if write_disp:
++                path_disp = 
+path+sep+&quot;disp_curves&quot;+sep+method+sep+str(glob_ini)
++                self.interpreter.relax_disp.plot_disp_curves(dir=path_disp, 
+force=True)
++                self.interpreter.relax_disp.write_disp_curves(dir=path_disp, 
+force=True)
+ 
+             # The selected models for the final run.
+             self.interpreter.value.write(param='model', file='model.out', 
+dir=path, force=True)
+@@ -2815,6 +2820,58 @@
+         chmod(file_path, S_IRWXU|S_IRGRP|S_IROTH)
+ 
+ 
++    def create_mc_data(self, number=500, distribution=&quot;measured&quot;, 
+fixed_error=None, methods=None, model=None, model_from=None, analysis=None, 
+analysis_from=None, list_glob_ini=None, force=False):
++        &quot;&quot;&quot;Create MC data.&quot;&quot;&quot;
++
++        # Set default
++        if model_from == None:
++            model_from = model
++        if analysis_from == None:
++            analysis_from = analysis
++
++        # Loop over the methods.
++        for method in methods:
++            # Change the self key.
++            self.set_self(key='method', value=method)
++
++            # Loop over the glob ini:
++            for glob_ini in list_glob_ini:
++                # Check previous, and get the pipe name.
++                found_pipe, pipe_name, resfile, path = 
+self.check_previous_result(method=self.method, model=model, 
+analysis=analysis, glob_ini=glob_ini, bundle=self.method)
++
++                # Try from analysis
++                if not found_pipe:
++                    # Check previous, and get the pipe name.
++                    found_analysis, pipe_name, resfile, path = 
+self.check_previous_result(method=self.method, model=model, 
+analysis=analysis_from, glob_ini=glob_ini, bundle=self.method)
++
++                # Print
++                subtitle(file=sys.stdout, text=&quot;MC data for pipe='%s'&quot; % 
+(pipe_name), prespace=3)
++
++                # Select the model.
++                self.interpreter.relax_disp.select_model(model)
++
++                # Create data
++                self.interpreter.monte_carlo.setup(number=number)
++                
+self.interpreter.monte_carlo.create_data(distribution=distribution, 
+fixed_error=fixed_error)
++                self.interpreter.monte_carlo.initial_values()
++
++                # Save results, and store the current settings dic to pipe.
++                cdp.settings = self.settings
++
++                # Define new pipe names.
++                pipe_name = self.name_pipe(method=self.method, model=model, 
+analysis=analysis, glob_ini=glob_ini)
++                resfile = pipe_name.replace(&quot; &quot;, &quot;_&quot;)
++                model_path = model.replace(&quot; &quot;, &quot;_&quot;)
++                path = self.results_dir+sep+model_path
++
++                if found_pipe and not force:
++                    file_path = get_file_path(file_name=resfile, dir=path)
++                    text = &quot;The file '%s' already exists.  Set the force 
+flag to True to overwrite.&quot; % (file_path)
++                    warn(RelaxWarning(text))
++                else:
++                    self.interpreter.results.write(file=resfile, dir=path, 
+force=force)
++
++
+     def interpreter_start(self):
+         # Load the interpreter.
+         self.interpreter = Interpreter(show_script=False, 
+raise_relax_error=True)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed May 27 03:20:02 2015</div>  
+</body>
+</html>

@@ -1,0 +1,198 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r19372 &#45; /branches/relax_disp/specific_analyses/relax_disp.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 04 Apr 2013 22:07:08 +0200 -->
+<!--X-Message-Id: E1UNqRA&#45;0004UE&#45;Bz@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r19372 - /branches/relax_disp/specific_analyses/relax_disp.py -- April 04, 2013 - 22:07</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r19372 - /branches/relax_disp/specific_analyses/relax_disp.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00091" class="tabs">Index by Date</a> | <a href="threads.html#00091" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00090.html">Date Prev</a>] [<a href="msg00092.html">Date Next</a>] [<a href="msg00090.html">Thread Prev</a>] [<a href="msg00092.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 04 Apr 2013 20:07:08 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00091.html">E1UNqRA-0004UE-Bz@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on April 04, 2013 - 22:07:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Apr  4 22:07:07 2013
+New Revision: 19372
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=19372&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=19372&amp;view=rev</a>
+Log:
+The 'exp_fit' relaxation dispersion model now uses the minfx.grid sparseness 
+argument.
+
+This is used to skip all parts of the grid search belonging to a different 
+exponential curve or
+different spin.  If the number of curves is N and the number of spins M, the 
+grid size decreases
+from inc**(2*N*M) to (inc**2)*N*M.  For lots of spins and curves, this is a 
+huge decrease.
+
+
+Modified:
+    branches/relax_disp/specific_analyses/relax_disp.py
+
+Modified: branches/relax_disp/specific_analyses/relax_disp.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp.py?rev=19372&amp;r1=19371&amp;r2=19372&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp.py?rev=19372&amp;r1=19371&amp;r2=19372&amp;view=diff</a>
+==============================================================================
+--- branches/relax_disp/specific_analyses/relax_disp.py (original)
++++ branches/relax_disp/specific_analyses/relax_disp.py Thu Apr  4 22:07:07 
+2013
+@@ -557,7 +557,7 @@
+             lower = []
+             upper = []
+ 
+-            # First add the spin specific parameters.
++            # First the spin specific parameters.
+             for spin_index in range(len(spins)):
+                 # Alias the spin.
+                 spin = spins[spin_index]
+@@ -609,10 +609,42 @@
+                     lower.append(0.0)
+                     upper.append(10000.0)
+ 
++        # Define sparse regions to skip.
++        sparseness = []
++        if cdp.model == 'exp_fit':
++            for spin_index1 in range(len(spins)):
++                for spin_index2 in range(len(spins)):
++                    for exp_index1, key in self._exp_curve_loop():
++                        for exp_index2, key in self._exp_curve_loop():
++                            # The same spin and curve, so no sparseness.
++                            if spin_index1 == spin_index2 and exp_index1 == 
+exp_index2:
++                                continue
++    
++                            # The parameter index.
++                            index1 = spin_index1 * 2 * cdp.curve_count + 
+exp_index1 * cdp.curve_count
++                            index2 = spin_index2 * 2 * cdp.curve_count + 
+exp_index2 * cdp.curve_count
++
++                            # Add the parameter combinations.
++                            sparseness.append([index1, index2])
++                            sparseness.append([index1, index2+1])
++                            sparseness.append([index1+1, index2])
++                            sparseness.append([index1+1, index2+1])
++
++        # The sparse grid size.
++        if cdp.model == 'exp_fit':
++            grid_size = 0
++            for spin_index in range(len(spins)):
++                for exp_index, key in self._exp_curve_loop():
++                    index = spin_index * 2 * cdp.curve_count + exp_index * 
+cdp.curve_count
++                    grid_size += inc[index] * inc[index+1]
++
++        # The full grid size.
++        else:
++            grid_size = 1
++            for i in range(n):
++                grid_size *= inc[i]
++
+         # Test if the grid is too large.
+-        grid_size = 1
+-        for i in range(n):
+-            grid_size = grid_size * inc[0]
+         if isinstance(grid_size, long):
+             raise RelaxError(&quot;A grid search of size %s is too large.&quot; % 
+grid_size)
+ 
+@@ -622,7 +654,7 @@
+             upper[i] = upper[i] / scaling_matrix[i, i]
+ 
+         # Return the data structures.
+-        return grid_size, inc, lower, upper
++        return grid_size, inc, lower, upper, sparseness
+ 
+ 
+     def _linear_constraints(self, spins=None, scaling_matrix=None):
+@@ -1054,7 +1086,7 @@
+ 
+             # Get the grid search minimisation options.
+             if match('^[Gg]rid', min_algor):
+-                grid_size, inc, lower, upper = 
+self._grid_search_setup(spins=spins, param_vector=param_vector, lower=lower, 
+upper=upper, inc=inc, scaling_matrix=scaling_matrix)
++                grid_size, inc, lower, upper, sparseness = 
+self._grid_search_setup(spins=spins, param_vector=param_vector, lower=lower, 
+upper=upper, inc=inc, scaling_matrix=scaling_matrix)
+ 
+             # Linear constraints.
+             A, b = None, None
+@@ -1078,7 +1110,7 @@
+ 
+             # Grid search.
+             if search('^[Gg]rid', min_algor):
+-                results = grid(func=model.func, args=(), num_incs=inc, 
+lower=lower, upper=upper, A=A, b=b, verbosity=verbosity)
++                results = grid(func=model.func, args=(), num_incs=inc, 
+lower=lower, upper=upper, A=A, b=b, sparseness=sparseness, 
+verbosity=verbosity)
+ 
+                 # Unpack the results.
+                 param_vector, chi2, iter_count, warning = results
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Apr 04 22:40:02 2013</div>  
+</body>
+</html>

@@ -1,0 +1,186 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r12563 &#45; /1.3/generic_fns/pdc.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 18 Feb 2011 14:51:49 +0100 -->
+<!--X-Message-Id: E1PqQkP&#45;0008Rc&#45;FW@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r12563 - /1.3/generic_fns/pdc.py -- February 18, 2011 - 14:51</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r12563 - /1.3/generic_fns/pdc.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00084" class="tabs">Index by Date</a> | <a href="threads.html#00084" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00083.html">Date Prev</a>] [<a href="msg00085.html">Date Next</a>] [<a href="msg00083.html">Thread Prev</a>] [<a href="msg00085.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 18 Feb 2011 13:51:49 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00084.html">E1PqQkP-0008Rc-FW@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on February 18, 2011 - 14:51:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Feb 18 14:51:49 2011
+New Revision: 12563
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=12563&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=12563&amp;view=rev</a>
+Log:
+Some fixes for the pdc.read() back end so that PDC NOE data files can be read 
+properly.
+
+
+Modified:
+    1.3/generic_fns/pdc.py
+
+Modified: 1.3/generic_fns/pdc.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/generic_fns/pdc.py?rev=12563&amp;r1=12562&amp;r2=12563&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/generic_fns/pdc.py?rev=12563&amp;r1=12562&amp;r2=12563&amp;view=diff</a>
+==============================================================================
+--- 1.3/generic_fns/pdc.py (original)
++++ 1.3/generic_fns/pdc.py Fri Feb 18 14:51:49 2011
+@@ -108,39 +108,55 @@
+     # Loop over the data.
+     in_ri_data = False
+     for line in file_data:
++        print line
+         # The data type.
+         if len(line) == 3 and search('T1', line[2]):
+             ri_label = 'R1'
+-            continue
++        elif len(line) == 3 and search('T2', line[2]):
++            ri_label = 'R2'
++        elif len(line) == 4 and line[3] == 'NOE':
++            ri_label = 'NOE'
+ 
+         # Get the frequency.
+-        if len(line) == 3 and line[0] == 'Proton' and line[1] == 
+'frequency[MHz]:':
++        elif len(line) == 3 and line[0] == 'Proton' and line[1] == 
+'frequency[MHz]:':
+             frq = float(line[2])
+             frq_label = str(int(round(float(line[2])/10)*10))
+-            continue
+ 
+         # Inside the relaxation data section.
+-        if len(line) == 2 and line[0] == 'SECTION:' and line[1] == 'results':
++        elif len(line) == 2 and line[0] == 'SECTION:' and line[1] == 
+'results':
+             in_ri_data = True
+-            continue
+ 
+         # The relaxation data.
+-        if in_ri_data and line[0] != 'Peak':
++        elif in_ri_data and line[0] != 'Peak':
++            # Differences in the Rx and NOE files.
++            if ri_label == 'NOE':
++                index1 = -4
++                index2 = -4
++            else:
++                index1 = -5
++                index2 = -3
++
+             # The residue info.
+-            res_nums.append(get_res_num(line[:-5]))
++            res_nums.append(get_res_num(line[:index1]))
+ 
+             # Get the relaxation data.
+-            rx, rx_err = get_relax_data(line[-3:])
++            if ri_label != 'NOE':
++                rx, rx_err = get_relax_data(line[index2:])
++            else:
++                rx = float(line[-2])
++                rx_err = float(line[-1])
++
++            # Append the data.
+             values.append(rx)
+             errors.append(rx_err)
+ 
+         # The temperature.
+-        if len(line) == 3 and line[0] == 'Temperature':
++        elif len(line) == 3 and line[0] == 'Temperature':
+             # Set the value (not implemented yet).
+-            continue
++            pass
+ 
+         # The labelling.
+-        if len(line) == 2 and line[0] == 'Labelling:':
++        elif len(line) == 2 and line[0] == 'Labelling:':
+             # Set the heteronucleus value.
+             value.set(line[1], 'heteronucleus')
+ 
+@@ -149,7 +165,7 @@
+             name_spin(name=name)
+ 
+         # The integration method.
+-        if len(line) == 4 and line[0] == 'Used' and line[1] == 'integrals:':
++        elif len(line) == 4 and line[0] == 'Used' and line[1] == 
+'integrals:':
+             # Not implemented yet!  Needs the BMRB branch.
+             ## Peak heights.
+             #if line[2] == 'peak' and line[3] == 'intensities':
+@@ -158,7 +174,7 @@
+             ## Peak volumes:
+             #if line[2] == 'peak' and line[3] == 'volumes':
+             #    peak_intensity_type(ri_label=ri_label, frq_label=frq_label, 
+type='volume')
+-            continue
++            pass
+ 
+     # Pack the data.
+     pack_data(ri_label, frq_label, frq, values, errors, ids=res_nums)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Feb 18 15:20:02 2011</div>  
+</body>
+</html>

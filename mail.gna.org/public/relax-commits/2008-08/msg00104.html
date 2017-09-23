@@ -1,0 +1,229 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r7151 &#45; /branches/rdc_analysis/specific_fns/n_state_model.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 11 Aug 2008 18:12:14 +0200 -->
+<!--X-Message-Id: E1KSYhN&#45;0006KD&#45;Uh@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r7151 - /branches/rdc_analysis/specific_fns/n_state_model.py -- August 11, 2008 - 18:12</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r7151 - /branches/rdc_analysis/specific_fns/n_state_model.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00104" class="tabs">Index by Date</a> | <a href="threads.html#00104" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00102.html">Date Prev</a>] [<a href="msg00103.html">Date Next</a>] [<a href="msg00102.html">Thread Prev</a>] [<a href="msg00103.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 11 Aug 2008 14:48:40 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00104.html">E1KSYhN-0006KD-Uh@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on August 11, 2008 - 18:12:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Mon Aug 11 16:48:36 2008
+New Revision: 7151
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=7151&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=7151&amp;view=rev</a>
+Log:
+Redesigned the __minimise_setup_pcs() method.
+
+
+Modified:
+    branches/rdc_analysis/specific_fns/n_state_model.py
+
+Modified: branches/rdc_analysis/specific_fns/n_state_model.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/rdc_analysis/specific_fns/n_state_model.py?rev=7151&amp;r1=7150&amp;r2=7151&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/rdc_analysis/specific_fns/n_state_model.py?rev=7151&amp;r1=7150&amp;r2=7151&amp;view=diff</a>
+==============================================================================
+--- branches/rdc_analysis/specific_fns/n_state_model.py (original)
++++ branches/rdc_analysis/specific_fns/n_state_model.py Mon Aug 11 16:48:36 
+2008
+@@ -41,7 +41,7 @@
+ from generic_fns.structure.internal import Internal
+ from maths_fns.n_state_model import N_state_opt
+ from maths_fns.rotation_matrix import R_2vect, R_euler_zyz
+-from physical_constants import dipolar_constant, return_gyromagnetic_ratio
++from physical_constants import dipolar_constant, g1H, pcs_constant, 
+return_gyromagnetic_ratio
+ from relax_errors import RelaxError, RelaxInfError, RelaxModelError, 
+RelaxNaNError, RelaxNoModelError, RelaxNoTensorError
+ from relax_io import open_write_file
+ from relax_warnings import RelaxWarning
+@@ -356,8 +356,6 @@
+                         - the unit vectors connecting the paramagnetic 
+centre (the electron spin) to
+                         the nuclear spin.
+                         - the pseudocontact shift constants.
+-                        - the temperatures.
+-                        - the spectrometer frequencies.
+         @rtype:     tuple of (numpy rank-2 array, numpy rank-2 array, numpy 
+rank-2 array, numpy
+                     rank-1 array, numpy rank-1 array)
+         &quot;&quot;&quot;
+@@ -368,9 +366,8 @@
+         # Initialise.
+         pcs = []
+         unit_vect = []
+-        pcs_dj = []
+-        temp = []
+-        frq = []
++        r = []
++        pcs_const = []
+ 
+         # Spin loop.
+         for spin, spin_id in spin_loop(return_id=True):
+@@ -385,12 +382,11 @@
+             # Append the PCSs to the list.
+             pcs.append(spin.pcs)
+ 
+-            # Gyromagnetic ratios.
+-            gx = return_gyromagnetic_ratio(spin.heteronuc_type)
+-            gh = return_gyromagnetic_ratio(spin.proton_type)
+-
+-            # Loop over the states, and calculate the PCS constant for each 
+(the distance changes each time).
+-            pcs_dj.append([])
++            # Add empty lists to the r and unit_vector lists.
++            unit_vect.append([])
++            r.append([])
++
++            # Loop over the states, and calculate the paramagnetic centre to 
+nucleus unit vectors.
+             for c in range(cdp.N):
+                 # Get the paramagnetic coordinates.
+                 i = 0
+@@ -402,24 +398,49 @@
+                     raise RelaxError, &quot;More than one paramagnetic centre 
+found.&quot;
+ 
+                 # Calculate the electron spin to nuclear spin vector.
++                print c
++                print spin.pos
+                 vect = spin.pos[c] - R
+ 
+                 # The length.
+-                r = norm(vect)
++                r.append(norm(vect))
+ 
+                 # Append the unit vector.
+-                unit_vect.append(vect/r)
+-
+-                # Calculate the PCS dipolar constant (in Hertz, and the 3 
+comes from the alignment tensor), and append it to the list.
+-                pcs_dj[-1].append(pcs_constant(gx, gh, r))
+-
+-        # Loop over alignments.
+-        for align in cdp.align_tensors:
+-            # Append the temperature.
+-            temp.append(cdp.temp[align.name])
+-
+-            # Append the frequency.
+-            frq.append(cdp.frq[align.name])
++                unit_vect.append(vect/norm(vect))
++
++        # Loop over experiments.
++        for i in xrange(len(cdp.align_tensors)):
++            # Append an empty array to the PCS constant structure.
++            pcs_const.append([])
++
++            # Get the temperature and spectrometer frequency for the PCS 
+constant.
++            id = cdp.align_tensors[i].name
++            temp = cdp.temperature[id]
++            frq = cdp.frq[id]
++
++            # Convert the frequency of Hertz into a field strength in Tesla 
+units.
++            frq = frq * 2.0 * pi / g1H
++
++            # Spin loop.
++            j = 0
++            for spin, spin_id in spin_loop(return_id=True):
++                # Skip deselected spins.
++                if not spin.select:
++                    continue
++
++                # Skip spins without PCS data.
++                if not hasattr(spin, 'pcs'):
++                    continue
++
++                # Append an empty array to the PCS constant structure.
++                pcs_const[i].append([])
++
++                # Loop over the states, and calculate the PCS constant for 
+each (the distance changes each time).
++                for c in range(cdp.N):
++                    pcs_const[i][-1].append(pcs_constant(temp[i], frq[i], 
+r[j][c]))
++
++                # Spin index.
++                j = j + 1
+ 
+         # Initialise the numpy objects (the pcs matrix is transposed!).
+         pcs_numpy = zeros((len(pcs[0]), len(pcs)), float64)
+@@ -438,7 +459,7 @@
+                 unit_vect_numpy[spin_index, state_index] = 
+unit_vect[spin_index][state_index]
+ 
+         # Return the data structures.
+-        return pcs_numpy, unit_vect_numpy, pcs_dj, temp, frq
++        return pcs_numpy, unit_vect_numpy, pcs_const
+ 
+ 
+     def __minimise_setup_rdcs(self, param_vector=None, scaling_matrix=None):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Aug 11 19:20:15 2008</div>  
+</body>
+</html>

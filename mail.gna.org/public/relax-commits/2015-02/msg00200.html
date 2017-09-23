@@ -1,0 +1,238 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r27635 &#45; /trunk/test_suite/system_tests/structure.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 12 Feb 2015 19:42:35 +0100 -->
+<!--X-Message-Id: E1YLyih&#45;0003IE&#45;63@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r27635 - /trunk/test_suite/system_tests/structure.py -- February 12, 2015 - 19:42</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r27635 - /trunk/test_suite/system_tests/structure.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00200" class="tabs">Index by Date</a> | <a href="threads.html#00200" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00199.html">Date Prev</a>] [<a href="msg00201.html">Date Next</a>] [<a href="msg00199.html">Thread Prev</a>] [<a href="msg00201.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 12 Feb 2015 18:42:35 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00200.html">E1YLyih-0003IE-63@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on February 12, 2015 - 19:42:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Feb 12 19:42:34 2015
+New Revision: 27635
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=27635&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=27635&amp;view=rev</a>
+Log:
+Created new system tests for implementing new functionality for the 
+structure.mean user function.
+
+This includes the Structure.test_mean_models and 
+Structure.test_mean_molecules.  The idea is to
+convert the user function to the new pipes/models/molecules/atom_id design.  
+This will allow
+molecules with non-identical sequences and atomic compositions to be 
+averaged.  The set_mol_name and
+set_model_num arguments from the structure.read_pdb, structure.read_gaussian, 
+and structure.read_xyz
+user functions will also be implemented to allow the mean structure to be 
+stored alongside the other
+molecules.
+
+
+Modified:
+    trunk/test_suite/system_tests/structure.py
+
+Modified: trunk/test_suite/system_tests/structure.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/test_suite/system_tests/structure.py?rev=27635&amp;r1=27634&amp;r2=27635&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/test_suite/system_tests/structure.py?rev=27635&amp;r1=27634&amp;r2=27635&amp;view=diff</a>
+==============================================================================
+--- trunk/test_suite/system_tests/structure.py  (original)
++++ trunk/test_suite/system_tests/structure.py  Thu Feb 12 19:42:34 2015
+@@ -3716,6 +3716,88 @@
+         self.assertEqual(mol.z[1], 0.0)
+ 
+ 
++    def test_mean_models(self):
++        &quot;&quot;&quot;Test the structure.mean user function for different models.
++
++        This checks the molecules argument of the U{structure.mean user 
+function&lt;<a  rel="nofollow" href="http://www.nmr-relax.com/manual/structure_mean.html">http://www.nmr-relax.com/manual/structure_mean.html</a>&gt;}.
++        &quot;&quot;&quot;
++
++        # Set up 3 models.
++        self.interpreter.structure.add_model(model_num=1)
++        self.interpreter.structure.add_model(model_num=2)
++        self.interpreter.structure.add_model(model_num=4)
++
++        # Check that the models were correctly created.
++        self.assert_(hasattr(cdp, 'structure'))
++        self.assert_(hasattr(cdp.structure, 'structural_data'))
++        self.assertEqual(len(cdp.structure.structural_data), 3)
++
++        # Create a structure with some atoms.
++        self.interpreter.structure.add_atom(atom_name='A', res_name='UNK', 
+res_num=1, pos=[[1., 0., -1.], [0., 0., 0.], [-1., 0., 1.]], element='S')
++        self.interpreter.structure.add_atom(atom_name='A', res_name='UNK', 
+res_num=2, pos=[[1., 2., -1.], [0., 2., 0.], [-1., 2., 1.]], element='S')
++        self.interpreter.structure.add_atom(atom_name='A', res_name='UNK', 
+res_num=3, pos=[[1., 20., -1.], [0., 20., 0.], [-1., 20., 1.]], element='S')
++
++        # Calculate the mean structure and store it as model 3.
++        self.interpreter.structure.mean(models=[1, 2, 4], set_model_num=3)
++
++        # Check the internal atomic info.
++        self.assertEqual(cdp.structure.structural_data[0].num, 1)
++        self.assertEqual(cdp.structure.structural_data[0].mol[0].x, [1., 1., 
+1.])
++        self.assertEqual(cdp.structure.structural_data[0].mol[0].y, [0., 2., 
+20.])
++        self.assertEqual(cdp.structure.structural_data[0].mol[0].z, [-1., 
+-1., -1.])
++        self.assertEqual(cdp.structure.structural_data[1].num, 2)
++        self.assertEqual(cdp.structure.structural_data[1].mol[0].x, [0., 0., 
+0.])
++        self.assertEqual(cdp.structure.structural_data[1].mol[0].y, [0., 2., 
+20.])
++        self.assertEqual(cdp.structure.structural_data[1].mol[0].z, [0., 0., 
+0.])
++        self.assertEqual(cdp.structure.structural_data[2].num, 4)
++        self.assertEqual(cdp.structure.structural_data[2].mol[0].x, [-1., 
+-1., -1.])
++        self.assertEqual(cdp.structure.structural_data[2].mol[0].y, [0., 2., 
+20.])
++        self.assertEqual(cdp.structure.structural_data[2].mol[0].z, [1., 1., 
+1.])
++        self.assertEqual(cdp.structure.structural_data[3].num, 3)
++        self.assertEqual(cdp.structure.structural_data[3].mol[0].x, [0., 0., 
+0.])
++        self.assertEqual(cdp.structure.structural_data[3].mol[0].y, [0., 2., 
+20.])
++        self.assertEqual(cdp.structure.structural_data[3].mol[0].z, [0., 0., 
+0.])
++
++
++    def test_mean_molecules(self):
++        &quot;&quot;&quot;Test the structure.mean user function for different molecules in 
+one pipe.
++
++        This checks the molecules argument of the U{structure.mean user 
+function&lt;<a  rel="nofollow" href="http://www.nmr-relax.com/manual/structure_mean.html">http://www.nmr-relax.com/manual/structure_mean.html</a>&gt;}.
++        &quot;&quot;&quot;
++
++        # Create three molecules 'X', 'Y', and 'Z' with a some atoms.
++        self.interpreter.structure.add_atom(atom_name='A', res_name='UNK', 
+res_num=1, mol_name='X', pos=[1., 0., -1.], element='S')
++        self.interpreter.structure.add_atom(atom_name='A', res_name='UNK', 
+res_num=1, mol_name='Y', pos=[0., 0., 0.], element='S')
++        self.interpreter.structure.add_atom(atom_name='A', res_name='UNK', 
+res_num=1, mol_name='Z', pos=[-1., 0., 1.], element='S')
++        self.interpreter.structure.add_atom(atom_name='A', res_name='UNK', 
+res_num=2, mol_name='X', pos=[1., 2., -1.], element='S')
++        self.interpreter.structure.add_atom(atom_name='A', res_name='UNK', 
+res_num=2, mol_name='Y', pos=[0., 2., 0.], element='S')
++        self.interpreter.structure.add_atom(atom_name='A', res_name='UNK', 
+res_num=2, mol_name='Z', pos=[-1., 2., 1.], element='S')
++        self.interpreter.structure.add_atom(atom_name='A', res_name='UNK', 
+res_num=3, mol_name='X', pos=[1., 20., -1.], element='S')
++        self.interpreter.structure.add_atom(atom_name='A', res_name='UNK', 
+res_num=3, mol_name='Y', pos=[0., 20., 0.], element='S')
++        self.interpreter.structure.add_atom(atom_name='A', res_name='UNK', 
+res_num=3, mol_name='Z', pos=[-1., 20., 1.], element='S')
++
++        # Calculate the mean structure.
++        self.interpreter.structure.mean(molecules=[['X', 'Y', 'Z']], 
+set_mol_name='A')
++
++        # Check the internal atomic info.
++        self.assertEqual(cdp.structure.structural_data[0].mol[0].name, 'X')
++        self.assertEqual(cdp.structure.structural_data[0].mol[0].x, [1., 1., 
+1.])
++        self.assertEqual(cdp.structure.structural_data[0].mol[0].y, [0., 2., 
+20.])
++        self.assertEqual(cdp.structure.structural_data[0].mol[0].z, [-1., 
+-1., -1.])
++        self.assertEqual(cdp.structure.structural_data[0].mol[1].name, 'Y')
++        self.assertEqual(cdp.structure.structural_data[0].mol[1].x, [0., 0., 
+0.])
++        self.assertEqual(cdp.structure.structural_data[0].mol[1].y, [0., 2., 
+20.])
++        self.assertEqual(cdp.structure.structural_data[0].mol[1].z, [0., 0., 
+0.])
++        self.assertEqual(cdp.structure.structural_data[0].mol[2].name, 'Z')
++        self.assertEqual(cdp.structure.structural_data[0].mol[2].x, [-1., 
+-1., -1.])
++        self.assertEqual(cdp.structure.structural_data[0].mol[2].y, [0., 2., 
+20.])
++        self.assertEqual(cdp.structure.structural_data[0].mol[2].z, [1., 1., 
+1.])
++        self.assertEqual(cdp.structure.structural_data[0].mol[3].name, 'A')
++        self.assertEqual(cdp.structure.structural_data[0].mol[3].x, [0., 0., 
+0.])
++        self.assertEqual(cdp.structure.structural_data[0].mol[3].y, [0., 2., 
+20.])
++        self.assertEqual(cdp.structure.structural_data[0].mol[3].z, [0., 0., 
+0.])
++
++
+     def test_metadata_xml(self):
+         &quot;&quot;&quot;Test the storage and loading of metadata into an XML state 
+file.&quot;&quot;&quot;
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Feb 13 17:20:03 2015</div>  
+</body>
+</html>

@@ -1,0 +1,252 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r20542 &#45; in /trunk/test_suite: system_tests/base_classes.py	unit_tests/base_classes.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 06 Aug 2013 10:23:46 +0200 -->
+<!--X-Message-Id: E1V6cYU&#45;0002vW&#45;U0@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r20542 - in /trunk/test_suite: system_tests/base_classes.py	unit_tests/base_classes.py -- August 06, 2013 - 10:23</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r20542 - in /trunk/test_suite: system_tests/base_classes.py	unit_tests/base_classes.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00059" class="tabs">Index by Date</a> | <a href="threads.html#00059" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00058.html">Date Prev</a>] [<a href="msg00060.html">Date Next</a>] [<a href="msg00058.html">Thread Prev</a>] [<a href="msg00060.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 06 Aug 2013 08:23:46 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00059.html">E1V6cYU-0002vW-U0@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on August 06, 2013 - 10:23:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Aug  6 10:23:46 2013
+New Revision: 20542
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=20542&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=20542&amp;view=rev</a>
+Log:
+An attempt at better handling MS Windows not releasing the file handle on 
+time in the test suite.
+
+The system and unit tests tearDown() method should now be resilient to the 
+strange MS Windows
+behaviour of not releasing the relax state files.  The tearDown() method 
+should now complete even
+when this error occurs.  A delay of 3 seconds has been added when the 
+WindowsError occurs to give
+the OS some time before attempting to delete the file again.  If this fails, 
+then the file deletion
+operation is skipped.
+
+
+Modified:
+    trunk/test_suite/system_tests/base_classes.py
+    trunk/test_suite/unit_tests/base_classes.py
+
+Modified: trunk/test_suite/system_tests/base_classes.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/test_suite/system_tests/base_classes.py?rev=20542&amp;r1=20541&amp;r2=20542&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/test_suite/system_tests/base_classes.py?rev=20542&amp;r1=20541&amp;r2=20542&amp;view=diff</a>
+==============================================================================
+--- trunk/test_suite/system_tests/base_classes.py (original)
++++ trunk/test_suite/system_tests/base_classes.py Tue Aug  6 10:23:46 2013
+@@ -67,40 +67,43 @@
+     def tearDown(self):
+         &quot;&quot;&quot;Default tearDown operation - delete temp directories and files 
+and reset relax.&quot;&quot;&quot;
+ 
+-        # Horrible MS Windows kludge - avoid the WindowsError due to the 
+file still being open by the state.save or results.write user functions.
+-        sleep(0.03)
+-
+-        # Remove the temporary directories.
++        # Remove the temporary directory and variable.
+         if hasattr(ds, 'tmpdir'):
+-            # Delete the directory.
+             rmtree(ds.tmpdir)
+-
+-            # Remove the variable.
+             del ds.tmpdir
+ 
+-        # Remove the temporary directories.
++        # Remove the temporary directory and variable.
+         if hasattr(self, 'tmpdir'):
+-            # Delete the directory.
+             rmtree(self.tmpdir)
+-
+-            # Remove the variable.
+             del self.tmpdir
+ 
+-        # Remove temporary files.
++        # Remove temporary file and variable.
+         if hasattr(ds, 'tmpfile'):
+-            # Delete the file.
+-            delete(ds.tmpfile, fail=False)
++            try:
++                delete(ds.tmpfile, fail=False)
++                del ds.tmpfile
+ 
+-            # Remove the variable.
+-            del ds.tmpfile
++            # Handle MS Windows strangeness.
++            except WindowsError:
++                sleep(3)
++                try:
++                    delete(ds.tmpfile, fail=False)
++                finally:
++                    del ds.tmpfile
+ 
+-        # Remove temporary files.
++        # Remove temporary file and variable.
+         if hasattr(self, 'tmpfile'):
+-            # Delete the file.
+-            delete(self.tmpfile, fail=False)
++            try:
++                delete(self.tmpfile, fail=False)
++                del self.tmpfile
+ 
+-            # Remove the variable.
+-            del self.tmpfile
++            # Handle MS Windows strangeness.
++            except WindowsError:
++                sleep(3)
++                try:
++                    delete(ds.tmpfile, fail=False)
++                finally:
++                    del ds.tmpfile
+ 
+         # Reset relax.
+         reset()
+
+Modified: trunk/test_suite/unit_tests/base_classes.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/test_suite/unit_tests/base_classes.py?rev=20542&amp;r1=20541&amp;r2=20542&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/test_suite/unit_tests/base_classes.py?rev=20542&amp;r1=20541&amp;r2=20542&amp;view=diff</a>
+==============================================================================
+--- trunk/test_suite/unit_tests/base_classes.py (original)
++++ trunk/test_suite/unit_tests/base_classes.py Tue Aug  6 10:23:46 2013
+@@ -24,6 +24,7 @@
+ 
+ # Python module imports.
+ from shutil import rmtree
++from time import sleep
+ from unittest import TestCase
+ 
+ # relax module imports.
+@@ -38,37 +39,43 @@
+     def tearDown(self):
+         &quot;&quot;&quot;Default tearDown operation - delete temp directories and files 
+and reset relax.&quot;&quot;&quot;
+ 
+-        # Remove the temporary directories.
++        # Remove the temporary directory and variable.
+         if hasattr(ds, 'tmpdir'):
+-            # Delete the directory.
+             rmtree(ds.tmpdir)
+-
+-            # Remove the variable.
+             del ds.tmpdir
+ 
+-        # Remove the temporary directories.
++        # Remove the temporary directory and variable.
+         if hasattr(self, 'tmpdir'):
+-            # Delete the directory.
+             rmtree(self.tmpdir)
+-
+-            # Remove the variable.
+             del self.tmpdir
+ 
+-        # Remove temporary files.
++        # Remove temporary file and variable.
+         if hasattr(ds, 'tmpfile'):
+-            # Delete the file.
+-            delete(ds.tmpfile, fail=False)
++            try:
++                delete(ds.tmpfile, fail=False)
++                del ds.tmpfile
+ 
+-            # Remove the variable.
+-            del ds.tmpfile
++            # Handle MS Windows strangeness.
++            except WindowsError:
++                sleep(3)
++                try:
++                    delete(ds.tmpfile, fail=False)
++                finally:
++                    del ds.tmpfile
+ 
+-        # Remove temporary files.
++        # Remove temporary file and variable.
+         if hasattr(self, 'tmpfile'):
+-            # Delete the file.
+-            delete(self.tmpfile, fail=False)
++            try:
++                delete(self.tmpfile, fail=False)
++                del self.tmpfile
+ 
+-            # Remove the variable.
+-            del self.tmpfile
++            # Handle MS Windows strangeness.
++            except WindowsError:
++                sleep(3)
++                try:
++                    delete(ds.tmpfile, fail=False)
++                finally:
++                    del ds.tmpfile
+ 
+         # Reset relax.
+         reset()
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Aug 06 10:40:01 2013</div>  
+</body>
+</html>

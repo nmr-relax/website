@@ -1,0 +1,203 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r14080 &#45; in /branches/gui_testing: gui/controller.py status.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 03 Aug 2011 10:27:53 +0200 -->
+<!--X-Message-Id: E1QoWnx&#45;0002Lg&#45;Ni@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r14080 - in /branches/gui_testing: gui/controller.py status.py -- August 03, 2011 - 10:27</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r14080 - in /branches/gui_testing: gui/controller.py status.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00060" class="tabs">Index by Date</a> | <a href="threads.html#00060" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00059.html">Date Prev</a>] [<a href="msg00061.html">Date Next</a>] [<a href="msg00059.html">Thread Prev</a>] [<a href="msg00061.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 03 Aug 2011 08:27:53 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00060.html">E1QoWnx-0002Lg-Ni@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on August 03, 2011 - 10:27:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Aug  3 10:27:52 2011
+New Revision: 14080
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=14080&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=14080&amp;view=rev</a>
+Log:
+Implemented limited scroll back on the LogCtrl relax controller log element.
+
+This will prevent the computer from running out of memory.  The maximum 
+number of lines is now
+stored in the status singleton.
+
+
+Modified:
+    branches/gui_testing/gui/controller.py
+    branches/gui_testing/status.py
+
+Modified: branches/gui_testing/gui/controller.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/gui_testing/gui/controller.py?rev=14080&amp;r1=14079&amp;r2=14080&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/gui_testing/gui/controller.py?rev=14080&amp;r1=14079&amp;r2=14080&amp;view=diff</a>
+==============================================================================
+--- branches/gui_testing/gui/controller.py (original)
++++ branches/gui_testing/gui/controller.py Wed Aug  3 10:27:52 2011
+@@ -512,13 +512,36 @@
+         self.SetFont(font.modern_8)
+ 
+ 
+-    def limit_scrollback(self):
+-        &quot;&quot;&quot;Limit scroll back to the maximum number of lines.&quot;&quot;&quot;
+-
+-        # Limit scroll back by removing lines.
+-        if self.control.GetNumberOfLines() &gt; self.max_entries:
+-            self.control.Remove(0, self.control.GetLineLength(0) + 1)
+-            self.control.Refresh()
++    def limit_scrollback(self, prune=20):
++        &quot;&quot;&quot;Limit scroll back to the maximum number of lines.
++
++        Lines are deleted in blocks of 'prune' number of lines for faster 
+operation.
++        &quot;&quot;&quot;
++
++        # Maximum not reached, so do nothing.
++        if self.GetLineCount() &lt; status.controller_max_entries:
++            return
++
++        # Get the current selection, scroll position and caret position.
++        pos_start, pos_end = self.GetSelection()
++        curr_pos = self.GetCurrentPos()
++
++        # Prune the first x lines.
++        del_start = 0
++        del_end = self.GetLineEndPosition(prune) + 1
++        del_extent = del_end - del_start
++        self.SetSelection(del_start, del_end)
++        self.DeleteBack()
++
++        # Determine the new settings.
++        new_curr_pos = curr_pos - del_extent
++        new_pos_start = pos_start - del_extent
++        new_pos_end = pos_end - del_extent
++
++        # Return to the original position and state.
++        self.SetCurrentPos(new_curr_pos)
++        self.SetSelection(new_pos_start, new_pos_end)
++        self.LineScroll(0, prune)
+ 
+ 
+     def write(self, string):
+@@ -527,28 +550,33 @@
+         @param string:  The text to add.
+         @type string:   str
+         &quot;&quot;&quot;
++
++        # First freeze the element.
++        self.Freeze()
+ 
+         # Add the text.
+         sys.__stdout__.write(string)
+         self.AppendText(string)
+ 
++        # Limit the scroll back.
++        self.limit_scrollback()
++
++        # Finally thaw.
++        self.Thaw()
+ 
+ 
+ class Redirect_text(object):
+     &quot;&quot;&quot;The IO redirection to text control object.&quot;&quot;&quot;
+ 
+-    def __init__(self, control, max_entries=100000):
++    def __init__(self, control):
+         &quot;&quot;&quot;Set up the text redirection object.
+ 
+         @param control:         The text control object to redirect IO to.
+         @type control:          wx.TextCtrl instance
+-        @keyword max_entries:   Limit the scroll back to this many lines.
+-        @type max_entries:      int
+         &quot;&quot;&quot;
+ 
+         # Store the args.
+         self.control = control
+-        self.max_entries = max_entries
+ 
+ 
+     def write(self, string):
+
+Modified: branches/gui_testing/status.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/gui_testing/status.py?rev=14080&amp;r1=14079&amp;r2=14080&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/gui_testing/status.py?rev=14080&amp;r1=14079&amp;r2=14080&amp;view=diff</a>
+==============================================================================
+--- branches/gui_testing/status.py (original)
++++ branches/gui_testing/status.py Wed Aug  3 10:27:52 2011
+@@ -74,8 +74,9 @@
+         # Testing mode flag.
+         self.test_mode = False
+ 
+-        # The GUI flag.
+-        self.show_gui = False
++        # GUI structures.
++        self.show_gui = False    # The GUI flag.
++        self.controller_max_entries = 100000    # Scroll back limit in the 
+relax controller.
+ 
+         # A structure for skipped system and unit tests.
+         self.skipped_tests = []
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Aug 03 11:00:02 2011</div>  
+</body>
+</html>

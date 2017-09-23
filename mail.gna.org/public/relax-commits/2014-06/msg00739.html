@@ -1,0 +1,275 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r24352 &#45; /branches/frame_order_cleanup/specific_analyses/frame_order/geometric.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 27 Jun 2014 17:47:16 +0200 -->
+<!--X-Message-Id: E1X0YMu&#45;00065u&#45;7f@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r24352 - /branches/frame_order_cleanup/specific_analyses/frame_order/geometric.py -- June 27, 2014 - 17:47</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r24352 - /branches/frame_order_cleanup/specific_analyses/frame_order/geometric.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00739" class="tabs">Index by Date</a> | <a href="threads.html#00739" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00738.html">Date Prev</a>] [<a href="msg00740.html">Date Next</a>] [<a href="msg00738.html">Thread Prev</a>] [<a href="msg00740.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 27 Jun 2014 15:47:16 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00739.html">E1X0YMu-00065u-7f@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on June 27, 2014 - 17:47:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Jun 27 17:47:15 2014
+New Revision: 24352
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=24352&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=24352&amp;view=rev</a>
+Log:
+Shifted the rotor generation for the frame order geometric representation 
+into its own function.
+
+This is the specific_analyses.frame_order.geometric.add_rotors() function 
+which adds the rotors are
+new structures to a given internal structural object.  The code has been 
+extended to add support for
+the double rotor model.
+
+
+Modified:
+    branches/frame_order_cleanup/specific_analyses/frame_order/geometric.py
+
+Modified: 
+branches/frame_order_cleanup/specific_analyses/frame_order/geometric.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/specific_analyses/frame_order/geometric.py?rev=24352&amp;r1=24351&amp;r2=24352&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/specific_analyses/frame_order/geometric.py?rev=24352&amp;r1=24351&amp;r2=24352&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/specific_analyses/frame_order/geometric.py   
+  (original)
++++ branches/frame_order_cleanup/specific_analyses/frame_order/geometric.py   
+  Fri Jun 27 17:47:15 2014
+@@ -45,8 +45,99 @@
+ from lib.warnings import RelaxWarning
+ from pipe_control import pipes
+ from pipe_control.structure.mass import pipe_centre_of_mass
+-from specific_analyses.frame_order.data import domain_moving
++from specific_analyses.frame_order.data import domain_moving, generate_pivot
+ from specific_analyses.frame_order.parameters import update_model
++
++
++def add_rotors(structure=None):
++    &quot;&quot;&quot;Add all rotor objects for the current frame order model to the 
+structural object.
++
++    @keyword structure: The internal structural object to add the rotor 
+objects to.
++    @type structure:    lib.structure.internal.object.Internal instance
++    &quot;&quot;&quot;
++
++    # Initialise the list structures for the rotor data.
++    axis = []
++    span = []
++    staggered = []
++    pivot = []
++    rotor_angle = []
++    com = []
++
++    # The pivot points.
++    pivot1 = generate_pivot(order=1)
++    pivot2 = generate_pivot(order=2)
++
++    # The single rotor models.
++    if cdp.model in ['rotor', 'free rotor', 'iso cone', 'iso cone, free 
+rotor', 'pseudo-ellipse', 'pseudo-ellipse, free rotor']:
++        # The rotor angle.
++        if cdp.model in ['free rotor', 'iso cone, free rotor', 
+'pseudo-ellipse, free rotor']:
++            rotor_angle.append(pi)
++        else:
++            rotor_angle.append(cdp.cone_sigma_max)
++
++        # Get the CoM of the entire molecule to use as the centre of the 
+rotor.
++        if cdp.model in ['rotor', 'free rotor']:
++            com.append(pipe_centre_of_mass(verbosity=0))
++        else:
++            com.append(pivot1)
++
++        # Generate the rotor axis.
++        if cdp.model in ['rotor', 'free rotor']:
++            axis.append(create_rotor_axis_alpha(alpha=cdp.axis_alpha, 
+pivot=pivot, point=com))
++        elif cdp.model in ['iso cone', 'iso cone, free rotor']:
++            axis.append(create_rotor_axis_spherical(theta=cdp.axis_theta, 
+phi=cdp.axis_phi))
++        else:
++            axis.append(create_rotor_axis_euler(alpha=cdp.eigen_alpha, 
+beta=cdp.eigen_beta, gamma=cdp.eigen_gamma))
++
++        # The size of the rotor, taking the 30 Angstrom cone representation 
+into account.
++        if cdp.model in ['rotor', 'free rotor']:
++            span.append(20e-10)
++        else:
++            span.append(35e-10)
++
++        # Stagger the propeller blades.
++        if cdp.model in ['free rotor', 'iso cone, free rotor', 
+'pseudo-ellipse, free rotor']:
++            staggered.append(False)
++        else:
++            staggered.append(True)
++
++        # The pivot.
++        pivot.append(pivot1)
++
++    # The double rotor models.
++    elif cdp.model in ['double rotor']:
++        # Add both rotor angles (the 2nd must come first).
++        rotor_angle.append(cdp.cone_sigma_max_2)
++        rotor_angle.append(cdp.cone_sigma_max)
++
++        # Set the com to the pivot points.
++        com.append(pivot2)
++        com.append(pivot1)
++
++        # Generate the eigenframe of the motion.
++        frame = zeros((3, 3), float64)
++        euler_to_R_zyz(cdp.eigen_alpha, cdp.eigen_beta, cdp.eigen_gamma, 
+frame)
++
++        # Add the x and y axes.
++        axis.append(frame[:,0])
++        axis.append(frame[:,1])
++
++        # The rotor size.
++        span.append(20e-10)
++        span.append(20e-10)
++
++        # Stagger the propeller blades.
++        staggered.append(True)
++        staggered.append(True)
++
++        # The pivot points.
++        pivot.append(pivot2)
++        pivot.append(pivot1)
++
++    # Add each rotor to the structure as a new molecule.
++    for i in range(len(axis)):
++        rotor_pdb(structure=structure, rotor_angle=rotor_angle[i], 
+axis=axis[i], axis_pt=pivot[i], centre=com[i], span=span[i], 
+blade_length=5e-10, staggered=staggered[i])
+ 
+ 
+ def create_ave_pos(format='PDB', file=None, dir=None, force=False):
+@@ -149,42 +240,10 @@
+         model_num = 2
+ 
+     # The pivot point.
+-    pivot = array([cdp.pivot_x, cdp.pivot_y, cdp.pivot_z])
+-
+-    # The rotor object.
+-    if cdp.model in ['rotor', 'free rotor', 'iso cone', 'iso cone, free 
+rotor', 'pseudo-ellipse', 'pseudo-ellipse, free rotor']:
+-        # The rotor angle.
+-        if cdp.model in ['free rotor', 'iso cone, free rotor', 
+'pseudo-ellipse, free rotor']:
+-            rotor_angle = pi
+-        else:
+-            rotor_angle = cdp.cone_sigma_max
+-
+-        # Get the CoM of the entire molecule to use as the centre of the 
+rotor.
+-        com = pivot
+-        if cdp.model in ['rotor', 'free rotor']:
+-            com = pipe_centre_of_mass(verbosity=0)
+-
+-        # Generate the rotor axis.
+-        if cdp.model in ['rotor', 'free rotor']:
+-            axis = create_rotor_axis_alpha(alpha=cdp.axis_alpha, 
+pivot=pivot, point=com)
+-        elif cdp.model in ['iso cone', 'iso cone, free rotor']:
+-            axis = create_rotor_axis_spherical(theta=cdp.axis_theta, 
+phi=cdp.axis_phi)
+-        else:
+-            axis = create_rotor_axis_euler(alpha=cdp.eigen_alpha, 
+beta=cdp.eigen_beta, gamma=cdp.eigen_gamma)
+-
+-        # The size of the rotor, taking the 30 Angstrom cone representation 
+into account.
+-        if cdp.model in ['rotor', 'free rotor']:
+-            span = 20e-10
+-        else:
+-            span = 35e-10
+-
+-        # Stagger the propeller blades.
+-        staggered = True
+-        if cdp.model in ['free rotor', 'iso cone, free rotor', 
+'pseudo-ellipse, free rotor']:
+-            staggered = False
+-
+-        # Add the rotor object to the structure as a new molecule.
+-        rotor_pdb(structure=structure, rotor_angle=rotor_angle, axis=axis, 
+axis_pt=pivot, centre=com, span=span, blade_length=5e-10, staggered=staggered)
++    pivot = generate_pivot(order=1)
++
++    # Add all rotor objects.
++    add_rotors(structure=structure)
+ 
+     # Create the molecule.
+     structure.add_molecule(name='rest')
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Jun 27 18:00:02 2014</div>  
+</body>
+</html>

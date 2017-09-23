@@ -1,0 +1,489 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r11208 &#45; /1.3/auto_analyses/dauvergne_protocol.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 20 May 2010 09:24:43 +0200 -->
+<!--X-Message-Id: E1OF07X&#45;0006qH&#45;3W@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r11208 - /1.3/auto_analyses/dauvergne_protocol.py -- May 20, 2010 - 09:24</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r11208 - /1.3/auto_analyses/dauvergne_protocol.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00036" class="tabs">Index by Date</a> | <a href="threads.html#00036" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00035.html">Date Prev</a>] [<a href="msg00037.html">Date Next</a>] [<a href="msg00035.html">Thread Prev</a>] [<a href="msg00037.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 20 May 2010 07:24:42 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00036.html">E1OF07X-0006qH-3W@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on May 20, 2010 - 09:24:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu May 20 09:24:42 2010
+New Revision: 11208
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=11208&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=11208&amp;view=rev</a>
+Log:
+Bug fix for catching the looping around the universal solution in the 
+dauvergne_protocol module.
+
+This was first identified by Seb in the post at
+<a  rel="nofollow" href="https://mail.gna.org/public/relax-users/2007-09/msg00010.html">https://mail.gna.org/public/relax-users/2007-09/msg00010.html</a> (Message-id:
+&lt;46EEA6B2.90606@xxxxxxxxx&gt;).
+
+The problem was the automatic looping over optimisation cycles in the 
+full_analysis.py script.  This
+code is now in the dauvergne_protocol auto_analyses module.  The issue was a 
+never-ending looping
+around the universal solution (the optimisation minimum combined with Occam's 
+razor or the model
+selection minimum).  This should now be caught and the protocol terminated at 
+the end of the first
+completed loop.  The fix was to compare the chi2, selected models, diffusion 
+tensor, and model-free
+parameters to every iteration, starting from the first.  This will not be 
+optimal if the protocol is
+interrupted in the middle of one such loop, but will just mean that a few 
+extra iterations will be
+required to complete the loop.
+
+
+Modified:
+    1.3/auto_analyses/dauvergne_protocol.py
+
+Modified: 1.3/auto_analyses/dauvergne_protocol.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/auto_analyses/dauvergne_protocol.py?rev=11208&amp;r1=11207&amp;r2=11208&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/auto_analyses/dauvergne_protocol.py?rev=11208&amp;r1=11207&amp;r2=11208&amp;view=diff</a>
+==============================================================================
+--- 1.3/auto_analyses/dauvergne_protocol.py (original)
++++ 1.3/auto_analyses/dauvergne_protocol.py Thu May 20 09:24:42 2010
+@@ -227,6 +227,21 @@
+         self.status.dAuvergne_protocol.mf_models = mf_models
+         self.status.dAuvergne_protocol.local_tm_models = local_tm_models
+ 
++        # Initialise the convergence data structures.
++        self.conv_data = Container()
++        self.conv_data.chi2 = []
++        self.conv_data.models = []
++        self.conv_data.diff_vals = []
++        if self.diff_model == 'sphere':
++            self.conv_data.diff_params = ['tm']
++        elif self.diff_model == 'oblate' or self.diff_model == 'prolate':
++            self.conv_data.diff_params = ['tm', 'Da', 'theta', 'phi']
++        elif self.diff_model == 'ellipsoid':
++            self.conv_data.diff_params = ['tm', 'Da', 'Dr', 'alpha', 'beta', 
+'gamma']
++        self.conv_data.spin_ids = []
++        self.conv_data.mf_params = []
++        self.conv_data.mf_vals = []
++
+         # Load the interpreter.
+         self.interpreter = Interpreter(show_script=False, quit=False, 
+raise_relax_error=True)
+         self.interpreter.populate_self()
+@@ -256,6 +271,9 @@
+         #############################
+ 
+         elif self.diff_model == 'sphere' or self.diff_model == 'prolate' or 
+self.diff_model == 'oblate' or self.diff_model == 'ellipsoid':
++            # The initial round of optimisation - not zero if calculations 
+were interrupted.
++            self.start_round = self.determine_rnd(model=self.diff_model)
++
+             # Loop until convergence if conv_loop is set, otherwise just 
+loop once.
+             # This looping could be made much cleaner by removing the 
+dependence on the determine_rnd() function.
+             while True:
+@@ -526,53 +544,19 @@
+     def convergence(self):
+         &quot;&quot;&quot;Test for the convergence of the global model.&quot;&quot;&quot;
+ 
+-        # Alias the data pipes.
+-        prev_pipe = pipes.get_pipe('previous')
+-
+         # Print out.
+         print(&quot;\n\n\n&quot;)
+         print(&quot;#####################&quot;)
+         print(&quot;# Convergence tests #&quot;)
+-        print(&quot;#####################\n\n&quot;)
++        print(&quot;#####################\n&quot;)
+ 
+         # Maximum number of iterations reached.
+-        if self.round &gt; self.max_iter:
++        if self.max_iter and self.round &gt; self.max_iter:
+             print(&quot;Maximum number of global iterations reached.  Terminating 
+the protocol before convergence has been reached.&quot;)
+             return True
+ 
+-        # Convergence flags.
+-        chi2_converged = True
+-        models_converged = True
+-        params_converged = True
+-
+-
+-        # Chi-squared test.
+-        ###################
+-
+-        print(&quot;Chi-squared test:&quot;)
+-        print((&quot;    chi2 (k-1):          &quot; + repr(prev_pipe.chi2)))
+-        print((&quot;        (as an IEEE-754 byte array: &quot; + 
+repr(floatAsByteArray(prev_pipe.chi2)) + ')'))
+-        print((&quot;    chi2 (k):            &quot; + repr(cdp.chi2)))
+-        print((&quot;        (as an IEEE-754 byte array: &quot; + 
+repr(floatAsByteArray(cdp.chi2)) + ')'))
+-        print((&quot;    chi2 (difference):   &quot; + repr(prev_pipe.chi2 - 
+cdp.chi2)))
+-        if prev_pipe.chi2 == cdp.chi2:
+-            print(&quot;    The chi-squared value has converged.\n&quot;)
+-        else:
+-            print(&quot;    The chi-squared value has not converged.\n&quot;)
+-            chi2_converged = False
+-
+-
+-        # Identical model-free model test.
+-        ##################################
+-
+-        print(&quot;Identical model-free models test:&quot;)
+-
+-        # Create a string representation of the model-free models of the 
+previous data pipe.
+-        prev_models = ''
+-        for spin in spin_loop(pipe='previous'):
+-            if hasattr(spin, 'model'):
+-                if not spin.model == 'None':
+-                    prev_models = prev_models + spin.model
++        # Store the data of the current data pipe.
++        self.conv_data.chi2.append(cdp.chi2)
+ 
+         # Create a string representation of the model-free models of the 
+current data pipe.
+         curr_models = ''
+@@ -580,98 +564,120 @@
+             if hasattr(spin, 'model'):
+                 if not spin.model == 'None':
+                     curr_models = curr_models + spin.model
+-
+-        # The test.
+-        if prev_models == curr_models:
+-            print(&quot;    The model-free models have converged.\n&quot;)
+-        else:
+-            print(&quot;    The model-free models have not converged.\n&quot;)
+-            models_converged = False
+-
+-
+-        # Identical parameter value test.
+-        #################################
+-
+-        print(&quot;Identical parameter test:&quot;)
+-
+-        # Only run the tests if the model-free models have converged.
+-        if models_converged:
+-            # Diffusion parameter array.
+-            if self.diff_model == 'sphere':
+-                params = ['tm']
+-            elif self.diff_model == 'oblate' or self.diff_model == 'prolate':
+-                params = ['tm', 'Da', 'theta', 'phi']
+-            elif self.diff_model == 'ellipsoid':
+-                params = ['tm', 'Da', 'Dr', 'alpha', 'beta', 'gamma']
+-
+-            # Tests.
+-            for param in params:
+-                # Get the parameter values.
+-                prev_val = getattr(prev_pipe.diff_tensor, param)
+-                curr_val = getattr(cdp.diff_tensor, param)
+-
++        self.conv_data.models.append(curr_models)
++
++        # Store the diffusion tensor parameters.
++        self.conv_data.diff_vals.append([])
++        for param in self.conv_data.diff_params:
++            # Get the parameter values.
++            self.conv_data.diff_vals[-1].append(getattr(cdp.diff_tensor, 
+param))
++
++        # Store the model-free parameters.
++        self.conv_data.mf_vals.append([])
++        self.conv_data.mf_params.append([])
++        self.conv_data.spin_ids.append([])
++        for spin, spin_id in spin_loop(return_id=True):
++            # Skip spin systems with no 'params' object.
++            if not hasattr(spin, 'params'):
++                continue
++
++            # Add the spin ID, parameters, and empty value list.
++            self.conv_data.spin_ids[-1].append(spin_id)
++            self.conv_data.mf_params[-1].append([])
++            self.conv_data.mf_vals[-1].append([])
++
++            # Loop over the parameters.
++            for j in xrange(len(spin.params)):
++                # Get the parameters and values.
++                self.conv_data.mf_params[-1][-1].append(spin.params[j])
++                self.conv_data.mf_vals[-1][-1].append(getattr(spin, 
+lower(spin.params[j])))
++
++        # No need for tests.
++        if self.round == 1:
++            print(&quot;First round of optimisation, skipping the convergence 
+tests.\n\n\n&quot;)
++            return False
++
++        # Loop over the iterations.
++        converged = False
++        for i in range(self.start_round, self.round - 1):
++            # Print out.
++            print(&quot;\n\n\n# Comparing the current iteration to iteration 
+%i.\n&quot; % (i+1))
++
++            # Index.
++            index = i - self.start_round
++
++            # Chi-squared test.
++            print(&quot;Chi-squared test:&quot;)
++            print(&quot;    chi2 (iter %i):  %s&quot; % (i+1, 
+self.conv_data.chi2[index]))
++            print(&quot;        (as an IEEE-754 byte array:  %s)&quot; % 
+floatAsByteArray(self.conv_data.chi2[index]))
++            print(&quot;    chi2 (iter %i):  %s&quot; % (self.round, 
+self.conv_data.chi2[-1]))
++            print(&quot;        (as an IEEE-754 byte array:  %s)&quot; % 
+floatAsByteArray(self.conv_data.chi2[-1]))
++            print(&quot;    chi2 (difference):  %s&quot; % (self.conv_data.chi2[index] 
+- self.conv_data.chi2[-1]))
++            if self.conv_data.chi2[index] == self.conv_data.chi2[-1]:
++                print(&quot;    The chi-squared value has converged.\n&quot;)
++            else:
++                print(&quot;    The chi-squared value has not converged.\n&quot;)
++                continue
++
++            # Identical model-free model test.
++            print(&quot;Identical model-free models test:&quot;)
++            if self.conv_data.models[index] == self.conv_data.models[-1]:
++                print(&quot;    The model-free models have converged.\n&quot;)
++            else:
++                print(&quot;    The model-free models have not converged.\n&quot;)
++                continue
++
++            # Identical diffusion tensor parameter value test.
++            print(&quot;Identical diffusion tensor parameter test:&quot;)
++            params_converged = True
++            for k in range(len(self.conv_data.diff_params)):
+                 # Test if not identical.
+-                if prev_val != curr_val:
+-                    print((&quot;    Parameter:   &quot; + param))
+-                    print((&quot;    Value (k-1): &quot; + repr(prev_val)))
+-                    print((&quot;        (as an IEEE-754 byte array: &quot; + 
+repr(floatAsByteArray(prev_val)) + ')'))
+-                    print((&quot;    Value (k):   &quot; + repr(curr_val)))
+-                    print((&quot;        (as an IEEE-754 byte array: &quot; + 
+repr(floatAsByteArray(curr_val)) + ')'))
++                if self.conv_data.diff_vals[index][k] != 
+self.conv_data.diff_vals[-1][k]:
++                    print(&quot;    Parameter:   %s&quot; % param)
++                    print(&quot;    Value (iter %i):  %s&quot; % (i+1, 
+self.conv_data.diff_vals[index][k]))
++                    print(&quot;        (as an IEEE-754 byte array:  %s)&quot; % 
+floatAsByteArray(self.conv_data.diff_vals[index][k]))
++                    print(&quot;    Value (iter %i):  %s&quot; % (self.round, 
+self.conv_data.diff_vals[-1][k]))
++                    print(&quot;        (as an IEEE-754 byte array:  %s)&quot; % 
+floatAsByteArray(self.conv_data.diff_vals[-1][k]))
+                     print(&quot;    The diffusion parameters have not 
+converged.\n&quot;)
+                     params_converged = False
+-
+-            # Skip the rest if the diffusion tensor parameters have not 
+converged.
+-            if params_converged:
+-                # Loop over the spins.
+-                for mol_index, res_index, spin_index in spin_index_loop():
+-                    # Alias the spin containers.
+-                    prev_spin = 
+prev_pipe.mol[mol_index].res[res_index].spin[spin_index]
+-                    curr_spin = 
+cdp.mol[mol_index].res[res_index].spin[spin_index]
+-
+-                    # Skip if the parameters have not converged.
+-                    if not params_converged:
++                    break
++            if not params_converged:
++                continue
++            print(&quot;    The diffusion tensor parameters have converged.\n&quot;)
++
++            # Identical model-free parameter value test.
++            print(&quot;\nIdentical model-free parameter test:&quot;)
++            if len(self.conv_data.spin_ids[index]) != 
+len(self.conv_data.spin_ids[-1]):
++                print(&quot;    Different number of spins.&quot;)
++                continue
++            for j in range(len(self.conv_data.spin_ids[-1])):
++                # Loop over the parameters.
++                for k in range(len(self.conv_data.mf_params[-1][j])):
++                    # Test if not identical.
++                    if self.conv_data.mf_vals[index][j][k] != 
+self.conv_data.mf_vals[-1][j][k]:
++                        print(&quot;    Spin ID:     %s&quot; % 
+self.conv_data.spin_ids[-1][j])
++                        print(&quot;    Parameter:   %s&quot; % 
+self.conv_data.mf_params[-1][j][k])
++                        print(&quot;    Value (iter %i): %s&quot; % (i+1, 
+self.conv_data.mf_vals[index][j][k]))
++                        print(&quot;        (as an IEEE-754 byte array:  %s)&quot; % 
+floatAsByteArray(self.conv_data.mf_vals[index][j][k]))
++                        print(&quot;    Value (iter %i): %s&quot; % (self.round, 
+self.conv_data.mf_vals[-1][j][k]))
++                        print(&quot;        (as an IEEE-754 byte array:  %s)&quot; % 
+floatAsByteArray(self.conv_data.mf_vals[index][j][k]))
++                        print(&quot;    The model-free parameters have not 
+converged.\n&quot;)
++                        params_converged = False
+                         break
+-
+-                    # Skip spin systems with no 'params' object.
+-                    if not hasattr(prev_spin, 'params') or not 
+hasattr(curr_spin, 'params'):
+-                        continue
+-
+-                    # The spin ID string.
+-                    spin_id = 
+generate_spin_id(mol_name=cdp.mol[mol_index].name, 
+res_num=cdp.mol[mol_index].res[res_index].num, 
+res_name=cdp.mol[mol_index].res[res_index].name, 
+spin_num=cdp.mol[mol_index].res[res_index].spin[spin_index].num, 
+spin_name=cdp.mol[mol_index].res[res_index].spin[spin_index].name)
+-
+-                    # Loop over the parameters.
+-                    for j in xrange(len(curr_spin.params)):
+-                        # Get the parameter values.
+-                        prev_val = getattr(prev_spin, 
+lower(prev_spin.params[j]))
+-                        curr_val = getattr(curr_spin, 
+lower(curr_spin.params[j]))
+-
+-                        # Test if not identical.
+-                        if prev_val != curr_val:
+-                            print((&quot;    Spin ID:     &quot; + repr(spin_id)))
+-                            print((&quot;    Parameter:   &quot; + 
+curr_spin.params[j]))
+-                            print((&quot;    Value (k-1): &quot; + repr(prev_val)))
+-                            print((&quot;        (as an IEEE-754 byte array: &quot; + 
+repr(floatAsByteArray(prev_val)) + ')'))
+-                            print((&quot;    Value (k):   &quot; + repr(curr_val)))
+-                            print((&quot;        (as an IEEE-754 byte array: &quot; + 
+repr(floatAsByteArray(prev_val)) + ')'))
+-                            print(&quot;    The model-free parameters have not 
+converged.\n&quot;)
+-                            params_converged = False
+-                            break
+-
+-        # The model-free models haven't converged hence the parameter values 
+haven't converged.
+-        else:
+-            print(&quot;    The model-free models haven't converged hence the 
+parameters haven't converged.\n&quot;)
+-            params_converged = False
+-
+-        # Print out.
+-        if params_converged:
+-            print(&quot;    The diffusion tensor and model-free parameters have 
+converged.\n&quot;)
++            if not params_converged:
++                continue
++            print(&quot;    The model-free parameters have converged.\n&quot;)
++
++            # Convergence.
++            converged = True
++            break
+ 
+ 
+         # Final print out.
+         ##################
+ 
+         print(&quot;\nConvergence:&quot;)
+-        if chi2_converged and models_converged and params_converged:
++        if converged:
+             # Update the status.
+             self.status.dAuvergne_protocol.convergence = True
+ 
+@@ -795,9 +801,9 @@
+ 
+             # Deselect spins to be excluded (including unresolved and 
+specifically excluded spins).
+             if self.unres:
+-                self.interpreter.deselect.read(file=self.unres)
++                self.interpreter.deselect.read(file=self.unres, 
+spin_id_col=1)
+             if self.exclude:
+-                self.interpreter.deselect.read(file=self.exclude)
++                self.interpreter.deselect.read(file=self.exclude, 
+spin_id_col=1)
+ 
+             # Copy the diffusion tensor from the 'opt' data pipe and prevent 
+it from being minimised.
+             if not local_tm:
+@@ -823,3 +829,7 @@
+ 
+         # Unset the status.
+         self.status.dAuvergne_protocol.current_model = None
++
++
++class Container:
++    &quot;&quot;&quot;Empty container for data storage.&quot;&quot;&quot;
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri May 21 16:20:02 2010</div>  
+</body>
+</html>

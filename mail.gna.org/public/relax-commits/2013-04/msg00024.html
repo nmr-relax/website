@@ -1,0 +1,210 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r19305 &#45; in /branches/relax_disp: ./	specific_analyses/consistency_tests.py specific_analyses/jw_mapping.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 02 Apr 2013 12:39:44 +0200 -->
+<!--X-Message-Id: E1UMycy&#45;0008DG&#45;6A@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r19305 - in /branches/relax_disp: ./	specific_analyses/consistency_tests.py specific_analyses/jw_mapping.py -- April 02, 2013 - 12:39</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r19305 - in /branches/relax_disp: ./	specific_analyses/consistency_tests.py specific_analyses/jw_mapping.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00024" class="tabs">Index by Date</a> | <a href="threads.html#00024" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00023.html">Date Prev</a>] [<a href="msg00025.html">Date Next</a>] [<a href="msg00023.html">Thread Prev</a>] [<a href="msg00025.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 02 Apr 2013 10:39:43 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00024.html">E1UMycy-0008DG-6A@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on April 02, 2013 - 12:39:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Apr  2 12:39:37 2013
+New Revision: 19305
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=19305&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=19305&amp;view=rev</a>
+Log:
+Merged revisions 19304 via svnmerge from 
+svn+ssh://bugman@xxxxxxxxxxx/svn/relax/trunk
+
+........
+  r19304 | bugman | 2013-04-02 12:38:54 +0200 (Tue, 02 Apr 2013) | 6 lines
+  
+  Ported the changes of r19302 to the consistency testing and J(w) mapping 
+analyses.
+  
+  This is the code for checking for infinite relaxation rates imported from 
+Bruker Dynamics Centre
+  files.
+........
+
+Modified:
+    branches/relax_disp/   (props changed)
+    branches/relax_disp/specific_analyses/consistency_tests.py
+    branches/relax_disp/specific_analyses/jw_mapping.py
+
+Propchange: branches/relax_disp/
+------------------------------------------------------------------------------
+--- svnmerge-integrated (original)
++++ svnmerge-integrated Tue Apr  2 12:39:37 2013
+@@ -1,1 +1,1 @@
+-/trunk:1-19302
++/trunk:1-19304
+
+Modified: branches/relax_disp/specific_analyses/consistency_tests.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/consistency_tests.py?rev=19305&amp;r1=19304&amp;r2=19305&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/consistency_tests.py?rev=19305&amp;r1=19304&amp;r2=19305&amp;view=diff</a>
+==============================================================================
+--- branches/relax_disp/specific_analyses/consistency_tests.py (original)
++++ branches/relax_disp/specific_analyses/consistency_tests.py Tue Apr  2 
+12:39:37 2013
+@@ -343,12 +343,24 @@
+ 
+             # Data checks.
+             if data_check:
+-                # The number of relaxation data points.
++                # The number of relaxation data points (and for infinite 
+data).
+                 data_points = 0
++                inf_data = False
+                 if hasattr(cdp, 'ri_ids') and hasattr(spin, 'ri_data'):
+                     for id in cdp.ri_ids:
+                         if id in spin.ri_data and spin.ri_data[id] != None:
+                             data_points += 1
++
++                            # Infinite data!
++                            if isInf(spin.ri_data[id]):
++                                inf_data = True
++
++                # Infinite data.
++                if inf_data:
++                    warn(RelaxDeselectWarning(spin_id, 'infinite relaxation 
+data'))
++                    spin.select = False
++                    deselect_flag = True
++                    continue
+ 
+                 # Relaxation data must exist!
+                 if not hasattr(spin, 'ri_data'):
+@@ -357,7 +369,7 @@
+                     deselect_flag = True
+                     continue
+ 
+-                # Require 3 or more data points.
++                # Require 3 or more relaxation data points.
+                 if data_points &lt; 3:
+                     warn(RelaxDeselectWarning(spin_id, 'insufficient 
+relaxation data, 3 or more data points are required'))
+                     spin.select = False
+
+Modified: branches/relax_disp/specific_analyses/jw_mapping.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/jw_mapping.py?rev=19305&amp;r1=19304&amp;r2=19305&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/jw_mapping.py?rev=19305&amp;r1=19304&amp;r2=19305&amp;view=diff</a>
+==============================================================================
+--- branches/relax_disp/specific_analyses/jw_mapping.py (original)
++++ branches/relax_disp/specific_analyses/jw_mapping.py Tue Apr  2 12:39:37 
+2013
+@@ -286,7 +286,7 @@
+         if verbose:
+             print(&quot;\nOver-fit spin deselection:&quot;)
+ 
+-        # Test the sequence data exists.
++        # Test if sequence data exists.
+         if not exists_mol_res_spin_data():
+             raise RelaxNoSequenceError
+ 
+@@ -327,12 +327,24 @@
+ 
+             # Data checks.
+             if data_check:
+-                # The number of relaxation data points.
++                # The number of relaxation data points (and for infinite 
+data).
+                 data_points = 0
++                inf_data = False
+                 if hasattr(cdp, 'ri_ids') and hasattr(spin, 'ri_data'):
+                     for id in cdp.ri_ids:
+                         if id in spin.ri_data and spin.ri_data[id] != None:
+                             data_points += 1
++
++                            # Infinite data!
++                            if isInf(spin.ri_data[id]):
++                                inf_data = True
++
++                # Infinite data.
++                if inf_data:
++                    warn(RelaxDeselectWarning(spin_id, 'infinite relaxation 
+data'))
++                    spin.select = False
++                    deselect_flag = True
++                    continue
+ 
+                 # Relaxation data must exist!
+                 if not hasattr(spin, 'ri_data'):
+@@ -341,7 +353,7 @@
+                     deselect_flag = True
+                     continue
+ 
+-                # Require 3 or more data points.
++                # Require 3 or more relaxation data points.
+                 if data_points &lt; 3:
+                     warn(RelaxDeselectWarning(spin_id, 'insufficient 
+relaxation data, 3 or more data points are required'))
+                     spin.select = False
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Apr 02 13:00:01 2013</div>  
+</body>
+</html>

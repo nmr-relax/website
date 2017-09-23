@@ -1,0 +1,193 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r9052 &#45; /1.3/generic_fns/sequence.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 12 May 2009 11:25:39 +0200 -->
+<!--X-Message-Id: E1M3oF1&#45;0002qo&#45;0M@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r9052 - /1.3/generic_fns/sequence.py -- May 12, 2009 - 11:25</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r9052 - /1.3/generic_fns/sequence.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00016" class="tabs">Index by Date</a> | <a href="threads.html#00016" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00015.html">Date Prev</a>] [<a href="msg00017.html">Date Next</a>] [<a href="msg00015.html">Thread Prev</a>] [<a href="msg00017.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 12 May 2009 09:25:38 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00016.html">E1M3oF1-0002qo-0M@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on May 12, 2009 - 11:25:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue May 12 11:25:38 2009
+New Revision: 9052
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=9052&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=9052&amp;view=rev</a>
+Log:
+Created the compare_sequence() for checking if 2 sequences are the same.
+
+
+Modified:
+    1.3/generic_fns/sequence.py
+
+Modified: 1.3/generic_fns/sequence.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/generic_fns/sequence.py?rev=9052&amp;r1=9051&amp;r2=9052&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/generic_fns/sequence.py?rev=9052&amp;r1=9051&amp;r2=9052&amp;view=diff</a>
+==============================================================================
+--- 1.3/generic_fns/sequence.py (original)
++++ 1.3/generic_fns/sequence.py Tue May 12 11:25:38 2009
+@@ -1,6 +1,6 @@
+ 
+###############################################################################
+ #                                                                            
+ #
+-# Copyright (C) 2003-2008 Edward d'Auvergne                                  
+ #
++# Copyright (C) 2003-2009 Edward d'Auvergne                                  
+ #
+ #                                                                            
+ #
+ # This file is part of the program relax.                                    
+ #
+ #                                                                            
+ #
+@@ -24,9 +24,9 @@
+ &quot;&quot;&quot;Module for handling the molecule, residue, and spin sequence.&quot;&quot;&quot;
+ 
+ # relax module imports.
+-from generic_fns.mol_res_spin import count_spins, exists_mol_res_spin_data, 
+generate_spin_id, return_molecule, return_residue, return_spin, spin_loop
++from generic_fns.mol_res_spin import count_molecules, count_residues, 
+count_spins, exists_mol_res_spin_data, generate_spin_id, return_molecule, 
+return_residue, return_spin, spin_loop
+ import pipes
+-from relax_errors import RelaxError, RelaxFileEmptyError, 
+RelaxInvalidSeqError, RelaxNoSequenceError, RelaxSequenceError
++from relax_errors import RelaxError, RelaxDiffMolNumError, 
+RelaxDiffResNumError, RelaxDiffSeqError, RelaxDiffSpinNumError, 
+RelaxFileEmptyError, RelaxInvalidSeqError, RelaxNoSequenceError, 
+RelaxSequenceError
+ from relax_io import extract_data, open_write_file, strip
+ import sys
+ 
+@@ -78,6 +78,59 @@
+ 
+         # Generate the new sequence.
+         generate(mol_name, res_num, res_name, spin.num, spin.name, pipe_to, 
+select=select, verbose=verbose)
++
++
++def compare_sequence(pipe1=None, pipe2=None, fail=True):
++    &quot;&quot;&quot;Compare the sequence in two data pipes.
++
++    @keyword pipe1:     The name of the first data pipe.
++    @type pipe1:        str
++    @keyword pipe2:     The name of the second data pipe.
++    @type pipe2:        str
++    @keyword fail:      A flag which if True causes a RelaxError to be 
+raised.
++    @type fail:         bool
++    @return:            1 if the sequence is the same, 0 if different.
++    @rtype:             int
++    @raises:            RelaxError if the sequence is different and the fail 
+flag is True.
++    &quot;&quot;&quot;
++
++    # Failure status.
++    status = 1
++
++    # Molecule number.
++    if count_molecules(pipe=pipe1) != count_molecules(pipe=pipe2):
++        status = 0
++        if fail:
++            raise RelaxDiffMolNumError, (pipe1, pipe2)
++
++    # Residue number.
++    if count_residues(pipe=pipe1) != count_residues(pipe=pipe2):
++        status = 0
++        if fail:
++            raise RelaxDiffResNumError, (pipe1, pipe2)
++
++    # Spin number.
++    if count_spins(pipe=pipe1) != count_spins(pipe=pipe2):
++        status = 0
++        if fail:
++            raise RelaxDiffSpinNumError, (pipe1, pipe2)
++
++    # Create a string representation of the 2 sequences.
++    seq1 = ''
++    seq2 = ''
++    for spin, spin_id in spin_loop(return_id=True, pipe=pipe1):
++        seq1 = seq1 + spin_id + '\n'
++    for spin, spin_id in spin_loop(return_id=True, pipe=pipe2):
++        seq2 = seq2 + spin_id + '\n'
++
++    # Sequence check.
++    if seq1 != seq2:
++        status = 0
++        if fail:
++            raise RelaxDiffSeqError, (pipe1, pipe2)
++
++    # Return the status.
++    return status
+ 
+ 
+ def display(sep=None, mol_name_flag=False, res_num_flag=False, 
+res_name_flag=False, spin_num_flag=False, spin_name_flag=False):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue May 12 11:40:01 2009</div>  
+</body>
+</html>

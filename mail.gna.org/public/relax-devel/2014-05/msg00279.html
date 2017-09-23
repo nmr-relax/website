@@ -1,0 +1,162 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: Speeding up the relaxation dispersion analysis &#45; optimisation of the missing data handling. -->
+<!--X-From-R13: "Sqjneq q'Ohiretar" &#60;rqjneqNaze&#45;erynk.pbz> -->
+<!--X-Date: Fri, 09 May 2014 16:30:15 +0200 -->
+<!--X-Message-Id: CAED9pY_H9PUJsuseqo7nVX0Eru5VvSy0imWPocgUeGctZfEjxw@mail.gmail.com -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>Speeding up the relaxation dispersion analysis - optimisation of the missing data handling. -- May 09, 2014 - 16:30</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />Speeding up the relaxation dispersion analysis - optimisation of the missing data handling.</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00279" class="tabs">Index by Date</a> | <a href="threads.html#00279" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00278.html">Date Prev</a>] [<a href="msg00280.html">Date Next</a>] [<a href="msg00270.html">Thread Prev</a>] [<a href="msg00359.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: &quot;relax-devel@xxxxxxx&quot; &lt;relax-devel@xxxxxxx&gt;</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 9 May 2014 16:29:20 +0200</li>
+<li class="menuitem">
+<em>Dkim-signature</em>: v=1; a=rsa-sha256; c=relaxed/relaxed; d=gmail.com; s=20120113; h=mime-version:sender:date:message-id:subject:from:to:content-type; bh=OKIqgb3/T+Z5CTSV15qWQAP4R/y4qORNCR7rrl/n7fo=; b=VoWa68gJEVNM1K97AagVj79cLOywQ2XoxJnMB9VuGKINi/hWWxn6wJdgNzCugM98LH Yjy4K5aQrNm1LkVnU8uN0f8NB7DH9GtLjPwPHda5KOuNAqYsVcz8Jm8KgRdeLNf6eiOu Xic2JewBjf4a6SSq6oTSocvUk5kkCVFw2xa+mGOHpM0iPis8UcNA7TdqXiZttye2/v3U 0RImScQj+ZljI3OTHE+5xHP52tuDnJI5DNn/sjxqsYETQsSgPmY6+UurgGvKlvQZXMIW 0dO2n48F6kTg+1C0eQIUTJbNfEqPbfbIj92L9QQRiMXMlp0k4J/1KoZl6jtBKI9hnSY2 /gFQ==</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00279.html">CAED9pY_H9PUJsuseqo7nVX0Eru5VvSy0imWPocgUeGctZfEjxw@mail.gmail.com</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>Edward d'Auvergne</strong> on May 09, 2014 - 16:30:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Hi,
+
+This post is a placeholder for ideas about how to optimise the
+handling of the self.missing data structure in the
+target_functions.relax_disp module.  The current implementation is
+very slow and has a significant impact on the speed of a dispersion
+analysis.
+
+The current logic is:
+
+# Loop over the experiment types.
+for ei in range(self.num_exp):
+    # Loop over the spins.
+    for si in range(self.num_spins):
+        # Loop over the spectrometer frequencies.
+        for mi in range(self.num_frq):
+            # Loop over the offsets.
+            for oi in range(self.num_offsets[0][si][mi]):
+                # For all missing data points, set the back-calculated
+value to the measured values so that it has no effect on the
+chi-squared value.
+                for di in range(self.num_disp_points[0][si][mi][oi]):
+                    if self.missing[0][si][mi][oi][di]:
+                        self.back_calc[0][si][mi][oi][di] =
+self.values[0][si][mi][oi][di]
+
+                # Calculate the chi-squared value.
+                chi2_sum += chi2(self.values[ei][si][mi][0],
+self.back_calc[ei][si][mi][0], self.errors[ei][si][mi][0])
+
+
+Here, the back calculated value is set to the real value when data is
+missing.  That way the chi-squared value for this element will be zero
+as the difference between the back-calculated value (set to the real
+value) and the real value is zero.
+
+The ideal would be to shift this logic to be outside of all of these
+loops.  And then to construct a chi2_multi_dim() function, which
+replaces chi2(), that will calculate the chi2-square value for all
+elements as a huge numpy data structure, then sums over all
+dimensions.  Here for the dispersion analysis, the data structures
+have 5 dimensions.  Probably for maximum speed, a series of functions
+are needed - chi2_2D(), chi2_3D(), chi2_4D() and chi2_5D().
+
+For the handling of the missing data, the following could be
+implemented.  The logic will be the same, the elements of
+self.back_calc which correspond to missing data would be set to the
+real values (self.values).  How can this be done outside of the loops?
+ Simply:
+
+        back_calc_new = self.back_calc * self.missing_inv + 
+self.missing_values
+
+For this to work, self.missing_inv and self.missing_values would need
+to be pre-created in the __init__() method as numpy float64 arrays:
+
+- self.missing_inv:  An element is zero when data is missing, and 1.0
+otherwise.  The multiplication will cause all missing elements in
+self.back_calc to be set to zero and all other values remain
+unmodified.
+
+- self.missing_values:  This will be an array full of zeros, except
+for where data is missing and then the element is set to the number in
+self.values.
+
+The last two lines of the target function would then be:
+
+        # Return the total chi-squared value.
+        return chi2_5D(self.values, self.back_calc, self.errors)
+
+The speed up of such an implementation would be very significant.  A
+halving of the calculation time would not be surprising, though that
+would depend on the dispersion model.  Anyway, I will leave such an
+implementation for anyone who is interested in speed.  Please discuss
+first.
+
+Regards,
+
+Edward
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<ul><li><strong>Follow-Ups</strong>:
+<ul>
+<li><strong><a name="00359" href="msg00359.html">Re: Speeding up the relaxation dispersion analysis - optimisation of the missing data handling.</a></strong>
+<ul><li><em>From:</em> Edward d'Auvergne</li></ul></li>
+</ul></li></ul>
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon May 19 11:40:15 2014</div>  
+</body>
+</html>

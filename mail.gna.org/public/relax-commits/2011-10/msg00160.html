@@ -1,0 +1,247 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r14928 &#45; in /1.3/generic_fns/structure: main.py superimpose.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 26 Oct 2011 14:47:25 +0200 -->
+<!--X-Message-Id: E1RJ2tB&#45;0004WP&#45;01@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r14928 - in /1.3/generic_fns/structure: main.py superimpose.py -- October 26, 2011 - 14:47</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r14928 - in /1.3/generic_fns/structure: main.py superimpose.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00160" class="tabs">Index by Date</a> | <a href="threads.html#00160" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00159.html">Date Prev</a>] [<a href="msg00161.html">Date Next</a>] [<a href="msg00159.html">Thread Prev</a>] [<a href="msg00161.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 26 Oct 2011 12:47:24 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00160.html">E1RJ2tB-0004WP-01@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on October 26, 2011 - 14:47:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Oct 26 14:47:24 2011
+New Revision: 14928
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=14928&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=14928&amp;view=rev</a>
+Log:
+Rearranged the back end of the structure.superimpose user function.
+
+This is just to shift more code into the 'superimpose' module.
+
+
+Modified:
+    1.3/generic_fns/structure/main.py
+    1.3/generic_fns/structure/superimpose.py
+
+Modified: 1.3/generic_fns/structure/main.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/generic_fns/structure/main.py?rev=14928&amp;r1=14927&amp;r2=14928&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/generic_fns/structure/main.py?rev=14928&amp;r1=14927&amp;r2=14928&amp;view=diff</a>
+==============================================================================
+--- 1.3/generic_fns/structure/main.py (original)
++++ 1.3/generic_fns/structure/main.py Wed Oct 26 14:47:24 2011
+@@ -37,7 +37,7 @@
+ from generic_fns.structure.api_base import Displacements
+ from generic_fns.structure.internal import Internal
+ from generic_fns.structure.scientific import Scientific_data
+-from generic_fns.structure.superimpose import kabsch
++from generic_fns.structure.superimpose import fit_to_first
+ from relax_errors import RelaxError, RelaxFileError, RelaxNoPdbError, 
+RelaxNoSequenceError
+ from relax_io import get_file_path, open_write_file, write_spin_data
+ from relax_warnings import RelaxWarning, RelaxNoPDBFileWarning, 
+RelaxZeroVectorWarning
+@@ -510,47 +510,28 @@
+         for model in cdp.structure.model_loop():
+             models.append(model.num)
+ 
++    # Assemble the atomic coordinates of all models.
++    coord = []
++    for model in models:
++        coord.append([])
++        for pos in cdp.structure.atom_loop(atom_id=atom_id, model_num=model, 
+pos_flag=True):
++            coord[-1].append(pos[0])
++        coord[-1] = array(coord[-1])
++
+     # The different algorithms.
+     if method == 'fit to mean':
+-        superimpose_to_mean(models=models, atom_id=atom_id)
++        T, R, pivot = fit_to_mean(models=models, coord=coord)
+     elif method == 'fit to first':
+-        superimpose_to_first(models=models, atom_id=atom_id)
+-
+-
+-def superimpose_to_first(models=None, atom_id=None):
+-    &quot;&quot;&quot;Superimpose a set of structural models using the fit to first 
+algorithm.
+-
+-    @keyword models:    The list of models to superimpose.
+-    @type models:       list of int
+-    @keyword atom_id:   The molecule, residue, and atom identifier string.  
+This matches the spin ID string format.
+-    @type atom_id:      str or None
+-    &quot;&quot;&quot;
+-
+-    # Print out.
+-    print(&quot;\nSuperimposition of structural models %s using the 'fit to 
+first' algorithm.&quot; % models)
+-
+-    # Assemble the atomic coordinates of the first model.
+-    coord_to = []
+-    for pos in cdp.structure.atom_loop(atom_id=atom_id, model_num=models[0], 
+pos_flag=True):
+-        coord_to.append(pos[0])
+-    coord_to = array(coord_to)
+-
+-    # Loop over the ending models.
+-    for model in models[1:]:
+-        # Assemble the atomic coordinates.
+-        coord_from = []
+-        for pos in cdp.structure.atom_loop(atom_id=atom_id, model_num=model, 
+pos_flag=True):
+-            coord_from.append(pos[0])
+-        coord_from = array(coord_from)
+-
+-        # Calculate the displacements (Kabsch algorithm).
+-        trans_vect, trans_dist, R, axis, angle, pivot = 
+kabsch(name_from='model %s'%models[0], name_to='model %s'%model, 
+coord_from=coord_from, coord_to=coord_to)
+-
++        T, R, pivot = fit_to_first(models=models, coord=coord)
++
++
++    # Update to the new coordinates.
++    for i in range(len(models)):
+         # Translate the molecule first (the rotational pivot is defined in 
+the first model).
+-        translate(T=trans_vect, model=model)
++        translate(T=T[i], model=models[i])
+ 
+         # Rotate the molecule.
+-        rotate(R=R, origin=pivot, model=model)
++        rotate(R=R[i], origin=pivot[i], model=models[i])
+ 
+ 
+ def translate(T=None, model=None):
+
+Modified: 1.3/generic_fns/structure/superimpose.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/generic_fns/structure/superimpose.py?rev=14928&amp;r1=14927&amp;r2=14928&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/generic_fns/structure/superimpose.py?rev=14928&amp;r1=14927&amp;r2=14928&amp;view=diff</a>
+==============================================================================
+--- 1.3/generic_fns/structure/superimpose.py (original)
++++ 1.3/generic_fns/structure/superimpose.py Wed Oct 26 14:47:24 2011
+@@ -25,7 +25,7 @@
+ 
+ # Python module imports.
+ from math import pi
+-from numpy import diag, dot, float64, outer, sign, transpose, zeros
++from numpy import diag, dot, eye, float64, outer, sign, transpose, zeros
+ from numpy.linalg import det, norm, svd
+ 
+ # relax module import.
+@@ -46,6 +46,39 @@
+ 
+     # Return.
+     return centroid
++
++
++def fit_to_first(models=None, coord=None):
++    &quot;&quot;&quot;Superimpose a set of structural models using the fit to first 
+algorithm.
++
++    @keyword models:    The list of models to superimpose.
++    @type models:       list of int
++    @keyword coord:     The list of coordinates of all models to 
+superimpose.  The first index is the models, the second is the atomic 
+positions, and the third is the xyz coordinates.
++    @type coord:        list of numpy rank-2, Nx3 arrays
++    @return:            The lists of translation vectors, rotation matrices, 
+and rotation pivots.
++    @rtype:             list of numpy rank-1 3D arrays, list of numpy rank-2 
+3D arrays, list of numpy rank-1 3D arrays
++    &quot;&quot;&quot;
++
++    # Print out.
++    print(&quot;\nSuperimposition of structural models %s using the 'fit to 
+first' algorithm.&quot; % models)
++
++    # Init (there is no transformation for the first model).
++    T_list = [zeros(3, float64)]
++    R_list = [eye(3, dtype=float64)]
++    pivot_list = [zeros(3, float64)]
++
++    # Loop over the ending models.
++    for i in range(1, len(models)):
++        # Calculate the displacements (Kabsch algorithm).
++        trans_vect, trans_dist, R, axis, angle, pivot = 
+kabsch(name_from='model %s'%models[0], name_to='model %s'%models[i], 
+coord_from=coord[i], coord_to=coord[0])
++
++        # Store the transforms.
++        T_list.append(trans_vect)
++        R_list.append(R)
++        pivot_list.append(pivot)
++
++    # Return the transform data.
++    return T_list, R_list, pivot_list
+ 
+ 
+ def kabsch(name_from=None, name_to=None, coord_from=None, coord_to=None, 
+centroid=None, verbosity=1):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Oct 26 16:00:02 2011</div>  
+</body>
+</html>

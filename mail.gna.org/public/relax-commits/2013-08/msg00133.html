@@ -1,0 +1,313 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r20616 &#45; in /branches/peak_intensities: lib/software/nmrpipe.py	lib/spectrum/peak_list.py pipe_control/spectrum.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 16 Aug 2013 19:42:57 +0200 -->
+<!--X-Message-Id: E1VAO37&#45;0007sV&#45;2i@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r20616 - in /branches/peak_intensities: lib/software/nmrpipe.py	lib/spectrum/peak_list.py pipe_control/spectrum.py -- August 16, 2013 - 19:42</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r20616 - in /branches/peak_intensities: lib/software/nmrpipe.py	lib/spectrum/peak_list.py pipe_control/spectrum.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00133" class="tabs">Index by Date</a> | <a href="threads.html#00133" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00132.html">Date Prev</a>] [<a href="msg00134.html">Date Next</a>] [<a href="msg00132.html">Thread Prev</a>] [<a href="msg00134.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 16 Aug 2013 17:42:57 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00133.html">E1VAO37-0007sV-2i@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on August 16, 2013 - 19:42:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Aug 16 19:42:56 2013
+New Revision: 20616
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=20616&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=20616&amp;view=rev</a>
+Log:
+The NMRPipe seriesTab peak lists are now supported through the Peak_list 
+object.
+
+
+Modified:
+    branches/peak_intensities/lib/software/nmrpipe.py
+    branches/peak_intensities/lib/spectrum/peak_list.py
+    branches/peak_intensities/pipe_control/spectrum.py
+
+Modified: branches/peak_intensities/lib/software/nmrpipe.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/peak_intensities/lib/software/nmrpipe.py?rev=20616&amp;r1=20615&amp;r2=20616&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/peak_intensities/lib/software/nmrpipe.py?rev=20616&amp;r1=20615&amp;r2=20616&amp;view=diff</a>
+==============================================================================
+--- branches/peak_intensities/lib/software/nmrpipe.py (original)
++++ branches/peak_intensities/lib/software/nmrpipe.py Fri Aug 16 19:42:56 2013
+@@ -31,19 +31,16 @@
+ from lib.io import open_write_file, strip
+ 
+ 
+-def read_list_intensity_seriestab(file_data=None, int_col=None):
+-    &quot;&quot;&quot;Return the peak intensity information from the NMRPipe SeriesTab peak 
+intensity file.
++def read_list_intensity_seriestab(peak_list=None, file_data=None, 
+int_col=None):
++    &quot;&quot;&quot;Extract the intensity information from the NMRPipe SeriesTab peak 
+intensity file.
+ 
+-    The residue number, heteronucleus and proton names, and peak intensity 
+will be returned.
+-
+-
++    @keyword peak_list: The peak list object to place all data into.
++    @type peak_list:    lib.spectrum.objects.Peak_list instance
+     @keyword file_data: The data extracted from the file converted into a 
+list of lists.
+     @type file_data:    list of lists of str
+     @keyword int_col:  The column which to multiply the peak intensity data 
+(used by the SeriesTab intensity file format).
+     @type int_col:     int
+     @raises RelaxError: When the expected peak intensity is not a float.
+-    @return:            The extracted data as a list of lists.  The first 
+dimension corresponds to the spin.  The second dimension consists of the 
+proton name, heteronucleus name, residue number, the intensity value, and the 
+original line of text.
+-    @rtype:             list of lists of str, str, int, float, str
+     &quot;&quot;&quot;
+ 
+     # Set start variables.
+@@ -93,78 +90,40 @@
+     # Remove the header.
+     file_data = file_data[header:]
+ 
+-    # Create an empty intensity list.
+-    intensity_list = [None]*len(spectra)
++    # Loop over the file data.
++    for line in file_data:
++        # Skip non-assigned peaks.
++        if line[ass_i] == '?-?':
++            continue
+ 
+-    # Create the whole empty data_all list, where entries will be replaced 
+later.
+-    # Format: H_name, X_name, spin_id, intensity, line.
+-    data_all = [[None, None, None, intensity_list, None]]*len(file_data)
++        # First split by the 2D separator.
++        assign2, assign1 = re.split('-', line[ass_i])
+ 
+-    # Define a current spectrum counter.
+-    i = 0
++        # The assignment of the first dimension.
++        row1 = re.split('([A-Z]+)', assign1)
++        name1 = row1[-2] + row1[-1]
+ 
+-    # Loop over the spectra.
+-    for spectrum in spectra:
+-        # Current intensity index.
+-        int_i = spectra_i[i]
++        # The assignment of the second dimension.
++        row2 = re.split('([A-Z]+)', assign2)
++        name2 = row2[-2] + row2[-1]
+ 
+-        # Define a current line counter.
+-        j = 0
++        # Get the residue number.
++        try:
++            res_num = int(row2[-3])
++        except:
++            raise RelaxError(&quot;Improperly formatted NMRPipe SeriesTab file., 
+cannot process the assignment '%s'.&quot; % line[0])
+ 
+-        for line in file_data:
+-            # Skip non-assigned peaks.
+-            if line[ass_i] == '?-?':
+-                continue
++        # Get the intensities.
++        try:
++            # Loop over the spectra.
++            intensities = []
++            for i in range(len(spectra)):
++                # The intensity is given by column multiplication.
++                intensities.append(float(line[spectra_i[i]])*float(line[5]))
+ 
+-            # First split by the 2D separator.
+-            x_assign, h_assign = re.split('-', line[ass_i])
++        # Bad data.
++        except ValueError:
++            raise RelaxError(&quot;The peak intensity value %s from the line %s 
+is invalid.&quot; % (intensity, line))
+ 
+-            # The proton info.
+-            h_row = re.split('([A-Z]+)', h_assign)
+-            h_name = h_row[-2] + h_row[-1]
+-
+-            # The heteronucleus info.
+-            x_row = re.split('([A-Z]+)', x_assign)
+-            x_name = x_row[-2] + x_row[-1]
+-
+-            # Get the residue number.
+-            try:
+-                res_num = int(x_row[-3])
+-            except:
+-                raise RelaxError(&quot;Improperly formatted NMRPipe SeriesTab 
+file.&quot;)
+-
+-            # Get the intensity.
+-            try:
+-                # The intensity is given by column multiplication.
+-                intensity = float(line[int_i])*float(line[5])
+-
+-                # Extract the intensity_list
+-                intensity_list = data_all[j][3]
+-
+-                # Replace the intensity.
+-                intensity_list[i] = intensity
+-
+-            except ValueError:
+-                raise RelaxError(&quot;The peak intensity value %s from the line 
+%s is invalid.&quot;%(intensity,line))
+-
+-            # Replace the data.
+-            # Format: H_name, X_name, spin_id, intensity, line.
+-            data_all[j] = [h_name, x_name, res_num, list(intensity_list), 
+line]
+-
+-            # Add 1 to current line counter.
+-            j += 1
+-
+-        # Add 1 to current spectrum counter.
+-        i += 1
+-
+-    # Remove from data_all where empty list starts. They are created where 
+spins are
+-    # skipped for ID = '?-?'.
+-    for i in range(len(data_all)):
+-        spin = data_all[i]
+-        if spin[0] == None and spin[1] == None and spin[2] == None:
+-            # Replace the data
+-            data_all = data_all[:i]
+-            break
+-
+-    # Return the data.
+-    return data_all
++        # Add the assignment to the peak list object.
++        peak_list.add(res_nums=[res_num, res_num], spin_names=[name1, 
+name2], intensity=intensities, intensity_name=spectra)
+
+Modified: branches/peak_intensities/lib/spectrum/peak_list.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/peak_intensities/lib/spectrum/peak_list.py?rev=20616&amp;r1=20615&amp;r2=20616&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/peak_intensities/lib/spectrum/peak_list.py?rev=20616&amp;r1=20615&amp;r2=20616&amp;view=diff</a>
+==============================================================================
+--- branches/peak_intensities/lib/spectrum/peak_list.py (original)
++++ branches/peak_intensities/lib/spectrum/peak_list.py Fri Aug 16 19:42:56 
+2013
+@@ -188,16 +188,7 @@
+         print(&quot;NMRPipe SeriesTab formatted data file.\n&quot;)
+ 
+         # Extract the data.
+-        nmrpipe.read_list_intensity_seriestab(peak_list=peak_list, 
+file_data=file_data, int_col=int_col, int_col_labels=int_col_labels)
+-
+-        # Extract the expected number of spectrum ID's.
+-        nr_int_col = len(peak_list[0].intensity)
+-
+-        # Make it possible to autogenerate spectrum ID's, if 
+spectrum_id='auto'.
+-        if not isinstance(spectrum_id, list) and spectrum_id.lower() == 
+'auto':
+-            spectrum_id = []
+-            for i in range(nr_int_col):
+-                spectrum_id.append('Z_A%s'%i)
++        nmrpipe.read_list_intensity_seriestab(peak_list=peak_list, 
+file_data=file_data, int_col=int_col)
+ 
+     # Sparky.
+     elif format == 'sparky':
+
+Modified: branches/peak_intensities/pipe_control/spectrum.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/peak_intensities/pipe_control/spectrum.py?rev=20616&amp;r1=20615&amp;r2=20616&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/peak_intensities/pipe_control/spectrum.py?rev=20616&amp;r1=20615&amp;r2=20616&amp;view=diff</a>
+==============================================================================
+--- branches/peak_intensities/pipe_control/spectrum.py (original)
++++ branches/peak_intensities/pipe_control/spectrum.py Fri Aug 16 19:42:56 
+2013
+@@ -507,7 +507,7 @@
+     # Intensity column checks.
+     if isinstance(spectrum_id, list) and not isinstance(int_col, list):
+         raise RelaxError(&quot;If a list of spectrum IDs is supplied, the 
+intensity column argument must also be a list of equal length.&quot;)
+-    if not isinstance(spectrum_id, list) and isinstance(int_col, list):
++    if spectrum_id != 'auto' and not isinstance(spectrum_id, list) and 
+isinstance(int_col, list):
+         raise RelaxError(&quot;If a list of intensity columns is supplied, the 
+spectrum ID argument must also be a list of equal length.&quot;)
+     if isinstance(spectrum_id, list) and len(spectrum_id) != len(int_col):
+         raise RelaxError(&quot;The spectrum ID list %s has a different number of 
+elements to the intensity column list %s.&quot; % (spectrum_id, int_col))
+@@ -521,6 +521,10 @@
+ 
+     # Read the peak list data.
+     peak_list = read_peak_list(file=file, dir=dir, int_col=int_col, 
+spin_id_col=spin_id_col, mol_name_col=mol_name_col, res_num_col=res_num_col, 
+res_name_col=res_name_col, spin_num_col=spin_num_col, 
+spin_name_col=spin_name_col, sep=sep, spin_id=spin_id)
++
++    # Automatic spectrum IDs.
++    if spectrum_id == 'auto':
++        spectrum_id = peak_list[0].intensity_name
+ 
+     # Loop over the assignments.
+     data = []
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Aug 16 20:00:02 2013</div>  
+</body>
+</html>

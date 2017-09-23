@@ -1,0 +1,161 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r11901 &#45; /branches/bieri_gui/gui_bieri/menu.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Sun, 19 Dec 2010 17:13:57 +0100 -->
+<!--X-Message-Id: E1PULtV&#45;0002G9&#45;Nq@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r11901 - /branches/bieri_gui/gui_bieri/menu.py -- December 19, 2010 - 17:13</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r11901 - /branches/bieri_gui/gui_bieri/menu.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00201" class="tabs">Index by Date</a> | <a href="threads.html#00201" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00200.html">Date Prev</a>] [<a href="msg00202.html">Date Next</a>] [<a href="msg00200.html">Thread Prev</a>] [<a href="msg00202.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Sun, 19 Dec 2010 16:13:57 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00201.html">E1PULtV-0002G9-Nq@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on December 19, 2010 - 17:13:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Sun Dec 19 17:13:56 2010
+New Revision: 11901
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=11901&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=11901&amp;view=rev</a>
+Log:
+The user function menu entires are disabled during relax execution lock.
+
+This will prevent racing and strange crashing of relax.
+
+
+Modified:
+    branches/bieri_gui/gui_bieri/menu.py
+
+Modified: branches/bieri_gui/gui_bieri/menu.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/bieri_gui/gui_bieri/menu.py?rev=11901&amp;r1=11900&amp;r2=11901&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/bieri_gui/gui_bieri/menu.py?rev=11901&amp;r1=11900&amp;r2=11901&amp;view=diff</a>
+==============================================================================
+--- branches/bieri_gui/gui_bieri/menu.py (original)
++++ branches/bieri_gui/gui_bieri/menu.py Sun Dec 19 17:13:56 2010
+@@ -23,6 +23,9 @@
+ 
+ # Module docstring.
+ &quot;&quot;&quot;Module for the main relax menu bar.&quot;&quot;&quot;
++
++# relax module imports.
++from status import Status
+ 
+ # Python module imports.
+ import wx
+@@ -114,6 +117,9 @@
+         self.gui.Bind(wx.EVT_MENU, self.gui.references,     id=42)
+         self.gui.Bind(wx.EVT_MENU, self.gui.about_gui,      id=43)
+         self.gui.Bind(wx.EVT_MENU, self.gui.about_relax,    id=44)
++
++        # Menu update.
++        self.gui.Bind(wx.EVT_MENU_OPEN, self.update_menus)
+ 
+ 
+     def build_menu_item(self, menu, id=None, text='', tooltip='', icon=None):
+@@ -185,7 +191,7 @@
+         menu = wx.Menu()
+ 
+         # The list of entries to build.
+-        entries = [
++        self.entries_uf = [
+             [wx.NewId(), &quot;&amp;molecule&quot;, paths.icon_16x16.molecule, None, [
+                 [wx.NewId(), &quot;&amp;create&quot;, paths.icon_16x16.add, 
+self.gui.user_functions.molecule.create],
+                 [wx.NewId(), &quot;&amp;delete&quot;, paths.icon_16x16.remove, 
+self.gui.user_functions.molecule.delete]
+@@ -207,7 +213,30 @@
+         ]
+ 
+         # Build.
+-        self._create_menu(menu, entries)
++        self._create_menu(menu, self.entries_uf)
+ 
+         # Add the sub-menu.
+-        self.menubar.Append(menu, &quot;&amp;User functions&quot;)
++        title = &quot;&amp;User functions&quot;
++        self.menubar.Append(menu, title)
++        self.menu_uf_id = self.menubar.FindMenu(title)
++
++
++    def update_menus(self, event):
++        &quot;&quot;&quot;Update the menus dependent on the relax state.
++
++        @param event:   The wx event.
++        @type event:    wx event
++        &quot;&quot;&quot;
++
++        # The status object.
++        status = Status()
++
++        # Loop over the user function menu items.
++        for i in range(len(self.entries_uf)):
++            # Enable the menu entries.
++            if not status.exec_lock.locked():
++                self.menubar.Enable(self.entries_uf[i][0], True)
++
++            # Disable the menu entries.
++            else:
++                self.menubar.Enable(self.entries_uf[i][0], False)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Sun Dec 19 17:20:01 2010</div>  
+</body>
+</html>

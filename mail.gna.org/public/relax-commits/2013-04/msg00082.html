@@ -1,0 +1,298 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r19363 &#45; /branches/relax_disp/specific_analyses/relax_disp.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 04 Apr 2013 16:28:42 +0200 -->
+<!--X-Message-Id: E1UNl9e&#45;0007u2&#45;Jv@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r19363 - /branches/relax_disp/specific_analyses/relax_disp.py -- April 04, 2013 - 16:28</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r19363 - /branches/relax_disp/specific_analyses/relax_disp.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00082" class="tabs">Index by Date</a> | <a href="threads.html#00082" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00081.html">Date Prev</a>] [<a href="msg00083.html">Date Next</a>] [<a href="msg00081.html">Thread Prev</a>] [<a href="msg00083.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 04 Apr 2013 14:28:42 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00082.html">E1UNl9e-0007u2-Jv@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on April 04, 2013 - 16:28:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Apr  4 16:28:42 2013
+New Revision: 19363
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=19363&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=19363&amp;view=rev</a>
+Log:
+The relax_disp function _grid_search_setup() now operates in the same way as 
+the relax_fit code.
+
+This function originates from the 'relax_fit' specific analysis code, but 
+that code has since
+evolved.  The 'relax_disp' code now mimics the new code, returning lists of 
+grid search increments
+and upper and lower limits.
+
+
+Modified:
+    branches/relax_disp/specific_analyses/relax_disp.py
+
+Modified: branches/relax_disp/specific_analyses/relax_disp.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp.py?rev=19363&amp;r1=19362&amp;r2=19363&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp.py?rev=19363&amp;r1=19362&amp;r2=19363&amp;view=diff</a>
+==============================================================================
+--- branches/relax_disp/specific_analyses/relax_disp.py (original)
++++ branches/relax_disp/specific_analyses/relax_disp.py Thu Apr  4 16:28:42 
+2013
+@@ -538,103 +538,91 @@
+             raise RelaxError(&quot;Cannot run a grid search on a model with zero 
+parameters.&quot;)
+ 
+         # Lower bounds.
+-        if lower != None:
+-            if len(lower) != n:
+-                raise RelaxLenError('lower bounds', n)
++        if lower != None and len(lower) != n:
++            raise RelaxLenError('lower bounds', n)
+ 
+         # Upper bounds.
+-        if upper != None:
+-            if len(upper) != n:
+-                raise RelaxLenError('upper bounds', n)
++        if upper != None and len(upper) != n:
++            raise RelaxLenError('upper bounds', n)
+ 
+         # Increment.
+-        if type(inc) == list:
+-            if len(inc) != n:
+-                raise RelaxLenError('increment', n)
+-            inc = inc
+-        elif type(inc) == int:
+-            temp = []
+-            for j in xrange(n):
+-                temp.append(inc)
+-            inc = temp
+-
+-        # Minimisation options initialisation.
+-        min_options = []
+-        j = 0
+-
+-        # First add the spin specific parameters.
+-        for spin_index in range(len(spins)):
+-            # Alias the spin.
+-            spin = spins[spin_index]
+-
+-            # Loop over each exponential curve.
+-            for exp_i, key in self._exp_curve_loop():
+-                # Loop over the parameters.
+-                for i in range(len(spin.params)):
+-                    # R2eff relaxation rate (from 0 to 40 s^-1).
+-                    if spin.params[i] == 'R2eff':
+-                        min_options.append([inc[j], 0.0, 40.0])
+-
+-                    # Intensity.
+-                    elif spin.params[i] == 'I0':
+-                        min_options.append([inc[j], 0.0, 
+max(spin.intensities.values())])
+-
+-                    # Increment j.
+-                    j += 1
+-
+-        # Then the spin block specific parameters.
+-        spin = spins[0]
+-        for i in range(len(spin.params)):
+-            # R2 relaxation rate (from 0 to 40 s^-1).
+-            if spin.params[i] == 'R2':
+-                min_options.append([inc[j], 0.0, 40.0])
+-
+-            # Chemical exchange contribution to 'R2'.
+-            elif spin.params[i] == 'Rex':
+-                min_options.append([inc[j], 0.0, 20.0])
+-
+-            # Exchange rate.
+-            elif spin.params[i] == 'kex':
+-                min_options.append([inc[j], 0.0, 100000.0])
+-
+-            # Transversal relaxation rate for state A.
+-            elif spin.params[i] == 'R2A':
+-                min_options.append([inc[j], 0.0, 20.0])
+-
+-            # Exchange rate from state A to state B.
+-            elif spin.params[i] == 'kA':
+-                min_options.append([inc[j], 0.0, 100000.0])
+-
+-            # Chemical shift difference between states A and B.
+-            elif spin.params[i] == 'dw':
+-                min_options.append([inc[j], 0.0, 10000.0])
+-
+-            # Increment j.
+-            j += 1
+-
+-        # Set the lower and upper bounds if these are supplied.
+-        if lower != None:
+-            for j in xrange(n):
+-                if lower[j] != None:
+-                    min_options[j][1] = lower[j]
+-        if upper != None:
+-            for j in xrange(n):
+-                if upper[j] != None:
+-                    min_options[j][2] = upper[j]
++        if isinstance(inc, list) and len(inc) != n:
++            raise RelaxLenError('increment', n)
++        elif isinstance(inc, int):
++            inc = [inc]*n
++
++        # Set up the default bounds.
++        if not lower:
++            # Init.
++            lower = []
++            upper = []
++
++            # First add the spin specific parameters.
++            for spin_index in range(len(spins)):
++                # Alias the spin.
++                spin = spins[spin_index]
++
++                # Loop over each exponential curve.
++                for exp_i, key in self._exp_curve_loop():
++                    # Loop over the parameters.
++                    for i in range(len(spin.params)):
++                        # R2eff relaxation rate (from 0 to 40 s^-1).
++                        if spin.params[i] == 'R2eff':
++                            lower.append(0.0)
++                            upper.append(40.0)
++
++                        # Intensity.
++                        elif spin.params[i] == 'I0':
++                            lower.append(0.0)
++                            upper.append(max(spin.intensities.values()))
++
++            # Then the spin block specific parameters.
++            spin = spins[0]
++            for i in range(len(spin.params)):
++                # R2 relaxation rate (from 0 to 40 s^-1).
++                if spin.params[i] == 'R2':
++                    lower.append(0.0)
++                    upper.append(40.0)
++
++                # Chemical exchange contribution to 'R2'.
++                elif spin.params[i] == 'Rex':
++                    lower.append(0.0)
++                    upper.append(20.0)
++
++                # Exchange rate.
++                elif spin.params[i] == 'kex':
++                    lower.append(0.0)
++                    upper.append(100000.0)
++
++                # Transversal relaxation rate for state A.
++                elif spin.params[i] == 'R2A':
++                    lower.append(0.0)
++                    upper.append(20.0)
++
++                # Exchange rate from state A to state B.
++                elif spin.params[i] == 'kA':
++                    lower.append(0.0)
++                    upper.append(100000.0)
++
++                # Chemical shift difference between states A and B.
++                elif spin.params[i] == 'dw':
++                    lower.append(0.0)
++                    upper.append(10000.0)
+ 
+         # Test if the grid is too large.
+         grid_size = 1
+-        for i in xrange(len(min_options)):
+-            grid_size = grid_size * min_options[i][0]
+-        if type(grid_size) == long:
++        for i in range(n):
++            grid_size = grid_size * inc[0]
++        if isinstance(grid_size, long):
+             raise RelaxError(&quot;A grid search of size %s is too large.&quot; % 
+grid_size)
+ 
+         # Diagonal scaling of minimisation options.
+-        for j in range(len(min_options)):
+-            min_options[j][1] = min_options[j][1] * scaling_matrix[j, j]
+-            min_options[j][2] = min_options[j][2] * scaling_matrix[j, j]
+-
+-        return grid_size, min_options
++        for i in range(n):
++            lower[i] = lower[i] / scaling_matrix[i, i]
++            upper[i] = upper[i] / scaling_matrix[i, i]
++
++        # Return the data structures.
++        return grid_size, inc, lower, upper
+ 
+ 
+     def _linear_constraints(self, spins=None, scaling_matrix=None):
+@@ -1066,7 +1054,7 @@
+ 
+             # Get the grid search minimisation options.
+             if match('^[Gg]rid', min_algor):
+-                grid_size, min_options = 
+self._grid_search_setup(spins=spins, param_vector=param_vector, lower=lower, 
+upper=upper, inc=inc, scaling_matrix=scaling_matrix)
++                grid_size, inc, lower, upper = 
+self._grid_search_setup(spins=spins, param_vector=param_vector, lower=lower, 
+upper=upper, inc=inc, scaling_matrix=scaling_matrix)
+ 
+             # Linear constraints.
+             A, b = None, None
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Apr 04 16:40:01 2013</div>  
+</body>
+</html>

@@ -1,0 +1,213 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r17163 &#45; /branches/interatomic/generic_fns/mol_res_spin.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 03 Jul 2012 20:21:22 +0200 -->
+<!--X-Message-Id: E1Sm7j0&#45;0003A6&#45;7M@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r17163 - /branches/interatomic/generic_fns/mol_res_spin.py -- July 03, 2012 - 20:21</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r17163 - /branches/interatomic/generic_fns/mol_res_spin.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00049" class="tabs">Index by Date</a> | <a href="threads.html#00049" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00048.html">Date Prev</a>] [<a href="msg00050.html">Date Next</a>] [<a href="msg00048.html">Thread Prev</a>] [<a href="msg00050.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 03 Jul 2012 18:21:22 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00049.html">E1Sm7j0-0003A6-7M@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on July 03, 2012 - 20:21:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Jul  3 20:21:21 2012
+New Revision: 17163
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=17163&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=17163&amp;view=rev</a>
+Log:
+A number of the generic_fns.mol_res_spin functions now accept the pipe 
+argument.
+
+These include name_spin(), set_spin_element(), and set_spin_isotope() and 
+this allows the functions
+to operate on any data pipe.
+
+
+Modified:
+    branches/interatomic/generic_fns/mol_res_spin.py
+
+Modified: branches/interatomic/generic_fns/mol_res_spin.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/interatomic/generic_fns/mol_res_spin.py?rev=17163&amp;r1=17162&amp;r2=17163&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/interatomic/generic_fns/mol_res_spin.py?rev=17163&amp;r1=17162&amp;r2=17163&amp;view=diff</a>
+==============================================================================
+--- branches/interatomic/generic_fns/mol_res_spin.py (original)
++++ branches/interatomic/generic_fns/mol_res_spin.py Tue Jul  3 20:21:21 2012
+@@ -2185,22 +2185,31 @@
+         status.spin_lock.release(sys._getframe().f_code.co_name)
+ 
+ 
+-def name_spin(spin_id=None, name=None, force=False):
++def name_spin(spin_id=None, name=None, pipe=None, force=False):
+     &quot;&quot;&quot;Name the spins.
+ 
+     @keyword spin_id:   The spin identification string.
+     @type spin_id:      str
+     @keyword name:      The new spin name.
+     @type name:         str
++    @param pipe:        The data pipe to operate on.  Defaults to the 
+current data pipe.
++    @type pipe:         str
+     @keyword force:     A flag which if True will cause the named spin to be 
+renamed.
+     @type force:        bool
+     &quot;&quot;&quot;
++
++    # The data pipe.
++    if pipe == None:
++        pipe = pipes.cdp_name()
++
++    # Test the data pipe.
++    pipes.test(pipe)
+ 
+     # Acquire the spin lock (data modifying function), and make sure it is 
+finally released.
+     status.spin_lock.acquire(sys._getframe().f_code.co_name)
+     try:
+         # Rename the matching spins.
+-        for spin, id in spin_loop(spin_id, return_id=True):
++        for spin, id in spin_loop(spin_id, pipe=pipe, return_id=True):
+             if spin.name and not force:
+                 warn(RelaxWarning(&quot;The spin '%s' is already named.  Set the 
+force flag to rename.&quot; % id))
+             else:
+@@ -2990,13 +2999,15 @@
+     return True
+ 
+ 
+-def set_spin_element(spin_id=None, element=None, force=False):
++def set_spin_element(spin_id=None, element=None, pipe=None, force=False):
+     &quot;&quot;&quot;Set the element type of the spins.
+ 
+     @keyword spin_id:   The spin identification string.
+     @type spin_id:      str
+     @keyword element:   The IUPAC element name.
+     @type element:      str
++    @param pipe:        The data pipe to operate on.  Defaults to the 
+current data pipe.
++    @type pipe:         str
+     @keyword force:     A flag which if True will cause the element to be 
+changed.
+     @type force:        bool
+     &quot;&quot;&quot;
+@@ -3016,21 +3027,30 @@
+     if element not in valid_names:
+         raise(RelaxError(&quot;The element name '%s' is not valid and should be 
+one of the IUPAC names %s.&quot; % (element, valid_names)))
+ 
++    # The data pipe.
++    if pipe == None:
++        pipe = pipes.cdp_name()
++
++    # Test the data pipe.
++    pipes.test(pipe)
++
+     # Set the element name for the matching spins.
+-    for spin, id in spin_loop(spin_id, return_id=True):
++    for spin, id in spin_loop(spin_id, pipe=pipe, return_id=True):
+         if hasattr(spin, 'element') and spin.element and not force:
+             warn(RelaxWarning(&quot;The element type of the spin '%s' is already 
+set.  Set the force flag to True to rename.&quot; % id))
+         else:
+             spin.element = element
+ 
+ 
+-def set_spin_isotope(spin_id=None, isotope=None, force=False):
++def set_spin_isotope(spin_id=None, isotope=None, pipe=None, force=False):
+     &quot;&quot;&quot;Set the nuclear isotope type of the spins.
+ 
+     @keyword spin_id:   The spin identification string.
+     @type spin_id:      str
+     @keyword isotope:   The nuclear isotope type.
+     @type isotope:      str
++    @param pipe:        The data pipe to operate on.  Defaults to the 
+current data pipe.
++    @type pipe:         str
+     @keyword force:     A flag which if True will cause the isotope type to 
+be changed.
+     @type force:        bool
+     &quot;&quot;&quot;
+@@ -3053,8 +3073,15 @@
+     if isotope not in supported_types:
+         raise(RelaxError(&quot;The nuclear isotope type '%s' is currently not 
+supported.&quot; % isotope))
+ 
++    # The data pipe.
++    if pipe == None:
++        pipe = pipes.cdp_name()
++
++    # Test the data pipe.
++    pipes.test(pipe)
++
+     # Set the isotope type for the matching spins.
+-    for spin, id in spin_loop(spin_id, return_id=True):
++    for spin, id in spin_loop(spin_id, pipe=pipe, return_id=True):
+         if hasattr(spin, 'isotope') and spin.isotope and not force:
+             warn(RelaxWarning(&quot;The nuclear isotope type of the spin '%s' is 
+already set.  Change the force flag to True to reset.&quot; % id))
+         else:
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Jul 03 20:40:02 2012</div>  
+</body>
+</html>

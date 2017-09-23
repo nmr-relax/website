@@ -1,0 +1,353 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r19492 &#45; in /branches/relax_disp: specific_analyses/relax_disp.py	user_functions/relax_disp.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 18 Apr 2013 14:31:30 +0200 -->
+<!--X-Message-Id: E1USnzu&#45;0002fb&#45;Ir@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r19492 - in /branches/relax_disp: specific_analyses/relax_disp.py	user_functions/relax_disp.py -- April 18, 2013 - 14:31</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r19492 - in /branches/relax_disp: specific_analyses/relax_disp.py	user_functions/relax_disp.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00211" class="tabs">Index by Date</a> | <a href="threads.html#00211" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00210.html">Date Prev</a>] [<a href="msg00212.html">Date Next</a>] [<a href="msg00210.html">Thread Prev</a>] [<a href="msg00212.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 18 Apr 2013 12:31:30 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00211.html">E1USnzu-0002fb-Ir@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on April 18, 2013 - 14:31:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Apr 18 14:31:29 2013
+New Revision: 19492
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=19492&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=19492&amp;view=rev</a>
+Log:
+Created the relax_disp.plot_exp_curves user function.
+
+This is to be used to create 2D graphs of the exponential curves (relaxation 
+time verses peak
+intensity) as the grace.write user function plots are not very nice - the 
+curves from each
+spectrometer field strength and dispersion point are mixed into one curve.
+
+
+Modified:
+    branches/relax_disp/specific_analyses/relax_disp.py
+    branches/relax_disp/user_functions/relax_disp.py
+
+Modified: branches/relax_disp/specific_analyses/relax_disp.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp.py?rev=19492&amp;r1=19491&amp;r2=19492&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp.py?rev=19492&amp;r1=19491&amp;r2=19492&amp;view=diff</a>
+==============================================================================
+--- branches/relax_disp/specific_analyses/relax_disp.py (original)
++++ branches/relax_disp/specific_analyses/relax_disp.py Thu Apr 18 14:31:29 
+2013
+@@ -35,10 +35,14 @@
+ # relax module imports.
+ from dep_check import C_module_exp_fn
+ from lib.errors import RelaxError, RelaxFuncSetupError, RelaxLenError, 
+RelaxNoModelError, RelaxNoSequenceError, RelaxNoSpectraError
++from lib.io import get_file_path, open_write_file
++from lib.list import count_unique_elements, unique_elements
++from lib.software.grace import write_xy_data, write_xy_header
+ from lib.text.sectioning import subsection
+ from lib.list import count_unique_elements, unique_elements
+ from pipe_control import pipes
+ from pipe_control.mol_res_spin import exists_mol_res_spin_data, return_spin, 
+spin_loop
++from pipe_control.result_files import add_result_file
+ from specific_analyses.api_base import API_base
+ from specific_analyses.api_common import API_common
+ from target_functions.relax_disp import Dispersion
+@@ -547,6 +551,27 @@
+ 
+             # Increment the parameter index.
+             param_index = param_index + 1
++
++
++    def _dispersion_point_loop(self):
++        &quot;&quot;&quot;Generator method for looping over all dispersion points (either 
+spin-lock field or nu_CPMG points).
++
++        @return:    Either the spin-lock field strength in Hz or the nu_CPMG 
+frequency in Hz.
++        @rtype:     float
++        &quot;&quot;&quot;
++
++        # CPMG type data.
++        if cdp.exp_type in ['cpmg']:
++            fields = unique_elements(cdp.cpmg_frqs_list.values())
++        elif cdp.exp_type in ['r1rho']:
++            fields = unique_elements(cdp.spin_lock_nu1.values())
++        else:
++            raise RelaxError(&quot;The experiment type '%s' is unknown.&quot;)
++        fields.sort()
++
++        # Yield each unique field strength or frequency.
++        for field in fields:
++            yield field
+ 
+ 
+     def _exp_curve_index_from_key(self, key):
+@@ -1207,6 +1232,86 @@
+         return num
+ 
+ 
++    def _plot_exp_curves(self, file=None, dir=None, force=None, norm=None):
++        &quot;&quot;&quot;Custom 2D Grace plotting function for the exponential curves.
++
++        @keyword file:          The name of the Grace file to create.
++        @type file:             str
++        @keyword dir:           The optional directory to place the file 
+into.
++        @type dir:              str
++        @param force:           Boolean argument which if True causes the 
+file to be overwritten if it already exists.
++        @type force:            bool
++        @keyword norm:          The normalisation flag which if set to True 
+will cause all graphs to be normalised to a starting value of 1.
++        @type norm:             bool
++        &quot;&quot;&quot;
++
++        # Test if the current pipe exists.
++        pipes.test()
++
++        # Test if the sequence data is loaded.
++        if not exists_mol_res_spin_data():
++            raise RelaxNoSequenceError
++
++        # Open the file for writing.
++        file_path = get_file_path(file, dir)
++        file = open_write_file(file, dir, force)
++
++        # Initialise some data structures.
++        data = []
++        set_labels = []
++        x_err_flag = False
++        y_err_flag = False
++
++        # Loop over the spectrometer frequencies.
++        graph_index = 0
++        err = False
++        for field in self._spectrometer_loop():
++            # Loop over the dispersion points.
++            for disp_point in self._dispersion_point_loop():
++                # Create a new graph.
++                data.append([])
++
++                # Loop over each spin.
++                for spin, id in spin_loop(return_id=True, skip_desel=True):
++                    # Append a new set structure and set the name to the 
+spin ID.
++                    data[graph_index].append([])
++                    if graph_index == 0:
++                        set_labels.append(&quot;Spin %s&quot; % id)
++
++                    # Loop over the relaxation time periods.
++                    for time in cdp.relax_time_list:
++                        # The key.
++                        key = self._intensity_key(exp_key=disp_point, 
+relax_time=time)
++
++                        # Add the data.
++                        if hasattr(spin, 'intensity_err'):
++                            data[graph_index][-1].append([time, 
+spin.intensities[key], spin.intensity_err[key]])
++                            err = True
++                        else:
++                            data[graph_index][-1].append([time, 
+spin.intensities[key]])
++
++                # Increment the field index.
++                graph_index += 1
++
++        # The axis labels.
++        axis_labels = ['Relaxation time period (s)', 'Peak intensities']
++
++        # Write the header.
++        write_xy_header(sets=len(data[0]), file=file, set_names=set_labels, 
+axis_labels=axis_labels, norm=norm)
++
++        # Write the data.
++        graph_type = 'xy'
++        if err:
++            graph_type = 'xydy'
++        write_xy_data(data, file=file, graph_type=graph_type, norm=norm)
++
++        # Close the file.
++        file.close()
++
++        # Add the file to the results file list.
++        add_result_file(type='grace', label='Grace', file=file_path)
++
++
+     def _relax_time(self, time=0.0, spectrum_id=None):
+         &quot;&quot;&quot;Set the relaxation time period associated with a given spectrum.
+ 
+@@ -1285,6 +1390,26 @@
+ 
+         # Set up the model.
+         self._model_setup(model, params)
++
++
++    def _spectrometer_loop(self):
++        &quot;&quot;&quot;Generator method for looping over all spectrometer field data.
++
++        @return:    The field strength in Hz.
++        @rtype:     float
++        &quot;&quot;&quot;
++
++        # The number of spectrometer field strengths.
++        field_count = 1
++        fields = [None]
++        if hasattr(cdp, 'frq'):
++            field_count = count_unique_elements(cdp.frq.values())
++            fields = unique_elements(cdp.frq.values())
++            fields.sort()
++
++        # Yield each unique spectrometer field strength.
++        for field in fields:
++            yield field
+ 
+ 
+     def _spin_lock_field(self, spectrum_id=None, field=None):
+
+Modified: branches/relax_disp/user_functions/relax_disp.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/user_functions/relax_disp.py?rev=19492&amp;r1=19491&amp;r2=19492&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_disp/user_functions/relax_disp.py?rev=19492&amp;r1=19491&amp;r2=19492&amp;view=diff</a>
+==============================================================================
+--- branches/relax_disp/user_functions/relax_disp.py (original)
++++ branches/relax_disp/user_functions/relax_disp.py Thu Apr 18 14:31:29 2013
+@@ -22,6 +22,14 @@
+ 
+ # Module docstring.
+ &quot;&quot;&quot;The relax_disp user function definitions.&quot;&quot;&quot;
++
++# Python module imports.
++import dep_check
++if dep_check.wx_module:
++    from wx import FD_OPEN, FD_SAVE
++else:
++    FD_OPEN = -1
++    FD_SAVE = -1
+ 
+ # relax module imports.
+ from pipe_control import spectrum
+@@ -261,6 +269,52 @@
+ uf.wizard_apply_button = False
+ 
+ 
++# The relax_disp.plot_exp_curves user function.
++uf = uf_info.add_uf('relax_disp.plot_exp_curves')
++uf.title = &quot;Create 2D Grace plots of the exponential curves.&quot;
++uf.title_short = &quot;Exponential curve plotting.&quot;
++uf.add_keyarg(
++    name = &quot;file&quot;,
++    py_type = &quot;str&quot;,
++    arg_type = &quot;file sel&quot;,
++    desc_short = &quot;file name&quot;,
++    desc = &quot;The name of the file.&quot;,
++    wiz_filesel_wildcard = &quot;Grace files (*.agr)|*.agr;*.AGR&quot;,
++    wiz_filesel_style = FD_SAVE
++)
++uf.add_keyarg(
++    name = &quot;dir&quot;,
++    default = &quot;grace&quot;,
++    py_type = &quot;str&quot;,
++    arg_type = &quot;dir&quot;,
++    desc_short = &quot;directory name&quot;,
++    desc = &quot;The directory name.&quot;,
++    can_be_none = True
++)
++uf.add_keyarg(
++    name = &quot;force&quot;,
++    default = False,
++    py_type = &quot;bool&quot;,
++    desc_short = &quot;force flag&quot;,
++    desc = &quot;A flag which, if set to True, will cause the file to be 
+overwritten.&quot;
++)
++uf.add_keyarg(
++    name = &quot;norm&quot;,
++    default = False,
++    py_type = &quot;bool&quot;,
++    desc_short = &quot;normalisation flag&quot;,
++    desc = &quot;A flag which, if set to True, will cause all graphs to be 
+normalised to a starting value of 1.  This is for the normalisation of series 
+type data.&quot;
++)
++# Description.
++uf.desc.append(Desc_container())
++uf.desc[-1].add_paragraph(&quot;This is used to created 2D Grace plots of the 
+individual exponential curves used to find the R2eff values.  This 
+supplements the grace.write user function which is not capable of generating 
+these curves in a reasonable format.&quot;)
++uf.backend = relax_disp_obj._plot_exp_curves
++uf.menu_text = &quot;&amp;plot_exp_curves&quot;
++uf.gui_icon = &quot;oxygen.actions.document-save&quot;
++uf.wizard_size = (800, 600)
++uf.wizard_image = WIZARD_IMAGE_PATH + 'grace.png'
++
++
+ # The relax_disp.relax_time user function.
+ uf = uf_info.add_uf('relax_disp.relax_time')
+ uf.title = &quot;Set the relaxation delay time associated with each spectrum.&quot;
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Apr 18 14:40:02 2013</div>  
+</body>
+</html>

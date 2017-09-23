@@ -1,0 +1,264 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r10782 &#45; /1.3/generic_fns/grace.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 19 Feb 2010 18:18:45 +0100 -->
+<!--X-Message-Id: E1NiWV3&#45;00007N&#45;39@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r10782 - /1.3/generic_fns/grace.py -- February 19, 2010 - 18:18</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r10782 - /1.3/generic_fns/grace.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00178" class="tabs">Index by Date</a> | <a href="threads.html#00178" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00177.html">Date Prev</a>] [<a href="msg00179.html">Date Next</a>] [<a href="msg00177.html">Thread Prev</a>] [<a href="msg00179.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 19 Feb 2010 17:18:45 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00178.html">E1NiWV3-00007N-39@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on February 19, 2010 - 18:18:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Feb 19 18:18:44 2010
+New Revision: 10782
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=10782&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=10782&amp;view=rev</a>
+Log:
+Fixes for get_data() for when the analysis specific return_value() fn returns 
+a list of values!
+
+
+Modified:
+    1.3/generic_fns/grace.py
+
+Modified: 1.3/generic_fns/grace.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/generic_fns/grace.py?rev=10782&amp;r1=10781&amp;r2=10782&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/generic_fns/grace.py?rev=10782&amp;r1=10781&amp;r2=10782&amp;view=diff</a>
+==============================================================================
+--- 1.3/generic_fns/grace.py (original)
++++ 1.3/generic_fns/grace.py Fri Feb 19 18:18:44 2010
+@@ -86,6 +86,7 @@
+     set_labels = []
+     x_err_flag = False
+     y_err_flag = False
++    data_list = False
+ 
+     # Specific x and y value returning functions.
+     x_return_value = y_return_value = get_specific_fn('return_value', 
+pipes.get_type())
+@@ -128,24 +129,6 @@
+             if not spin.select:
+                 continue
+ 
+-            # A new spin type (on data set per spin type).
+-            if spin.name not in spin_names:
+-                # Append a new set structure.
+-                data[0].append([])
+-
+-                # Append the label.
+-                set_labels.append(set_label + &quot;%s spins.&quot; % spin.name)
+-
+-                # Add the spin name to the list.
+-                spin_names.append(spin.name)
+-
+-            # The set index.
+-            index = i * len(spin_names) + spin_names.index(spin.name)
+-
+-            # Initialise and alias point structure.
+-            data[0][index].append([])
+-            point = data[0][index][-1]
+-
+             # The X data (plotted as residue numbers).
+             if x_data_type == 'spin':
+                 x_val = res_num
+@@ -170,25 +153,70 @@
+             if x_val == None or y_val == None:
+                 continue
+ 
+-            # Conversion factors.
+-            x_val = x_val / x_return_conversion_factor(x_data_type, spin)
+-            if x_err:
+-                x_err = x_err / x_return_conversion_factor(x_data_type, spin)
+-            y_val = y_val / y_return_conversion_factor(y_data_type, spin)
+-            if y_err:
+-                y_err = y_err / y_return_conversion_factor(y_data_type, spin)
+-
+-            # Append the data.
+-            point.append(x_val)
+-            point.append(y_val)
+-            point.append(x_err)
+-            point.append(y_err)
+-
+-            # Error flags.
+-            if x_err and not x_err_flag:
+-                x_err_flag = True
+-            if y_err and not y_err_flag:
+-                y_err_flag = True
++            # One set per spin (list data has been returned).
++            if data_list or type(x_val) == list:
++                # Append a new set structure and set the name to the spin ID.
++                data[0].append([])
++                set_labels.append(spin_id)
++
++                # The set index.
++                index = len(data[0]) - 1
++
++                # No errors.
++                if x_err == None:
++                    x_err = [None]*len(x_val)
++                if y_err == None:
++                    y_err = [None]*len(y_val)
++
++                # Data list flag.
++                data_list = True
++
++            # Convert the data to lists for packing into 1 point.
++            else:
++                x_val = [x_val]
++                y_val = [y_val]
++                x_err = [x_err]
++                y_err = [y_err]
++
++            # A new spin type (on data set per spin type).
++            if not data_list and spin.name not in spin_names:
++                # Append a new set structure.
++                data[0].append([])
++
++                # Append the label.
++                set_labels.append(&quot;%s spins. &quot; % spin.name + set_label)
++
++                # Add the spin name to the list.
++                spin_names.append(spin.name)
++
++                # The set index.
++                index = i * len(spin_names) + spin_names.index(spin.name)
++
++            # Loop over the points.
++            for j in range(len(x_val)):
++                # Initialise and alias point structure.
++                data[0][index].append([])
++                point = data[0][index][-1]
++
++                # Conversion factors.
++                x_val[j] = x_val[j] / 
+x_return_conversion_factor(x_data_type, spin)
++                if x_err[j]:
++                    x_err[j] = x_err[j] / 
+x_return_conversion_factor(x_data_type, spin)
++                y_val[j] = y_val[j] / 
+y_return_conversion_factor(y_data_type, spin)
++                if y_err[j]:
++                    y_err[j] = y_err[j] / 
+y_return_conversion_factor(y_data_type, spin)
++
++                # Append the data.
++                point.append(x_val[j])
++                point.append(y_val[j])
++                point.append(x_err[j])
++                point.append(y_err[j])
++
++                # Error flags.
++                if x_err and not x_err_flag:
++                    x_err_flag = True
++                if y_err and not y_err_flag:
++                    y_err_flag = True
+ 
+     # The graph type.
+     graph_type = 'xy'
+@@ -313,12 +341,12 @@
+             # The target and type.
+             file.write(&quot;@target G%s.S%s\n&quot; % (gi, si))
+             file.write(&quot;@type %s\n&quot; % graph_type)
+-    
++
+             # Normalisation (to the first data point y value!).
+             norm_fact = 1.0
+             if norm:
+                 norm_fact = data[gi][si][0][1]
+-    
++
+             # Loop over the data points.
+             for point in data[gi][si]:
+                 # X and Y data.
+@@ -330,20 +358,20 @@
+                     error = point[2]
+                     if error == None:
+                         error = 0.0
+-    
++
+                     # Write the error.
+                     file.write(&quot; %-30s&quot; % (error/norm_fact))
+-    
++
+                 # The dy errors of xydxdy.
+                 if graph_type == 'xydxdy':
+                     # Catch y-axis errors of None.
+                     error = point[3]
+                     if error == None:
+                         error = 0.0
+-    
++
+                     # Write the error.
+                     file.write(&quot; %-30s&quot; % (error/norm_fact))
+-    
++
+                 # End the point.
+                 file.write(&quot;\n&quot;)
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Feb 19 18:40:02 2010</div>  
+</body>
+</html>

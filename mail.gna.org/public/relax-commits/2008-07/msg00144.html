@@ -1,0 +1,211 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r6745 &#45; /1.3/specific_fns/model_free/main.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Sat, 05 Jul 2008 16:02:02 +0200 -->
+<!--X-Message-Id: E1KF87i&#45;0001CY&#45;KX@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r6745 - /1.3/specific_fns/model_free/main.py -- July 05, 2008 - 16:02</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r6745 - /1.3/specific_fns/model_free/main.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00144" class="tabs">Index by Date</a> | <a href="threads.html#00144" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00143.html">Date Prev</a>] [<a href="msg00145.html">Date Next</a>] [<a href="msg00143.html">Thread Prev</a>] [<a href="msg00145.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Sat, 05 Jul 2008 13:48:22 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00144.html">E1KF87i-0001CY-KX@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on July 05, 2008 - 16:02:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Sat Jul  5 15:48:21 2008
+New Revision: 6745
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=6745&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=6745&amp;view=rev</a>
+Log:
+Converted the model-free remove_tm() method to the new design.
+
+
+Modified:
+    1.3/specific_fns/model_free/main.py
+
+Modified: 1.3/specific_fns/model_free/main.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/specific_fns/model_free/main.py?rev=6745&amp;r1=6744&amp;r2=6745&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/specific_fns/model_free/main.py?rev=6745&amp;r1=6744&amp;r2=6745&amp;view=diff</a>
+==============================================================================
+--- 1.3/specific_fns/model_free/main.py (original)
++++ 1.3/specific_fns/model_free/main.py Sat Jul  5 15:48:21 2008
+@@ -1742,67 +1742,61 @@
+                 spin.select = False
+ 
+ 
+-    def remove_tm(self, run, res_num):
+-        &quot;&quot;&quot;Function for removing the local tm parameter from the model-free 
+parameters.&quot;&quot;&quot;
+-
+-        # Arguments.
+-        self.run = run
+-
+-        # Test if the run exists.
+-        if not self.run in ds.run_names:
+-            raise RelaxNoPipeError, self.run
+-
+-        # Test if the run type is set to 'mf'.
+-        function_type = ds.run_types[ds.run_names.index(self.run)]
++    def remove_tm(self, spin_id=None):
++        &quot;&quot;&quot;Remove local tm from the set of model-free parameters for the 
+given spins.
++
++        @param spin_id: The spin identification string.
++        @type spin_id:  str or None
++        &quot;&quot;&quot;
++
++        # Test if the current data pipe exists.
++        if not ds.current_pipe:
++            raise RelaxNoPipeError
++
++        # Test if the pipe type is 'mf'.
++        function_type = ds[ds.current_pipe].pipe_type
+         if function_type != 'mf':
+-            raise RelaxFuncSetupError, 
+self.relax.specific_setup.get_string(function_type)
++            raise RelaxFuncSetupError, specific_fns.get_string(function_type)
+ 
+         # Test if sequence data is loaded.
+-        if not ds.res.has_key(self.run):
+-            raise RelaxNoSequenceError, self.run
+-
+-        # Loop over the sequence.
+-        for i in xrange(len(ds.res[self.run])):
+-            # Remap the data structure.
+-            data = ds.res[self.run][i]
+-
+-            # Skip deselected residues.
+-            if not data.select:
++        if not exists_mol_res_spin_data():
++            raise RelaxNoSequenceError
++
++        # Loop over the spins.
++        for spin in spin_loop(spin_id):
++            # Skip deselected spins.
++            if not spin.select:
+                 continue
+ 
+-            # If res_num is set, then skip all other residues.
+-            if res_num != None and res_num != data.num:
++            # Test if a local tm parameter exists.
++            if not hasattr(spin, 'params') or not 'local_tm' in spin.params:
+                 continue
+ 
+-            # Test if a local tm parameter exists.
+-            if not hasattr(data, 'params') or not 'local_tm' in data.params:
+-                continue
+-
+             # Remove tm.
+-            data.params.remove('local_tm')
++            spin.params.remove('local_tm')
+ 
+             # Model name.
+-            if match('^tm', data.model):
+-                data.model = data.model[1:]
+-
+-            # Set the local tm value to None.
+-            data.local_tm = None
+-
+-            # Set all the minimisation details to None.
+-            data.chi2 = None
+-            data.iter = None
+-            data.f_count = None
+-            data.g_count = None
+-            data.h_count = None
+-            data.warning = None
+-
+-        # Set the global minimisation details to None.
+-        ds.chi2[self.run] = None
+-        ds.iter[self.run] = None
+-        ds.f_count[self.run] = None
+-        ds.g_count[self.run] = None
+-        ds.h_count[self.run] = None
+-        ds.warning[self.run] = None
++            if match('^tm', spin.model):
++                spin.model = spin.model[1:]
++
++            # Delete the local tm variable.
++            del spin.local_tm
++
++            # Set all the minimisation stats to None.
++            spin.chi2 = None
++            spin.iter = None
++            spin.f_count = None
++            spin.g_count = None
++            spin.h_count = None
++            spin.warning = None
++
++        # Set the global minimisation stats to None.
++        ds[ds.current_pipe].chi2 = None
++        ds[ds.current_pipe].iter = None
++        ds[ds.current_pipe].f_count = None
++        ds[ds.current_pipe].g_count = None
++        ds[ds.current_pipe].h_count = None
++        ds[ds.current_pipe].warning = None
+ 
+ 
+     def return_conversion_factor(self, param, spin=None, spin_id=None):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Sat Jul 05 16:20:12 2008</div>  
+</body>
+</html>

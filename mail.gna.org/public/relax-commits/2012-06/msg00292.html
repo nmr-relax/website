@@ -1,0 +1,331 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r16847 &#45; /trunk/relax_io.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 11 Jun 2012 19:55:18 +0200 -->
+<!--X-Message-Id: E1Se8pi&#45;0001Yp&#45;7b@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r16847 - /trunk/relax_io.py -- June 11, 2012 - 19:55</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r16847 - /trunk/relax_io.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00292" class="tabs">Index by Date</a> | <a href="threads.html#00292" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00291.html">Date Prev</a>] [<a href="msg00293.html">Date Next</a>] [<a href="msg00291.html">Thread Prev</a>] [<a href="msg00293.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 11 Jun 2012 17:55:18 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00292.html">E1Se8pi-0001Yp-7b@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on June 11, 2012 - 19:55:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Mon Jun 11 19:55:17 2012
+New Revision: 16847
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=16847&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=16847&amp;view=rev</a>
+Log:
+Spun out the automatic column width formatting code from 
+relax_io.write_spin_data() to write_data().
+
+The write_data() will be useful for many other columnar data printouts, and 
+will write out to any
+file handles given to it.
+
+
+Modified:
+    trunk/relax_io.py
+
+Modified: trunk/relax_io.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/relax_io.py?rev=16847&amp;r1=16846&amp;r2=16847&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/relax_io.py?rev=16847&amp;r1=16846&amp;r2=16847&amp;view=diff</a>
+==============================================================================
+--- trunk/relax_io.py (original)
++++ trunk/relax_io.py Mon Jun 11 19:55:17 2012
+@@ -722,6 +722,91 @@
+         raise RelaxNoInPathError(binary)
+ 
+ 
++def write_data(out=None, headings=None, data=None, sep=None):
++    &quot;&quot;&quot;Write out a table of the data to the given file handle.
++
++    @keyword out:       The file handle to write to.
++    @type out:          file handle
++    @keyword headings:  The optional headings to print out.
++    @type headings:     list of str or None
++    @keyword data:      The data to print out.
++    @type data:         list of list of str
++    @keyword sep:       The column separator which, if None, defaults to 
+whitespace.
++    @type sep:          str or None
++    &quot;&quot;&quot;
++
++    # The number of rows and columns.
++    num_rows = len(data)
++    num_cols = len(data[0])
++
++    # Pretty whitespace formatting.
++    if sep == None:
++        # Determine the widths for the headings.
++        widths = []
++        for j in range(num_cols):
++            if headings != None:
++                if j == 0:
++                    widths.append(len(headings[j]) + 2)
++                else:
++                    widths.append(len(headings[j]))
++
++            # No headings.
++            else:
++                widths.append(0)
++
++        # Determine the maximum column widths for nice whitespace formatting.
++        for i in range(num_rows):
++            for j in range(num_cols):
++                size = len(data[i][j])
++                if size &gt; widths[j]:
++                    widths[j] = size
++
++        # Convert to format strings.
++        formats = []
++        for j in range(num_cols):
++            formats.append(&quot;%%-%ss&quot; % (widths[j] + 4))
++
++        # The headings.
++        if headings != None:
++            out.write(formats[0] % (&quot;# &quot; + headings[0]))
++            for j in range(1, num_cols):
++                out.write(formats[j] % headings[j])
++            out.write('\n')
++
++        # The data.
++        for i in range(num_rows):
++            # The row.
++            for j in range(num_cols):
++                out.write(formats[j] % data[i][j])
++            out.write('\n')
++
++    # Non-whitespace formatting.
++    else:
++        # The headings.
++        if headings != None:
++            out.write('#')
++            for j in range(num_cols):
++                # The column separator.
++                if j &gt; 0:
++                    out.write(sep)
++
++                # The heading.
++                out.write(headings[j])
++            out.write('\n')
++
++        # The data.
++        for i in range(num_rows):
++            # The row.
++            for j in range(num_cols):
++                # The column separator.
++                if j &gt; 0:
++                    out.write(sep)
++
++                # The heading.
++                out.write(data[i][j])
++            out.write('\n')
++
++
+ def write_spin_data(file, dir=None, sep=None, spin_ids=None, mol_names=None, 
+res_nums=None, res_names=None, spin_nums=None, spin_names=None, force=False, 
+data=None, data_name=None, error=None, error_name=None):
+     &quot;&quot;&quot;Generator function for reading the spin specific data from file.
+ 
+@@ -833,12 +918,13 @@
+ 
+ 
+     # Init.
+-    file_data = [[]]
++    headings = []
++    file_data = []
+ 
+     # Headers - the spin ID info.
+     for i in range(len(args)):
+         if args[i]:
+-            file_data[-1].append(arg_names[i])
++            headings.append(arg_names[i])
+ 
+     # Headers - the data.
+     if data:
+@@ -847,32 +933,35 @@
+             # Loop over the list.
+             for i in range(len(data[0])):
+                 # The data.
+-                file_data[-1].append(data_name[i])
++                headings.append(data_name[i])
+ 
+                 # The error.
+                 if error:
+-                    file_data[-1].append(error_name[i])
++                    headings.append(error_name[i])
+ 
+         # Simple list.
+         else:
+             # The data.
+-            file_data[-1].append(data_name)
++            headings.append(data_name)
+ 
+             # The error.
+             if error:
+-                file_data[-1].append(error_name)
++                headings.append(error_name)
+ 
+     # Headers - only errors.
+     elif error:
+         # List of lists.
+         if isinstance(error[0], list):
+             for i in range(len(error[0])):
+-                file_data[-1].append(error_name[i])
++                headings.append(error_name[i])
+ 
+         # Simple list.
+         else:
+-            file_data[-1].append(error_name)
+-
++            headings.append(error_name)
++
++    # No headings.
++    if headings == []:
++        headings = None
+ 
+     # Spin specific data.
+     for spin_index in range(N):
+@@ -921,73 +1010,14 @@
+                 file_data[-1].append(repr(error[spin_index]))
+ 
+     # No data to write, so do nothing!
+-    if file_data == [[]]:
++    if file_data == [] or file_data == [[]]:
+         return
+ 
+     # Open the file for writing.
+     file = open_write_file(file_name=file, dir=dir, force=force)
+ 
+-    # The number of rows and columns.
+-    num_rows = len(file_data)
+-    num_cols = len(file_data[0])
+-
+-    # Pretty whitespace formatting.
+-    if sep == None:
+-        # Determine the maximum column widths for nice whitespace formatting.
+-        widths = []
+-        for j in range(num_cols):
+-            if j == 0:
+-                widths.append(len(file_data[0][j]) + 2)
+-            else:
+-                widths.append(len(file_data[0][j]))
+-        for i in range(num_rows):
+-            for j in range(num_cols):
+-                size = len(file_data[i][j])
+-                if size &gt; widths[j]:
+-                    widths[j] = size
+-
+-        # Convert to format strings.
+-        formats = []
+-        for j in range(num_cols):
+-            formats.append(&quot;%%-%ss&quot; % (widths[j] + 4))
+-
+-        # The headings.
+-        file.write(formats[0] % (&quot;# &quot; + file_data[0][0]))
+-        for j in range(1, num_cols):
+-            file.write(formats[j] % file_data[0][j])
+-        file.write('\n')
+-
+-        # The data.
+-        for i in range(1, num_rows):
+-            # The row.
+-            for j in range(num_cols):
+-                file.write(formats[j] % file_data[i][j])
+-            file.write('\n')
+-
+-    # Non-whitespace formatting.
+-    else:
+-        # The headings.
+-        file.write('#')
+-        for j in range(num_cols):
+-            # The column separator.
+-            if j &gt; 0:
+-                file.write(sep)
+-
+-            # The heading.
+-            file.write(file_data[0][j])
+-        file.write('\n')
+-
+-        # The data.
+-        for i in range(1, num_rows):
+-            # The row.
+-            for j in range(num_cols):
+-                # The column separator.
+-                if j &gt; 0:
+-                    file.write(sep)
+-
+-                # The heading.
+-                file.write(file_data[i][j])
+-            file.write('\n')
++    # Write out the file data.
++    write_data(out=file, headings=headings, data=file_data, sep=sep)
+ 
+ 
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Jun 11 20:00:02 2012</div>  
+</body>
+</html>

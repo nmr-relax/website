@@ -1,0 +1,216 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r24567 &#45; /branches/zooming_grid_search/pipe_control/minimise.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 18 Jul 2014 13:47:59 +0200 -->
+<!--X-Message-Id: E1X86dr&#45;0007oj&#45;PN@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r24567 - /branches/zooming_grid_search/pipe_control/minimise.py -- July 18, 2014 - 13:47</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r24567 - /branches/zooming_grid_search/pipe_control/minimise.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00201" class="tabs">Index by Date</a> | <a href="threads.html#00201" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00200.html">Date Prev</a>] [<a href="msg00202.html">Date Next</a>] [<a href="msg00200.html">Thread Prev</a>] [<a href="msg00202.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 18 Jul 2014 11:47:59 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00201.html">E1X86dr-0007oj-PN@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on July 18, 2014 - 13:47:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Jul 18 13:47:59 2014
+New Revision: 24567
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=24567&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=24567&amp;view=rev</a>
+Log:
+Implemented infrastructure in the grid_search user function in preparation 
+for the zooming grid.
+
+The grid search backend now calls the new grid_bounds() function.  This takes 
+the lower and upper
+bounds as arguments, uses the specific API to determine the per-model 
+parameter grid search bounds,
+and then returns a per model list of lower and upper bounds.  The specific 
+API get_param_names() and
+get_param_values() are called to obtain the current model parameter names and 
+values, and then the
+parameter names and model info are used in the new parameter object 
+grid_lower() and grid_upper()
+methods to obtain the bounds.  This shifts all of the grid search bounds 
+logic out of the specific
+analyses and into the grid search backend, so it should allow the specific 
+analysis code to be
+simplified.
+
+
+Modified:
+    branches/zooming_grid_search/pipe_control/minimise.py
+
+Modified: branches/zooming_grid_search/pipe_control/minimise.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/zooming_grid_search/pipe_control/minimise.py?rev=24567&amp;r1=24566&amp;r2=24567&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/zooming_grid_search/pipe_control/minimise.py?rev=24567&amp;r1=24566&amp;r2=24567&amp;view=diff</a>
+==============================================================================
+--- branches/zooming_grid_search/pipe_control/minimise.py       (original)
++++ branches/zooming_grid_search/pipe_control/minimise.py       Fri Jul 18 
+13:47:59 2014
+@@ -26,7 +26,7 @@
+ from multi import Processor_box
+ from pipe_control.mol_res_spin import return_spin, spin_loop
+ from pipe_control import pipes
+-from specific_analyses.api import return_api
++from specific_analyses.api import return_api, return_parameter_object
+ from status import Status; status = Status()
+ from user_functions.data import Uf_tables; uf_tables = Uf_tables()
+ 
+@@ -80,6 +80,51 @@
+ 
+     # Execute any queued commands.
+     processor.run_queue()
++
++
++def grid_bounds(lower=None, upper=None):
++    &quot;&quot;&quot;Determine the per-model grid bounds, allowing for the zooming grid 
+search.
++
++    @keyword lower:     The lower bounds of the grid search which must be 
+equal to the number of parameters in the model.
++    @type lower:        array of numbers
++    @keyword upper:     The upper bounds of the grid search which must be 
+equal to the number of parameters in the model.
++    @type upper:        array of numbers
++    @return:            The per-model grid upper and lower bounds.  The 
+first dimension of each structure corresponds to the model, the second the 
+model parameters.
++    @rtype:             tuple of 2 lists of lists of float
++    &quot;&quot;&quot;
++
++    # The specific analysis API object and parameter object.
++    api = return_api()
++    param_object = return_parameter_object()
++
++    # Initialise.
++    model_lower = []
++    model_upper = []
++
++    # Loop over the models.
++    for model_info in api.model_loop():
++        # The lower and upper bounds have been supplied by the user, so use 
+those unmodified instead.
++        if lower != None or upper != None:
++            model_lower.append(lower)
++            model_upper.append(upper)
++            continue
++
++        # Print out the model title.
++        api.print_model_title(model_info)
++
++        # Get the parameter names and current values.
++        names = api.get_param_names(model_info)
++        values = api.get_param_values(model_info)
++
++        # Build the bounds.
++        model_lower.append([])
++        model_upper.append([])
++        for i in range(len(names)):
++            model_lower[-1].append(param_object.grid_lower(names[i], 
+model_info=model_info))
++            model_upper[-1].append(param_object.grid_upper(names[i], 
+model_info=model_info))
++
++    # Return the bounds.
++    return model_lower, model_upper
+ 
+ 
+ def grid_search(lower=None, upper=None, inc=None, constraints=True, 
+verbosity=1):
+@@ -103,6 +148,9 @@
+     # The specific analysis API object.
+     api = return_api()
+ 
++    # Determine the model specific grid bounds, and allow for the zooming 
+grid search.
++    model_lower, model_upper = grid_bounds(lower, upper)
++
+     # Deselect spins lacking data:
+     api.overfit_deselect()
+ 
+@@ -121,7 +169,7 @@
+                 status.mc_number = i
+ 
+             # Optimisation.
+-            api.grid_search(lower=lower, upper=upper, inc=inc, 
+constraints=constraints, verbosity=verbosity-1, sim_index=i)
++            api.grid_search(lower=model_lower, upper=model_upper, inc=inc, 
+constraints=constraints, verbosity=verbosity-1, sim_index=i)
+ 
+             # Print out.
+             if verbosity and not processor.is_queued():
+@@ -135,7 +183,7 @@
+ 
+     # Grid search.
+     else:
+-        api.grid_search(lower=lower, upper=upper, inc=inc, 
+constraints=constraints, verbosity=verbosity)
++        api.grid_search(lower=model_lower, upper=model_upper, inc=inc, 
+constraints=constraints, verbosity=verbosity)
+ 
+     # Execute any queued commands.
+     processor.run_queue()
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Jul 18 15:00:03 2014</div>  
+</body>
+</html>

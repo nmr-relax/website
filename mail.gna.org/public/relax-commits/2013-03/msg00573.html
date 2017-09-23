@@ -1,0 +1,260 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r19155 &#45; in /trunk: lib/alignment/alignment_tensor.py	pipe_control/align_tensor.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 26 Mar 2013 11:43:52 +0100 -->
+<!--X-Message-Id: E1UKRM8&#45;0008Qd&#45;HN@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r19155 - in /trunk: lib/alignment/alignment_tensor.py	pipe_control/align_tensor.py -- March 26, 2013 - 11:43</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r19155 - in /trunk: lib/alignment/alignment_tensor.py	pipe_control/align_tensor.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00573" class="tabs">Index by Date</a> | <a href="threads.html#00573" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00572.html">Date Prev</a>] [<a href="msg00574.html">Date Next</a>] [<a href="msg00572.html">Thread Prev</a>] [<a href="msg00574.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 26 Mar 2013 10:43:52 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00573.html">E1UKRM8-0008Qd-HN@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on March 26, 2013 - 11:43:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Mar 26 11:43:52 2013
+New Revision: 19155
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=19155&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=19155&amp;view=rev</a>
+Log:
+Shifted calc_chi_tensor() and kappa() from pipe_control.align_tensor to 
+lib.alignment.alignment_tensor.
+
+
+Modified:
+    trunk/lib/alignment/alignment_tensor.py
+    trunk/pipe_control/align_tensor.py
+
+Modified: trunk/lib/alignment/alignment_tensor.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/lib/alignment/alignment_tensor.py?rev=19155&amp;r1=19154&amp;r2=19155&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/lib/alignment/alignment_tensor.py?rev=19155&amp;r1=19154&amp;r2=19155&amp;view=diff</a>
+==============================================================================
+--- trunk/lib/alignment/alignment_tensor.py (original)
++++ trunk/lib/alignment/alignment_tensor.py Tue Mar 26 11:43:52 2013
+@@ -25,6 +25,35 @@
+ # Python imports.
+ from numpy.linalg import eigvals
+ 
++# relax module imports.
++from lib.physical_constants import g1H, h_bar, kB, mu0, 
+return_gyromagnetic_ratio
++
++
++def calc_chi_tensor(A, B0, T):
++    &quot;&quot;&quot;Convert the alignment tensor into the magnetic susceptibility (chi) 
+tensor.
++
++    A can be either the full tensor (3D or 5D), a component Aij of the 
+tensor, Aa, or Ar, anything that can be multiplied by the constants to 
+convert from one to the other.
++
++
++    @param A:       The alignment tensor or alignment tensor component.
++    @type A:        numpy array or float
++    @param B0:      The magnetic field strength in Hz.
++    @type B0:       float
++    @param T:       The temperature in Kalvin.
++    @type T:        float
++    @return:        A multiplied by the PCS constant.
++    @rtype:         numpy array or float
++    &quot;&quot;&quot;
++
++    # B0 in Tesla.
++    B0 = 2.0 * pi * B0 / g1H
++
++    # The conversion factor.
++    conv = 15.0 * mu0 * kB * T / B0**2
++
++    # Return the converted value.
++    return conv * A
++
+ 
+ def dAi_dAxx(A):
+     &quot;&quot;&quot;The dAi/dAxx gradient.
+@@ -124,6 +153,32 @@
+     A[0, 0] = 0.0;  A[0, 1] = 0.0;  A[0, 2] = 0.0
+     A[1, 0] = 0.0;  A[1, 1] = 0.0;  A[1, 2] = 1.0
+     A[2, 0] = 0.0;  A[2, 1] = 1.0;  A[2, 2] = 0.0
++
++
++def kappa(nuc1='15N', nuc2='1H'):
++    &quot;&quot;&quot;Function for calculating the kappa constant.
++
++    The kappa constant is::
++
++        kappa = -3/(8pi^2).gI.gS.mu0.h_bar,
++
++    where gI and gS are the gyromagnetic ratios of the I and S spins, mu0 is 
+the permeability of
++    free space, and h_bar is Planck's constant divided by 2pi.
++
++    @param nuc1:    The first nucleus type.
++    @type nuc1:     str
++    @param nuc2:    The first nucleus type.
++    @type nuc2:     str
++    @return:        The kappa constant value.
++    @rtype:         float
++    &quot;&quot;&quot;
++
++    # Gyromagnetic ratios.
++    gI = return_gyromagnetic_ratio(nuc1)
++    gS = return_gyromagnetic_ratio(nuc2)
++
++    # Kappa.
++    return -3.0/(8.0*pi**2) * gI * gS * mu0 * h_bar
+ 
+ 
+ def maxA(tensor):
+
+Modified: trunk/pipe_control/align_tensor.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/pipe_control/align_tensor.py?rev=19155&amp;r1=19154&amp;r2=19155&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/pipe_control/align_tensor.py?rev=19155&amp;r1=19154&amp;r2=19155&amp;view=diff</a>
+==============================================================================
+--- trunk/pipe_control/align_tensor.py (original)
++++ trunk/pipe_control/align_tensor.py Tue Mar 26 11:43:52 2013
+@@ -35,7 +35,7 @@
+ from data_store.align_tensor import AlignTensorList
+ from pipe_control.angles import wrap_angles
+ from pipe_control import pipes
+-from lib.physical_constants import g1H, h_bar, kB, mu0, 
+return_gyromagnetic_ratio
++from lib.alignment.alignment_tensor import calc_chi_tensor, kappa
+ from lib.errors import RelaxError, RelaxNoTensorError, RelaxStrError, 
+RelaxTensorError, RelaxUnknownParamCombError, RelaxUnknownParamError
+ from lib.io import write_data
+ from lib.warnings import RelaxWarning
+@@ -83,32 +83,6 @@
+ 
+     # All tensors are fixed.
+     return True
+-
+-
+-def calc_chi_tensor(A, B0, T):
+-    &quot;&quot;&quot;Convert the alignment tensor into the magnetic susceptibility (chi) 
+tensor.
+-
+-    A can be either the full tensor (3D or 5D), a component Aij of the 
+tensor, Aa, or Ar, anything that can be multiplied by the constants to 
+convert from one to the other.
+-
+-
+-    @param A:       The alignment tensor or alignment tensor component.
+-    @type A:        numpy array or float
+-    @param B0:      The magnetic field strength in Hz.
+-    @type B0:       float
+-    @param T:       The temperature in Kalvin.
+-    @type T:        float
+-    @return:        A multiplied by the PCS constant.
+-    @rtype:         numpy array or float
+-    &quot;&quot;&quot;
+-
+-    # B0 in Tesla.
+-    B0 = 2.0 * pi * B0 / g1H
+-
+-    # The conversion factor.
+-    conv = 15.0 * mu0 * kB * T / B0**2
+-
+-    # Return the converted value.
+-    return conv * A
+ 
+ 
+ def copy(tensor_from=None, pipe_from=None, tensor_to=None, pipe_to=None):
+@@ -988,32 +962,6 @@
+         return [0, 2*pi]
+ 
+ 
+-def kappa(nuc1='15N', nuc2='1H'):
+-    &quot;&quot;&quot;Function for calculating the kappa constant.
+-
+-    The kappa constant is::
+-
+-        kappa = -3/(8pi^2).gI.gS.mu0.h_bar,
+-
+-    where gI and gS are the gyromagnetic ratios of the I and S spins, mu0 is 
+the permeability of
+-    free space, and h_bar is Planck's constant divided by 2pi.
+-
+-    @param nuc1:    The first nucleus type.
+-    @type nuc1:     str
+-    @param nuc2:    The first nucleus type.
+-    @type nuc2:     str
+-    @return:        The kappa constant value.
+-    @rtype:         float
+-    &quot;&quot;&quot;
+-
+-    # Gyromagnetic ratios.
+-    gI = return_gyromagnetic_ratio(nuc1)
+-    gS = return_gyromagnetic_ratio(nuc2)
+-
+-    # Kappa.
+-    return -3.0/(8.0*pi**2) * gI * gS * mu0 * h_bar
+-
+-
+ def map_labels(index, params, bounds, swap, inc):
+     &quot;&quot;&quot;Function for creating labels, tick locations, and tick values for an 
+OpenDX map.
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Mar 26 12:40:02 2013</div>  
+</body>
+</html>

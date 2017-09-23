@@ -1,0 +1,210 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r21266 &#45; in /branches/relax_disp/specific_analyses/relax_disp:	optimisation.py parameters.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Sun, 27 Oct 2013 19:55:07 +0100 -->
+<!--X-Message-Id: E1VaVUR&#45;00033Y&#45;5v@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r21266 - in /branches/relax_disp/specific_analyses/relax_disp:	optimisation.py parameters.py -- October 27, 2013 - 19:55</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r21266 - in /branches/relax_disp/specific_analyses/relax_disp:	optimisation.py parameters.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00260" class="tabs">Index by Date</a> | <a href="threads.html#00260" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00259.html">Date Prev</a>] [<a href="msg00261.html">Date Next</a>] [<a href="msg00259.html">Thread Prev</a>] [<a href="msg00261.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Sun, 27 Oct 2013 18:55:07 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00260.html">E1VaVUR-00033Y-5v@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on October 27, 2013 - 19:55:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Sun Oct 27 19:55:06 2013
+New Revision: 21266
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=21266&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=21266&amp;view=rev</a>
+Log:
+Proper fix for the printout of the optimised dispersion parameters.
+
+The loop_parameters() dispersion function is no longer used, avoiding all 
+requirements on the
+current data pipe existing.  This allows for proper printouts on a MPI 
+cluster.
+
+
+Modified:
+    branches/relax_disp/specific_analyses/relax_disp/optimisation.py
+    branches/relax_disp/specific_analyses/relax_disp/parameters.py
+
+Modified: branches/relax_disp/specific_analyses/relax_disp/optimisation.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp/optimisation.py?rev=21266&amp;r1=21265&amp;r2=21266&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp/optimisation.py?rev=21266&amp;r1=21265&amp;r2=21266&amp;view=diff</a>
+==============================================================================
+--- branches/relax_disp/specific_analyses/relax_disp/optimisation.py 
+(original)
++++ branches/relax_disp/specific_analyses/relax_disp/optimisation.py Sun Oct 
+27 19:55:06 2013
+@@ -216,7 +216,7 @@
+ class Disp_minimise_command(Slave_command):
+     &quot;&quot;&quot;Command class for relaxation dispersion optimisation on the slave 
+processor.&quot;&quot;&quot;
+ 
+-    def __init__(self, spins=None, spin_ids=None, sim_index=None, 
+scaling_matrix=None, min_algor=None, min_options=None, func_tol=None, 
+grad_tol=None, max_iterations=None, constraints=False, verbosity=0, 
+lower=None, upper=None, inc=None, fields=None):
++    def __init__(self, spins=None, spin_ids=None, sim_index=None, 
+scaling_matrix=None, min_algor=None, min_options=None, func_tol=None, 
+grad_tol=None, max_iterations=None, constraints=False, verbosity=0, 
+lower=None, upper=None, inc=None, fields=None, param_names=None):
+         &quot;&quot;&quot;Initialise the base class, storing all the master data to be sent 
+to the slave processor.
+ 
+         This method is run on the master processor whereas the run() method 
+is run on the slave processor.
+@@ -252,6 +252,8 @@
+         @type inc:                  array of int
+         @keyword fields:            The list of unique of spectrometer field 
+strengths.
+         @type fields:               int
++        @keyword param_names:       The list of parameter names to use in 
+printouts.
++        @type param_names:          str
+         &quot;&quot;&quot;
+ 
+         # Execute the base class __init__() method.
+@@ -269,6 +271,7 @@
+         self.grad_tol = grad_tol
+         self.max_iterations = max_iterations
+         self.fields = fields
++        self.param_names = param_names
+ 
+         # Create the initial parameter vector.
+         self.param_vector = assemble_param_vector(spins=self.spins)
+@@ -350,17 +353,8 @@
+         # Optimisation printout.
+         if self.verbosity:
+             print(&quot;\nOptimised parameter values:&quot;)
+-            for param_name, param_index, spin_index, frq_index in 
+loop_parameters(spins=self.spins):
+-                # The parameter with additional details.
+-                param_text = param_name
+-                if param_name in ['r2', 'r2a', 'r2b']:
+-                    frq = return_value_from_frq_index(frq_index)
+-                    if frq:
+-                        param_text += &quot; (%.3f MHz)&quot; % (frq / 1e6) 
+-                param_text += &quot;:&quot;
+-
+-                # The printout.
+-                print(&quot;%-20s %25.15f&quot; % (param_text, 
+param_vector[param_index]*self.scaling_matrix[param_index, param_index]))
++            for i in range(len(param_vector)):
++                print(&quot;%-20s %25.15f&quot; % (self.param_names, 
+param_vector[i]*self.scaling_matrix[i, i]))
+ 
+         # Printout.
+         if self.sim_index != None:
+
+Modified: branches/relax_disp/specific_analyses/relax_disp/parameters.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp/parameters.py?rev=21266&amp;r1=21265&amp;r2=21266&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp/parameters.py?rev=21266&amp;r1=21265&amp;r2=21266&amp;view=diff</a>
+==============================================================================
+--- branches/relax_disp/specific_analyses/relax_disp/parameters.py (original)
++++ branches/relax_disp/specific_analyses/relax_disp/parameters.py Sun Oct 27 
+19:55:06 2013
+@@ -340,6 +340,34 @@
+         set_value(value=param_vector[param_index], key=key, spins=spins, 
+sim_index=sim_index, param_name=param_name, spin_index=spin_index, 
+frq_index=frq_index)
+ 
+ 
++def get_param_names(spins=None):
++    &quot;&quot;&quot;Generate a list of dispersion parameter names for the given spins.
++
++    @keyword spins:         The list of spin data containers for the block.
++    @type spins:            list of SpinContainer instances
++    &quot;&quot;&quot;
++
++    # Initialise the structure.
++    names = []
++
++    # Loop over the parameters.
++    for param_name, param_index, spin_index, frq_index in 
+loop_parameters(spins=self.spins, model_type=self.model_type):
++        # Set the initial text.
++        param_text = param_name
++
++        # The parameters with additional details.
++        if param_name in ['r2', 'r2a', 'r2b']:
++            frq = return_value_from_frq_index(frq_index)
++            if frq:
++                param_text += &quot; (%.3f MHz)&quot; % (frq / 1e6) 
++ 
++        # Append the text.
++        names.append(param_text)
++
++    # Return the structure.
++    return names
++
++
+ def get_value(key=None, spins=None, sim_index=None, param_name=None, 
+spin_index=None, frq_index=None):
+     &quot;&quot;&quot;Return the value for the given parameter.
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Sun Oct 27 20:00:01 2013</div>  
+</body>
+</html>

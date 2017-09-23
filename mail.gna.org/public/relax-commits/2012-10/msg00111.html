@@ -1,0 +1,180 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r17732 &#45; /trunk/test_suite/system_tests/model_free.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 08 Oct 2012 00:11:32 +0200 -->
+<!--X-Message-Id: E1TKz4O&#45;0005Gk&#45;Jq@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r17732 - /trunk/test_suite/system_tests/model_free.py -- October 08, 2012 - 00:11</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r17732 - /trunk/test_suite/system_tests/model_free.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00111" class="tabs">Index by Date</a> | <a href="threads.html#00111" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00110.html">Date Prev</a>] [<a href="msg00112.html">Date Next</a>] [<a href="msg00110.html">Thread Prev</a>] [<a href="msg00112.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Sun, 07 Oct 2012 22:11:32 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00111.html">E1TKz4O-0005Gk-Jq@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on October 08, 2012 - 00:11:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Mon Oct  8 00:11:32 2012
+New Revision: 17732
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=17732&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=17732&amp;view=rev</a>
+Log:
+Python 3 fix for the model-free results file reading tests.
+
+The ordering of dictionaries is different in Python 3, so now these are 
+properly converted from
+strings to dictionaries before comparison.  This was not happening because of 
+the XML changes from
+Python 2.7.3 onwards.
+
+
+Modified:
+    trunk/test_suite/system_tests/model_free.py
+
+Modified: trunk/test_suite/system_tests/model_free.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/test_suite/system_tests/model_free.py?rev=17732&amp;r1=17731&amp;r2=17732&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/test_suite/system_tests/model_free.py?rev=17732&amp;r1=17731&amp;r2=17732&amp;view=diff</a>
+==============================================================================
+--- trunk/test_suite/system_tests/model_free.py (original)
++++ trunk/test_suite/system_tests/model_free.py Mon Oct  8 00:11:32 2012
+@@ -26,6 +26,7 @@
+ from os import sep
+ from re import search
+ from shutil import copytree
++import sys
+ from tempfile import mkdtemp
+ 
+ # relax module imports.
+@@ -2620,8 +2621,9 @@
+         file.close()
+ 
+         # Read the 1.3 results file, extract the data, then close it again.
+-        a, b, c = platform.python_version_tuple()
+-        if (dep_check.xml_type == 'internal' and int(a) &gt;= 2 and int(b) &gt;= 7 
+and int(c) &gt;= 3) or int(a) &gt;= 3:
++        if sys.version_info[0] &gt;= 3:
++            file = open_read_file(file_name='final_results_trunc_2.1_py3', 
+dir=path)
++        elif dep_check.xml_type == 'internal' and sys.version_info[0] &gt;= 2 
+and sys.version_info[1] &gt;= 7 and sys.version_info[2] &gt;= 3:
+             file = open_read_file(file_name='final_results_trunc_1.3_v2', 
+dir=path)
+         else:
+             file = 
+open_read_file(file_name='final_results_trunc_1.3_pre_py2.7.3_v2', dir=path)
+@@ -2635,20 +2637,44 @@
+             if i == 1 or i == 2:
+                 continue
+ 
++            # Alias the lines.
++            test = test_lines[i]
++            true = true_lines[i]
++
+             # Try to convert the test line into a python object (for 
+cross-platform support).
+             try:
+-                test_line = eval(test_lines[i])
++                # Process the post 2.7.3 Python XML.
++                if search('&lt;value&gt;', test):
++                    test = test.lstrip()
++                    test = test.replace('&lt;value&gt;', '')
++                    test = test.replace('&lt;/value&gt;', '')
++                if search('&lt;ieee_754_byte_array&gt;', test):
++                    test = test.lstrip()
++                    test = test.replace('&lt;ieee_754_byte_array&gt;', '')
++                    test = test.replace('&lt;/ieee_754_byte_array&gt;', '')
++
++                test = eval(test)
+             except:
+-                test_line = test_lines[i]
++                pass
+ 
+             # Try to convert the true line into a python object (for 
+cross-platform support).
+             try:
+-                true_line = eval(true_lines[i])
++                # Process the post 2.7.3 Python XML.
++                if search('&lt;value&gt;', true):
++                    true = true.lstrip()
++                    true = true.replace('&lt;value&gt;', '')
++                    true = true.replace('&lt;/value&gt;', '')
++                if search('&lt;ieee_754_byte_array&gt;', true):
++                    true = true.lstrip()
++                    true = true.replace('&lt;ieee_754_byte_array&gt;', '')
++                    true = true.replace('&lt;/ieee_754_byte_array&gt;', '')
++
++                true = eval(true)
+             except:
+-                true_line = true_lines[i]
++                pass
+ 
+             # Test that the line is the same.
+-            self.assertEqual(test_line, true_line)
++            self.assertEqual(test, true)
+ 
+ 
+     def value_test(self, spin, select=True, local_tm=None, s2=None, 
+s2f=None, s2s=None, te=None, tf=None, ts=None, rex=None, chi2=None, 
+iter=None, f_count=None, g_count=None, h_count=None, warning=None):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Oct 08 00:40:02 2012</div>  
+</body>
+</html>

@@ -1,0 +1,247 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r9558 &#45; /1.3/specific_fns/n_state_model.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 22 Sep 2009 14:52:47 +0200 -->
+<!--X-Message-Id: E1Mq4rP&#45;0007wp&#45;A7@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r9558 - /1.3/specific_fns/n_state_model.py -- September 22, 2009 - 14:52</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r9558 - /1.3/specific_fns/n_state_model.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00122" class="tabs">Index by Date</a> | <a href="threads.html#00122" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00121.html">Date Prev</a>] [<a href="msg00123.html">Date Next</a>] [<a href="msg00121.html">Thread Prev</a>] [<a href="msg00123.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 22 Sep 2009 12:52:47 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00122.html">E1Mq4rP-0007wp-A7@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on September 22, 2009 - 14:52:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Sep 22 14:52:46 2009
+New Revision: 9558
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=9558&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=9558&amp;view=rev</a>
+Log:
+Redesigned the N-state model grid search setup around the new minfx interface.
+
+
+Modified:
+    1.3/specific_fns/n_state_model.py
+
+Modified: 1.3/specific_fns/n_state_model.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/specific_fns/n_state_model.py?rev=9558&amp;r1=9557&amp;r2=9558&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/specific_fns/n_state_model.py?rev=9558&amp;r1=9557&amp;r2=9558&amp;view=diff</a>
+==============================================================================
+--- 1.3/specific_fns/n_state_model.py (original)
++++ 1.3/specific_fns/n_state_model.py Tue Sep 22 14:52:46 2009
+@@ -26,6 +26,7 @@
+ # Python module imports.
+ from math import acos, cos, pi, sqrt
+ from minfx.generic import generic_minimise
++from minfx.grid import grid
+ from numpy import array, dot, float64, identity, ones, zeros
+ from numpy.linalg import inv, norm
+ from re import search
+@@ -1267,45 +1268,37 @@
+ 
+         # If inc is a single int, convert it into an array of that value.
+         if isinstance(inc, int):
+-            temp = []
+-            for j in xrange(n):
+-                temp.append(inc)
+-            inc = temp
+-
+-        # Initialise the grid_ops structure.
+-        grid_ops = []
+-        &quot;&quot;&quot;This structure is a list of lists.  The first dimension 
+corresponds to the model
+-        parameter.  The second dimension has the elements: 0, the number of 
+increments in that
+-        dimension; 1, the lower limit of the grid; 2, the upper limit of the 
+grid.&quot;&quot;&quot;
+-
+-        # Set the grid search options.
+-        for i in xrange(n):
+-            # i is in the parameter array.
+-            if i &lt; len(cdp.params):
+-                # Probabilities (default values).
+-                if search('^p', cdp.params[i]):
+-                    grid_ops.append([inc[i], 0.0, 1.0])
+-
+-                # Angles (default values).
+-                if search('^alpha', cdp.params[i]) or search('^gamma', 
+cdp.params[i]):
+-                    grid_ops.append([inc[i], 0.0, 2*pi])
+-                elif search('^beta', cdp.params[i]):
+-                    grid_ops.append([inc[i], 0.0, pi])
+-
+-            # Otherwise this must be an alignment tensor component.
+-            else:
+-                grid_ops.append([inc[i], -1e-3, 1e-3])
+-
+-            # Lower bound (if supplied).
+-            if lower:
+-                grid_ops[i][1] = lower[i]
+-
+-            # Upper bound (if supplied).
+-            if upper:
+-                grid_ops[i][1] = upper[i]
++            inc = [inc]*n
++
++        # Setup the default bounds.
++        if not lower:
++            # Init.
++            lower = []
++            upper = []
++
++            for i in range(n):
++                # i is in the parameter array.
++                if i &lt; len(cdp.params):
++                    # Probabilities (default values).
++                    if search('^p', cdp.params[i]):
++                        lower.append(0.0)
++                        upper.append(1.0)
++
++                    # Angles (default values).
++                    if search('^alpha', cdp.params[i]) or search('^gamma', 
+cdp.params[i]):
++                        lower.append(0.0)
++                        upper.append(2*pi)
++                    elif search('^beta', cdp.params[i]):
++                        lower.append(0.0)
++                        upper.append(pi)
++    
++                # Otherwise this must be an alignment tensor component.
++                else:
++                    lower.append(-1e-3)
++                    upper.append(1e-3)
+ 
+         # Minimisation.
+-        self.minimise(min_algor='grid', min_options=grid_ops, 
+constraints=constraints, verbosity=verbosity, sim_index=sim_index)
++        self.minimise(min_algor='grid', min_options=[inc, lower, upper], 
+constraints=constraints, verbosity=verbosity, sim_index=sim_index)
+ 
+ 
+     def is_spin_param(self, name):
+@@ -1393,6 +1386,8 @@
+         # Linear constraints.
+         if constraints:
+             A, b = self.__linear_constraints(data_types=data_types, 
+scaling_matrix=scaling_matrix)
++        else:
++            A, b = None, None
+ 
+         # Get the data structures for optimisation using the tensors as base 
+data sets.
+         full_tensors, red_tensor_elem, red_tensor_err, full_in_ref_frame = 
+None, None, None, None
+@@ -1412,16 +1407,26 @@
+         # Set up the class instance containing the target function.
+         model = N_state_opt(model=cdp.model, N=cdp.N, 
+init_params=param_vector, full_tensors=full_tensors, 
+red_data=red_tensor_elem, red_errors=red_tensor_err, 
+full_in_ref_frame=full_in_ref_frame, pcs=pcs, rdcs=rdcs, pcs_errors=pcs_err, 
+rdc_errors=rdc_err, pcs_vect=pcs_vect, xh_vect=xh_vect, pcs_const=pcs_dj, 
+dip_const=rdc_dj, scaling_matrix=scaling_matrix)
+ 
++        # Grid search.
++        if search('^[Gg]rid', min_algor):
++            print min_options
++            results = grid(func=model.func, args=(), 
+num_incs=min_options[0], lower=min_options[1], upper=min_options[2], A=A, 
+b=b, verbosity=verbosity)
++
++            # Unpack the results.
++            param_vector, func, iter_count = results
++            f_count = iter_count
++            g_count = 0.0
++            h_count = 0.0
++            warning = None
++
+         # Minimisation.
+-        if constraints:
++        else:
+             results = generic_minimise(func=model.func, dfunc=model.dfunc, 
+d2func=model.d2func, args=(), x0=param_vector, min_algor=min_algor, 
+min_options=min_options, func_tol=func_tol, grad_tol=grad_tol, 
+maxiter=max_iterations, A=A, b=b, full_output=1, print_flag=verbosity)
+-        else:
+-            results = generic_minimise(func=model.func, dfunc=model.dfunc, 
+d2func=model.d2func, args=(), x0=param_vector, min_algor=min_algor, 
+min_options=min_options, func_tol=func_tol, grad_tol=grad_tol, 
+maxiter=max_iterations, full_output=1, print_flag=verbosity)
+-        if results == None:
+-            return
+-
+-        # Disassemble the results.
+-        param_vector, func, iter_count, f_count, g_count, h_count, warning = 
+results
++
++            # Unpack the results.
++            if results == None:
++                return
++            param_vector, func, iter_count, f_count, g_count, h_count, 
+warning = results
+ 
+         # Catch infinite chi-squared values.
+         if isInf(func):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Sep 22 15:20:11 2009</div>  
+</body>
+</html>

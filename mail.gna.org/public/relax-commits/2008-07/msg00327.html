@@ -1,0 +1,153 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r6932 &#45; /branches/rdc_analysis/specific_fns/n_state_model.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 10 Jul 2008 13:26:54 +0200 -->
+<!--X-Message-Id: E1KGuIX&#45;0003Nq&#45;IF@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r6932 - /branches/rdc_analysis/specific_fns/n_state_model.py -- July 10, 2008 - 13:26</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r6932 - /branches/rdc_analysis/specific_fns/n_state_model.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00327" class="tabs">Index by Date</a> | <a href="threads.html#00327" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00326.html">Date Prev</a>] [<a href="msg00328.html">Date Next</a>] [<a href="msg00326.html">Thread Prev</a>] [<a href="msg00328.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 10 Jul 2008 11:26:53 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00327.html">E1KGuIX-0003Nq-IF@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on July 10, 2008 - 13:26:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Jul 10 13:26:51 2008
+New Revision: 6932
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=6932&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=6932&amp;view=rev</a>
+Log:
+Wrote the __assemble_scaling_matrix() method for creating a scaling matrix 
+for the N-state model.
+
+
+Modified:
+    branches/rdc_analysis/specific_fns/n_state_model.py
+
+Modified: branches/rdc_analysis/specific_fns/n_state_model.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/rdc_analysis/specific_fns/n_state_model.py?rev=6932&amp;r1=6931&amp;r2=6932&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/rdc_analysis/specific_fns/n_state_model.py?rev=6932&amp;r1=6931&amp;r2=6932&amp;view=diff</a>
+==============================================================================
+--- branches/rdc_analysis/specific_fns/n_state_model.py (original)
++++ branches/rdc_analysis/specific_fns/n_state_model.py Thu Jul 10 13:26:51 
+2008
+@@ -22,7 +22,7 @@
+ 
+ # Python module imports.
+ from math import acos, cos, pi
+-from numpy import array, dot, float64, zeros
++from numpy import array, dot, float64, identity, zeros
+ from numpy.linalg import norm
+ from re import search
+ from warnings import warn
+@@ -46,6 +46,35 @@
+ 
+ class N_state_model(Common_functions):
+     &quot;&quot;&quot;Class containing functions for the N-state model.&quot;&quot;&quot;
++
++    def __assemble_scaling_matrix(self, data_type=None):
++        &quot;&quot;&quot;Create and return the scaling matrix.
++
++        @keyword data_type: The type of data used in the optimisation - 
+either 'rdc' or 'tensor'.
++        @type data_type:    str
++        @return:            The square and diagonal scaling matrix.
++        @rtype:             numpy rank-2 array
++        &quot;&quot;&quot;
++
++        # Alias the current data pipe.
++        cdp = ds[ds.current_pipe]
++
++        # Initialise.
++        scaling_matrix = identity(self.param_num(), float64)
++
++        # Starting point of the populations.
++        pop_start = 0
++        if data_type == 'rdc':
++            pop_start = pop_start + 5*len(cdp.rdc_ids)
++
++        # Loop over the populations, and set the scaling factor.
++        factor = 100.0
++        for i in xrange(pop_start, pop_start + (cdp.N-1)):
++            scaling_matrix[i, i] = factor
++
++        # Return the matrix.
++        return scaling_matrix
++
+ 
+     def __update_model(self):
+         &quot;&quot;&quot;Update the model parameters as necessary.&quot;&quot;&quot;
+@@ -708,6 +737,9 @@
+         # Determine if alignment tensors or RDCs are to be used.
+         data_type = self.__determine_data_type()
+ 
++        # Get the scaling matrix.
++        scaling_matrix = self.__assemble_scaling_matrix(data_type=data_type)
++
+         # Set up minimisation using alignment tensors.
+         if data_type == 'tensor':
+             model = self.minimise_setup_tensors(param_vector=param_vector)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Jul 10 13:40:10 2008</div>  
+</body>
+</html>

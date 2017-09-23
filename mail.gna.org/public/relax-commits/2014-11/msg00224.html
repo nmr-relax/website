@@ -1,0 +1,303 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r26620 &#45; in /trunk: pipe_control/align_tensor.py user_functions/align_tensor.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 18 Nov 2014 17:50:23 +0100 -->
+<!--X-Message-Id: E1Xqlyx&#45;0003pB&#45;Mo@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r26620 - in /trunk: pipe_control/align_tensor.py user_functions/align_tensor.py -- November 18, 2014 - 17:50</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r26620 - in /trunk: pipe_control/align_tensor.py user_functions/align_tensor.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00224" class="tabs">Index by Date</a> | <a href="threads.html#00224" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00223.html">Date Prev</a>] [<a href="msg00225.html">Date Next</a>] [<a href="msg00223.html">Thread Prev</a>] [<a href="msg00225.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 18 Nov 2014 16:50:23 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00224.html">E1Xqlyx-0003pB-Mo@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on November 18, 2014 - 17:50:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Nov 18 17:50:23 2014
+New Revision: 26620
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=26620&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=26620&amp;view=rev</a>
+Log:
+Expansion of the align_tensor.matrix_angles user function.
+
+The new basis set 'unitary 9D' has been introduced.  This creates vectors as 
+{Sxx, Sxy, Sxz, Syx,
+Syy, Syz, Szx, Szy, Szz} and computes the inter-vector angles.  These match 
+the 'matrix' basis set
+whereby the Euclidean inner product divided by the Frobenius norms is used to 
+calculate the
+inter-tensor angles.
+
+In addition, the user function documentation and printouts have been 
+improved.  And the backend code
+has been simplified.
+
+
+Modified:
+    trunk/pipe_control/align_tensor.py
+    trunk/user_functions/align_tensor.py
+
+Modified: trunk/pipe_control/align_tensor.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/pipe_control/align_tensor.py?rev=26620&amp;r1=26619&amp;r2=26620&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/pipe_control/align_tensor.py?rev=26620&amp;r1=26619&amp;r2=26620&amp;view=diff</a>
+==============================================================================
+--- trunk/pipe_control/align_tensor.py  (original)
++++ trunk/pipe_control/align_tensor.py  Tue Nov 18 17:50:23 2014
+@@ -899,7 +899,7 @@
+     &quot;&quot;&quot;
+ 
+     # Argument check.
+-    allowed = ['matrix', 'unitary 5D', 'geometric 5D']
++    allowed = ['matrix', 'unitary 9D', 'unitary 5D', 'geometric 5D']
+     if basis_set not in allowed:
+         raise RelaxError(&quot;The basis set of '%s' is not one of %s.&quot; % 
+(basis_set, allowed))
+ 
+@@ -915,8 +915,12 @@
+         tensor_num = tensor_num + 1
+ 
+     # Create the matrix which contains the 5D vectors.
+-    matrix_3D = zeros((tensor_num, 3, 3), float64)
+-    matrix_5D = zeros((tensor_num, 5), float64)
++    if basis_set == 'matrix':
++        matrix = zeros((tensor_num, 3, 3), float64)
++    elif basis_set == 'unitary 9D':
++        matrix = zeros((tensor_num, 9), float64)
++    elif basis_set in ['unitary 5D', 'geometric 5D']:
++        matrix = zeros((tensor_num, 5), float64)
+ 
+     # Loop over the tensors.
+     i = 0
+@@ -925,32 +929,41 @@
+         if tensors and tensor.name not in tensors:
+             continue
+ 
+-        # Unitary basis set.
++        # Full matrix.
++        if basis_set == 'matrix':
++            matrix[i] = tensor.A
++
++        # 9D unitary basis set.
++        elif basis_set == 'unitary 9D':
++            matrix[i, 0] = tensor.Sxx
++            matrix[i, 1] = tensor.Sxy
++            matrix[i, 2] = tensor.Sxz
++            matrix[i, 3] = tensor.Sxy
++            matrix[i, 4] = tensor.Syy
++            matrix[i, 5] = tensor.Syz
++            matrix[i, 6] = tensor.Sxz
++            matrix[i, 7] = tensor.Syz
++            matrix[i, 8] = tensor.Szz
++
++        # 5D unitary basis set.
+         if basis_set == 'unitary 5D':
+-            # Pack the elements.
+-            matrix_5D[i, 0] = tensor.Sxx
+-            matrix_5D[i, 1] = tensor.Syy
+-            matrix_5D[i, 2] = tensor.Sxy
+-            matrix_5D[i, 3] = tensor.Sxz
+-            matrix_5D[i, 4] = tensor.Syz
+-
+-        # Geometric basis set.
++            matrix[i, 0] = tensor.Sxx
++            matrix[i, 1] = tensor.Syy
++            matrix[i, 2] = tensor.Sxy
++            matrix[i, 3] = tensor.Sxz
++            matrix[i, 4] = tensor.Syz
++
++        # 5D geometric basis set.
+         elif basis_set == 'geometric 5D':
+-            # Pack the elements.
+-            matrix_5D[i, 0] = tensor.Szz
+-            matrix_5D[i, 1] = tensor.Sxxyy
+-            matrix_5D[i, 2] = tensor.Sxy
+-            matrix_5D[i, 3] = tensor.Sxz
+-            matrix_5D[i, 4] = tensor.Syz
+-
+-        # Full matrix.
+-        elif basis_set == 'matrix':
+-            matrix_3D[i] = tensor.A
++            matrix[i, 0] = tensor.Szz
++            matrix[i, 1] = tensor.Sxxyy
++            matrix[i, 2] = tensor.Sxy
++            matrix[i, 3] = tensor.Sxz
++            matrix[i, 4] = tensor.Syz
+ 
+         # Normalisation.
+-        if basis_set in ['unitary 5D', 'geometric 5D']:
+-            norm_5D = linalg.norm(matrix_5D[i])
+-            matrix_5D[i] = matrix_5D[i] / norm_5D
++        if basis_set in ['unitary 9D', 'unitary 5D', 'geometric 5D']:
++            matrix[i] = matrix[i] / norm(matrix[i])
+ 
+         # Increment the index.
+         i = i + 1
+@@ -960,11 +973,13 @@
+ 
+     # Header printout.
+     if basis_set == 'matrix':
+-        sys.stdout.write(&quot;Standard inter-matrix angles in degress using the 
+Euclidean inner product divided by the Frobenius norm&quot;)
++        sys.stdout.write(&quot;Standard inter-tensor matrix angles in degress 
+using the Euclidean inner product divided by the Frobenius norms (theta = 
+arccos(&lt;A1,A2&gt;/(||A1||.||A2||)))&quot;)
++    elif basis_set == 'unitary 9D':
++        sys.stdout.write(&quot;Inter-tensor vector angles in degrees for the 
+unitary 9D vectors {Sxx, Sxy, Sxz, Syx, Syy, Syz, Szx, Szy, Szz}&quot;)
+     elif basis_set == 'unitary 5D':
+-        sys.stdout.write(&quot;Inter-matrix angles in degrees for the unitary 5D 
+vectors {Sxx, Syy, Sxy, Sxz, Syz}&quot;)
++        sys.stdout.write(&quot;Inter-tensor vector angles in degrees for the 
+unitary 5D vectors {Sxx, Syy, Sxy, Sxz, Syz}&quot;)
+     elif basis_set == 'geometric 5D':
+-        sys.stdout.write(&quot;Inter-matrix angles in degrees for the geometric 
+5D vectors {Szz, Sxx-yy, Sxy, Sxz, Syz}&quot;)
++        sys.stdout.write(&quot;Inter-tensor vector angles in degrees for the 
+geometric 5D vectors {Szz, Sxx-yy, Sxy, Sxz, Syz}&quot;)
+     sys.stdout.write(&quot;:\n\n&quot;)
+ 
+     # Initialise the table of data.
+@@ -988,10 +1003,10 @@
+ 
+         # Second loop over the columns.
+         for j in range(tensor_num):
+-            # The 5D angles.
+-            if basis_set in ['unitary 5D', 'geometric 5D']:
++            # The vector angles.
++            if basis_set in ['unitary 9D', 'unitary 5D', 'geometric 5D']:
+                 # Dot product.
+-                delta = dot(matrix_5D[i], matrix_5D[j])
++                delta = dot(matrix[i], matrix[j])
+ 
+                 # Check.
+                 if delta &gt; 1:
+@@ -1003,10 +1018,10 @@
+             # The full matrix angle.
+             elif basis_set in ['matrix']:
+                 # The Euclidean inner product.
+-                nom = inner(matrix_3D[i].flatten(), matrix_3D[j].flatten())
++                nom = inner(matrix[i].flatten(), matrix[j].flatten())
+ 
+                 # The Frobenius norms.
+-                denom = norm(matrix_3D[i]) * norm(matrix_3D[j])
++                denom = norm(matrix[i]) * norm(matrix[j])
+ 
+                 # The angle.
+                 ratio = nom / denom
+
+Modified: trunk/user_functions/align_tensor.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/user_functions/align_tensor.py?rev=26620&amp;r1=26619&amp;r2=26620&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/user_functions/align_tensor.py?rev=26620&amp;r1=26619&amp;r2=26620&amp;view=diff</a>
+==============================================================================
+--- trunk/user_functions/align_tensor.py        (original)
++++ trunk/user_functions/align_tensor.py        Tue Nov 18 17:50:23 2014
+@@ -307,8 +307,8 @@
+     desc_short = &quot;basis set&quot;,
+     desc = &quot;The basis set to operate with.&quot;,
+     wiz_element_type = &quot;combo&quot;,
+-    wiz_combo_choices = [&quot;Standard matrix angles via the Euclidean inner 
+product&quot;, &quot;Unitary 5D {Sxx, Syy, Sxy, Sxz, Syz}&quot;, &quot;Geometric 5D {Szz, Sxxyy, 
+Sxy, Sxz, Syz}&quot;],
+-    wiz_combo_data = [&quot;matrix&quot;, &quot;unitary 5D&quot;, &quot;geometric 5D&quot;]
++    wiz_combo_choices = [&quot;Standard matrix angles via the Euclidean inner 
+product&quot;, &quot;Unitary 9D {Sxx, Sxy, Sxz, ..., Szz}&quot;, &quot;Unitary 5D {Sxx, Syy, Sxy, 
+Sxz, Syz}&quot;, &quot;Geometric 5D {Szz, Sxxyy, Sxy, Sxz, Syz}&quot;],
++    wiz_combo_data = [&quot;matrix&quot;, &quot;unitary 9D&quot;, &quot;unitary 5D&quot;, &quot;geometric 5D&quot;]
+ )
+ uf.add_keyarg(
+     name = &quot;tensors&quot;,
+@@ -323,9 +323,10 @@
+ # Description.
+ uf.desc.append(Desc_container())
+ uf.desc[-1].add_paragraph(&quot;This will calculate the inter-matrix angles 
+between all loaded alignment tensors for the current data pipe.  For the 5D 
+basis sets, the matrices are first converted to a 5D vector form and then 
+then the inter-vector angles, rather than inter-matrix angles, are 
+calculated.  The angles are dependent upon the basis set:&quot;)
+-uf.desc[-1].add_item_list_element(&quot;matrix&quot;, &quot;The standard inter-matrix 
+angle.  This is the default option.  The angle is calculated via the 
+Euclidean inner product of the alignment matrices in rank-2, 3D form divided 
+by the Frobenius norm ||A||_F of the matrices.&quot;)
+-uf.desc[-1].add_item_list_element(&quot;unitary 5D&quot;, &quot;The unitary 5D basis set 
+{Sxx, Syy, Sxy, Sxz, Syz}.&quot;)
+-uf.desc[-1].add_item_list_element(&quot;geometric 5D&quot;, &quot;The geometric 5D basis 
+set {Szz, Sxxyy, Sxy, Sxz, Syz}.  This is also the Pales standard notation.&quot;)
++uf.desc[-1].add_item_list_element(&quot;'matrix'&quot;, &quot;The standard inter-tensor 
+matrix angle.  This is the default option.  The angle is calculated via the 
+Euclidean inner product of the alignment matrices in rank-2, 3D form divided 
+by the Frobenius norm ||A||_F of the matrices.&quot;)
++uf.desc[-1].add_item_list_element(&quot;'unitary 9D'&quot;, &quot;The inter-tensor vector 
+angle for the unitary 9D basis set {Sxx, Sxy, Sxz, Syx, Syy, Syz, Szx, Szy, 
+Szz}.&quot;)
++uf.desc[-1].add_item_list_element(&quot;'unitary 5D'&quot;, &quot;The inter-tensor vector 
+angle for the unitary 5D basis set {Sxx, Syy, Sxy, Sxz, Syz}.&quot;)
++uf.desc[-1].add_item_list_element(&quot;'geometric 5D'&quot;, &quot;The inter-tensor vector 
+angle for the geometric 5D basis set {Szz, Sxxyy, Sxy, Sxz, Syz}.  This is 
+also the Pales standard notation.&quot;)
+ uf.desc[-1].add_paragraph(&quot;The full matrix angle via the Euclidean inner 
+product is defined as:&quot;)
+ uf.desc[-1].add_verbatim(&quot;&quot;&quot;
+                    /   &lt;A1 , A2&gt;   \ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Nov 18 18:20:02 2014</div>  
+</body>
+</html>

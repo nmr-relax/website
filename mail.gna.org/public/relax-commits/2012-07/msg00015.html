@@ -1,0 +1,172 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r17129 &#45; /branches/interatomic/generic_fns/relax_data.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 02 Jul 2012 17:18:45 +0200 -->
+<!--X-Message-Id: E1SliOj&#45;0005lx&#45;Bc@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r17129 - /branches/interatomic/generic_fns/relax_data.py -- July 02, 2012 - 17:18</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r17129 - /branches/interatomic/generic_fns/relax_data.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00015" class="tabs">Index by Date</a> | <a href="threads.html#00015" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00014.html">Date Prev</a>] [<a href="msg00016.html">Date Next</a>] [<a href="msg00014.html">Thread Prev</a>] [<a href="msg00016.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 02 Jul 2012 15:18:45 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00015.html">E1SliOj-0005lx-Bc@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on July 02, 2012 - 17:18:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Mon Jul  2 17:18:45 2012
+New Revision: 17129
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=17129&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=17129&amp;view=rev</a>
+Log:
+Fixes for the relaxation data bmrb_write() function for the interatomic data 
+design.
+
+
+Modified:
+    branches/interatomic/generic_fns/relax_data.py
+
+Modified: branches/interatomic/generic_fns/relax_data.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/interatomic/generic_fns/relax_data.py?rev=17129&amp;r1=17128&amp;r2=17129&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/interatomic/generic_fns/relax_data.py?rev=17129&amp;r1=17128&amp;r2=17129&amp;view=diff</a>
+==============================================================================
+--- branches/interatomic/generic_fns/relax_data.py (original)
++++ branches/interatomic/generic_fns/relax_data.py Mon Jul  2 17:18:45 2012
+@@ -35,7 +35,7 @@
+ from data import Relax_data_store; ds = Relax_data_store()
+ from data.exp_info import ExpInfo
+ from generic_fns import bmrb
+-from generic_fns.interatomic import create_interatom, return_interatom
++from generic_fns.interatomic import create_interatom, return_interatom, 
+return_interatom_list
+ from generic_fns.mol_res_spin import Selection, create_spin, 
+exists_mol_res_spin_data, find_index, generate_spin_id, get_molecule_names, 
+return_spin, return_spin_from_selection, spin_index_loop, spin_loop
+ from generic_fns import pipes
+ from generic_fns import value
+@@ -270,7 +270,7 @@
+             raise RelaxError(&quot;For the BMRB, the residue of spin '%s' must be 
+named.&quot; % spin_id)
+         if spin.name == None:
+             raise RelaxError(&quot;For the BMRB, the spin '%s' must be named.&quot; % 
+spin_id)
+-        if spin.heteronuc_type == None:
++        if spin.isotope == None:
+             raise RelaxError(&quot;For the BMRB, the spin isotope type of '%s' 
+must be specified.&quot; % spin_id)
+ 
+         # The molecule/residue/spin info.
+@@ -279,17 +279,26 @@
+         res_name_list.append(str(res_name))
+         atom_name_list.append(str(spin.name))
+ 
++        # Interatomic info.
++        interatoms = return_interatom_list(spin_id)
++        if len(interatoms) == 0:
++            raise RelaxError(&quot;No interatomic interactions are defined for 
+the spin '%s'.&quot; % spin_id)
++        if len(interatoms) &gt; 1:
++            raise RelaxError(&quot;The BMRB only handles a signal interatomic 
+interaction for the spin '%s'.&quot; % spin_id)
++
++        # Get the attached spin.
++        spin_attached = return_spin(interatoms[0].spin_id1)
++        if id(spin_attached) == id(spin):
++            spin_attached = return_spin(interatoms[0].spin_id2)
++
+         # The attached atom info.
+-        if hasattr(spin, 'attached_atom'):
+-            attached_atom_name_list.append(str(spin.attached_atom))
+-        elif hasattr(spin, 'attached_proton'):
+-            attached_atom_name_list.append(str(spin.attached_proton))
++        if hasattr(spin_attached, 'name'):
++            attached_atom_name_list.append(str(spin_attached.name))
+         else:
+             attached_atom_name_list.append(None)
+-
+-        if hasattr(spin, 'proton_type'):
+-            
+attached_element_list.append(element_from_isotope(spin.proton_type))
+-            
+attached_isotope_list.append(str(number_from_isotope(spin.proton_type)))
++        if hasattr(spin_attached, 'isotope'):
++            
+attached_element_list.append(element_from_isotope(spin_attached.isotope))
++            
+attached_isotope_list.append(str(number_from_isotope(spin_attached.isotope)))
+         else:
+             attached_element_list.append(None)
+             attached_isotope_list.append(None)
+@@ -306,7 +315,7 @@
+                 ri_data_err_list[i].append(None)
+ 
+         # Other info.
+-        isotope_list.append(int(string.strip(spin.heteronuc_type, 
+string.ascii_letters)))
++        isotope_list.append(int(string.strip(spin.isotope, 
+string.ascii_letters)))
+         element_list.append(spin.element)
+ 
+     # Convert the molecule names into the entity IDs.
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Jul 02 17:20:01 2012</div>  
+</body>
+</html>

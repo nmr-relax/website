@@ -1,0 +1,159 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r24242 &#45; /branches/disp_spin_speed/lib/dispersion/matrix_exponential.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 23 Jun 2014 14:09:26 +0200 -->
+<!--X-Message-Id: E1Wz33u&#45;00015y&#45;M0@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r24242 - /branches/disp_spin_speed/lib/dispersion/matrix_exponential.py -- June 23, 2014 - 14:09</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r24242 - /branches/disp_spin_speed/lib/dispersion/matrix_exponential.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00629" class="tabs">Index by Date</a> | <a href="threads.html#00629" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00628.html">Date Prev</a>] [<a href="msg00630.html">Date Next</a>] [<a href="msg00628.html">Thread Prev</a>] [<a href="msg00630.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 23 Jun 2014 12:09:26 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00629.html">E1Wz33u-00015y-M0@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on June 23, 2014 - 14:09:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Mon Jun 23 14:09:26 2014
+New Revision: 24242
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=24242&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=24242&amp;view=rev</a>
+Log:
+Fix to lib/dispersion/matrix_exponential.py, since the svn copy command was 
+used on non-updated version of the file.
+
+Task #7807 (<a  rel="nofollow" href="https://gna.org/task/index.php?7807">https://gna.org/task/index.php?7807</a>): Speed-up of dispersion 
+models for Clustered analysis.
+
+Modified:
+    branches/disp_spin_speed/lib/dispersion/matrix_exponential.py
+
+Modified: branches/disp_spin_speed/lib/dispersion/matrix_exponential.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/disp_spin_speed/lib/dispersion/matrix_exponential.py?rev=24242&amp;r1=24241&amp;r2=24242&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/disp_spin_speed/lib/dispersion/matrix_exponential.py?rev=24242&amp;r1=24241&amp;r2=24242&amp;view=diff</a>
+==============================================================================
+--- branches/disp_spin_speed/lib/dispersion/matrix_exponential.py       
+(original)
++++ branches/disp_spin_speed/lib/dispersion/matrix_exponential.py       Mon 
+Jun 23 14:09:26 2014
+@@ -57,15 +57,17 @@
+         return array(eA.real)
+ 
+ 
+-def matrix_exponential_rankN(A):
++def matrix_exponential_rankN(A, dtype=None):
+     &quot;&quot;&quot;Calculate the exact matrix exponential using the eigenvalue 
+decomposition approach, for higher dimensional data.
+ 
+     Here X is the Row and Column length, of the outer square matrix.
+ 
+-    @param A:   The square matrix to calculate the matrix exponential of.
+-    @type A:    numpy float array of rank [NE][NS][NM][NO][ND][X][X]
+-    @return:    The matrix exponential.  This will have the same 
+dimensionality as the A matrix.
+-    @rtype:     numpy float array of rank [NE][NS][NM][NO][ND][X][X]
++    @param A:       The square matrix to calculate the matrix exponential of.
++    @type A:        numpy float array of rank [NE][NS][NM][NO][ND][X][X]
++    @param dtype:   If provided, forces the calculation to use the data type 
+specified.
++    @type type:     data-type, optional
++    @return:        The matrix exponential.  This will have the same 
+dimensionality as the A matrix.
++    @rtype:         numpy float array of rank [NE][NS][NM][NO][ND][X][X]
+     &quot;&quot;&quot;
+ 
+     # Set initial to None.
+@@ -75,6 +77,15 @@
+         NE, NS, NM, NO, ND, Row, Col = A.shape
+     elif len(A.shape) == 6:
+         NS, NM, NO, ND, Row, Col = A.shape
++
++    # Convert dtype, if specified.
++    if dtype != None:
++        dtype_mat = A.dtype
++
++        # If the dtype is different from the input.
++        if dtype_mat != dtype:
++            # This needs to be made as a copy.
++            A = A.astype(dtype)
+ 
+     # Is the original matrix real?
+     complex_flag = any(iscomplex(A))
+@@ -102,7 +113,11 @@
+         eye_mat = tile(eye(Row)[newaxis, newaxis, newaxis, newaxis, newaxis, 
+...], (NE, NS, NM, NO, ND, 1, 1) )
+ 
+     # Transform it to a diagonal matrix, with elements from vector down the 
+diagonal.
+-    W_exp_diag = multiply(W_exp, eye_mat )
++    # Use the dtype, if specified.
++    if dtype != None:
++        W_exp_diag = multiply(W_exp, eye_mat, dtype=dtype )
++    else:
++        W_exp_diag = multiply(W_exp, eye_mat)
+ 
+     # Make dot products for higher dimension.
+     # &quot;...&quot;, the Ellipsis notation, is designed to mean to insert as many 
+full slices (:)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Jun 23 14:20:02 2014</div>  
+</body>
+</html>

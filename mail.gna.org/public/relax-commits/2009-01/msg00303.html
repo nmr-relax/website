@@ -1,0 +1,164 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r8528 &#45; /branches/multi_structure/generic_fns/structure/scientific.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 19 Jan 2009 14:33:03 +0100 -->
+<!--X-Message-Id: E1LOuFT&#45;0003r5&#45;NM@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r8528 - /branches/multi_structure/generic_fns/structure/scientific.py -- January 19, 2009 - 14:33</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r8528 - /branches/multi_structure/generic_fns/structure/scientific.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00303" class="tabs">Index by Date</a> | <a href="threads.html#00303" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00302.html">Date Prev</a>] [<a href="msg00304.html">Date Next</a>] [<a href="msg00302.html">Thread Prev</a>] [<a href="msg00304.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 19 Jan 2009 13:33:03 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00303.html">E1LOuFT-0003r5-NM@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on January 19, 2009 - 14:33:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Mon Jan 19 14:33:03 2009
+New Revision: 8528
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=8528&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=8528&amp;view=rev</a>
+Log:
+Fixes for the Scientific python MolContainer usage.
+
+Now all molecules are stored in the MolContainer object to allow for the 
+to_xml() method, which has
+now been added.  The MolContainer is no longer a list type.  These changes 
+will break things!
+
+
+Modified:
+    branches/multi_structure/generic_fns/structure/scientific.py
+
+Modified: branches/multi_structure/generic_fns/structure/scientific.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/multi_structure/generic_fns/structure/scientific.py?rev=8528&amp;r1=8527&amp;r2=8528&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/multi_structure/generic_fns/structure/scientific.py?rev=8528&amp;r1=8527&amp;r2=8528&amp;view=diff</a>
+==============================================================================
+--- branches/multi_structure/generic_fns/structure/scientific.py (original)
++++ branches/multi_structure/generic_fns/structure/scientific.py Mon Jan 19 
+14:33:03 2009
+@@ -37,6 +37,7 @@
+ 
+ # relax module imports.
+ from api_base import Base_struct_API
++from data.relax_xml import fill_object_contents, xml_to_object
+ from generic_fns import pipes, relax_re
+ from generic_fns.mol_res_spin import Selection, parse_token, tokenise
+ from relax_errors import RelaxError, RelaxPdbLoadError
+@@ -567,7 +568,8 @@
+             if hasattr(model, 'peptide_chains'):
+                 for mol in model.peptide_chains:
+                     mol.mol_type = 'protein'
+-                    mol_conts[-1].append(mol)
++                    mol_conts[-1].append(MolContainer())
++                    mol_conts[-1][-1].data = mol
+                     mol_conts[-1][-1].mol_type = 'protein'
+                     self.target_mol_name(set=set_mol_name, 
+target=new_mol_name, index=mol_index, mol_num=mol_index+1, file=file)
+                     mol_index = mol_index + 1
+@@ -575,7 +577,8 @@
+             # Then the nucleotide chains (generating the molecule names and 
+incrementing the molecule index).
+             if hasattr(model, 'nucleotide_chains'):
+                 for mol in model.nucleotide_chains:
+-                    mol_conts[-1].append(mol)
++                    mol_conts[-1].append(MolContainer())
++                    mol_conts[-1][-1].data = mol
+                     mol_conts[-1][-1].mol_type = 'nucleic acid'
+                     self.target_mol_name(set=set_mol_name, 
+target=new_mol_name, index=mol_index, mol_num=mol_index+1, file=file)
+                     mol_index = mol_index + 1
+@@ -605,5 +608,26 @@
+         return True
+ 
+ 
+-class MolContainer(list):
++class MolContainer:
+     &quot;&quot;&quot;The empty list-type container for the non-protein and non-RNA 
+molecular information.&quot;&quot;&quot;
++
++
++    def to_xml(self, doc, element):
++        &quot;&quot;&quot;Create XML elements for the contents of this molecule container.
++
++        @param doc:     The XML document object.
++        @type doc:      xml.dom.minidom.Document instance
++        @param element: The element to add the molecule XML elements to.
++        @type element:  XML element object
++        &quot;&quot;&quot;
++
++        # Create an XML element for this molecule and add it to the higher 
+level element.
++        mol_element = doc.createElement('mol')
++        element.appendChild(mol_element)
++
++        # Set the molecule attributes.
++        mol_element.setAttribute('desc', 'Molecule container')
++        mol_element.setAttribute('name', str(self.mol_name))
++
++        # Add all simple python objects within the MolContainer to the XML 
+element.
++        fill_object_contents(doc, mol_element, object=self, 
+blacklist=['data'] + self.__class__.__dict__.keys())
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Jan 19 14:40:02 2009</div>  
+</body>
+</html>

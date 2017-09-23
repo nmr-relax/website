@@ -1,0 +1,212 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r19635 &#45; /branches/relax_disp/specific_analyses/relax_disp/__init__.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 03 May 2013 15:41:43 +0200 -->
+<!--X-Message-Id: E1UYGF5&#45;0003jY&#45;5R@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r19635 - /branches/relax_disp/specific_analyses/relax_disp/__init__.py -- May 03, 2013 - 15:41</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r19635 - /branches/relax_disp/specific_analyses/relax_disp/__init__.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00024" class="tabs">Index by Date</a> | <a href="threads.html#00024" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00023.html">Date Prev</a>] [<a href="msg00025.html">Date Next</a>] [<a href="msg00023.html">Thread Prev</a>] [<a href="msg00025.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 03 May 2013 13:41:43 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00024.html">E1UYGF5-0003jY-5R@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on May 03, 2013 - 15:41:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri May  3 15:41:42 2013
+New Revision: 19635
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=19635&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=19635&amp;view=rev</a>
+Log:
+Completed the relaxation dispersion calculate() method.
+
+This allows the R2eff/R1rho values to be calculated for the fixed relaxation 
+time period
+experiments through the calc user function.
+
+
+Modified:
+    branches/relax_disp/specific_analyses/relax_disp/__init__.py
+
+Modified: branches/relax_disp/specific_analyses/relax_disp/__init__.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp/__init__.py?rev=19635&amp;r1=19634&amp;r2=19635&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp/__init__.py?rev=19635&amp;r1=19634&amp;r2=19635&amp;view=diff</a>
+==============================================================================
+--- branches/relax_disp/specific_analyses/relax_disp/__init__.py (original)
++++ branches/relax_disp/specific_analyses/relax_disp/__init__.py Fri May  3 
+15:41:42 2013
+@@ -34,23 +34,26 @@
+ from minfx.grid import grid
+ from numpy import array, average, dot, float64, identity, log, zeros
+ from numpy.linalg import inv
++from random import gauss
+ from re import match, search
+ import sys
+ 
+ # relax module imports.
+ from dep_check import C_module_exp_fn
++from lib.dispersion.equations import calc_two_point_r2eff
+ from lib.errors import RelaxError, RelaxFuncSetupError, RelaxLenError, 
+RelaxNoModelError, RelaxNoSequenceError, RelaxNoSpectraError
+ from lib.io import get_file_path, open_write_file
+ from lib.list import count_unique_elements, unique_elements
+ from lib.mathematics import round_to_next_order
+ from lib.software.grace import write_xy_data, write_xy_header
++from lib.statistics import std
+ from lib.text.sectioning import subsection
+ from pipe_control import pipes
+ from pipe_control.mol_res_spin import exists_mol_res_spin_data, return_spin, 
+spin_loop
+ from pipe_control.result_files import add_result_file
+ from specific_analyses.api_base import API_base
+ from specific_analyses.api_common import API_common
+-from specific_analyses.relax_disp.disp_data import exp_curve_index_from_key, 
+exp_curve_key_from_index, intensity_key, loop_dispersion_point, 
+loop_exp_curve, loop_spectrometer, relax_time
++from specific_analyses.relax_disp.disp_data import exp_curve_index_from_key, 
+exp_curve_key_from_index, intensity_key, loop_all_data, 
+loop_dispersion_point, loop_exp_curve, loop_spectrometer, relax_time, 
+return_key
+ from specific_analyses.relax_disp.variables import CPMG_EXP, FIXED_TIME_EXP, 
+R1RHO_EXP, VAR_TIME_EXP
+ from target_functions.relax_disp import Dispersion
+ from user_functions.data import Uf_tables; uf_tables = Uf_tables()
+@@ -1296,21 +1299,58 @@
+         if cdp.exp_type not in FIXED_TIME_EXP:
+             raise RelaxError(&quot;The experiment '%s' is not of the fixed 
+relaxation time period data type, the R2eff/R1rho values cannot be directly 
+calculated.&quot; % cdp.exp_type)
+ 
++        # Simulation number.
++        sim_num = 500
++
++        # Printouts.
++        print(&quot;Calculating the R2eff/R1rho values for fixed relaxation time 
+period data.&quot;)
++        print(&quot;Error propagation using Bootstrapping with %i simulations.&quot; % 
+sim_num)
++
+         # Loop over the spins.
+         for spin, spin_id in spin_loop(return_id=True, skip_desel=True):
++            # Spin ID printout.
++            print(&quot;Spin '%s'.&quot; % spin_id)
++
+             # Skip spins which have no data.
+             if not hasattr(spin, 'intensities'):
+                 continue
+ 
+-            # Loop over each exponential curve.
+-            print spin
+-            for field in loop_spectrometer():
+-                for disp_point in loop_dispersion_point():
+-                    print field, disp_point
+-
+-
+-
+-
++            # Initialise the data structures.
++            if not hasattr(spin, 'r2eff'):
++                spin.r2eff = {}
++            if not hasattr(spin, 'r2eff_sim'):
++                spin.r2eff_sim = []
++                for i in range(sim_num):
++                    spin.r2eff_sim.append({})
++            if not hasattr(spin, 'r2eff_err'):
++                spin.r2eff_err = {}
++
++            # Loop over all the data.
++            for frq, point, time in loop_all_data():
++                # The two keys.
++                ref_key = return_key(frq=frq, point=None, time=time)
++                key = return_key(frq=frq, point=point, time=time)
++
++                # Missing data.
++                if ref_key not in spin.intensities or key not in 
+spin.intensities:
++                    continue
++
++                # Calculate the R2eff value.
++                spin.r2eff[key] = calc_two_point_r2eff(relax_time=time, 
+I_ref=spin.intensities[ref_key], I=spin.intensities[key])
++
++                # Bootstrapping error propagation.
++                values = []
++                for i in range(sim_num):
++                    # Randomise the data.
++                    I_ref = gauss(spin.intensities[ref_key], 
+spin.intensity_err[ref_key])
++                    I = gauss(spin.intensities[key], spin.intensity_err[key])
++
++                    # Calculate the simulation R2eff value.
++                    spin.r2eff_sim[i][key] = 
+calc_two_point_r2eff(relax_time=time, I_ref=I_ref, I=I)
++                    values.append(spin.r2eff_sim[i][key])
++
++                # The standard deviation.
++                spin.r2eff_err[key] = std(values)
+ 
+ 
+     def create_mc_data(self, data_id):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri May 03 16:00:02 2013</div>  
+</body>
+</html>

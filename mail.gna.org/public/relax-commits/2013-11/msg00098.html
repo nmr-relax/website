@@ -1,0 +1,289 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r21440 &#45; in /trunk: pipe_control/rdc.py	specific_analyses/n_state_model/__init__.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 14 Nov 2013 11:54:27 +0100 -->
+<!--X-Message-Id: E1VguZ9&#45;0002mU&#45;Ie@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r21440 - in /trunk: pipe_control/rdc.py	specific_analyses/n_state_model/__init__.py -- November 14, 2013 - 11:54</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r21440 - in /trunk: pipe_control/rdc.py	specific_analyses/n_state_model/__init__.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00098" class="tabs">Index by Date</a> | <a href="threads.html#00098" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00097.html">Date Prev</a>] [<a href="msg00099.html">Date Next</a>] [<a href="msg00097.html">Thread Prev</a>] [<a href="msg00099.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 14 Nov 2013 10:54:27 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00098.html">E1VguZ9-0002mU-Ie@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on November 14, 2013 - 11:54:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Nov 14 11:54:27 2013
+New Revision: 21440
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=21440&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=21440&amp;view=rev</a>
+Log:
+Clean ups and improvements for the pipe_control.rdc.check_rdcs() function.
+
+Pseudo-atoms are now handled much better and correctly in all cases.  And 
+many RelaxErrors have been
+converted to RelaxWarnings followed by a 'return False' statement.
+
+
+Modified:
+    trunk/pipe_control/rdc.py
+    trunk/specific_analyses/n_state_model/__init__.py
+
+Modified: trunk/pipe_control/rdc.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/pipe_control/rdc.py?rev=21440&amp;r1=21439&amp;r2=21440&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/pipe_control/rdc.py?rev=21440&amp;r1=21439&amp;r2=21440&amp;view=diff</a>
+==============================================================================
+--- trunk/pipe_control/rdc.py (original)
++++ trunk/pipe_control/rdc.py Thu Nov 14 11:54:27 2013
+@@ -37,7 +37,7 @@
+ from lib.errors import RelaxError, RelaxNoAlignError, RelaxNoJError, 
+RelaxNoRDCError, RelaxNoSequenceError, RelaxSpinTypeError
+ from lib.io import extract_data, open_write_file, strip, write_data
+ from lib.physical_constants import dipolar_constant, 
+return_gyromagnetic_ratio
+-from lib.warnings import RelaxWarning
++from lib.warnings import RelaxWarning, RelaxSpinTypeWarning
+ from pipe_control import grace, pipes
+ from pipe_control.align_tensor import get_tensor_index, get_tensor_object, 
+opt_uses_align_data, opt_uses_tensor
+ from pipe_control.interatomic import consistent_interatomic_data, 
+create_interatom, interatomic_loop, return_interatom
+@@ -190,27 +190,19 @@
+         raise RelaxNoRDCError(rdc_id)
+ 
+ 
+-def check_rdcs(interatom, spin1, spin2):
+-    &quot;&quot;&quot;Check if the RDCs for the given interatomic data container should be 
+used.
++def check_rdcs(interatom):
++    &quot;&quot;&quot;Check if all data required for calculating the RDC is present.
+ 
+     @param interatom:   The interatomic data container.
+     @type interatom:    InteratomContainer instance
+-    @param spin1:       The first spin container.
+-    @type spin1:        SpinContainer instance
+-    @param spin2:       The second spin container.
+-    @type spin2:        SpinContainer instance
+-    @return:            True if the RDCs should be used, False otherwise.
++    @return:            True if all data required for calculating the RDC is 
+present, False otherwise.
++    @rtype:             bool
+     &quot;&quot;&quot;
+ 
+     # Skip deselected interatomic data containers.
+     if not interatom.select:
+         return False
+ 
+-    # Skip deselected spins.
+-    # FIXME:  These checks could be fatal in the future if a user has good 
+RDCs and one of the two spins are deselected!
+-    if not spin1.select or not spin2.select:
+-        return False
+-
+     # Only use interatomic data containers with RDC data.
+     if not hasattr(interatom, 'rdc'):
+         return False
+@@ -219,33 +211,22 @@
+     if opt_uses_j_couplings() and not hasattr(interatom, 'j_coupling'):
+         return False
+ 
+-    # RDC data exists but the interatomic vectors are missing?
+-    if not hasattr(interatom, 'vector'):
+-        # Throw a warning.
+-        warn(RelaxWarning(&quot;RDC data exists but the interatomic vectors are 
+missing, skipping the spin pair '%s' and '%s'.&quot; % (interatom.spin_id1, 
+interatom.spin_id2)))
+-
+-        # Jump to the next spin.
++    # Get the spins.
++    spin1 = return_spin(interatom.spin_id1)
++    spin2 = return_spin(interatom.spin_id2)
++
++    # Spin information checks.
++    if not hasattr(spin1, 'isotope'):
++        warn(RelaxSpinTypeWarning(interatom.spin_id1))
+         return False
+-
+-    # Skip non-Me pseudo-atoms for the first spin.
+-    if hasattr(spin1, 'members') and len(spin1.members) != 3:
+-        warn(RelaxWarning(&quot;Only methyl group pseudo atoms are supported due 
+to their fast rotation, skipping the spin pair '%s' and '%s'.&quot; % 
+(interatom.spin_id1, interatom.spin_id2)))
++    if not hasattr(spin2, 'isotope'):
++        warn(RelaxSpinTypeWarning(interatom.spin_id2))
+         return False
+-
+-    # Skip non-Me pseudo-atoms for the second spin.
+-    if hasattr(spin2, 'members') and len(spin2.members) != 3:
+-        warn(RelaxWarning(&quot;Only methyl group pseudo atoms are supported due 
+to their fast rotation, skipping the spin pair '%s' and '%s'.&quot; % 
+(interatom.spin_id1, interatom.spin_id2)))
++    if is_pseudoatom(spin1) and is_pseudoatom(spin2):
++        warn(RelaxWarning(&quot;Support for both spins being in a dipole pair 
+being pseudo-atoms is not implemented yet.&quot;))
+         return False
+ 
+-    # Checks.
+-    if not hasattr(spin1, 'isotope'):
+-        raise RelaxSpinTypeError(interatom.spin_id1)
+-    if not hasattr(spin2, 'isotope'):
+-        raise RelaxSpinTypeError(interatom.spin_id2)
+-    if is_pseudoatom(spin1) and is_pseudoatom(spin2):
+-        raise RelaxError(&quot;Support for both spins being in a dipole pair 
+being pseudo-atoms is not implemented yet.&quot;)
+-
+-    # Interatomic distance checking (pseudo-atoms).
++    # Pseudo-atom checks.
+     if is_pseudoatom(spin1) or is_pseudoatom(spin2):
+         # Alias the pseudo and normal atoms.
+         pseudospin = spin1
+@@ -261,14 +242,27 @@
+             # Get the corresponding interatomic data container.
+             pseudo_interatom = return_interatom(spin_id1=spin_id, 
+spin_id2=base_spin_id)
+ 
++            # Unit vector check.
++            if not hasattr(pseudo_interatom, 'vector'):
++                warn(RelaxWarning(&quot;The interatomic vector is missing for the 
+spin pair '%s' and '%s' of the pseudo-atom '%s', skipping the RDC for the 
+spin pair '%s' and '%s'.&quot; % (pseudo_interatom.spin_id1, 
+pseudo_interatom.spin_id2, pseudospin_id, base_spin_id, pseudospin_id)))
++                return False
++
+             # Check.
+             if not hasattr(pseudo_interatom, 'r'):
+-                raise RelaxError(&quot;The averaged interatomic distance between 
+spins '%s' and '%s' for the pseudo-atom '%s' has not been set yet.&quot; % 
+(spin_id, base_spin_id, pseudospin_id))
+-
+-    # Interatomic distance checking (normal atoms).
++                warn(RelaxWarning(&quot;The averaged interatomic distance between 
+spins '%s' and '%s' for the pseudo-atom '%s' has not been set yet.&quot; % 
+(spin_id, base_spin_id, pseudospin_id)))
++                return False
++
++    # Normal atoms checks.
+     else:
++        # Unit vector check.
++        if not hasattr(interatom, 'vector'):
++            warn(RelaxWarning(&quot;The interatomic vector is missing, skipping 
+the spin pair '%s' and '%s'.&quot; % (interatom.spin_id1, interatom.spin_id2)))
++            return False
++
++        # Distance information check.
+         if not hasattr(interatom, 'r'):
+-            raise RelaxError(&quot;The averaged interatomic distance between 
+spins '%s' and '%s' has not been set yet.&quot; % (interatom.spin_id1, 
+interatom.spin_id2))
++            warn(RelaxWarning(&quot;The averaged interatomic distance between 
+spins '%s' and '%s' has not been set yet.&quot; % (interatom.spin_id1, 
+interatom.spin_id2)))
++            return False
+ 
+     # Everything is ok.
+     return True
+@@ -946,7 +940,7 @@
+         spin2 = return_spin(interatom.spin_id2)
+ 
+         # RDC checks.
+-        if not check_rdcs(interatom, spin1, spin2):
++        if not check_rdcs(interatom):
+             continue
+ 
+         # Gyromagnetic ratios.
+@@ -1064,12 +1058,9 @@
+             spin1 = return_spin(interatom.spin_id1)
+             spin2 = return_spin(interatom.spin_id2)
+ 
+-            # Skip deselected spins.
+-            if not spin1.select or not spin2.select:
+-                continue
+-
+-            # Only use interatomic data containers with RDC and vector data.
+-            if not hasattr(interatom, 'rdc') or not hasattr(interatom, 
+'vector'):
++            print interatom.spin_id1, interatom.spin_id2
++            # RDC checks.
++            if not check_rdcs(interatom):
+                 continue
+ 
+             # T-type data.
+
+Modified: trunk/specific_analyses/n_state_model/__init__.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/n_state_model/__init__.py?rev=21440&amp;r1=21439&amp;r2=21440&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/n_state_model/__init__.py?rev=21440&amp;r1=21439&amp;r2=21440&amp;view=diff</a>
+==============================================================================
+--- trunk/specific_analyses/n_state_model/__init__.py (original)
++++ trunk/specific_analyses/n_state_model/__init__.py Thu Nov 14 11:54:27 2013
+@@ -314,7 +314,7 @@
+                 spin2 = return_spin(interatom.spin_id2)
+ 
+                 # RDC checks.
+-                if not check_rdcs(interatom, spin1, spin2):
++                if not check_rdcs(interatom):
+                     continue
+ 
+                 # Containers with RDC data.
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Nov 14 12:00:01 2013</div>  
+</body>
+</html>

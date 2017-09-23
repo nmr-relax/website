@@ -1,0 +1,213 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r10021 &#45; /1.3/specific_fns/model_free/main.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 30 Nov 2009 10:30:47 +0100 -->
+<!--X-Message-Id: E1NF2al&#45;0007ih&#45;Ci@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r10021 - /1.3/specific_fns/model_free/main.py -- November 30, 2009 - 10:30</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r10021 - /1.3/specific_fns/model_free/main.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00159" class="tabs">Index by Date</a> | <a href="threads.html#00159" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00158.html">Date Prev</a>] [<a href="msg00160.html">Date Next</a>] [<a href="msg00158.html">Thread Prev</a>] [<a href="msg00160.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 30 Nov 2009 09:30:47 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00159.html">E1NF2al-0007ih-Ci@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on November 30, 2009 - 10:30:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Mon Nov 30 10:30:47 2009
+New Revision: 10021
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=10021&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=10021&amp;view=rev</a>
+Log:
+Created the set_param_values() API method for model-free analysis.
+
+
+Modified:
+    1.3/specific_fns/model_free/main.py
+
+Modified: 1.3/specific_fns/model_free/main.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/specific_fns/model_free/main.py?rev=10021&amp;r1=10020&amp;r2=10021&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/specific_fns/model_free/main.py?rev=10021&amp;r1=10020&amp;r2=10021&amp;view=diff</a>
+==============================================================================
+--- 1.3/specific_fns/model_free/main.py (original)
++++ 1.3/specific_fns/model_free/main.py Mon Nov 30 10:30:47 2009
+@@ -22,7 +22,6 @@
+ 
+ # Python module imports.
+ from copy import deepcopy
+-from data.diff_tensor import DiffTensorSimList
+ from math import pi
+ from numpy import float64, array, identity, transpose, zeros
+ from re import match, search
+@@ -30,6 +29,8 @@
+ import sys
+ 
+ # relax module imports.
++import arg_check
++from data.diff_tensor import DiffTensorSimList
+ from float import isNaN, isInf
+ from generic_fns import diffusion_tensor, pipes, relax_data, sequence
+ from generic_fns.mol_res_spin import convert_from_global_index, count_spins, 
+exists_mol_res_spin_data, find_index, return_spin, return_spin_from_index, 
+spin_index_loop, spin_loop
+@@ -1365,6 +1366,11 @@
+         @return:        The default value.
+         @rtype:         float
+         &quot;&quot;&quot;
++
++        # Diffusion tensor parameter.
++        diff_val = diffusion_tensor.default_value(param)
++        if diff_val != None:
++            return diff_val
+ 
+         # Local tm.
+         if param == 'local_tm':
+@@ -2203,6 +2209,11 @@
+         @rtype:         str
+         &quot;&quot;&quot;
+ 
++        # Diffusion tensor parameters.
++        diff_obj = diffusion_tensor.return_data_name(param)
++        if diff_obj:
++            return diff_obj
++
+         # Local tm.
+         if search('[Ll]ocal[ -_]tm', param):
+             return 'local_tm'
+@@ -2488,17 +2499,55 @@
+                 inc = inc + 1
+ 
+ 
+-    def set_non_spin_params(self, value=None, param=None):
+-        &quot;&quot;&quot;Set the non-spin specific model-free params (this is solely the 
+diffusion params).
+-
+-        @param value:   The parameter values.
+-        @type value:    None, number, or list of numbers
+-        @param param:   The parameter names.
+-        @type param:    None, str, or list of str
+-        &quot;&quot;&quot;
+-
+-        # Call the diffusion tensor parameter setting function.
+-        diffusion_tensor.set(value=value, param=param)
++    def set_param_values(self, param=None, value=None, spin_id=None, 
+force=True):
++        &quot;&quot;&quot;Set the model-free parameter values.
++
++        @keyword param:     The parameter name list.
++        @type param:        list of str
++        @keyword value:     The parameter value list.
++        @type value:        list
++        @keyword spin_id:   The spin identification string, only used for 
+spin specific parameters.
++        @type spin_id:      None or str
++        @keyword force:     A flag which if True will cause current values 
+to be overwritten.  If False, a RelaxError will raised if the parameter value 
+is already set.
++        @type force:        bool
++        &quot;&quot;&quot;
++
++        # Checks.
++        arg_check.is_str_list(param, 'parameter name')
++
++        # Separate out the diffusion tensor parameters from the model-free 
+parameters.
++        diff_params = []
++        diff_vals = []
++        mf_params = []
++        mf_vals = []
++        for i in range(len(param)):
++            # Diffusion tensor parameter.
++            diff_obj = diffusion_tensor.return_data_name(param[i])
++            if diff_obj:
++                diff_params.append(param[i])
++                diff_vals.append(value[i])
++
++            # Model-free parameter.
++            else:
++                mf_params.append(param[i])
++                mf_vals.append(value[i])
++
++        # Set the diffusion tensor parameters.
++        if diff_params:
++            diffusion_tensor.set(value=diff_vals, param=diff_params)
++
++        # Set the model-free parameters.
++        for i in range(len(mf_params)):
++            # The object name.
++            obj_name = self.return_data_name(mf_params[i])
++
++            # Check if it is a model-free parameter.
++            if obj_name not in self.data_names(set='params') and obj_name 
+not in self.data_names(set='generic'):
++                raise RelaxError(&quot;The parameter '%s' is unknown.&quot; % 
+mf_params[i])
++
++            # Set the parameter.
++            for spin in spin_loop(spin_id):
++                setattr(spin, obj_name, mf_vals[i])
+ 
+ 
+     def set_selected_sim(self, model_info, select_sim):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Nov 30 10:40:02 2009</div>  
+</body>
+</html>

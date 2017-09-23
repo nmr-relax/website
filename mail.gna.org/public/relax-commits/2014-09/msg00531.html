@@ -1,0 +1,379 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r26025 &#45; /branches/frame_order_cleanup/auto_analyses/frame_order.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 25 Sep 2014 09:39:42 +0200 -->
+<!--X-Message-Id: E1XX3eQ&#45;0003Xk&#45;08@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r26025 - /branches/frame_order_cleanup/auto_analyses/frame_order.py -- September 25, 2014 - 09:39</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r26025 - /branches/frame_order_cleanup/auto_analyses/frame_order.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00531" class="tabs">Index by Date</a> | <a href="threads.html#00531" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00530.html">Date Prev</a>] [<a href="msg00532.html">Date Next</a>] [<a href="msg00530.html">Thread Prev</a>] [<a href="msg00532.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 25 Sep 2014 07:39:41 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00531.html">E1XX3eQ-0003Xk-08@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on September 25, 2014 - 09:39:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Sep 25 09:39:41 2014
+New Revision: 26025
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=26025&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=26025&amp;view=rev</a>
+Log:
+Incorporated the contents of the summarise.py script into the frame order 
+auto-analysis module.
+
+This has been converted into the summarise() function which will generate a 
+results summary table as
+the analysis is still running.
+
+
+Modified:
+    branches/frame_order_cleanup/auto_analyses/frame_order.py
+
+Modified: branches/frame_order_cleanup/auto_analyses/frame_order.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/auto_analyses/frame_order.py?rev=26025&amp;r1=26024&amp;r2=26025&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/auto_analyses/frame_order.py?rev=26025&amp;r1=26024&amp;r2=26025&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/auto_analyses/frame_order.py   (original)
++++ branches/frame_order_cleanup/auto_analyses/frame_order.py   Thu Sep 25 
+09:39:41 2014
+@@ -43,6 +43,7 @@
+ 
+ 
+ # Python module imports.
++from math import pi
+ from numpy import float64, zeros
+ from os import F_OK, access, getcwd, sep
+ import sys
+@@ -57,12 +58,166 @@
+ from lib.io import open_write_file
+ from lib.order.order_parameters import iso_cone_theta_to_S
+ from lib.text.sectioning import section, subsection, title
++from lib.text.table import MULTI_COL, format_table
++from pipe_control import pipes, results
+ from pipe_control.mol_res_spin import return_spin, spin_loop
+-from pipe_control.pipes import get_pipe
+ from pipe_control.structure.mass import pipe_centre_of_mass
+ from prompt.interpreter import Interpreter
+ from specific_analyses.frame_order.data import generate_pivot
+ from status import Status; status = Status()
++
++
++
++def summarise(file_name='summary', dir=None, force=True):
++    &quot;&quot;&quot;Summarise the frame order auto-analysis results.
++
++    This function can be used while a frame order analysis is running to 
+summarise the results.  It will create a table of the statistics and model 
+parameters for all of the optimised frame order models for which results 
+files currently exist.
++
++
++    @keyword file_name:     The file to save the table into.
++    @type file_name:        str
++    @keyword dir:           The optional directory to place the file into.
++    @type dir:              None or str
++    @keyword force:         A flag which if True will cause any preexisting 
+file to be overwritten.
++    @type force:            bool
++    &quot;&quot;&quot;
++
++    # The model names and directories.
++    model_names = [
++        'Rigid',
++        'Free rotor',
++        'Rotor',
++        'Iso cone, free rotor',
++        'Iso cone, torsionless',
++        'Iso cone, torsionless (perm A)',
++        'Iso cone',
++        'Iso cone (perm A)',
++        'Pseudo ellipse, torsionless',
++        'Pseudo ellipse, torsionless (perm A)',
++        'Pseudo ellipse, torsionless (perm B)',
++        'Pseudo ellipse',
++        'Pseudo ellipse (perm A)',
++        'Pseudo ellipse (perm B)',
++        'Double rotor'
++    ]
++    model_dirs = {
++        'Rigid': 'rigid',
++        'Free rotor': 'free_rotor',
++        'Rotor': 'rotor',
++        'Iso cone, free rotor': 'iso_cone, free_rotor',
++        'Iso cone, torsionless': 'iso_cone_torsionless',
++        'Iso cone, torsionless (perm A)': 
+'iso_cone_torsionless_permutation_A',
++        'Iso cone': 'iso_cone',
++        'Iso cone (perm A)': 'iso_cone_permutation_A',
++        'Pseudo ellipse, torsionless': 'pseudo-ellipse_torsionless',
++        'Pseudo ellipse, torsionless (perm A)': 
+'pseudo-ellipse_torsionless_permutation_A',
++        'Pseudo ellipse, torsionless (perm B)': 
+'pseudo-ellipse_torsionless_permutation_B',
++        'Pseudo ellipse': 'pseudo-ellipse',
++        'Pseudo ellipse (perm A)': 'pseudo-ellipse_permutation_A',
++        'Pseudo ellipse (perm B)': 'pseudo-ellipse_permutation_B',
++        'Double rotor': 'double_rotor'
++    }
++
++    # The analysis directory and structures.
++    contents = []
++    contents.append([&quot;Analysis directory&quot;, getcwd()])
++    string = format_table(contents=contents)
++
++    # Table header.
++    headings1 = []
++    headings1.append([&quot;Model&quot;, &quot;k&quot;, &quot;chi2&quot;, &quot;AIC&quot;, &quot;Motional eigenframe&quot;, 
+MULTI_COL, MULTI_COL, &quot;Order parameters (deg)&quot;, MULTI_COL, MULTI_COL, 
+MULTI_COL])
++    headings1.append([None, None, None, None, &quot;a&quot;, &quot;b/th&quot;, &quot;g/ph&quot;, &quot;thx&quot;, 
+&quot;thy&quot;, &quot;smax&quot;, &quot;smax2&quot;])
++
++    # 2nd table header.
++    headings2 = []
++    headings2.append([&quot;Model&quot;, &quot;Average position&quot;, MULTI_COL, MULTI_COL, 
+MULTI_COL, MULTI_COL, MULTI_COL, &quot;Pivot point&quot;, MULTI_COL, MULTI_COL])
++    headings2.append([None, &quot;x&quot;, &quot;y&quot;, &quot;z&quot;, &quot;a&quot;, &quot;b&quot;, &quot;g&quot;, &quot;x&quot;, &quot;y&quot;, &quot;z&quot;])
++
++    # Loop over the models.
++    contents1 = []
++    contents2 = []
++    for i in range(len(model_names)):
++        # No file.
++        if not access(model_dirs[model_names[i]]+'/results.bz2', F_OK):
++            continue
++
++        # Create a data pipe.
++        pipes.create(model_names[i], 'frame order')
++
++        # Load the data.
++        results.read(file='results', dir=model_dirs[model_names[i]])
++
++        # Number of params.
++        k = len(cdp.params)
++
++        # Format the model information.
++        contents1.append([model_names[i], k, cdp.chi2, cdp.chi2 + 2*k, None, 
+None, None, None, None, None, None])
++        contents2.append([model_names[i], 0.0, 0.0, 0.0, None, None, None, 
+None, None, None])
++
++        # Eigen alpha.
++        if hasattr(cdp, 'eigen_alpha') and cdp.eigen_alpha != None:
++            contents1[-1][4] = cdp.eigen_alpha
++
++        # Eigen beta.
++        if hasattr(cdp, 'eigen_beta') and cdp.eigen_beta != None:
++            contents1[-1][5] = cdp.eigen_beta
++        elif hasattr(cdp, 'axis_theta') and cdp.axis_theta != None:
++            contents1[-1][5] = cdp.axis_theta
++
++        # Eigen gamma.
++        if hasattr(cdp, 'eigen_gamma') and cdp.eigen_gamma != None:
++            contents1[-1][6] = cdp.eigen_gamma
++        elif hasattr(cdp, 'axis_phi') and cdp.axis_phi != None:
++            contents1[-1][6] = cdp.axis_phi
++
++        # Order x.
++        if hasattr(cdp, 'cone_theta_x') and cdp.cone_theta_x != None:
++            contents1[-1][7] = cdp.cone_theta_x / 2.0 / pi * 360.0
++        elif hasattr(cdp, 'cone_theta') and cdp.cone_theta != None:
++            contents1[-1][7] = cdp.cone_theta / 2.0 / pi * 360.0
++
++        # Order y.
++        if hasattr(cdp, 'cone_theta_y') and cdp.cone_theta_y != None:
++            contents1[-1][8] = cdp.cone_theta_y / 2.0 / pi * 360.0
++
++        # Order torsion.
++        if hasattr(cdp, 'cone_sigma_max') and cdp.cone_sigma_max != None:
++            contents1[-1][9] = cdp.cone_sigma_max / 2.0 / pi * 360.0
++
++        # Order torsion 2.
++        if hasattr(cdp, 'cone_sigma_max_2') and cdp.cone_sigma_max_2 != None:
++            contents1[-1][10] = cdp.cone_sigma_max_2 / 2.0 / pi * 360.0
++
++        # The average position parameters.
++        if hasattr(cdp, 'ave_pos_x') and cdp.ave_pos_x != None:
++            contents2[-1][1] = cdp.ave_pos_x
++        if hasattr(cdp, 'ave_pos_y') and cdp.ave_pos_y != None:
++            contents2[-1][2] = cdp.ave_pos_y
++        if hasattr(cdp, 'ave_pos_z') and cdp.ave_pos_z != None:
++            contents2[-1][3] = cdp.ave_pos_z
++        if hasattr(cdp, 'ave_pos_alpha') and cdp.ave_pos_alpha != None:
++            contents2[-1][4] = cdp.ave_pos_alpha
++        if hasattr(cdp, 'ave_pos_beta') and cdp.ave_pos_beta != None:
++            contents2[-1][5] = cdp.ave_pos_beta
++        if hasattr(cdp, 'ave_pos_gamma') and cdp.ave_pos_gamma != None:
++            contents2[-1][6] = cdp.ave_pos_gamma
++
++        # The pivot point.
++        contents2[-1][7] = cdp.pivot_x
++        contents2[-1][8] = cdp.pivot_y
++        contents2[-1][9] = cdp.pivot_z
++
++    # Add the tables.
++    string += format_table(headings=headings1, contents=contents1, 
+custom_format=[None, None, &quot;%.2f&quot;, &quot;%.2f&quot;, &quot;%.3f&quot;, &quot;%.3f&quot;, &quot;%.3f&quot;, &quot;%.2f&quot;, 
+&quot;%.2f&quot;, &quot;%.2f&quot;, &quot;%.2f&quot;])
++    string += format_table(headings=headings2, contents=contents2, 
+custom_format=[None, &quot;%.3f&quot;, &quot;%.3f&quot;, &quot;%.3f&quot;, &quot;%.3f&quot;, &quot;%.3f&quot;, &quot;%.3f&quot;, &quot;%.3f&quot;, 
+&quot;%.3f&quot;, &quot;%.3f&quot;])
++
++    # Write out.
++    sys.stdout.write(&quot;\n\n\n&quot;)
++    sys.stdout.write(string)
++    file = open_write_file(file_name=file_name, dir=dir, force=force)
++    file.write(string)
++    file.close()
++
+ 
+ 
+ class Frame_order_analysis:
+@@ -402,7 +557,7 @@
+             print(&quot;Obtaining the average position from the rigid model.&quot;)
+ 
+             # Get the rigid data pipe.
+-            pipe = get_pipe(self.pipe_name_dict[MODEL_RIGID])
++            pipe = pipes.get_pipe(self.pipe_name_dict[MODEL_RIGID])
+ 
+             # Copy the average position parameters from the rigid model.
+             cdp.ave_pos_x = pipe.ave_pos_x
+@@ -418,7 +573,7 @@
+             print(&quot;Obtaining the average position from the free rotor 
+model.&quot;)
+ 
+             # Get the free rotor data pipe.
+-            pipe = get_pipe(self.pipe_name_dict[MODEL_FREE_ROTOR])
++            pipe = pipes.get_pipe(self.pipe_name_dict[MODEL_FREE_ROTOR])
+ 
+             # Copy the average position parameters from the free rotor model.
+             cdp.ave_pos_x = pipe.ave_pos_x
+@@ -449,7 +604,7 @@
+             print(&quot;Obtaining the cone axis from the rotor model.&quot;)
+ 
+             # Get the rotor data pipe.
+-            pipe = get_pipe(self.pipe_name_dict[MODEL_ROTOR])
++            pipe = pipes.get_pipe(self.pipe_name_dict[MODEL_ROTOR])
+ 
+             # The cone axis as the axis alpha angle.
+             if model == MODEL_FREE_ROTOR:
+@@ -465,7 +620,7 @@
+             print(&quot;Obtaining the cone axis from the isotropic cone model.&quot;)
+ 
+             # Get the iso cone data pipe.
+-            pipe = get_pipe(self.pipe_name_dict[MODEL_ISO_CONE])
++            pipe = pipes.get_pipe(self.pipe_name_dict[MODEL_ISO_CONE])
+ 
+             # Copy the cone axis parameters.
+             cdp.axis_theta = pipe.axis_theta
+@@ -477,7 +632,7 @@
+             print(&quot;Obtaining the full eigenframe from the pseudo-ellipse 
+model.&quot;)
+ 
+             # Get the pseudo-ellipse data pipe.
+-            pipe = get_pipe(self.pipe_name_dict[MODEL_PSEUDO_ELLIPSE])
++            pipe = pipes.get_pipe(self.pipe_name_dict[MODEL_PSEUDO_ELLIPSE])
+ 
+             # Copy the three Euler angles.
+             cdp.eigen_alpha = pipe.eigen_alpha
+@@ -503,7 +658,7 @@
+         # The cone angle from the isotropic cone model.
+         if model in [MODEL_ISO_CONE_TORSIONLESS, MODEL_PSEUDO_ELLIPSE, 
+MODEL_ISO_CONE_FREE_ROTOR]:
+             # Get the iso cone data pipe.
+-            pipe = get_pipe(self.pipe_name_dict[MODEL_ISO_CONE])
++            pipe = pipes.get_pipe(self.pipe_name_dict[MODEL_ISO_CONE])
+ 
+             # Copy the cone angle directly.
+             if model == MODEL_ISO_CONE_TORSIONLESS:
+@@ -526,7 +681,7 @@
+             print(&quot;Obtaining the cone X and Y angles from the pseudo-ellipse 
+model.&quot;)
+ 
+             # Get the pseudo-ellipse data pipe.
+-            pipe = get_pipe(self.pipe_name_dict[MODEL_PSEUDO_ELLIPSE])
++            pipe = pipes.get_pipe(self.pipe_name_dict[MODEL_PSEUDO_ELLIPSE])
+ 
+             # Copy the cone axis.
+             cdp.cone_theta_x = pipe.cone_theta_x
+@@ -539,7 +694,7 @@
+             print(&quot;Obtaining the torsion angle from the rotor model.&quot;)
+ 
+             # Get the rotor data pipe.
+-            pipe = get_pipe(self.pipe_name_dict[MODEL_ROTOR])
++            pipe = pipes.get_pipe(self.pipe_name_dict[MODEL_ROTOR])
+ 
+             # Copy the cone axis.
+             cdp.cone_sigma_max = pipe.cone_sigma_max
+@@ -564,7 +719,7 @@
+         print(&quot;Obtaining the pivot point from the rotor model.&quot;)
+ 
+         # Get the iso cone data pipe.
+-        pipe = get_pipe(self.pipe_name_dict[MODEL_ROTOR])
++        pipe = pipes.get_pipe(self.pipe_name_dict[MODEL_ROTOR])
+ 
+         # Copy the pivot parameters.
+         cdp.pivot_x = pipe.pivot_x
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Sep 25 10:40:06 2014</div>  
+</body>
+</html>

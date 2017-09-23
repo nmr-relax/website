@@ -1,0 +1,175 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r25339 &#45; /trunk/specific_analyses/relax_disp/estimate_r2eff.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 27 Aug 2014 17:16:08 +0200 -->
+<!--X-Message-Id: E1XMexE&#45;000425&#45;Cp@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r25339 - /trunk/specific_analyses/relax_disp/estimate_r2eff.py -- August 27, 2014 - 17:16</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r25339 - /trunk/specific_analyses/relax_disp/estimate_r2eff.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00473" class="tabs">Index by Date</a> | <a href="threads.html#00473" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00472.html">Date Prev</a>] [<a href="msg00474.html">Date Next</a>] [<a href="msg00472.html">Thread Prev</a>] [<a href="msg00474.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 27 Aug 2014 15:16:08 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00473.html">E1XMexE-000425-Cp@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on August 27, 2014 - 17:16:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Wed Aug 27 17:16:07 2014
+New Revision: 25339
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=25339&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=25339&amp;view=rev</a>
+Log:
+Implemented the Jacobian of exponential function in Python Code.
+
+This now also gets the same error as leastsq and C code.
+
+task #7822(<a  rel="nofollow" href="https://gna.org/task/index.php?7822">https://gna.org/task/index.php?7822</a>): Implement user function to 
+estimate R2eff and associated errors for exponential curve fitting.
+
+Modified:
+    trunk/specific_analyses/relax_disp/estimate_r2eff.py
+
+Modified: trunk/specific_analyses/relax_disp/estimate_r2eff.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/relax_disp/estimate_r2eff.py?rev=25339&amp;r1=25338&amp;r2=25339&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/relax_disp/estimate_r2eff.py?rev=25339&amp;r1=25338&amp;r2=25339&amp;view=diff</a>
+==============================================================================
+--- trunk/specific_analyses/relax_disp/estimate_r2eff.py        (original)
++++ trunk/specific_analyses/relax_disp/estimate_r2eff.py        Wed Aug 27 
+17:16:07 2014
+@@ -210,6 +210,39 @@
+         return i0 * exp( -times * r2eff)
+ 
+ 
++    def func_exp_grad(self, params):
++        &quot;&quot;&quot;Target function for the gradient (Jacobian matrix) of func_exp to 
+minfx, for exponential fit .
++
++        @param params:  The vector of parameter values.
++        @type params:   numpy rank-1 float array
++        @return:        The Jacobian matrix with 'm' rows of function 
+derivatives per 'n' columns of parameters.
++        @rtype:         numpy array
++        &quot;&quot;&quot;
++
++        # Unpack the parameter values.
++        r2eff = params[0]
++        i0 = params[1]
++
++        # Make partial derivative, with respect to r2eff.
++        d_exp_d_r2eff = -i0 * self.times * exp(-r2eff * self.times)
++
++        # Make partial derivative, with respect to i0.
++        d_exp_d_i0 = exp(-r2eff * self.times)
++
++        # Define Jacobian as m rows with function derivatives and n columns 
+of parameters.
++        self.jacobian_matrix_exp = transpose(array( [d_exp_d_r2eff , 
+d_exp_d_i0] ) )
++
++        # Take the sum, to send to minfx.
++        sum_d_exp_d_r2eff = sum( d_exp_d_r2eff )
++        sum_d_exp_d_i0 = sum( d_exp_d_i0 )
++
++        # Define Jacobian as m rows with function derivatives and n columns 
+of parameters.
++        sum_jacobian_matrix_exp = transpose(array( [sum_d_exp_d_r2eff , 
+sum_d_exp_d_i0] ) )
++
++        # Return Jacobian matrix.
++        return sum_jacobian_matrix_exp
++
++
+     def func_exp_chi2(self, params):
+         &quot;&quot;&quot;Target function for minimising chi2 in minfx, for exponential fit.
+ 
+@@ -733,7 +766,7 @@
+     E.set_settings_minfx(min_algor=min_algor)
+ 
+     # Do C code
+-    do_C = True
++    do_C = False
+ 
+     if do_C:
+         # Initialise the function to minimise.
+@@ -770,13 +803,13 @@
+         jacobian_matrix_exp = transpose(asarray( jacobian(param_vector) ) )
+ 
+         # Compare with python code.
+-        #E.func_exp_chi2_grad(params=param_vector)
+-        #jacobian_matrix2 = deepcopy(E.jacobian_matrix)
+-        #print jacobian_matrix
+-        #print &quot; &quot;
+-        #print jacobian_matrix2
++        #E.func_exp_grad(param_vector)
++        #jacobian_matrix_exp2 = E.jacobian_matrix_exp
++        #print jacobian_matrix_exp - jacobian_matrix_exp2
+     else:
+-        jacobian_matrix_exp_chi2 = deepcopy(E.jacobian_matrix_exp_chi2)
++        # Call class, to store value.
++        E.func_exp_grad(param_vector)
++        jacobian_matrix_exp = E.jacobian_matrix_exp
+ 
+     # Get the co-variance
+     pcov = E.multifit_covar(J=jacobian_matrix_exp)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Aug 27 17:20:03 2014</div>  
+</body>
+</html>

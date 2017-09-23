@@ -1,0 +1,153 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r9033 &#45; /1.3/generic_fns/pcs.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 29 Apr 2009 11:01:49 +0200 -->
+<!--X-Message-Id: E1Lz5fp&#45;00061h&#45;Cu@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r9033 - /1.3/generic_fns/pcs.py -- April 29, 2009 - 11:01</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r9033 - /1.3/generic_fns/pcs.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00029" class="tabs">Index by Date</a> | <a href="threads.html#00029" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00028.html">Date Prev</a>] [<a href="msg00030.html">Date Next</a>] [<a href="msg00028.html">Thread Prev</a>] [<a href="msg00030.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 29 Apr 2009 09:01:49 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00029.html">E1Lz5fp-00061h-Cu@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on April 29, 2009 - 11:01:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Apr 29 11:01:49 2009
+New Revision: 9033
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=9033&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=9033&amp;view=rev</a>
+Log:
+Some more fixes for the centre() function.
+
+This should now be fully debugged!
+
+
+Modified:
+    1.3/generic_fns/pcs.py
+
+Modified: 1.3/generic_fns/pcs.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/generic_fns/pcs.py?rev=9033&amp;r1=9032&amp;r2=9033&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/generic_fns/pcs.py?rev=9033&amp;r1=9032&amp;r2=9033&amp;view=diff</a>
+==============================================================================
+--- 1.3/generic_fns/pcs.py (original)
++++ 1.3/generic_fns/pcs.py Wed Apr 29 11:01:49 2009
+@@ -25,7 +25,7 @@
+ 
+ # Python module imports.
+ from copy import deepcopy
+-from numpy import float64, ndarray, zeros
++from numpy import array, float64, zeros
+ 
+ # relax module imports.
+ from generic_fns.mol_res_spin import exists_mol_res_spin_data, 
+generate_spin_id_data_array, return_spin, spin_index_loop, spin_loop
+@@ -152,27 +152,28 @@
+     # Test the data pipe.
+     pipes.test(pipe)
+ 
+-    # Get the data pipe.
+-    dp = pipes.get_pipe(pipe)
++    # Get the data pipes.
++    source_dp = pipes.get_pipe(pipe)
++    cdp = pipes.get_pipe()
+ 
+     # Test if the structure has been loaded.
+-    if not hasattr(dp, 'structure'):
++    if not hasattr(source_dp, 'structure'):
+         raise RelaxNoPdbError
+ 
+     # Test the centre has already been set.
+-    if hasattr(dp, 'paramagnetic_centre'):
+-        raise RelaxError, &quot;The paramagnetic centre has already been set to 
+the coordinates &quot; + `dp.paramagnetic_centre` + &quot;.&quot;
++    if hasattr(cdp, 'paramagnetic_centre'):
++        raise RelaxError, &quot;The paramagnetic centre has already been set to 
+the coordinates &quot; + `cdp.paramagnetic_centre` + &quot;.&quot;
+ 
+     # Get the positions.
+     centre = zeros(3, float64)
+     num_pos = 0
+-    for spin, spin_id in spin_loop(atom_id, return_id=True):
++    for spin, spin_id in spin_loop(atom_id, pipe=pipe, return_id=True):
+         # No atomic positions.
+         if not hasattr(spin, 'pos'):
+             continue
+ 
+         # Spin position list.
+-        if type(spin.pos) == list or type(spin.pos) == ndarray:
++        if type(spin.pos[0]) == float or type(spin.pos[0]) == float64:
+             pos_list = [spin.pos]
+         else:
+             pos_list = spin.pos
+@@ -193,7 +194,6 @@
+     print &quot;Paramagnetic centre located at: &quot; + `centre`
+ 
+     # Set the centre (place it into the current data pipe).
+-    cdp = pipes.get_pipe()
+     cdp.paramagnetic_centre = centre
+ 
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Apr 29 11:20:03 2009</div>  
+</body>
+</html>

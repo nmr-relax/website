@@ -1,0 +1,189 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r24370 &#45; /branches/frame_order_cleanup/lib/structure/internal/object.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 01 Jul 2014 11:59:06 +0200 -->
+<!--X-Message-Id: E1X1uqA&#45;00087U&#45;4N@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r24370 - /branches/frame_order_cleanup/lib/structure/internal/object.py -- July 01, 2014 - 11:59</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r24370 - /branches/frame_order_cleanup/lib/structure/internal/object.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00004" class="tabs">Index by Date</a> | <a href="threads.html#00004" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00003.html">Date Prev</a>] [<a href="msg00005.html">Date Next</a>] [<a href="msg00003.html">Thread Prev</a>] [<a href="msg00005.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 01 Jul 2014 09:59:06 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00004.html">E1X1uqA-00087U-4N@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on July 01, 2014 - 11:59:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Jul  1 11:59:05 2014
+New Revision: 24370
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=24370&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=24370&amp;view=rev</a>
+Log:
+Improvements to the internal structural object _get_chemical_name() method.
+
+This now uses a translation table to convert the hetID or residue name into a 
+description, for
+example as used in the PDB HETNAM records to give a human readable 
+description of the residue inside
+the PDB file itself.  The new rotor RTX and RTB residue names have been added 
+to the table as well.
+
+
+Modified:
+    branches/frame_order_cleanup/lib/structure/internal/object.py
+
+Modified: branches/frame_order_cleanup/lib/structure/internal/object.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/structure/internal/object.py?rev=24370&amp;r1=24369&amp;r2=24370&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/structure/internal/object.py?rev=24370&amp;r1=24369&amp;r2=24370&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/lib/structure/internal/object.py       
+(original)
++++ branches/frame_order_cleanup/lib/structure/internal/object.py       Tue 
+Jul  1 11:59:05 2014
+@@ -189,19 +189,21 @@
+         &quot;&quot;&quot;Return the chemical name corresponding to the given residue ID.
+ 
+         The following names are currently returned::
+-         ________________________________________________
+-         |        |                                     |
+-         | hetID  | Chemical name                       |
+-         |________|_____________________________________|
+-         |        |                                     |
+-         | TNS    | Tensor                              |
+-         | COM    | Centre of mass                      |
+-         | AXS    | Tensor axes                         |
+-         | SIM    | Monte Carlo simulation tensor axes  |
+-         | PIV    | Pivot point                         |
+-         | CON    | Cone object                         |
+-         | AVE    | Average vector                      |
+-         |________|_____________________________________|
++         ___________________________________________________________
++         |        |                                                |
++         | hetID  | Chemical name                                  |
++         |________|________________________________________________|
++         |        |                                                |
++         | TNS    | Tensor                                         |
++         | COM    | Centre of mass                                 |
++         | AXS    | Tensor axes                                    |
++         | SIM    | Monte Carlo simulation tensor axes             |
++         | PIV    | Pivot point                                    |
++         | CON    | Cone object                                    |
++         | AVE    | Average vector                                 |
++         | RTX    | Axis of the rotor geometric object             |
++         | RTB    | Propeller blades of the rotor geometric object |
++         |________|________________________________________________|
+ 
+         For any other residues, no description is returned.
+ 
+@@ -211,33 +213,22 @@
+         @rtype:         str or None
+         &quot;&quot;&quot;
+ 
+-        # Tensor.
+-        if hetID == 'TNS':
+-            return 'Tensor'
+-
+-        # Centre of mass.
+-        if hetID == 'COM':
+-            return 'Centre of mass'
+-
+-        # Tensor axes.
+-        if hetID == 'AXS':
+-            return 'Tensor axes'
+-
+-        # Monte Carlo simulation tensor axes.
+-        if hetID == 'SIM':
+-            return 'Monte Carlo simulation tensor axes'
+-
+-        # Pivot point.
+-        if hetID == 'PIV':
+-            return 'Pivot point'
+-
+-        # Cone object.
+-        if hetID == 'CON':
+-            return 'Cone'
+-
+-        # Average vector.
+-        if hetID == 'AVE':
+-            return 'Average vector'
++        # Translation table.
++        table = {
++            &quot;TNS&quot;: &quot;Tensor&quot;,
++            &quot;COM&quot;: &quot;Centre of mass&quot;,
++            &quot;AXS&quot;: &quot;Tensor axes&quot;,
++            &quot;SIM&quot;: &quot;Monte Carlo simulation tensor axes&quot;,
++            &quot;PIV&quot;: &quot;Pivot point&quot;,
++            &quot;CON&quot;: &quot;Cone object&quot;,
++            &quot;AVE&quot;: &quot;Average vector&quot;,
++            &quot;RTX&quot;: &quot;Axis of the rotor geometric object&quot;,
++            &quot;RTB&quot;: &quot;Propeller blades of the rotor geometric object&quot;
++        }
++
++        # Return the description, if one exists.
++        if hetID in table:
++            return table[hetID]
+ 
+ 
+     def _parse_models_gaussian(self, file_path, verbosity=1):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Jul 01 12:20:02 2014</div>  
+</body>
+</html>

@@ -1,0 +1,329 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r21450 &#45; in /trunk: pipe_control/pcs.py	specific_analyses/n_state_model/__init__.py	target_functions/n_state_model.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 14 Nov 2013 15:00:50 +0100 -->
+<!--X-Message-Id: E1VgxTW&#45;00033n&#45;0c@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r21450 - in /trunk: pipe_control/pcs.py	specific_analyses/n_state_model/__init__.py	target_functions/n_state_model.py -- November 14, 2013 - 15:00</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r21450 - in /trunk: pipe_control/pcs.py	specific_analyses/n_state_model/__init__.py	target_functions/n_state_model.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00108" class="tabs">Index by Date</a> | <a href="threads.html#00108" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00107.html">Date Prev</a>] [<a href="msg00109.html">Date Next</a>] [<a href="msg00107.html">Thread Prev</a>] [<a href="msg00109.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 14 Nov 2013 14:00:49 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00108.html">E1VgxTW-00033n-0c@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on November 14, 2013 - 15:00:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Nov 14 15:00:49 2013
+New Revision: 21450
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=21450&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=21450&amp;view=rev</a>
+Log:
+Started to add better pseudo-atom support for the PCS.
+
+The new pipe_control.pcs.setup_pseudoatom_pcs() function has been added to 
+deselect the spins which
+are members of a pseudo-atom.  The return_pcs_data() function in the same 
+module now calls this
+function and builds a list of pseudo-atom flags for use in the target 
+function (though it is still
+unused).
+
+
+Modified:
+    trunk/pipe_control/pcs.py
+    trunk/specific_analyses/n_state_model/__init__.py
+    trunk/target_functions/n_state_model.py
+
+Modified: trunk/pipe_control/pcs.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/pipe_control/pcs.py?rev=21450&amp;r1=21449&amp;r2=21450&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/pipe_control/pcs.py?rev=21450&amp;r1=21449&amp;r2=21450&amp;view=diff</a>
+==============================================================================
+--- trunk/pipe_control/pcs.py (original)
++++ trunk/pipe_control/pcs.py Thu Nov 14 15:00:49 2013
+@@ -25,7 +25,7 @@
+ # Python module imports.
+ from copy import deepcopy
+ from math import pi, sqrt
+-from numpy import array, float64, ones, std, zeros
++from numpy import array, float64, int32, ones, std, zeros
+ from numpy.linalg import norm
+ from random import gauss
+ import sys
+@@ -40,7 +40,7 @@
+ from lib.warnings import RelaxWarning, RelaxNoSpinWarning
+ from pipe_control import grace, pipes
+ from pipe_control.align_tensor import get_tensor_index, get_tensor_object, 
+opt_uses_align_data, opt_uses_tensor
+-from pipe_control.mol_res_spin import exists_mol_res_spin_data, 
+generate_spin_id_unique, return_spin, spin_index_loop, spin_loop
++from pipe_control.mol_res_spin import exists_mol_res_spin_data, 
+generate_spin_id_unique, is_pseudoatom, return_spin, spin_index_loop, 
+spin_loop
+ 
+ 
+ def back_calc(align_id=None):
+@@ -756,11 +756,12 @@
+     @type sim_index:    None or int
+     @return:            The assembled data structures for using PCSs as the 
+base data for optimisation.  These include:
+                             - the PCS values.
+-                            - the unit vectors connecting the paramagnetic 
+centre (the electron spin) to
++                            - the unit vectors connecting the paramagnetic 
+centre (the electron spin) to the spin.
+                             - the PCS weight.
+-                            - the nuclear spin.
+-                            - the pseudocontact shift constants.
+-    @rtype:             tuple of (numpy rank-2 array, numpy rank-2 array, 
+numpy rank-2 array, numpy rank-1 array, numpy rank-1 array)
++                            - the experimental temperatures.
++                            - the spectrometer frequencies.
++                            - pseudo_flags, the list of flags indicating if 
+the interatomic data contains a pseudo-atom (as 1's and 0's).
++    @rtype:             tuple of (numpy rank-2 float64 array, numpy rank-2 
+float64 array, numpy rank-2 float64 array, list of float, list of float, 
+numpy rank-1 int32 array)
+     &quot;&quot;&quot;
+ 
+     # Data setup tests.
+@@ -771,12 +772,16 @@
+     if not hasattr(cdp, 'spectrometer_frq'):
+         raise RelaxError(&quot;The spectrometer frequencies of the experiments 
+have not been set.&quot;)
+ 
++    # Sort out pseudo-atoms first.  This only needs to be called once.
++    setup_pseudoatom_pcs()
++
+     # Initialise.
+     pcs = []
+     pcs_err = []
+     pcs_weight = []
+     temp = []
+     frq = []
++    pseudo_flags = []
+ 
+     # The PCS data.
+     for i in range(len(cdp.align_ids)):
+@@ -843,17 +848,25 @@
+             # Spin index.
+             j = j + 1
+ 
++    # Pseudo-atom.
++    for spin in spin_loop():
++        if is_pseudoatom(spin):
++            pseudo_flags.append(1)
++        else:
++            pseudo_flags.append(0)
++
+     # Convert to numpy objects.
+     pcs = array(pcs, float64)
+     pcs_err = array(pcs_err, float64)
+     pcs_weight = array(pcs_weight, float64)
++    pseudo_flags = array(pseudo_flags, int32)
+ 
+     # Convert the PCS from ppm to no units.
+     pcs = pcs * 1e-6
+     pcs_err = pcs_err * 1e-6
+ 
+     # Return the data structures.
+-    return pcs, pcs_err, pcs_weight, temp, frq
++    return pcs, pcs_err, pcs_weight, temp, frq, pseudo_flags
+ 
+ 
+ def set_errors(align_id=None, spin_id=None, sd=None):
+@@ -893,6 +906,26 @@
+         # Set the error.
+         for id in align_ids:
+             spin.pcs_err[id] = sd
++
++
++def setup_pseudoatom_pcs():
++    &quot;&quot;&quot;Make sure that the spin systems are properly set up for pseudo-atoms 
+and PCSs.
++
++    All spin data containers which are a member of a pseudo-atom will be 
+deselected.
++    &quot;&quot;&quot;
++
++    # Loop over all spin data containers.
++    for pseudospin, pseudospin_id in spin_loop(return_id=True):
++        # No pseudo-atom, so do nothing.
++        if not is_pseudoatom(pseudospin):
++            return
++
++        # Loop over the atoms of the pseudo-atom.
++        for spin, spin_id in pseudoatom_loop(pseudospin, return_id=True):
++            # Deselect if needed.
++            if spin.select:
++                warn(RelaxWarning(&quot;Deselecting the '%s' spin as it is a 
+member of the '%s' pseudo-atom system.&quot; % (spin_id, pseudospin_id)))
++                spin.select = False
+ 
+ 
+ def structural_noise(align_id=None, rmsd=0.2, sim_num=1000, file=None, 
+dir=None, force=False):
+
+Modified: trunk/specific_analyses/n_state_model/__init__.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/n_state_model/__init__.py?rev=21450&amp;r1=21449&amp;r2=21450&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/n_state_model/__init__.py?rev=21450&amp;r1=21449&amp;r2=21450&amp;view=diff</a>
+==============================================================================
+--- trunk/specific_analyses/n_state_model/__init__.py (original)
++++ trunk/specific_analyses/n_state_model/__init__.py Thu Nov 14 15:00:49 2013
+@@ -534,7 +534,7 @@
+         # Get the data structures for optimisation using PCSs as base data 
+sets.
+         pcs, pcs_err, pcs_weight, temp, frq = None, None, None, None, None
+         if 'pcs' in data_types:
+-            pcs, pcs_err, pcs_weight, temp, frq = 
+return_pcs_data(sim_index=sim_index)
++            pcs, pcs_err, pcs_weight, temp, frq, pcs_pseudo_flags = 
+return_pcs_data(sim_index=sim_index)
+ 
+         # Get the data structures for optimisation using RDCs as base data 
+sets.
+         rdcs, rdc_err, rdc_weight, rdc_vector, rdc_dj, absolute_rdc, 
+T_flags, j_couplings, rdc_pseudo_flags = None, None, None, None, None, None, 
+None, None, None
+@@ -568,7 +568,7 @@
+                 centre_fixed = cdp.paramag_centre_fixed
+ 
+         # Set up the class instance containing the target function.
+-        model = N_state_opt(model=cdp.model, N=cdp.N, 
+init_params=param_vector, probs=probs, full_tensors=full_tensors, 
+red_data=red_tensor_elem, red_errors=red_tensor_err, 
+full_in_ref_frame=full_in_ref_frame, fixed_tensors=fixed_tensors, pcs=pcs, 
+rdcs=rdcs, pcs_errors=pcs_err, rdc_errors=rdc_err, T_flags=T_flags, 
+j_couplings=j_couplings, rdc_pseudo_flags=rdc_pseudo_flags, 
+pcs_weights=pcs_weight, rdc_weights=rdc_weight, rdc_vect=rdc_vector, 
+temp=temp, frq=frq, dip_const=rdc_dj, absolute_rdc=absolute_rdc, 
+atomic_pos=atomic_pos, paramag_centre=paramag_centre, 
+scaling_matrix=scaling_matrix, centre_fixed=centre_fixed)
++        model = N_state_opt(model=cdp.model, N=cdp.N, 
+init_params=param_vector, probs=probs, full_tensors=full_tensors, 
+red_data=red_tensor_elem, red_errors=red_tensor_err, 
+full_in_ref_frame=full_in_ref_frame, fixed_tensors=fixed_tensors, pcs=pcs, 
+rdcs=rdcs, pcs_errors=pcs_err, rdc_errors=rdc_err, T_flags=T_flags, 
+j_couplings=j_couplings, rdc_pseudo_flags=rdc_pseudo_flags, 
+pcs_pseudo_flags=pcs_pseudo_flags, pcs_weights=pcs_weight, 
+rdc_weights=rdc_weight, rdc_vect=rdc_vector, temp=temp, frq=frq, 
+dip_const=rdc_dj, absolute_rdc=absolute_rdc, atomic_pos=atomic_pos, 
+paramag_centre=paramag_centre, scaling_matrix=scaling_matrix, 
+centre_fixed=centre_fixed)
+ 
+         # Return the data.
+         return model, param_vector, data_types, scaling_matrix
+
+Modified: trunk/target_functions/n_state_model.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/target_functions/n_state_model.py?rev=21450&amp;r1=21449&amp;r2=21450&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/target_functions/n_state_model.py?rev=21450&amp;r1=21449&amp;r2=21450&amp;view=diff</a>
+==============================================================================
+--- trunk/target_functions/n_state_model.py (original)
++++ trunk/target_functions/n_state_model.py Thu Nov 14 15:00:49 2013
+@@ -38,7 +38,7 @@
+ class N_state_opt:
+     &quot;&quot;&quot;Class containing the target function of the optimisation of the 
+N-state model.&quot;&quot;&quot;
+ 
+-    def __init__(self, model=None, N=None, init_params=None, probs=None, 
+full_tensors=None, red_data=None, red_errors=None, full_in_ref_frame=None, 
+fixed_tensors=None, pcs=None, pcs_errors=None, pcs_weights=None, rdcs=None, 
+rdc_errors=None, rdc_weights=None, rdc_vect=None, T_flags=None, 
+j_couplings=None, rdc_pseudo_flags=None, temp=None, frq=None, dip_const=None, 
+absolute_rdc=None, atomic_pos=None, paramag_centre=None, scaling_matrix=None, 
+centre_fixed=True):
++    def __init__(self, model=None, N=None, init_params=None, probs=None, 
+full_tensors=None, red_data=None, red_errors=None, full_in_ref_frame=None, 
+fixed_tensors=None, pcs=None, pcs_errors=None, pcs_weights=None, rdcs=None, 
+rdc_errors=None, rdc_weights=None, rdc_vect=None, T_flags=None, 
+j_couplings=None, rdc_pseudo_flags=None, pcs_pseudo_flags=None, temp=None, 
+frq=None, dip_const=None, absolute_rdc=None, atomic_pos=None, 
+paramag_centre=None, scaling_matrix=None, centre_fixed=True):
+         &quot;&quot;&quot;Set up the class instance for optimisation.
+ 
+         The N-state models
+@@ -141,6 +141,8 @@
+         @type j_couplings:          numpy rank-1 array
+         @keyword rdc_pseudo_flags:  The array of flags specifying if one of 
+the atoms of the interatomic pair for the RDC are pseudo-atoms.  The indices 
+correspond to the interatomic pairs.
+         @type rdc_pseudo_flags:     numpy rank-1 int32 array
++        @keyword pcs_pseudo_flags:  The array of flags specifying if one of 
+the atoms of the interatomic pair for the PCS are pseudo-atoms.  The indices 
+correspond to the interatomic pairs.
++        @type pcs_pseudo_flags:     numpy rank-1 int32 array
+         @keyword temp:              The temperature of each experiment, used 
+for the PCS.
+         @type temp:                 numpy rank-1 array
+         @keyword frq:               The frequency of each alignment, used 
+for the PCS.
+@@ -171,6 +173,7 @@
+         self.T_flags = T_flags
+         self.j_couplings = j_couplings
+         self.rdc_pseudo_flags = rdc_pseudo_flags
++        self.pcs_pseudo_flags = pcs_pseudo_flags
+         self.temp = temp
+         self.frq = frq
+         self.atomic_pos = atomic_pos
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Nov 14 15:20:02 2013</div>  
+</body>
+</html>

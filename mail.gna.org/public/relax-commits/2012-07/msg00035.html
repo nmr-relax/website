@@ -1,0 +1,381 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r17149 &#45; in /branches/interatomic/data: __init__.py mol_res_spin.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 03 Jul 2012 10:18:17 +0200 -->
+<!--X-Message-Id: E1SlyJN&#45;0004Bc&#45;PL@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r17149 - in /branches/interatomic/data: __init__.py mol_res_spin.py -- July 03, 2012 - 10:18</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r17149 - in /branches/interatomic/data: __init__.py mol_res_spin.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00035" class="tabs">Index by Date</a> | <a href="threads.html#00035" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00034.html">Date Prev</a>] [<a href="msg00036.html">Date Next</a>] [<a href="msg00034.html">Thread Prev</a>] [<a href="msg00036.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 03 Jul 2012 08:18:17 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00035.html">E1SlyJN-0004Bc-PL@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on July 03, 2012 - 10:18:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Jul  3 10:18:17 2012
+New Revision: 17149
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=17149&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=17149&amp;view=rev</a>
+Log:
+Better backwards compatibility of old relax results and state XML files for 
+the interatomic design.
+
+The MoleculeContainer._back_compat_hook() method has been shifted into the
+Relax_data_store._back_compat_hook() method.  This allows the spin containers 
+with attached protons
+to be converted (with new spin containers for the attached protons added) 
+after loading of the XML
+state.
+
+
+Modified:
+    branches/interatomic/data/__init__.py
+    branches/interatomic/data/mol_res_spin.py
+
+Modified: branches/interatomic/data/__init__.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/interatomic/data/__init__.py?rev=17149&amp;r1=17148&amp;r2=17149&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/interatomic/data/__init__.py?rev=17149&amp;r1=17148&amp;r2=17149&amp;view=diff</a>
+==============================================================================
+--- branches/interatomic/data/__init__.py (original)
++++ branches/interatomic/data/__init__.py Tue Jul  3 10:18:17 2012
+@@ -188,6 +188,77 @@
+         status.observers.pipe_alteration.notify()
+ 
+ 
++    def _back_compat_hook(self, file_version=None, pipes=None):
++        &quot;&quot;&quot;Method for converting the old data structures to the new ones.
++
++        @keyword file_version:  The relax XML version of the XML file.
++        @type file_version:     int
++        @keyword pipes:         The list of new pipe names to update.
++        @type pipes:            list of str
++        &quot;&quot;&quot;
++
++        # Loop over the new data pipes.
++        for pipe_name in pipes:
++            # The data pipe object.
++            dp = self[pipe_name]
++
++            # Convert the molecule-residue-spin data.
++            for mol in dp.mol:
++                # Loop over the residues.
++                for res in mol.res:
++                    # Loop over the spins.
++                    for spin in res.spin:
++                        # The interatomic data container design.
++                        if hasattr(spin, 'heteronuc_type'):
++                            # Rename the nuclear isotope.
++                            spin.isotope = spin.heteronuc_type
++
++                            # Name the spin if needed.
++                            if spin.name == None:
++                                if search('N', spin.isotope):
++                                    spin.name = 'N'
++                                elif search('C', spin.isotope):
++                                    spin.name = 'C'
++
++                            # An attached proton - convert into a spin 
+container.
++                            if hasattr(spin, 'attached_proton'):
++                                # Create a new spin container for the 
+proton, then set up a dipole interaction between the two spins.
++                                h_spin = 
+generic_fns.mol_res_spin.create_spin(mol_name=mol.name, res_num=res.num, 
+res_name=res.name, spin_name=spin.attached_proton)
++                                h_spin.select = False
++                                h_spin.element = 'H'
++                                h_spin.isotope = '1H'
++                                spin_id1 = 
+generic_fns.mol_res_spin.generate_spin_id(mol_name=mol.name, res_num=res.num, 
+res_name=res.name, spin_name=spin.name, spin_num=spin.num)
++                                spin_id2 = 
+generic_fns.mol_res_spin.generate_spin_id(mol_name=mol.name, res_num=res.num, 
+res_name=res.name, spin_name='H')
++                                generic_fns.dipole_pair.define(spin_id1, 
+spin_id2, verbose=False)
++
++                                # Get the interatomic data container.
++                                interatom = 
+generic_fns.interatomic.return_interatom(spin_id1=spin_id1, spin_id2=spin_id2)
++
++                                # Set the interatomic distance.
++                                if hasattr(spin, 'r'):
++                                    interatom.r = spin.r
++
++                                # Set the interatomic unit vectors.
++                                if hasattr(spin, 'xh_vect'):
++                                    interatom.vector = spin.xh_vect
++
++                        # Delete the old structures.
++                        if hasattr(spin, 'heteronuc_type'):
++                            del spin.heteronuc_type
++                        if hasattr(spin, 'proton_type'):
++                            del spin.proton_type
++                        if hasattr(spin, 'attached_proton'):
++                            del spin.attached_proton
++                        if hasattr(spin, 'r'):
++                            del spin.r
++                        if hasattr(spin, 'r_err'):
++                            del spin.r_err
++                        if hasattr(spin, 'r_sim'):
++                            del spin.r_sim
++                        if hasattr(spin, 'xh_vect'):
++                            del spin.xh_vect
++
++
+     def add(self, pipe_name, pipe_type, bundle=None, switch=True):
+         &quot;&quot;&quot;Method for adding a new data pipe container to the dictionary.
+ 
+@@ -329,6 +400,9 @@
+         # Get the pipe nodes.
+         pipe_nodes = relax_node.getElementsByTagName('pipe')
+ 
++        # Structure for the names of the new pipes.
++        pipes = []
++
+         # Target loading to a specific pipe (for pipe results reading).
+         if pipe_to:
+             # Check if there are multiple pipes in the XML file.
+@@ -352,6 +426,9 @@
+ 
+             # Load the data.
+             self[pipe_to].from_xml(pipe_nodes[0], dir=dir, 
+file_version=file_version)
++
++            # Store the pipe name.
++            pipes.append(pipe_to)
+ 
+         # Load the state.
+         else:
+@@ -384,12 +461,18 @@
+                 # Fill the pipe.
+                 self[pipe_name].from_xml(pipe_node, 
+file_version=file_version, dir=dir)
+ 
++                # Store the pipe name.
++                pipes.append(pipe_name)
++
+             # Set the current pipe.
+             if self.current_pipe in self.keys():
+                 __builtin__.cdp = self[self.current_pipe]
+ 
+         # Finally update the molecule, residue, and spin metadata.
+         generic_fns.mol_res_spin.metadata_update()
++
++        # Backwards compatibility transformations.
++        self._back_compat_hook(file_version, pipes=pipes)
+ 
+ 
+     def to_xml(self, file, pipes=None):
+
+Modified: branches/interatomic/data/mol_res_spin.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/interatomic/data/mol_res_spin.py?rev=17149&amp;r1=17148&amp;r2=17149&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/interatomic/data/mol_res_spin.py?rev=17149&amp;r1=17148&amp;r2=17149&amp;view=diff</a>
+==============================================================================
+--- branches/interatomic/data/mol_res_spin.py (original)
++++ branches/interatomic/data/mol_res_spin.py Tue Jul  3 10:18:17 2012
+@@ -222,13 +222,26 @@
+ 
+ 
+     def add_item(self, spin_name=None, spin_num=None, select=True):
+-        &quot;&quot;&quot;Function for appending an empty container to the list.&quot;&quot;&quot;
++        &quot;&quot;&quot;Appending an empty container to the list.
++
++        @keyword spin_name: The name of the new spin.
++        @type spin_name:    str or None
++        @keyword spin_num:  The number of the new spin.
++        @type spin_num:     str or None
++        @keyword select:    The selection flag.
++        @type select:       bool
++        @return:            The new container.
++        @rtype:             SpinContainer instance
++        &quot;&quot;&quot;
+ 
+         # If no spin data exists, replace the empty first spin with this 
+spin.
+         if self.is_empty():
+             self[0].num = spin_num
+             self[0].name = spin_name
+             self[0].select = select
++
++            # Return the container.
++            return self[0]
+ 
+         # Otherwise append a new SpinContainer.
+         else:
+@@ -237,15 +250,18 @@
+                 # Spin number has been supplied.
+                 if spin_num != None:
+                     if self[i].num == spin_num:
+-                        raise RelaxError(&quot;The spin number '&quot; + 
+repr(spin_num) + &quot;' already exists.&quot;)
++                        raise RelaxError(&quot;The spin number '%s' already 
+exists.&quot; % spin_name)
+ 
+                 # No spin numbers.
+                 else:
+                     if self[i].name == spin_name:
+-                        raise RelaxError(&quot;The unnumbered spin name '&quot; + 
+repr(spin_name) + &quot;' already exists.&quot;)
++                        raise RelaxError(&quot;The unnumbered spin name '%s' 
+already exists.&quot; % spin_name)
+ 
+             # Append a new SpinContainer.
+             self.append(SpinContainer(spin_name, spin_num, select))
++
++            # Return the container.
++            return self[-1]
+ 
+ 
+     def is_empty(self):
+@@ -634,66 +650,6 @@
+             text = text + &quot;  &quot; + name + &quot;: &quot; + repr(getattr(self, name)) + 
+&quot;\n&quot;
+ 
+         return text
+-
+-
+-    def _back_compat_hook(self, file_version=None):
+-        &quot;&quot;&quot;Method for converting the old data structures to the new ones.
+-
+-        @keyword file_version:  The relax XML version of the XML file.
+-        @type file_version:     int
+-        &quot;&quot;&quot;
+-
+-        # Loop over the residues.
+-        for res in self.res:
+-            # Loop over the spins.
+-            for spin in res.spin:
+-                # The interatomic data container design.
+-                if hasattr(spin, 'heteronuc_type'):
+-                    # Rename the nuclear isotope.
+-                    spin.isotope = spin.heteronuc_type
+-
+-                    # Name the spin if needed.
+-                    if spin.name == None:
+-                        if search('N', spin.isotope):
+-                            spin.name = 'N'
+-                        elif search('C', spin.isotope):
+-                            spin.name = 'C'
+-
+-                    # Create a new spin container for the proton, then set 
+up a dipole interaction between the two spins.
+-                    h_spin = 
+generic_fns.mol_res_spin.create_spin(mol_name=self.name, res_num=res.num, 
+res_name=res.name, spin_name='H')
+-                    h_spin.select = False
+-                    h_spin.element = 'H'
+-                    h_spin.isotope = '1H'
+-                    spin_id1 = 
+generic_fns.mol_res_spin.generate_spin_id(mol_name=self.name, 
+res_num=res.num, res_name=res.name, spin_name=spin.name, spin_num=spin.num)
+-                    spin_id2 = 
+generic_fns.mol_res_spin.generate_spin_id(mol_name=self.name, 
+res_num=res.num, res_name=res.name, spin_name='H')
+-                    generic_fns.dipole_pair.define(spin_id1, spin_id2, 
+verbose=False)
+-
+-                    # Get the interatomic data container.
+-                    interatom = 
+generic_fns.interatomic.return_interatom(spin_id1=spin_id1, spin_id2=spin_id2)
+-
+-                    # Set the interatomic distance.
+-                    if hasattr(spin, 'r'):
+-                        interatom.r = spin.r
+-
+-                    # Set the interatomic unit vectors.
+-                    if hasattr(spin, 'xh_vect'):
+-                        interatom.vector = spin.xh_vect
+-
+-                # Delete the old structures.
+-                if hasattr(spin, 'heteronuc_type'):
+-                    del spin.heteronuc_type
+-                if hasattr(spin, 'proton_type'):
+-                    del spin.proton_type
+-                if hasattr(spin, 'attached_proton'):
+-                    del spin.attached_proton
+-                if hasattr(spin, 'r'):
+-                    del spin.r
+-                if hasattr(spin, 'r_err'):
+-                    del spin.r_err
+-                if hasattr(spin, 'r_sim'):
+-                    del spin.r_sim
+-                if hasattr(spin, 'xh_vect'):
+-                    del spin.xh_vect
+ 
+ 
+     def is_empty(self):
+@@ -826,9 +782,6 @@
+             # Recreate the residue data structures for the current molecule.
+             self[-1].res.from_xml(res_nodes, file_version=file_version)
+ 
+-            # Backwards compatibility transformations.
+-            self[-1]._back_compat_hook(file_version)
+-
+ 
+     def to_xml(self, doc, element):
+         &quot;&quot;&quot;Create XML elements for each molecule.
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Jul 03 10:40:01 2012</div>  
+</body>
+</html>

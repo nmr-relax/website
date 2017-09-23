@@ -1,0 +1,294 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r13091 &#45; /branches/xyz/generic_fns/structure/internal.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 17 Jun 2011 12:05:06 +0200 -->
+<!--X-Message-Id: E1QXVvG&#45;0006Fv&#45;Kj@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r13091 - /branches/xyz/generic_fns/structure/internal.py -- June 17, 2011 - 12:05</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r13091 - /branches/xyz/generic_fns/structure/internal.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00258" class="tabs">Index by Date</a> | <a href="threads.html#00258" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00257.html">Date Prev</a>] [<a href="msg00259.html">Date Next</a>] [<a href="msg00257.html">Thread Prev</a>] [<a href="msg00259.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 17 Jun 2011 10:05:06 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00258.html">E1QXVvG-0006Fv-Kj@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on June 17, 2011 - 12:05:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Jun 17 12:05:06 2011
+New Revision: 13091
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=13091&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=13091&amp;view=rev</a>
+Log:
+Generating new user functions load_xyz() and __parse_models_xyz().
+
+This is Han's patch <a  rel="nofollow" href="https://gna.org/task/download.php?file_id=13247">https://gna.org/task/download.php?file_id=13247</a> attached 
+to the task
+<a  rel="nofollow" href="http://gna.org/task/?7404">http://gna.org/task/?7404</a>.
+
+New user functions load_xyz() and __parse_models_xyz() were generated in
+generic_fns/structures/internal.py based on the functions load_pdb() and 
+__parse_models().
+
+
+Modified:
+    branches/xyz/generic_fns/structure/internal.py
+
+Modified: branches/xyz/generic_fns/structure/internal.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/xyz/generic_fns/structure/internal.py?rev=13091&amp;r1=13090&amp;r2=13091&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/xyz/generic_fns/structure/internal.py?rev=13091&amp;r1=13090&amp;r2=13091&amp;view=diff</a>
+==============================================================================
+--- branches/xyz/generic_fns/structure/internal.py (original)
++++ branches/xyz/generic_fns/structure/internal.py Fri Jun 17 12:05:06 2011
+@@ -280,6 +280,66 @@
+                 records = []
+ 
+                 # Skip the rest of this loop.
++                continue
++
++            # Append the line as a record of the model.
++            records.append(lines[i])
++
++        # If records is not empty then there are no models, so yield the lot.
++        if len(records):
++            yield model, records
++
++
++        def __parse_models_xyz(self, file_path):
++        &quot;&quot;&quot;Generator function for looping over the models in the XYZ file.
++
++        @param file_path:   The full path of the XYZ file.
++        @type file_path:    str
++        @return:            The model number and all the records for that 
+model.
++        @rtype:             tuple of int and array of str
++        &quot;&quot;&quot;
++
++        # Open the file.
++        file = open_read_file(file_path)
++        lines = file.readlines()
++        file.close()
++
++        # Check for empty files.
++        if lines == []:
++            raise RelaxError(&quot;The XYZ file is empty.&quot;)
++
++        # Init.
++        total_atom = 0
++        model = 0 
++        records = []
++
++        # Loop over the data.
++        for i in xrange(len(lines)):
++            num=0
++            word=split(lines[i])
++            # Find the total atom number and the first model.
++            if (i==0) and (len(word)==1):
++                try:
++                    total_atom = int(word[0])
++                    num = 1
++                except:
++                    raise RelaxError(&quot;The MODEL record &quot; + repr(lines[i]) + 
+&quot; is corrupt, cannot read the XYZ file.&quot;)
++
++            # End of the model.
++            if (len(records) == total_atom):
++              # Get the model number
++              model = num
++              print &quot;model&quot;, model
++              num = num + 1
++
++              # Yield the info
++              yield model, records
++
++              # Reset the records.
++              records = []
++
++            # Skip all records prior to atom coordinates record.
++            if (len(word) != 4):
+                 continue
+ 
+             # Append the line as a record of the model.
+@@ -727,6 +787,108 @@
+         return True
+ 
+ 
++    def load_xyz(self, file_path, read_mol=None, set_mol_name=None, 
+read_model=None, set_model_num=None, verbosity=False):
++        &quot;&quot;&quot;Method for loading structures from a XYZ file.
++
++        @param file_path:       The full path of the XYZ file.
++        @type file_path:        str
++        @keyword read_mol:      The molecule(s) to read from the file, 
+independent of model.  The
++                                molecules are determined differently by the 
+different parsers, but
++                                are numbered consecutively from 1.  If set 
+to None, then all
++                                molecules will be loaded.
++        @type read_mol:         None, int, or list of int
++        @keyword set_mol_name:  Set the names of the molecules which are 
+loaded.  If set to None,
++                                then the molecules will be automatically 
+labelled based on the file
++                                name or other information.
++        @type set_mol_name:     None, str, or list of str
++        @keyword read_model:    The XYZ model to extract from the file.  If 
+set to None, then all
++                                models will be loaded.
++        @type read_model:       None, int, or list of int
++        @keyword set_model_num: Set the model number of the loaded molecule. 
+ If set to None, then
++                                the XYZ model numbers will be preserved, if 
+they exist.
++        @type set_model_num:    None, int, or list of int
++        @keyword verbosity:     A flag which if True will cause messages to 
+be printed.
++        @type verbosity:        bool
++        @return:                The status of the loading of the XYZ file.
++        @rtype:                 bool
++        &quot;&quot;&quot;
++
++        # Initial print out.
++        if verbosity:
++            print(&quot;\nInternal relax XYZ parser.&quot;)
++
++        # Test if the file exists.
++        if not access(file_path, F_OK):
++            # Exit indicating failure.
++            return False
++
++        # Separate the file name and path.
++        path, file = os.path.split(file_path)
++
++        # Convert the structure reading args into lists.
++        if read_mol and not isinstance(read_mol, list):
++            read_mol = [read_mol]
++        if set_mol_name and not isinstance(set_mol_name, list):
++            set_mol_name = [set_mol_name]
++        if read_model and not isinstance(read_model, list):
++            read_model = [read_model]
++        if set_model_num and not isinstance(set_model_num, list):
++            set_model_num = [set_model_num]
++
++        # Loop over all models in the XYZ file.
++        mol_index=0
++        model_index = 0
++        orig_model_num = []
++        mol_conts = []
++        orig_mol_num = []
++        new_mol_name = []
++        for model_num, model_records in self.__parse_models_xyz(file_path):
++            # Only load the desired model.
++            if read_model and model_num not in read_model:
++                continue
++
++            # Store the original model number.
++            orig_model_num.append(model_index)
++
++            # Loop over the molecules of the model.
++            if read_mol and mol_index not in read_mol:
++                print &quot;continue&quot;
++                continue
++
++            # Set the target molecule name.
++            if set_mol_name:
++                new_mol_name.append(set_mol_name[mol_index])
++            else:
++                # Set the name to the file name plus the structure number.
++                new_mol_name.append(file_root(file) + '_mol' + 
+repr(mol_index))
++
++            # Store the original mol number.
++            orig_mol_num.append(mol_index)
++
++            # Generate the molecule container.
++            mol = MolContainer_xyz()
++
++            # Fill the molecular data object.
++            mol.fill_object_from_xyz(model_records)
++
++            # Store the molecule container.
++            mol_conts.append([])
++            mol_conts[model_index].append(mol)
++
++            # Increment the molecule index.
++            mol_index = mol_index + 1
++            print &quot;mol_index_try&quot;, mol_index
++
++            # Increment the model index.
++            model_index = model_index + 1
++        
++        # Create the structural data data structures.
++        self.pack_structs(mol_conts, orig_model_num=orig_model_num, 
+set_model_num=set_model_num, orig_mol_num=orig_mol_num, 
+set_mol_name=new_mol_name, file_name=file, file_path=path)
++
++        # Loading worked.
++        return True
++        
++
+     def write_pdb(self, file, model_num=None):
+         &quot;&quot;&quot;Method for the creation of a PDB file from the structural data.
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Jun 17 12:20:03 2011</div>  
+</body>
+</html>

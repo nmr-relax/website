@@ -1,0 +1,207 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r11585 &#45; in /branches/bieri_gui: gui_bieri/relax_gui.py	gui_bieri/relax_prompt.py relax_io.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 16 Sep 2010 17:11:17 +0200 -->
+<!--X-Message-Id: E1OwG7J&#45;0006Vd&#45;HA@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r11585 - in /branches/bieri_gui: gui_bieri/relax_gui.py	gui_bieri/relax_prompt.py relax_io.py -- September 16, 2010 - 17:11</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r11585 - in /branches/bieri_gui: gui_bieri/relax_gui.py	gui_bieri/relax_prompt.py relax_io.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00051" class="tabs">Index by Date</a> | <a href="threads.html#00051" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00050.html">Date Prev</a>] [<a href="msg00052.html">Date Next</a>] [<a href="msg00050.html">Thread Prev</a>] [<a href="msg00052.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 16 Sep 2010 15:11:17 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00051.html">E1OwG7J-0006Vd-HA@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on September 16, 2010 - 17:11:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Sep 16 17:11:17 2010
+New Revision: 11585
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=11585&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=11585&amp;view=rev</a>
+Log:
+The relax prompt GUI element now overrides the exiting functions 'exit', 'q', 
+'quit', 'bye'.
+
+These now correspond to the relax GUI exit_gui() method.  The IO streams are 
+also restored prior to
+printing out the citations, so they are printed in all cases.
+
+
+Modified:
+    branches/bieri_gui/gui_bieri/relax_gui.py
+    branches/bieri_gui/gui_bieri/relax_prompt.py
+    branches/bieri_gui/relax_io.py
+
+Modified: branches/bieri_gui/gui_bieri/relax_gui.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/bieri_gui/gui_bieri/relax_gui.py?rev=11585&amp;r1=11584&amp;r2=11585&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/bieri_gui/gui_bieri/relax_gui.py?rev=11585&amp;r1=11584&amp;r2=11585&amp;view=diff</a>
+==============================================================================
+--- branches/bieri_gui/gui_bieri/relax_gui.py (original)
++++ branches/bieri_gui/gui_bieri/relax_gui.py Thu Sep 16 17:11:17 2010
+@@ -31,6 +31,7 @@
+ import platform
+ from re import search
+ from string import lower, lowercase, replace
++import sys
+ from textwrap import wrap
+ import time
+ import webbrowser
+@@ -45,6 +46,7 @@
+ from generic_fns.mol_res_spin import generate_spin_id, spin_index_loop, 
+spin_loop
+ from generic_fns.reset import reset
+ from relax_errors import RelaxError
++from relax_io import io_streams_restore
+ from version import version
+ 
+ # relaxGUI module imports.
+@@ -129,7 +131,7 @@
+         self.controller = Controller(None, -1, &quot;&quot;)
+ 
+         # Build the relax prompt, but don't show it.
+-        self.relax_prompt = Prompt(None, -1, &quot;&quot;)
++        self.relax_prompt = Prompt(None, -1, &quot;&quot;, parent=self)
+ 
+         rx_data = ds.relax_gui.analyses[self.noe_index[0]]
+         self.frame_1_statusbar = self.CreateStatusBar(3, 0)
+@@ -424,7 +426,7 @@
+         webbrowser.open_new('<a  rel="nofollow" href="mailto:relax-users@xxxxxxx">mailto:relax-users@xxxxxxx</a>')
+ 
+ 
+-    def exit_gui(self, event):
++    def exit_gui(self, event=None):
+         &quot;&quot;&quot;Catch the main window closure and perform the exit procedure.
+ 
+         @param event:   The wx event.
+@@ -436,6 +438,9 @@
+ 
+         # Exit.
+         if doexit:
++            # Restore the IO streams.
++            io_streams_restore(verbosity=0)
++
+             # The relax information box.
+             info = Info_box()
+ 
+@@ -457,7 +462,7 @@
+             for line in wrap(info.bib['dAuvergneGooley08b'].cite_short(), 
+width):
+                 text = text + line + '\n'
+             text = text + '\n'
+-            print(text)
++            sys.__stdout__.write(text)
+ 
+             # Destroy all dialogs.
+             self.controller.Destroy()
+
+Modified: branches/bieri_gui/gui_bieri/relax_prompt.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/bieri_gui/gui_bieri/relax_prompt.py?rev=11585&amp;r1=11584&amp;r2=11585&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/bieri_gui/gui_bieri/relax_prompt.py?rev=11585&amp;r1=11584&amp;r2=11585&amp;view=diff</a>
+==============================================================================
+--- branches/bieri_gui/gui_bieri/relax_prompt.py (original)
++++ branches/bieri_gui/gui_bieri/relax_prompt.py Thu Sep 16 17:11:17 2010
+@@ -41,6 +41,9 @@
+     def __init__(self, *args, **kwds):
+         &quot;&quot;&quot;Set up the relax prompt.&quot;&quot;&quot;
+ 
++        # Store the parent object.
++        self.gui = kwds.pop('parent')
++
+         # Create GUI elements
+         kwds[&quot;style&quot;] = wx.DEFAULT_FRAME_STYLE
+         wx.Frame.__init__(self, *args, **kwds)
+@@ -79,6 +82,10 @@
+         self.prompt.StyleSetSpec(stc.STC_P_WORD, &quot;fore:#a52a2a&quot;)
+         self.prompt.StyleSetSpec(stc.STC_P_DEFNAME, &quot;fore:#008b8b&quot;)
+         self.prompt.StyleSetSpec(stc.STC_P_CLASSNAME, &quot;fore:#008b8b&quot;)
++
++        # Override the exiting commands.
++        for name in ['exit', 'bye', 'quit', 'q']:
++            self.prompt.interp.locals[name] = self.gui.exit_gui
+ 
+         # Add the shell to the sizer.
+         sizer.Add(self.prompt, 1, wx.EXPAND|wx.ALL, self.border)
+
+Modified: branches/bieri_gui/relax_io.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/bieri_gui/relax_io.py?rev=11585&amp;r1=11584&amp;r2=11585&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/bieri_gui/relax_io.py?rev=11585&amp;r1=11584&amp;r2=11585&amp;view=diff</a>
+==============================================================================
+--- branches/bieri_gui/relax_io.py (original)
++++ branches/bieri_gui/relax_io.py Thu Sep 16 17:11:17 2010
+@@ -204,8 +204,12 @@
+     return file_path
+ 
+ 
+-def io_streams_restore():
+-    &quot;&quot;&quot;Restore all IO streams to the Python defaults.&quot;&quot;&quot;
++def io_streams_restore(verbosity=1):
++    &quot;&quot;&quot;Restore all IO streams to the Python defaults.
++
++    @param verbosity:   The verbosity level.
++    @type verbosity:    int
++    &quot;&quot;&quot;
+ 
+     # Print out.
+     if verbosity:
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Sep 16 17:40:01 2010</div>  
+</body>
+</html>

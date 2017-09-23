@@ -1,0 +1,217 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r26770 &#45; in /trunk: specific_analyses/relax_disp/ specific_analyses/relax_fit/ target_functions/ -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 26 Nov 2014 19:42:20 +0100 -->
+<!--X-Message-Id: E1XthXg&#45;0005zB&#45;KH@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r26770 - in /trunk: specific_analyses/relax_disp/ specific_analyses/relax_fit/ target_functions/ -- November 26, 2014 - 19:42</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r26770 - in /trunk: specific_analyses/relax_disp/ specific_analyses/relax_fit/ target_functions/</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00374" class="tabs">Index by Date</a> | <a href="threads.html#00374" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00373.html">Date Prev</a>] [<a href="msg00375.html">Date Next</a>] [<a href="msg00373.html">Thread Prev</a>] [<a href="msg00375.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 26 Nov 2014 18:42:20 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00374.html">E1XthXg-0005zB-KH@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on November 26, 2014 - 19:42:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Nov 26 19:42:20 2014
+New Revision: 26770
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=26770&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=26770&amp;view=rev</a>
+Log:
+Shifted the C code Jacobian functions into the new 
+target_functions.relax_fit_wrapper module.
+
+This shifts all of the relaxation curve-fitting C code access into the
+target_functions.relax_fit_wrapper module so that the rest of relax does not 
+need to handle the C
+code.  This will allow for new models to be very easily supported, as they 
+would all be set up in
+this target function module.
+
+
+Modified:
+    trunk/specific_analyses/relax_disp/estimate_r2eff.py
+    trunk/specific_analyses/relax_fit/api.py
+    trunk/target_functions/relax_fit_wrapper.py
+
+Modified: trunk/specific_analyses/relax_disp/estimate_r2eff.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/relax_disp/estimate_r2eff.py?rev=26770&amp;r1=26769&amp;r2=26770&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/relax_disp/estimate_r2eff.py?rev=26770&amp;r1=26769&amp;r2=26770&amp;view=diff</a>
+==============================================================================
+--- trunk/specific_analyses/relax_disp/estimate_r2eff.py        (original)
++++ trunk/specific_analyses/relax_disp/estimate_r2eff.py        Wed Nov 26 
+19:42:20 2014
+@@ -44,10 +44,6 @@
+ from target_functions.chi2 import chi2_rankN, dchi2
+ from target_functions.relax_fit_wrapper import Relax_fit_opt
+ 
+-# C modules.
+-if C_module_exp_fn:
+-    from target_functions.relax_fit import jacobian, jacobian_chi2, setup
+-
+ # Scipy installed.
+ if scipy_module:
+     # Import leastsq.
+@@ -123,10 +119,10 @@
+ 
+             # Initialise data in C code.
+             scaling_list = [1.0, 1.0]
+-            setup(num_params=len(param_vector), num_times=len(times), 
+values=values, sd=errors, relax_times=times, scaling_matrix=scaling_list)
++            model = Relax_fit_opt(num_params=len(param_vector), 
+values=values, errors=errors, relax_times=times, scaling_matrix=scaling_list)
+ 
+             # Use the direct Jacobian from function.
+-            jacobian_matrix_exp = transpose(asarray( jacobian(param_vector) 
+) )
++            jacobian_matrix_exp = transpose(asarray( 
+model.jacobian(param_vector) ) )
+             weights = 1. / errors**2
+ 
+             # Get the co-variance
+@@ -823,12 +819,12 @@
+     if E.c_code == True:
+         if E.chi2_jacobian:
+             # Use the chi2 Jacobian from C.
+-            jacobian_matrix_exp = transpose(asarray( 
+jacobian_chi2(param_vector) ) )
++            jacobian_matrix_exp = transpose(asarray( 
+model.jacobian_chi2(param_vector) ) )
+             weights = ones(E.errors.shape)
+ 
+         else:
+             # Use the direct Jacobian from C.
+-            jacobian_matrix_exp = transpose(asarray( jacobian(param_vector) 
+) )
++            jacobian_matrix_exp = transpose(asarray( 
+model.jacobian(param_vector) ) )
+             weights = 1. / E.errors**2
+ 
+     elif E.c_code == False:
+
+Modified: trunk/specific_analyses/relax_fit/api.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/relax_fit/api.py?rev=26770&amp;r1=26769&amp;r2=26770&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/relax_fit/api.py?rev=26770&amp;r1=26769&amp;r2=26770&amp;view=diff</a>
+==============================================================================
+--- trunk/specific_analyses/relax_fit/api.py    (original)
++++ trunk/specific_analyses/relax_fit/api.py    Wed Nov 26 19:42:20 2014
+@@ -45,10 +45,6 @@
+ from specific_analyses.relax_fit.parameters import assemble_param_vector, 
+disassemble_param_vector, linear_constraints
+ from target_functions.relax_fit_wrapper import Relax_fit_opt
+ 
+-# C modules.
+-if C_module_exp_fn:
+-    from target_functions.relax_fit import jacobian, setup
+-
+ 
+ class Relax_fit(API_base, API_common):
+     &quot;&quot;&quot;Class containing functions for relaxation curve fitting.&quot;&quot;&quot;
+@@ -139,10 +135,10 @@
+ 
+         # Initialise data in C code.
+         scaling_list = [1.0, 1.0]
+-        setup(num_params=len(param_vector), num_times=len(times), 
+values=values, sd=errors, relax_times=times, scaling_matrix=scaling_list)
++        model = Relax_fit_opt(num_params=len(param_vector), values=values, 
+errors=errors, relax_times=times, scaling_matrix=scaling_list)
+ 
+         # Use the direct Jacobian from function.
+-        jacobian_matrix_exp = transpose(asarray( jacobian(param_vector) ) )
++        jacobian_matrix_exp = transpose(asarray( 
+model.jacobian(param_vector) ) )
+         weights = 1. / errors**2
+ 
+         # Return the matrices.
+
+Modified: trunk/target_functions/relax_fit_wrapper.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/target_functions/relax_fit_wrapper.py?rev=26770&amp;r1=26769&amp;r2=26770&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/target_functions/relax_fit_wrapper.py?rev=26770&amp;r1=26769&amp;r2=26770&amp;view=diff</a>
+==============================================================================
+--- trunk/target_functions/relax_fit_wrapper.py (original)
++++ trunk/target_functions/relax_fit_wrapper.py Wed Nov 26 19:42:20 2014
+@@ -32,7 +32,7 @@
+ 
+ # C modules.
+ if C_module_exp_fn:
+-    from target_functions.relax_fit import setup, func, dfunc, d2func, 
+back_calc_I
++    from target_functions.relax_fit import jacobian, jacobian_chi2, setup, 
+func, dfunc, d2func, back_calc_I
+ 
+ 
+ class Relax_fit_opt:
+@@ -60,6 +60,10 @@
+         self.func = self.func_wrapper
+         self.dfunc = self.dfunc_wrapper
+         self.d2func = self.d2func_wrapper
++
++        # Alias the Jacobian C functions.
++        self.jacobian = jacobian
++        self.jacobian_chi2 = jacobian_chi2
+ 
+ 
+     def back_calc_data(self):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Nov 27 10:00:08 2014</div>  
+</body>
+</html>

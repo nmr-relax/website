@@ -1,0 +1,205 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r24924 &#45; /branches/R1_fitting/target_functions/relax_disp.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 04 Aug 2014 16:27:35 +0200 -->
+<!--X-Message-Id: E1XEJEc&#45;00019T&#45;Vj@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r24924 - /branches/R1_fitting/target_functions/relax_disp.py -- August 04, 2014 - 16:27</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r24924 - /branches/R1_fitting/target_functions/relax_disp.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00058" class="tabs">Index by Date</a> | <a href="threads.html#00058" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00057.html">Date Prev</a>] [<a href="msg00059.html">Date Next</a>] [<a href="msg00057.html">Thread Prev</a>] [<a href="msg00059.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 04 Aug 2014 14:27:34 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00058.html">E1XEJEc-00019T-Vj@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on August 04, 2014 - 16:27:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Mon Aug  4 16:27:34 2014
+New Revision: 24924
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=24924&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=24924&amp;view=rev</a>
+Log:
+Split the target function of model DPL94 into a func_DPL94 and calc_DPL94.
+
+This is to prepare for a target function func_DPL94_fit_r1.
+
+sr #3135(<a  rel="nofollow" href="https://gna.org/support/?3135">https://gna.org/support/?3135</a>): Optimisation of the R1 relaxation 
+rate for the off-resonance R1rho relaxation dispersion models.
+
+Modified:
+    branches/R1_fitting/target_functions/relax_disp.py
+
+Modified: branches/R1_fitting/target_functions/relax_disp.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/R1_fitting/target_functions/relax_disp.py?rev=24924&amp;r1=24923&amp;r2=24924&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/R1_fitting/target_functions/relax_disp.py?rev=24924&amp;r1=24923&amp;r2=24924&amp;view=diff</a>
+==============================================================================
+--- branches/R1_fitting/target_functions/relax_disp.py  (original)
++++ branches/R1_fitting/target_functions/relax_disp.py  Mon Aug  4 16:27:34 
+2014
+@@ -238,6 +238,7 @@
+         self.nm_no_nd_ones = ones([self.NM, self.NO, self.ND], float64)
+ 
+         # Structure of r20a and r20b. The full and outer dimensions 
+structures.
++        self.r1rho_prime_struct = deepcopy(numpy_array_zeros)
+         self.r20_struct = deepcopy(numpy_array_zeros)
+         self.r20a_struct = deepcopy(numpy_array_zeros)
+         self.r20b_struct = deepcopy(numpy_array_zeros)
+@@ -605,6 +606,42 @@
+         return chi2_rankN(self.values, self.back_calc, self.errors)
+ 
+ 
++    def calc_DPL94(self, R1=None, r1rho_prime=None, phi_ex=None, kex=None):
++        &quot;&quot;&quot;Calculation function for the Davis, Perlman and London (1994) 
+fast 2-site off-resonance exchange model for R1rho-type experiments.
++
++        @keyword R1:            The R1 value.
++        @type R1:               list of float
++        @keyword r1rho_prime:   The R1rho value for all states in the 
+absence of exchange.
++        @type r1rho_prime:      list of float
++        @keyword phi_ex:        The fast exchange factor pA.pB.dw**2 (ppm).
++        @type phi_ex:           list of float
++        @keyword kex:           The rate of exchange.
++        @type kex:              float
++        @return:                The chi-squared value.
++        @rtype:                 float
++        &quot;&quot;&quot;
++
++        # Convert phi_ex from ppm^2 to (rad/s)^2. Use the out argument, to 
+pass directly to structure.
++        multiply( multiply.outer( phi_ex.reshape(1, self.NS), 
+self.nm_no_nd_ones ), self.frqs_squared, out=self.phi_ex_struct )
++
++        # Reshape r1rho_prime to per experiment, spin and frequency.
++        self.r1rho_prime_struct[:] = multiply.outer( 
+r1rho_prime.reshape(self.NE, self.NS, self.NM), self.no_nd_ones )
++
++        # Back calculate the R2eff values.
++        r1rho_DPL94(r1rho_prime=self.r1rho_prime_struct, 
+phi_ex=self.phi_ex_struct, kex=kex, theta=self.tilt_angles, R1=R1, 
+spin_lock_fields2=self.spin_lock_omega1_squared, back_calc=self.back_calc)
++
++        # Clean the data for all values, which is left over at the end of 
+arrays.
++        self.back_calc = self.back_calc*self.disp_struct
++
++        # For all missing data points, set the back-calculated value to the 
+measured values so that it has no effect on the chi-squared value.
++        if self.has_missing:
++            # Replace with values.
++            self.back_calc[self.mask_replace_blank.mask] = 
+self.values[self.mask_replace_blank.mask]
++
++        # Return the total chi-squared value.
++        return chi2_rankN(self.values, self.back_calc, self.errors)
++
++
+     def calc_ns_cpmg_2site_3D_chi2(self, R20A=None, R20B=None, dw=None, 
+pA=None, kex=None):
+         &quot;&quot;&quot;Calculate the chi-squared value of the 'NS CPMG 2-site' models.
+ 
+@@ -977,29 +1014,12 @@
+             params = dot(params, self.scaling_matrix)
+ 
+         # Unpack the parameter values.
+-        R20 = params[:self.end_index[0]]
++        r1rho_prime = params[:self.end_index[0]]
+         phi_ex = params[self.end_index[0]:self.end_index[1]]
+         kex = params[self.end_index[1]]
+ 
+-        # Convert phi_ex from ppm^2 to (rad/s)^2. Use the out argument, to 
+pass directly to structure.
+-        multiply( multiply.outer( phi_ex.reshape(1, self.NS), 
+self.nm_no_nd_ones ), self.frqs_squared, out=self.phi_ex_struct )
+-
+-        # Reshape R20 to per experiment, spin and frequency.
+-        self.r20_struct[:] = multiply.outer( R20.reshape(self.NE, self.NS, 
+self.NM), self.no_nd_ones )
+-
+-        # Back calculate the R2eff values.
+-        r1rho_DPL94(r1rho_prime=self.r20_struct, phi_ex=self.phi_ex_struct, 
+kex=kex, theta=self.tilt_angles, R1=self.r1, 
+spin_lock_fields2=self.spin_lock_omega1_squared, back_calc=self.back_calc)
+-
+-        # Clean the data for all values, which is left over at the end of 
+arrays.
+-        self.back_calc = self.back_calc*self.disp_struct
+-
+-        # For all missing data points, set the back-calculated value to the 
+measured values so that it has no effect on the chi-squared value.
+-        if self.has_missing:
+-            # Replace with values.
+-            self.back_calc[self.mask_replace_blank.mask] = 
+self.values[self.mask_replace_blank.mask]
+-
+-        # Return the total chi-squared value.
+-        return chi2_rankN(self.values, self.back_calc, self.errors)
++        # Calculate and return the chi-squared value.
++        return self.calc_DPL94(R1=self.r1, r1rho_prime=r1rho_prime, 
+phi_ex=phi_ex, kex=kex)
+ 
+ 
+     def func_IT99(self, params):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Aug 04 16:40:02 2014</div>  
+</body>
+</html>

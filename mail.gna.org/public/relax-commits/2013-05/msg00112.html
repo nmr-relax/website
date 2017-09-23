@@ -1,0 +1,171 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r19723 &#45; /trunk/pipe_control/spectrometer.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 24 May 2013 09:25:29 +0200 -->
+<!--X-Message-Id: E1UfmNU&#45;0006lj&#45;S0@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r19723 - /trunk/pipe_control/spectrometer.py -- May 24, 2013 - 09:25</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r19723 - /trunk/pipe_control/spectrometer.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00112" class="tabs">Index by Date</a> | <a href="threads.html#00112" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00111.html">Date Prev</a>] [<a href="msg00113.html">Date Next</a>] [<a href="msg00111.html">Thread Prev</a>] [<a href="msg00113.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 24 May 2013 07:25:28 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00112.html">E1UfmNU-0006lj-S0@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on May 24, 2013 - 09:25:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri May 24 09:25:27 2013
+New Revision: 19723
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=19723&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=19723&amp;view=rev</a>
+Log:
+The pipe_control.spectrometer.get_frequencies() function can now return MHz 
+or Tesla units.
+
+
+Modified:
+    trunk/pipe_control/spectrometer.py
+
+Modified: trunk/pipe_control/spectrometer.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/pipe_control/spectrometer.py?rev=19723&amp;r1=19722&amp;r2=19723&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/pipe_control/spectrometer.py?rev=19723&amp;r1=19722&amp;r2=19723&amp;view=diff</a>
+==============================================================================
+--- trunk/pipe_control/spectrometer.py (original)
++++ trunk/pipe_control/spectrometer.py Fri May 24 09:25:27 2013
+@@ -23,12 +23,14 @@
+ &quot;&quot;&quot;Module for manipulating the spectrometer experimental information.&quot;&quot;&quot;
+ 
+ # Python module imports.
++from math import pi
+ from warnings import warn
+ 
+ # relax module imports.
++from lib.errors import RelaxError
++from lib.physical_constants import g1H
++from lib.warnings import RelaxWarning
+ from pipe_control import pipes
+-from lib.errors import RelaxError
+-from lib.warnings import RelaxWarning
+ 
+ 
+ def frequency(id=None, frq=None, units='Hz'):
+@@ -82,25 +84,44 @@
+         cdp.spectrometer_frq_count += 1
+ 
+ 
+-def get_frequencies():
++def get_frequencies(units='Hz'):
+     &quot;&quot;&quot;Return a list of all the current spectrometer frequencies.
+ 
+-    @return:    The frequency list for the current data pipe.
+-    @rtype:     list of float
++    The returned values can be changed with the units argument which can 
+have the following values:
++
++        - 'Hz' will return the proton frequency (wH),
++        - 'MHz' will return the proton frequency in megahertz,
++        - 'T' will return the B0 field in Tesla.
++
++
++    @keyword units: The magnetic field units to return.  This can be one of 
+'Hz', 'MHz', or 'T'.
++    @type units:    str
++    @return:        The frequency list for the current data pipe.
++    @rtype:         list of float
+     &quot;&quot;&quot;
+ 
+     # No frequency data.
+     if not hasattr(cdp, 'spectrometer_frq'):
+         return []
+ 
+-    # The frequency values.
+-    values = cdp.spectrometer_frq.values()
++    # Convert the values.
++    frq = []
++    for value in cdp.spectrometer_frq_list:
++        # Hertz.
++        if units == 'Hz':
++            frq.append(value)
+ 
+-    # Build a list of the unique frequencies.
+-    frq = []
+-    for value in values:
+-        if value not in frq:
+-            frq.append(value)
++        # MHz.
++        elif units == 'MHz':
++            frq.append(value * 1e-6)
++
++        # Tesla.
++        elif unit == 'T':
++            frq.append(value * 2.0 * pi / g1H)
++
++        # Unknown units.
++        else:
++            raise RelaxError(&quot;The units of '%s' should be one of 'Hz', 
+'MHz', or 'T'.&quot;)
+ 
+     # Return the frqs.
+     return frq
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri May 24 09:40:01 2013</div>  
+</body>
+</html>

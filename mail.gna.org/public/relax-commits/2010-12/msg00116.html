@@ -1,0 +1,249 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r11816 &#45; /branches/peak_list_handling/generic_fns/spectrum.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 14 Dec 2010 17:52:06 +0100 -->
+<!--X-Message-Id: E1PSY6g&#45;0000KS&#45;9D@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r11816 - /branches/peak_list_handling/generic_fns/spectrum.py -- December 14, 2010 - 17:52</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r11816 - /branches/peak_list_handling/generic_fns/spectrum.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00116" class="tabs">Index by Date</a> | <a href="threads.html#00116" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00115.html">Date Prev</a>] [<a href="msg00117.html">Date Next</a>] [<a href="msg00115.html">Thread Prev</a>] [<a href="msg00117.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 14 Dec 2010 16:52:06 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00116.html">E1PSY6g-0000KS-9D@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on December 14, 2010 - 17:52:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Dec 14 17:52:06 2010
+New Revision: 11816
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=11816&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=11816&amp;view=rev</a>
+Log:
+Peak intensity data is now stored as a dictionary with the spectrum_id arg as 
+keys.
+
+
+Modified:
+    branches/peak_list_handling/generic_fns/spectrum.py
+
+Modified: branches/peak_list_handling/generic_fns/spectrum.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/peak_list_handling/generic_fns/spectrum.py?rev=11816&amp;r1=11815&amp;r2=11816&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/peak_list_handling/generic_fns/spectrum.py?rev=11816&amp;r1=11815&amp;r2=11816&amp;view=diff</a>
+==============================================================================
+--- branches/peak_list_handling/generic_fns/spectrum.py (original)
++++ branches/peak_list_handling/generic_fns/spectrum.py Tue Dec 14 17:52:06 
+2010
+@@ -116,8 +116,7 @@
+ def __errors_repl(verbosity=0):
+     &quot;&quot;&quot;Calculate the errors for peak intensities from replicated spectra.
+ 
+-    @keyword verbosity: The amount of information to print.  The higher the 
+value, the greater the
+-                        verbosity.
++    @keyword verbosity: The amount of information to print.  The higher the 
+value, the greater the verbosity.
+     @type verbosity:    int
+     &quot;&quot;&quot;
+ 
+@@ -134,7 +133,6 @@
+     else:
+         print(&quot;All spectra replicated:  No.&quot;)
+ 
+-
+     # Test if the standard deviation has already been calculated.
+     if hasattr(cdp, 'sigma_I'):
+         raise RelaxError(&quot;The peak intensity standard deviation of all 
+spectra has already been calculated.&quot;)
+@@ -183,16 +181,24 @@
+                 spin.select = False
+                 continue
+ 
++            # Missing data.
++            missing = False
++            for j in xrange(num_spectra):
++                if not spin.intensities.has_key(spectra[j]):
++                    missing = True
++            if missing:
++                continue
++
+             # Average intensity.
+             ave_intensity = 0.0
+             for j in xrange(num_spectra):
+-                ave_intensity = ave_intensity + spin.intensities[indices[j]]
++                ave_intensity = ave_intensity + spin.intensities[spectra[j]]
+             ave_intensity = ave_intensity / num_spectra
+ 
+             # Sum of squared errors.
+             SSE = 0.0
+             for j in xrange(num_spectra):
+-                SSE = SSE + (spin.intensities[indices[j]] - ave_intensity) 
+** 2
++                SSE = SSE + (spin.intensities[spectra[j]] - ave_intensity) 
+** 2
+ 
+             # Variance.
+             #
+@@ -757,39 +763,29 @@
+     @type dir:              str
+     @keyword spectrum_id:   The spectrum identification string.
+     @type spectrum_id:      str
+-    @keyword heteronuc:     The name of the heteronucleus as specified in 
+the peak intensity
+-                            file.
++    @keyword heteronuc:     The name of the heteronucleus as specified in 
+the peak intensity file.
+     @type heteronuc:        str
+     @keyword proton:        The name of the proton as specified in the peak 
+intensity file.
+     @type proton:           str
+-    @keyword int_col:       The column containing the peak intensity data 
+(used by the generic
+-                            intensity file format).
++    @keyword int_col:       The column containing the peak intensity data 
+(used by the generic intensity file format).
+     @type int_col:          int
+     @keyword int_method:    The integration method, one of 'height', 'point 
+sum' or 'other'.
+     @type int_method:       str
+-    @keyword spin_id_col:   The column containing the spin ID strings (used 
+by the generic intensity
+-                            file format).  If supplied, the mol_name_col, 
+res_name_col, res_num_col,
+-                            spin_name_col, and spin_num_col arguments must 
+be none.
++    @keyword spin_id_col:   The column containing the spin ID strings (used 
+by the generic intensity file format).  If supplied, the mol_name_col, 
+res_name_col, res_num_col, spin_name_col, and spin_num_col arguments must be 
+none.
+     @type spin_id_col:      int or None
+-    @keyword mol_name_col:  The column containing the molecule name 
+information (used by the generic
+-                            intensity file format).  If supplied, 
+spin_id_col must be None.
++    @keyword mol_name_col:  The column containing the molecule name 
+information (used by the generic intensity file format).  If supplied, 
+spin_id_col must be None.
+     @type mol_name_col:     int or None
+-    @keyword res_name_col:  The column containing the residue name 
+information (used by the generic
+-                            intensity file format).  If supplied, 
+spin_id_col must be None.
++    @keyword res_name_col:  The column containing the residue name 
+information (used by the generic intensity file format).  If supplied, 
+spin_id_col must be None.
+     @type res_name_col:     int or None
+-    @keyword res_num_col:   The column containing the residue number 
+information (used by the
+-                            generic intensity file format).  If supplied, 
+spin_id_col must be None.
++    @keyword res_num_col:   The column containing the residue number 
+information (used by the generic intensity file format).  If supplied, 
+spin_id_col must be None.
+     @type res_num_col:      int or None
+-    @keyword spin_name_col: The column containing the spin name information 
+(used by the generic
+-                            intensity file format).  If supplied, 
+spin_id_col must be None.
++    @keyword spin_name_col: The column containing the spin name information 
+(used by the generic intensity file format).  If supplied, spin_id_col must 
+be None.
+     @type spin_name_col:    int or None
+-    @keyword spin_num_col:  The column containing the spin number 
+information (used by the generic
+-                            intensity file format).  If supplied, 
+spin_id_col must be None.
++    @keyword spin_num_col:  The column containing the spin number 
+information (used by the generic intensity file format).  If supplied, 
+spin_id_col must be None.
+     @type spin_num_col:     int or None
+     @keyword sep:           The column separator which, if None, defaults to 
+whitespace.
+     @type sep:              str or None
+-    @keyword spin_id:       The spin ID string used to restrict data loading 
+to a subset of all
+-                            spins.
++    @keyword spin_id:       The spin ID string used to restrict data loading 
+to a subset of all spins.
+     @type spin_id:          None or str
+     @keyword ncproc:        The Bruker ncproc binary intensity scaling 
+factor.
+     @type ncproc:           int or None
+@@ -894,14 +890,14 @@
+ 
+         # Initialise.
+         if not hasattr(spin, 'intensities'):
+-            spin.intensities = []
++            spin.intensities = {}
+ 
+         # Intensity scaling.
+         if ncproc != None:
+             intensity = intensity / float(2**ncproc)
+ 
+         # Add the data.
+-        spin.intensities.append(intensity)
++        spin.intensities[spectrum_id] = intensity
+ 
+ 
+ def replicated(spectrum_ids=None):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Dec 14 18:40:02 2010</div>  
+</body>
+</html>

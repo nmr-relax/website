@@ -1,0 +1,221 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r26032 &#45; /branches/frame_order_cleanup/auto_analyses/frame_order.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 25 Sep 2014 11:14:32 +0200 -->
+<!--X-Message-Id: E1XX58B&#45;0006E3&#45;TQ@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r26032 - /branches/frame_order_cleanup/auto_analyses/frame_order.py -- September 25, 2014 - 11:14</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r26032 - /branches/frame_order_cleanup/auto_analyses/frame_order.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00538" class="tabs">Index by Date</a> | <a href="threads.html#00538" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00537.html">Date Prev</a>] [<a href="msg00539.html">Date Next</a>] [<a href="msg00537.html">Thread Prev</a>] [<a href="msg00539.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 25 Sep 2014 09:14:31 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00538.html">E1XX58B-0006E3-TQ@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on September 25, 2014 - 11:14:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Sep 25 11:14:31 2014
+New Revision: 26032
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=26032&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=26032&amp;view=rev</a>
+Log:
+Incorporated the contents of count_sobol_points.py into the frame order 
+auto-analysis module.
+
+The analysis script has been converted into the count_sobol_points() function 
+which will generate a
+summary table of the number of quasi-random Sobol' points used for the PCS 
+numerical integration.
+
+
+Modified:
+    branches/frame_order_cleanup/auto_analyses/frame_order.py
+
+Modified: branches/frame_order_cleanup/auto_analyses/frame_order.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/auto_analyses/frame_order.py?rev=26032&amp;r1=26031&amp;r2=26032&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/auto_analyses/frame_order.py?rev=26032&amp;r1=26031&amp;r2=26032&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/auto_analyses/frame_order.py   (original)
++++ branches/frame_order_cleanup/auto_analyses/frame_order.py   Thu Sep 25 
+11:14:31 2014
+@@ -64,8 +64,110 @@
+ from pipe_control.structure.mass import pipe_centre_of_mass
+ from prompt.interpreter import Interpreter
+ from specific_analyses.frame_order.data import generate_pivot
++from specific_analyses.frame_order import optimisation
+ from status import Status; status = Status()
+ 
++
++
++def count_sobol_points(file_name='sobol_point_count', dir=None, force=True):
++    &quot;&quot;&quot;Count the number of Sobol' points used for the PCS numerical 
+integration.
++
++    This function can be used while a frame order analysis is running to 
+summarise the results.  It will create a table of the number of Sobol' points 
+used, which can then be used to judge the quality of the integration.
++
++
++    @keyword file_name:     The file to save the table into.
++    @type file_name:        str
++    @keyword dir:           The optional directory to place the file into.  
+If specified, the results files will also be searched for in this directory.
++    @type dir:              None or str
++    @keyword force:         A flag which if True will cause any preexisting 
+file to be overwritten.
++    @type force:            bool
++    &quot;&quot;&quot;
++
++    # The model names, titles and directories, including axis permutations.
++    models = []
++    model_titles = []
++    dirs = []
++    for model in MODEL_LIST:
++        # Add the base model.
++        models.append(model)
++        title = model[0].upper() + model[1:]
++        model_titles.append(title)
++        dirs.append(model_directory(model, base_dir=dir))
++
++        # Axis permutations.
++        if model in MODEL_LIST_ISO_CONE + MODEL_LIST_PSEUDO_ELLIPSE:
++            # The A permutation.
++            models.append(&quot;%s permutation A&quot; % model)
++            model_titles.append(title + ' (perm A)')
++            dirs.append(model_directory(models[-1], base_dir=dir))
++
++            # The B permutation.
++            if model in MODEL_LIST_PSEUDO_ELLIPSE:
++                models.append(&quot;%s permutation B&quot; % model)
++                model_titles.append(title + ' (perm B)')
++                dirs.append(model_directory(models[-1], base_dir=dir))
++
++    # Loop over the models.
++    count = {}
++    count_total = {}
++    percentage = {}
++    for i in range(len(models)):
++        # Skip the rigid model.
++        if models[i] == MODEL_RIGID:
++            continue
++
++        # No file.
++        if not access(dirs[i]+sep+'results.bz2', F_OK):
++            continue
++
++        # Switch to the data pipe if it already exists.
++        if pipes.has_pipe(models[i]):
++            pipes.switch(models[i])
++
++        # Otherwise load the data.
++        else:
++            # Create a data pipe.
++            pipes.create(models[i], 'frame order')
++
++            # Load the data.
++            results.read(file='results', dir=dirs[i])
++
++        # SciPy quadratic integration has been used.
++        if hasattr(cdp, 'quad_int') and cdp.quad_int:
++            count[models[i]] = 'Quad int'
++            count_total[models[i]] = ''
++            percentage[models[i]] = ''
++            continue
++
++        # Count the Sobol' points used.
++        if not hasattr(cdp, 'sobol_points_used'):
++            optimisation.count_sobol_points()
++        count[models[i]] = cdp.sobol_points_used
++        count_total[models[i]] = cdp.sobol_max_points
++        percentage[models[i]] = &quot;%10.3f&quot; % (float(cdp.sobol_points_used) / 
+float(cdp.sobol_max_points) * 100.0) + '%'
++
++    # Initialise the output string.
++    string = &quot;Quasi-random Sobol' numerical PCS integration point 
+counting:\n\n&quot;
++
++    # Assemble the table contents.
++    headings = [[&quot;Model&quot;, &quot;Total points&quot;, &quot;Used points&quot;, &quot;Percentage&quot;]]
++    contents = []
++    for model in models:
++        if model not in count:
++            continue
++        contents.append([model, count_total[model], count[model], 
+percentage[model]])
++
++    # Add the table to the output string.
++    string += format_table(headings=headings, contents=contents)
++
++    # Stdout output.
++    sys.stdout.write(&quot;\n\n\n&quot;)
++    sys.stdout.write(string)
++
++    # Save to file.
++    file = open_write_file(file_name=file_name, dir=dir, force=force)
++    file.write(string)
++    file.close()
+ 
+ 
+ def model_directory(model, base_dir=None):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Sep 25 11:20:03 2014</div>  
+</body>
+</html>

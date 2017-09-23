@@ -1,0 +1,172 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r13330 &#45; /branches/gui_testing/gui/analyses/auto_noe.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 30 Jun 2011 10:37:31 +0200 -->
+<!--X-Message-Id: E1QcCkc&#45;0005Oc&#45;Vp@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r13330 - /branches/gui_testing/gui/analyses/auto_noe.py -- June 30, 2011 - 10:37</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r13330 - /branches/gui_testing/gui/analyses/auto_noe.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00497" class="tabs">Index by Date</a> | <a href="threads.html#00497" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00496.html">Date Prev</a>] [<a href="msg00498.html">Date Next</a>] [<a href="msg00496.html">Thread Prev</a>] [<a href="msg00498.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 30 Jun 2011 08:37:30 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00497.html">E1QcCkc-0005Oc-Vp@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on June 30, 2011 - 10:37:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Jun 30 10:37:30 2011
+New Revision: 13330
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=13330&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=13330&amp;view=rev</a>
+Log:
+Replaced the sequence file, PDB file, and unresolved spin GUI elements in the 
+NOE page with a spin editor.
+
+
+Modified:
+    branches/gui_testing/gui/analyses/auto_noe.py
+
+Modified: branches/gui_testing/gui/analyses/auto_noe.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/gui_testing/gui/analyses/auto_noe.py?rev=13330&amp;r1=13329&amp;r2=13330&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/gui_testing/gui/analyses/auto_noe.py?rev=13330&amp;r1=13329&amp;r2=13330&amp;view=diff</a>
+==============================================================================
+--- branches/gui_testing/gui/analyses/auto_noe.py (original)
++++ branches/gui_testing/gui/analyses/auto_noe.py Thu Jun 30 10:37:30 2011
+@@ -35,6 +35,7 @@
+ # relax module imports.
+ from auto_analyses.noe import NOE_calc
+ from data import Relax_data_store; ds = Relax_data_store()
++from generic_fns.mol_res_spin import count_spins
+ from relax_io import DummyFileObject
+ from status import Status; status = Status()
+ 
+@@ -222,14 +223,8 @@
+         # Add the results directory GUI element.
+         self.field_results_dir = self.add_text_sel_element(box, self.parent, 
+text=&quot;Results directory&quot;, icon=paths.icon_16x16.open_folder, 
+default=self.data.save_dir, fn=self.results_directory, button=True)
+ 
+-        # Add the sequence file selection GUI element.
+-        self.field_sequence = self.add_text_sel_element(box, self.parent, 
+text=&quot;Sequence file&quot;, default=str_to_gui(self.gui.sequence_file_msg), 
+fn=self.load_sequence, editable=False, button=True)
+-
+-        # Add the structure file selection GUI element.
+-        self.field_structure = self.add_text_sel_element(box, self.parent, 
+text=&quot;Sequence from PDB structure file&quot;, 
+default=self.gui.structure_file_pdb_msg, control=StructureTextCtrl, 
+fn='open_file', editable=False, button=True)
+-
+-        # Add the unresolved spins GUI element.
+-        self.field_unresolved = self.add_text_sel_element(box, self.parent, 
+text=&quot;Unresolved residues&quot;)
++        # Add the spin GUI element.
++        self.spin_systems = self.add_text_sel_element(box, self.parent, 
+text=&quot;Spin systems&quot;, default=str_to_gui(self.spin_count()), 
+icon=paths.icon_16x16.spin, fn=self.launch_spin_editor, editable=False, 
+button=True)
+ 
+         # Add peak list selection header.
+         self.add_subtitle(box, &quot;NOE peak lists&quot;)
+@@ -298,7 +293,15 @@
+         event.Skip()
+ 
+ 
+-    def load_sequence(self, event):
++    def launch_spin_editor(self, event):
++        &quot;&quot;&quot;The spin editor GUI element.
++
++        @param event:   The wx event.
++        @type event:    wx event
++        &quot;&quot;&quot;
++
++
++      def load_sequence(self, event):
+         &quot;&quot;&quot;The sequence loading GUI element.
+ 
+         @param event:   The wx event.
+@@ -399,6 +402,20 @@
+ 
+         # Terminate the event.
+         event.Skip()
++
++
++    def spin_count(self):
++        &quot;&quot;&quot;Count the number of loaded spins, returning a string formatted as 
+'xxx spins loaded'.
++
++        @return:    The number of loaded spins in the format 'xxx spins 
+loaded'.
++        @rtype:     str
++        &quot;&quot;&quot;
++
++        # The count.
++        num = count_spins()
++
++        # Return the formatted string.
++        return &quot;%s spins loaded&quot; % num
+ 
+ 
+     def sync_ds(self, upload=False):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Jun 30 11:00:03 2011</div>  
+</body>
+</html>

@@ -1,0 +1,167 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r22600 &#45; /trunk/specific_analyses/model_free/api.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 28 Mar 2014 18:38:59 +0100 -->
+<!--X-Message-Id: E1WTak7&#45;0008Iq&#45;E1@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r22600 - /trunk/specific_analyses/model_free/api.py -- March 28, 2014 - 18:38</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r22600 - /trunk/specific_analyses/model_free/api.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00210" class="tabs">Index by Date</a> | <a href="threads.html#00210" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00209.html">Date Prev</a>] [<a href="msg00211.html">Date Next</a>] [<a href="msg00209.html">Thread Prev</a>] [<a href="msg00211.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 28 Mar 2014 17:38:59 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00210.html">E1WTak7-0008Iq-E1@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on March 28, 2014 - 18:38:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Mar 28 18:38:59 2014
+New Revision: 22600
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=22600&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=22600&amp;view=rev</a>
+Log:
+Import fixes for BMRB reading and writing support in the model-free analysis.
+
+
+Modified:
+    trunk/specific_analyses/model_free/api.py
+
+Modified: trunk/specific_analyses/model_free/api.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/model_free/api.py?rev=22600&amp;r1=22599&amp;r2=22600&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/model_free/api.py?rev=22600&amp;r1=22599&amp;r2=22600&amp;view=diff</a>
+==============================================================================
+--- trunk/specific_analyses/model_free/api.py   (original)
++++ trunk/specific_analyses/model_free/api.py   Fri Mar 28 18:38:59 2014
+@@ -25,12 +25,14 @@
+ 
+ 
+ # Python module imports.
++import bmrblib
+ from copy import deepcopy
+ from math import pi
+ from minfx.grid import grid_split
+-from numpy import array, dot, float64, zeros
++from numpy import array, dot, float64, int32, zeros
+ from numpy.linalg import inv
+ from re import match, search
++import string
+ from types import MethodType
+ from warnings import warn
+ 
+@@ -41,9 +43,11 @@
+ from lib.physical_constants import N15_CSA, h_bar, mu0, 
+return_gyromagnetic_ratio
+ from lib.warnings import RelaxDeselectWarning, RelaxWarning
+ from multi import Processor_box
+-from pipe_control import diffusion_tensor, interatomic, pipes, relax_data, 
+sequence
++from pipe_control import diffusion_tensor, interatomic, mol_res_spin, pipes, 
+relax_data, sequence
++from pipe_control.bmrb import list_sample_conditions
++from pipe_control.exp_info import bmrb_write_citations, bmrb_write_methods, 
+bmrb_write_software
+ from pipe_control.interatomic import return_interatom_list
+-from pipe_control.mol_res_spin import count_spins, exists_mol_res_spin_data, 
+find_index, return_spin, return_spin_from_index, return_spin_indices, 
+spin_loop
++from pipe_control.mol_res_spin import count_spins, exists_mol_res_spin_data, 
+find_index, get_molecule_names, return_spin, return_spin_from_index, 
+return_spin_indices, spin_loop
+ from specific_analyses.api_base import API_base
+ from specific_analyses.api_common import API_common
+ from specific_analyses.model_free.bmrb import sf_csa_read, 
+sf_model_free_read, to_bmrb_model
+@@ -177,7 +181,7 @@
+         star.read()
+ 
+         # The sample conditions.
+-        sample_conds = bmrb.list_sample_conditions(star)
++        sample_conds = list_sample_conditions(star)
+         if sample_conditions and sample_conditions not in sample_conds:
+             raise RelaxError(&quot;The sample conditions label '%s' does not 
+correspond to any of the labels in the file: %s&quot; % (sample_conditions, 
+sample_conds))
+         if not sample_conditions and len(sample_conds) &gt; 1:
+@@ -377,7 +381,7 @@
+         ######################################
+ 
+         # Generate the citations saveframe.
+-        exp_info.bmrb_write_citations(star)
++        bmrb_write_citations(star)
+ 
+ 
+         # Create Supergroup 3 : The molecular assembly saveframes.
+@@ -391,10 +395,10 @@
+         #################################################################
+ 
+         # Generate the method saveframes.
+-        exp_info.bmrb_write_methods(star)
++        bmrb_write_methods(star)
+ 
+         # Generate the software saveframe.
+-        software_ids, software_labels = exp_info.bmrb_write_software(star)
++        software_ids, software_labels = bmrb_write_software(star)
+ 
+ 
+         # Create Supergroup 5 : The NMR parameters saveframes.
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Mar 28 19:00:02 2014</div>  
+</body>
+</html>

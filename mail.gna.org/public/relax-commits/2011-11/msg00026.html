@@ -1,0 +1,236 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r14969 &#45; /1.3/generic_fns/structure/internal.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 03 Nov 2011 17:33:31 +0100 -->
+<!--X-Message-Id: E1RM0EN&#45;0003Yg&#45;1Q@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r14969 - /1.3/generic_fns/structure/internal.py -- November 03, 2011 - 17:33</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r14969 - /1.3/generic_fns/structure/internal.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00026" class="tabs">Index by Date</a> | <a href="threads.html#00026" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00025.html">Date Prev</a>] [<a href="msg00027.html">Date Next</a>] [<a href="msg00025.html">Thread Prev</a>] [<a href="msg00027.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 03 Nov 2011 16:33:30 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00026.html">E1RM0EN-0003Yg-1Q@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on November 03, 2011 - 17:33:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Nov  3 17:33:30 2011
+New Revision: 14969
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=14969&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=14969&amp;view=rev</a>
+Log:
+A lot of fixes for the internal structural object for handling multiple 
+models.
+
+
+Modified:
+    1.3/generic_fns/structure/internal.py
+
+Modified: 1.3/generic_fns/structure/internal.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/generic_fns/structure/internal.py?rev=14969&amp;r1=14968&amp;r2=14969&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/generic_fns/structure/internal.py?rev=14969&amp;r1=14968&amp;r2=14969&amp;view=diff</a>
+==============================================================================
+--- 1.3/generic_fns/structure/internal.py (original)
++++ 1.3/generic_fns/structure/internal.py Thu Nov  3 17:33:30 2011
+@@ -37,7 +37,7 @@
+ from generic_fns import pipes, relax_re
+ from generic_fns.mol_res_spin import spin_loop
+ from generic_fns.mol_res_spin import Selection
+-from relax_errors import RelaxError, RelaxNoPdbError
++from relax_errors import RelaxError, RelaxNoneIntError, RelaxNoPdbError
+ from relax_io import file_root, open_read_file
+ from relax_warnings import RelaxWarning
+ 
+@@ -599,14 +599,14 @@
+         # Test if the current data pipe exists.
+         pipes.test()
+ 
+-        # Add the molecule, if it does not exist.
+-        if cdp.structure.get_molecule(mol_name) == None:
+-            cdp.structure.add_molecule(name=mol_name)
+-
+         # Loop over each model.
+         for model in self.structural_data:
+             # Specific molecule.
+-            mol = cdp.structure.get_molecule(mol_name)
++            mol = self.get_molecule(mol_name, model=model.num)
++
++            # Add the molecule, if it does not exist.
++            if mol == None:
++                self.add_molecule(name=mol_name)
+ 
+             # Add the atom.
+             mol.atom_add(atom_name=atom_name, res_name=res_name, 
+res_num=res_num, pos=pos, element=element, atom_num=atom_num, 
+chain_id=chain_id, segment_id=segment_id, pdb_record=pdb_record)
+@@ -631,28 +631,23 @@
+                 if model == self.structural_data[i].num:
+                     raise RelaxError(&quot;The model '%s' already exists.&quot; % 
+model)
+ 
+-        # No structural data.
+-        new = self.structural_data.is_empty()
+-
+         # Add a new model.
+         self.structural_data.add_item(model_num=model)
+ 
++        # The model to duplicate.
++        if coords_from == None:
++            coords_from = self.structural_data[0].num
++
+         # Construct the structural data for the model from the other models.
+-        if not new:
+-            # The model to duplicate.
+-            if coords_from == None:
+-                coords_from = self.structural_data[0].num
+-
+-            # Loop over the atoms.
+-            for mol_name, res_num, res_name, atom_num, atom_name, element, 
+pos in self.atom_loop(self, model_num=coords_from, mol_name_flag=True, 
+res_num_flag=True, res_name_flag=True, atom_num_flag=True, 
+atom_name_flag=True, element_flag=True, pos_flag=True):
+-                # Add the atom.
+-                self.add_atom(self, mol_name=mol_name, atom_name=atom_name, 
+res_name=res_name, res_num=res_num, pos=pos, element=element, 
+atom_num=atom_num)
++        for mol_name, res_num, res_name, atom_num, atom_name, element, pos 
+in self.atom_loop(model_num=coords_from, mol_name_flag=True, 
+res_num_flag=True, res_name_flag=True, atom_num_flag=True, 
+atom_name_flag=True, element_flag=True, pos_flag=True):
++            # Add the atom.
++            self.add_atom(self, mol_name=mol_name, atom_name=atom_name, 
+res_name=res_name, res_num=res_num, pos=pos, element=element, 
+atom_num=atom_num)
+ 
+         # Return the model.
+         return self.structural_data[-1]
+ 
+ 
+-    def add_molecule(self, name=None, model=None):
++    def add_molecule(self, name=None):
+         &quot;&quot;&quot;Add a new molecule to the store.
+ 
+         @keyword name:          The molecule identifier string.
+@@ -661,8 +656,10 @@
+         @type model:            int or None
+         &quot;&quot;&quot;
+ 
+-        # Create the structural data data structures.
+-        self.pack_structs([[MolContainer()]], orig_model_num=[model], 
+orig_mol_num=[None], set_mol_name=[name])
++        # Loop over the models.
++        for i in range(len(self.structural_data)):
++            # Add the molecule.
++            self.structural_data[i].mol.add_item(mol_name=name, 
+mol_cont=MolContainer())
+ 
+ 
+     def atom_loop(self, atom_id=None, str_id=None, model_num=None, 
+model_num_flag=False, mol_name_flag=False, res_num_flag=False, 
+res_name_flag=False, atom_num_flag=False, atom_name_flag=False, 
+element_flag=False, pos_flag=False, ave=False):
+@@ -701,7 +698,9 @@
+             raise RelaxNoPdbError
+ 
+         # Generate the selection object.
+-        sel_obj = Selection(atom_id)
++        sel_obj = None
++        if atom_id:
++            sel_obj = Selection(atom_id)
+ 
+         # Model loop.
+         for model in self.model_loop(model_num):
+@@ -877,13 +876,13 @@
+         pipes.test()
+ 
+         # Add the molecule, if it does not exist.
+-        if cdp.structure.get_molecule(mol_name) == None:
+-            cdp.structure.add_molecule(name=mol_name)
++        if self.get_molecule(mol_name) == None:
++            self.add_molecule(name=mol_name)
+ 
+         # Loop over each model.
+         for model in self.structural_data:
+             # Specific molecule.
+-            mol = cdp.structure.get_molecule(mol_name)
++            mol = self.get_molecule(mol_name)
+ 
+             # Add the atom.
+             mol.atom_connect(index1=index1, index2=index2)
+@@ -920,7 +919,11 @@
+ 
+         # Check if the target is a single molecule.
+         if model == None and self.num_models() &gt; 1:
+-            raise RelaxError(&quot;The target molecule cannot be determined as 
+there are %s models already present.&quot; % self.num_modes())
++            raise RelaxError(&quot;The target molecule cannot be determined as 
+there are %s models already present.&quot; % self.num_models())
++
++        # Check the model argument.
++        if not isinstance(model, int) and not model == None:
++            raise RelaxNoneIntError
+ 
+         # No models.
+         if not len(self.structural_data):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Nov 03 18:00:02 2011</div>  
+</body>
+</html>

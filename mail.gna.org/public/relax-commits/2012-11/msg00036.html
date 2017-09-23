@@ -1,0 +1,353 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r17975 &#45; in /trunk/generic_fns: pcs.py rdc.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 14 Nov 2012 18:05:53 +0100 -->
+<!--X-Message-Id: E1TYgPR&#45;0008MT&#45;9R@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r17975 - in /trunk/generic_fns: pcs.py rdc.py -- November 14, 2012 - 18:05</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r17975 - in /trunk/generic_fns: pcs.py rdc.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00036" class="tabs">Index by Date</a> | <a href="threads.html#00036" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00035.html">Date Prev</a>] [<a href="msg00037.html">Date Next</a>] [<a href="msg00035.html">Thread Prev</a>] [<a href="msg00037.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 14 Nov 2012 17:05:53 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00036.html">E1TYgPR-0008MT-9R@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on November 14, 2012 - 18:05:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Nov 14 18:05:52 2012
+New Revision: 17975
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=17975&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=17975&amp;view=rev</a>
+Log:
+Implemented the rdc.copy and pcs.copy user function backends.
+
+This code is copied from the relax_data.copy user function and has been 
+tailored to the different
+data types.
+
+
+Modified:
+    trunk/generic_fns/pcs.py
+    trunk/generic_fns/rdc.py
+
+Modified: trunk/generic_fns/pcs.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/generic_fns/pcs.py?rev=17975&amp;r1=17974&amp;r2=17975&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/generic_fns/pcs.py?rev=17975&amp;r1=17974&amp;r2=17975&amp;view=diff</a>
+==============================================================================
+--- trunk/generic_fns/pcs.py (original)
++++ trunk/generic_fns/pcs.py Wed Nov 14 18:05:52 2012
+@@ -33,10 +33,10 @@
+ # relax module imports.
+ from generic_fns import grace, pipes
+ from generic_fns.align_tensor import get_tensor_index
+-from generic_fns.mol_res_spin import exists_mol_res_spin_data, 
+generate_spin_id, return_spin, spin_loop
++from generic_fns.mol_res_spin import exists_mol_res_spin_data, 
+generate_spin_id, return_spin, spin_index_loop, spin_loop
+ from maths_fns.pcs import ave_pcs_tensor
+ from physical_constants import g1H, pcs_constant
+-from relax_errors import RelaxError, RelaxNoPdbError, RelaxNoSequenceError
++from relax_errors import RelaxError, RelaxAlignError, RelaxNoAlignError, 
+RelaxNoPdbError, RelaxNoSequenceError, RelaxPCSError
+ from relax_io import open_write_file, read_spin_data, write_spin_data
+ from relax_warnings import RelaxWarning, RelaxNoSpinWarning
+ 
+@@ -200,6 +200,98 @@
+         if verbosity:
+             print(&quot;\nUsing all paramagnetic positions.&quot;)
+         cdp.paramagnetic_centre = full_pos_list
++
++
++def copy(pipe_from=None, pipe_to=None, align_id=None):
++    &quot;&quot;&quot;Copy the PCS data from one data pipe to another.
++
++    @keyword pipe_from: The data pipe to copy the PCS data from.  This 
+defaults to the current data pipe.
++    @type pipe_from:    str
++    @keyword pipe_to:   The data pipe to copy the PCS data to.  This 
+defaults to the current data pipe.
++    @type pipe_to:      str
++    @param align_id:    The alignment ID string.
++    @type align_id:     str
++    &quot;&quot;&quot;
++
++    # Defaults.
++    if pipe_from == None and pipe_to == None:
++        raise RelaxError(&quot;The pipe_from and pipe_to arguments cannot both be 
+set to None.&quot;)
++    elif pipe_from == None:
++        pipe_from = pipes.cdp_name()
++    elif pipe_to == None:
++        pipe_to = pipes.cdp_name()
++
++    # Test if the pipe_from and pipe_to data pipes exist.
++    pipes.test(pipe_from)
++    pipes.test(pipe_to)
++
++    # Get the data pipes.
++    dp_from = pipes.get_pipe(pipe_from)
++    dp_to = pipes.get_pipe(pipe_to)
++
++    # Test if pipe_from contains sequence data.
++    if not exists_mol_res_spin_data(pipe_from):
++        raise RelaxNoSequenceError
++
++    # Test if pipe_to contains sequence data.
++    if not exists_mol_res_spin_data(pipe_to):
++        raise RelaxNoSequenceError
++
++    # Test if alignment ID string exists for pipe_from.
++    if align_id and (not hasattr(dp_from, 'align_ids') or align_id not in 
+dp_from.align_ids):
++        raise RelaxNoAlignError(align_id, pipe_from)
++
++    # Test if PCS data for the alignment ID exists.
++    if not hasattr(dp_from, 'pcs_ids'):
++        raise RelaxError(&quot;No PCS data exists.&quot;)
++    elif align_id and align_id not in dp_from.pcs_ids:
++        raise RelaxNoPCSError(align_id)
++
++    # The IDs.
++    if align_id == None:
++        align_ids = dp_from.align_ids
++    else:
++        align_ids = [align_id]
++
++    # Init target pipe global structures.
++    if not hasattr(dp_to, 'align_ids'):
++        dp_to.align_ids = []
++    if not hasattr(dp_to, 'pcs_ids'):
++        dp_to.pcs_ids = []
++
++    # Loop over the align IDs.
++    for align_id in align_ids:
++        # Test if PCS ID string exists for pipe_to.
++        if align_id in dp_to.pcs_ids:
++            raise RelaxPCSError(align_id)
++
++        # Copy the global data.
++        dp_to.align_ids.append(align_id)
++        dp_to.pcs_ids.append(align_id)
++
++        # Spin loop.
++        for mol_index, res_index, spin_index in spin_index_loop():
++            # Alias the spin containers.
++            spin_from = 
+dp_from.mol[mol_index].res[res_index].spin[spin_index]
++            spin_to = dp_to.mol[mol_index].res[res_index].spin[spin_index]
++
++            # No data or errors.
++            if (not hasattr(spin_from, 'pcs') or not align_id in 
+spin_from.pcs) and (not hasattr(spin_from, 'pcs_err') or not align_id in 
+spin_from.pcs_err):
++                continue
++
++            # Initialise the spin data if necessary.
++            if hasattr(spin_from, 'pcs') and not hasattr(spin_to, 'pcs'):
++                spin_to.pcs = {}
++            if hasattr(spin_from, 'pcs_err') and not hasattr(spin_to, 
+'pcs_err'):
++                spin_to.pcs_err = {}
++
++            # Copy the value and error from pipe_from.
++            print spin_from
++            print spin_to
++            if hasattr(spin_from, 'pcs'):
++                spin_to.pcs[align_id] = spin_from.pcs[align_id]
++            if hasattr(spin_from, 'pcs_err'):
++                spin_to.pcs_err[align_id] = spin_from.pcs_err[align_id]
+ 
+ 
+ def corr_plot(format=None, file=None, dir=None, force=False):
+
+Modified: trunk/generic_fns/rdc.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/generic_fns/rdc.py?rev=17975&amp;r1=17974&amp;r2=17975&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/generic_fns/rdc.py?rev=17975&amp;r1=17974&amp;r2=17975&amp;view=diff</a>
+==============================================================================
+--- trunk/generic_fns/rdc.py (original)
++++ trunk/generic_fns/rdc.py Wed Nov 14 18:05:52 2012
+@@ -36,10 +36,10 @@
+ from generic_fns import grace, pipes
+ from generic_fns.align_tensor import get_tensor_index
+ from generic_fns.interatomic import create_interatom, interatomic_loop, 
+return_interatom
+-from generic_fns.mol_res_spin import exists_mol_res_spin_data, 
+generate_spin_id, return_spin, spin_loop
++from generic_fns.mol_res_spin import exists_mol_res_spin_data, 
+generate_spin_id, return_spin, spin_index_loop, spin_loop
+ from maths_fns.rdc import ave_rdc_tensor
+ from physical_constants import dipolar_constant, return_gyromagnetic_ratio
+-from relax_errors import RelaxError, RelaxNoRDCError, RelaxNoSequenceError, 
+RelaxSpinTypeError
++from relax_errors import RelaxError, RelaxAlignError, RelaxNoAlignError, 
+RelaxNoRDCError, RelaxNoSequenceError, RelaxSpinTypeError
+ from relax_io import extract_data, open_write_file, strip, write_data
+ from relax_warnings import RelaxWarning
+ 
+@@ -149,6 +149,96 @@
+ 
+     # Return the converted value.
+     return value * factor
++
++
++def copy(pipe_from=None, pipe_to=None, align_id=None):
++    &quot;&quot;&quot;Copy the RDC data from one data pipe to another.
++
++    @keyword pipe_from: The data pipe to copy the RDC data from.  This 
+defaults to the current data pipe.
++    @type pipe_from:    str
++    @keyword pipe_to:   The data pipe to copy the RDC data to.  This 
+defaults to the current data pipe.
++    @type pipe_to:      str
++    @param align_id:    The alignment ID string.
++    @type align_id:     str
++    &quot;&quot;&quot;
++
++    # Defaults.
++    if pipe_from == None and pipe_to == None:
++        raise RelaxError(&quot;The pipe_from and pipe_to arguments cannot both be 
+set to None.&quot;)
++    elif pipe_from == None:
++        pipe_from = pipes.cdp_name()
++    elif pipe_to == None:
++        pipe_to = pipes.cdp_name()
++
++    # Test if the pipe_from and pipe_to data pipes exist.
++    pipes.test(pipe_from)
++    pipes.test(pipe_to)
++
++    # Get the data pipes.
++    dp_from = pipes.get_pipe(pipe_from)
++    dp_to = pipes.get_pipe(pipe_to)
++
++    # Test if pipe_from contains sequence data.
++    if not exists_mol_res_spin_data(pipe_from):
++        raise RelaxNoSequenceError
++
++    # Test if pipe_to contains sequence data.
++    if not exists_mol_res_spin_data(pipe_to):
++        raise RelaxNoSequenceError
++
++    # Test if alignment ID string exists for pipe_from.
++    if align_id and (not hasattr(dp_from, 'align_ids') or align_id not in 
+dp_from.align_ids):
++        raise RelaxNoAlignError(align_id, pipe_from)
++
++    # Test if RDC data for the alignment ID exists.
++    if not hasattr(dp_from, 'rdc_ids'):
++        raise RelaxError(&quot;No RDC data exists.&quot;)
++    elif align_id and align_id not in dp_from.rdc_ids:
++        raise RelaxNoRDCError(align_id)
++
++    # The IDs.
++    if align_id == None:
++        align_ids = dp_from.align_ids
++    else:
++        align_ids = [align_id]
++
++    # Init target pipe global structures.
++    if not hasattr(dp_to, 'align_ids'):
++        dp_to.align_ids = []
++    if not hasattr(dp_to, 'rdc_ids'):
++        dp_to.rdc_ids = []
++
++    # Loop over the align IDs.
++    for align_id in align_ids:
++        # Test if RDC ID string exists for pipe_to.
++        if align_id in dp_to.rdc_ids:
++            raise RelaxRDCError(align_id)
++
++        # Copy the global data.
++        dp_to.align_ids.append(align_id)
++        dp_to.rdc_ids.append(align_id)
++
++        # Spin loop.
++        for mol_index, res_index, spin_index in spin_index_loop():
++            # Alias the spin containers.
++            spin_from = 
+dp_from.mol[mol_index].res[res_index].spin[spin_index]
++            spin_to = dp_to.mol[mol_index].res[res_index].spin[spin_index]
++
++            # No data or errors.
++            if (not hasattr(spin_from, 'rdc') or not align_id in 
+spin_from.rdc) and (not hasattr(spin_from, 'rdc_err') or not align_id in 
+spin_from.rdc_err):
++                continue
++
++            # Initialise the spin data if necessary.
++            if hasattr(spin_from, 'rdc') and not hasattr(spin_to, 'rdc'):
++                spin_to.rdc = {}
++            if hasattr(spin_from, 'rdc_err') and not hasattr(spin_to, 
+'rdc_err'):
++                spin_to.rdc_err = {}
++
++            # Copy the value and error from pipe_from.
++            if hasattr(spin_from, 'rdc'):
++                spin_to.rdc[align_id] = spin_from.rdc[align_id]
++            if hasattr(spin_from, 'rdc_err'):
++                spin_to.rdc_err[align_id] = spin_from.rdc_err[align_id]
+ 
+ 
+ def corr_plot(format=None, file=None, dir=None, force=False):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Nov 14 18:40:02 2012</div>  
+</body>
+</html>

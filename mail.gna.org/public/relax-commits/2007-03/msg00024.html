@@ -1,0 +1,415 @@
+<!-- MHonArc v2.6.10 -->
+<!--X-Subject: r3083 &#45; /1.3/sample_scripts/relax_curve_diff.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 06 Mar 2007 04:01:27 +0100 -->
+<!--X-Message-Id: E1HOPv6&#45;0003Ve&#45;PK@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r3083 - /1.3/sample_scripts/relax_curve_diff.py -- March 06, 2007 - 04:01</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r3083 - /1.3/sample_scripts/relax_curve_diff.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00024" class="tabs">Index by Date</a> | <a href="threads.html#00024" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00023.html">Date Prev</a>] [<a href="msg00025.html">Date Next</a>] [<a href="msg00023.html">Thread Prev</a>] [<a href="msg00025.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 06 Mar 2007 03:00:56 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00024.html">E1HOPv6-0003Ve-PK@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on March 06, 2007 - 04:01:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Mar  6 04:00:55 2007
+New Revision: 3083
+
+URL: <a  href="http://svn.gna.org/viewcvs/relax?rev=3083&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=3083&amp;view=rev</a>
+Log:
+Addition of a sample script to create a Grace plot of Ix - Ix(theta).
+
+This plot is the difference between the measured and back calculated peak 
+intensities.
+
+
+Added:
+    1.3/sample_scripts/relax_curve_diff.py
+
+Added: 1.3/sample_scripts/relax_curve_diff.py
+URL: 
+<a  href="http://svn.gna.org/viewcvs/relax/1.3/sample_scripts/relax_curve_diff.py?rev=3083&amp;view=auto">http://svn.gna.org/viewcvs/relax/1.3/sample_scripts/relax_curve_diff.py?rev=3083&amp;view=auto</a>
+==============================================================================
+--- 1.3/sample_scripts/relax_curve_diff.py (added)
++++ 1.3/sample_scripts/relax_curve_diff.py Tue Mar  6 04:00:55 2007
+@@ -1,0 +1,282 @@
++# Script: relax_curve_diff.py
++# Author: Edward d'Auvergne
++#
++# This script creates a Grace plot of Ix - Ix(theta), the difference between 
+the measured peak
++# intensity and the back calculated peak intensity for each spin system x.  
+Ix(theta) is back
++# calculated using the parameter vector theta = [Rx, I0], where Rx is either 
+the R1 or R2 relaxation
++# rate and I0 is the initial peak intensity.  The plot consists of 
+distributions of intensity
++# differences for each residue at each measured relaxation period.  The 
+average and standard
++# deviations of these distributions are also plotted.
++#
++# The resultant plot is useful for finding bad points or bad spectra when 
+fitting exponential curves
++# to determine the R1 and R2 relaxation rates.  If the averages deviate 
+systematically from zero,
++# then bias in the spectra or fitting will be clearly revealed.
++#
++# To use this script, R1 or R2 exponential curve fitting must have 
+previously have been carried out
++# and the program state saved to the file 'rx.save' (either with or without 
+the .gz or .bz2
++# extensions).  The file name of the saved state can be changed at the 
+bottom of this script.  It is
++# important to note that the same version of relax should be used for 
+creating the saved state as
++# reading the program state, these files are neither backwards nor forwards 
+compatible.  The name of
++# the run using in the curve fitting is expected to be 'rx' but this can 
+also be changed at the
++# bottom of the script.  Only the two parameter exponential fit is currently 
+supported.
++
++
++# Python modules.
++from Numeric import Float64, array, identity, sqrt, zeros
++
++# relax modules.
++from maths_fns.relax_fit import back_calc_I, func, setup
++
++
++def back_calc(name):
++    &quot;&quot;&quot;Back calculate the peak intensities.
++
++    The simple two parameter exponential curve (Rx, I0) is assumed.
++    &quot;&quot;&quot;
++
++    # Loop over the spins.
++    for spin in self.relax.data.res[name]:
++        # Skip deselected spins.
++        if not spin.select:
++            continue
++
++        # The parameter vector.
++        param_vector = array([spin.rx, spin.i0], Float64)
++
++        # Initialise the relaxation fit functions.
++        setup(num_params=len(spin.params), 
+num_times=len(self.relax.data.relax_times[name]), 
+values=spin.ave_intensities, sd=self.relax.data.sd[name], 
+relax_times=self.relax.data.relax_times[name], scaling_matrix=identity(2, 
+Float64))
++
++        # Make a single function call.  This will cause back calculation and 
+the data will be stored in the C module.
++        func(param_vector)
++
++        # Get the data and store it in the spin specific data structure.
++        spin.fit_int = back_calc_I()
++
++
++def calc_ave_sd():
++    &quot;&quot;&quot;Calculate the average difference and sd between the measured and 
+fitted intensities.
++
++    The standard deviation formula is:
++                  ___________________________
++                 /   1
++        sd =    /  ----- * sum({Xi - Xav}^2)],
++              \/   n - 1
++
++    where n is the total number of selected spins, Xi is the peak intensity 
+difference for spin i,
++    and Xav is the peak intensity difference averaged across all spins.
++    &quot;&quot;&quot;
++
++    # Diff array, std deviation array, and number of spins.
++    diff_array = zeros(sum(self.relax.data.num_spectra[name]), Float64)
++    sd_array = zeros(sum(self.relax.data.num_spectra[name]), Float64)
++    num_spins = 0
++
++
++    # Calculate the average difference.
++    ###################################
++
++    # Loop over the spins.
++    for spin in self.relax.data.res[name]:
++        # Skip deselected spins.
++        if not spin.select:
++            continue
++
++        # Loop over the intensities.
++        index = 0
++        for i in xrange(len(spin.intensities)):
++            for j in xrange(len(spin.intensities[i])):
++                # Add the difference between the measured and fitted 
+intensity to the diff array.
++                diff_array[index] = diff_array[index] + 
+(spin.intensities[i][j] - spin.fit_int[i])
++
++                # Increment the index.
++                index = index + 1
++
++        # The number of selected spins.
++        num_spins = num_spins + 1
++
++    # Average difference.
++    diff_array = diff_array / num_spins
++
++
++    # Calculate the standard deviations.
++    ####################################
++
++    # Loop over the spins.
++    for spin in self.relax.data.res[name]:
++        # Skip deselected spins.
++        if not spin.select:
++            continue
++
++        # Loop over the intensities.
++        index = 0
++        for i in xrange(len(spin.intensities)):
++            for j in xrange(len(spin.intensities[i])):
++                # Calculate the sum of squares.
++                sd_array[index] = sd_array[index] + ((spin.intensities[i][j] 
+- spin.fit_int[i]) - diff_array[index])**2
++
++                # Increment the index.
++                index = index + 1
++
++    # The standard deviations.
++    sd_array = sqrt(sd_array / (num_spins - 1))
++
++
++    # Return the values.
++    ####################
++
++    return diff_array, sd_array
++
++
++def grace_header(file, xmin, xmax, ymin, ymax):
++    &quot;&quot;&quot;Write the formatted Grace header.&quot;&quot;&quot;
++
++    # Grace version!
++    file.write(&quot;@version 50118\n&quot;)
++
++    # Graph G0.
++    file.write(&quot;@with g0\n&quot;)
++
++    # The graph zoom level.
++    file.write(&quot;@    world %.1f, %.1f, %.1f, %.1f\n&quot; % (xmin, ymin, xmax, 
+ymax))
++
++    # X-axis label.
++    file.write(&quot;@    xaxis  label \&quot;\qRelaxation time period (s)\Q\&quot;\n&quot;)
++
++    # X-axis specific settings.
++    file.write(&quot;@    xaxis  label char size 1.48\n&quot;)
++    file.write(&quot;@    xaxis  tick major size 0.75\n&quot;)
++    file.write(&quot;@    xaxis  tick major linewidth 0.5\n&quot;)
++    file.write(&quot;@    xaxis  tick minor linewidth 0.5\n&quot;)
++    file.write(&quot;@    xaxis  tick minor size 0.45\n&quot;)
++    file.write(&quot;@    xaxis  ticklabel char size 1.00\n&quot;)
++
++    # Y-axis label.
++    file.write(&quot;@    yaxis  label \&quot;\qPeak intensity differences (I\\sx\\N - 
+I\\sx\\N(\\xq\\f{}))\Q\&quot;\n&quot;)
++
++    # Y-axis specific settings.
++    file.write(&quot;@    yaxis  label char size 1.48\n&quot;)
++    file.write(&quot;@    yaxis  tick major size 0.75\n&quot;)
++    file.write(&quot;@    yaxis  tick major linewidth 0.5\n&quot;)
++    file.write(&quot;@    yaxis  tick minor linewidth 0.5\n&quot;)
++    file.write(&quot;@    yaxis  tick minor size 0.45\n&quot;)
++    file.write(&quot;@    yaxis  ticklabel char size 1.00\n&quot;)
++
++    # Frame.
++    file.write(&quot;@    frame linewidth 0.5\n&quot;)
++
++    # Symbols.
++    file.write(&quot;@    s0 symbol 9\n&quot;)
++    file.write(&quot;@    s0 symbol size 0.45\n&quot;)
++    file.write(&quot;@    s0 symbol linewidth 0.5\n&quot;)
++    file.write(&quot;@    s0 line linestyle 0\n&quot;)
++    file.write(&quot;@    s1 symbol 8\n&quot;)
++    file.write(&quot;@    s1 symbol size 0.45\n&quot;)
++    file.write(&quot;@    s1 symbol linewidth 0.5\n&quot;)
++    file.write(&quot;@    s1 line linestyle 0\n&quot;)
++    file.write(&quot;@    s2 symbol 1\n&quot;)
++    file.write(&quot;@    s2 symbol size 1.00\n&quot;)
++    file.write(&quot;@    s2 symbol fill pattern 1\n&quot;)
++    file.write(&quot;@    s2 symbol linewidth 0.5\n&quot;)
++    file.write(&quot;@    s2 line linestyle 3\n&quot;)
++
++
++def grace_plot(ave, sd, name):
++    &quot;&quot;&quot;Grace plot of the intensity differences.&quot;&quot;&quot;
++
++    # Open the file.
++    file = open('differences.agr', 'w')
++
++    # Y-axis min and max.
++    ymin = 2.5*min(ave - sd)
++    ymax = 2.5*max(ave + sd)
++
++    # Grace header.
++    grace_header(file, xmin=0, xmax=self.relax.data.relax_times[name][-1], 
+ymin=ymin, ymax=ymax)
++
++
++    # First time point difference distributions.
++    ############################################
++
++    # First graph, first data set.
++    file.write(&quot;@target G0.S0\n&quot;)
++    file.write(&quot;@type xy\n&quot;)
++
++    # Loop over the individual time points.
++    for i in xrange(len(self.relax.data.num_spectra[name])):
++        # Loop over the spins.
++        for spin in self.relax.data.res[name]:
++            # Skip deselected spins.
++            if not spin.select:
++                continue
++
++            # Grace data point.
++            file.write(&quot;%-30s%-30s\n&quot; % 
+(`self.relax.data.relax_times[name][i]`, `spin.intensities[i][0] - 
+spin.fit_int[i]`))
++
++    # End the graph.
++    file.write(&quot;&amp;\n&quot;)
++
++
++    # Second time point difference distributions.
++    #############################################
++
++    # First graph, second data set.
++    file.write(&quot;@target G0.S1\n&quot;)
++    file.write(&quot;@type xy\n&quot;)
++
++    # Loop over the individual time points.
++    for i in xrange(len(self.relax.data.num_spectra[name])):
++        # Loop over the spins.
++        for spin in self.relax.data.res[name]:
++            # Skip deselected spins.
++            if not spin.select:
++                continue
++
++            # Grace data point.
++            if len(spin.intensities[i]) == 2:
++                file.write(&quot;%-30s%-30s\n&quot; % 
+(`self.relax.data.relax_times[name][i]`, `spin.intensities[i][1] - 
+spin.fit_int[i]`))
++
++    # End the graph.
++    file.write(&quot;&amp;\n&quot;)
++
++
++    # Average and sd.
++    #################
++
++    # First graph, third data set.
++    file.write(&quot;@target G0.S2\n&quot;)
++    file.write(&quot;@type xydy\n&quot;)
++
++    # Loop over the data.
++    index = 0
++    for i in xrange(len(self.relax.data.num_spectra[name])):
++        for j in xrange(self.relax.data.num_spectra[name][i]):
++            # Grace data point.
++            file.write(&quot;%-30s%-30s%-30s\n&quot; % 
+(`self.relax.data.relax_times[name][i]`, `ave[index]`, `sd[index]`))
++
++            # Increment the index.
++            index = index + 1
++
++    # End the graph.
++    file.write(&quot;&amp;\n&quot;)
++
++    # Close the file.
++    file.close()
++
++
++# Load the program state containing saved by the 'relax_fit.py' sample 
+script.
++state.load('rx.save')
++
++# The name of the run from the 'relax_fit.py' sample script.
++name = 'rx'
++
++# Back calculate the peak intensities from the fitted parameters.
++back_calc(name)
++
++# Calculate the average difference and standard deviations for each time 
+point.
++ave, sd = calc_ave_sd()
++
++# Create a Grace plot of the differences.
++grace_plot(ave, sd, name)
++
++# View the graph.
++grace.view(file='differences.agr', dir=None)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Mar 06 04:20:06 2007</div>  
+</body>
+</html>

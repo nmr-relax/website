@@ -1,0 +1,533 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r21733 &#45; in /trunk: lib/structure/internal/ pipe_control/structure/	user_functions/ -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 02 Dec 2013 10:47:36 +0100 -->
+<!--X-Message-Id: E1VnQ6K&#45;0006tY&#45;8h@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r21733 - in /trunk: lib/structure/internal/ pipe_control/structure/	user_functions/ -- December 02, 2013 - 10:47</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r21733 - in /trunk: lib/structure/internal/ pipe_control/structure/	user_functions/</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00011" class="tabs">Index by Date</a> | <a href="threads.html#00011" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00010.html">Date Prev</a>] [<a href="msg00012.html">Date Next</a>] [<a href="msg00010.html">Thread Prev</a>] [<a href="msg00012.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 02 Dec 2013 09:47:36 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00011.html">E1VnQ6K-0006tY-8h@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on December 02, 2013 - 10:47:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Mon Dec  2 10:47:35 2013
+New Revision: 21733
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=21733&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=21733&amp;view=rev</a>
+Log:
+Implemented the structure.read_gaussian user function.
+
+This will read the final structural data out of a Gaussian log file.
+
+
+Modified:
+    trunk/lib/structure/internal/molecules.py
+    trunk/lib/structure/internal/object.py
+    trunk/pipe_control/structure/main.py
+    trunk/user_functions/structure.py
+
+Modified: trunk/lib/structure/internal/molecules.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/lib/structure/internal/molecules.py?rev=21733&amp;r1=21732&amp;r2=21733&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/lib/structure/internal/molecules.py?rev=21733&amp;r1=21732&amp;r2=21733&amp;view=diff</a>
+==============================================================================
+--- trunk/lib/structure/internal/molecules.py (original)
++++ trunk/lib/structure/internal/molecules.py Mon Dec  2 10:47:35 2013
+@@ -23,12 +23,14 @@
+ &quot;&quot;&quot;The objects representing molecules in the internal structural object.&quot;&quot;&quot;
+ 
+ # Python module imports.
++from re import search
+ from string import digits
+ from warnings import warn
+ 
+ # relax module import.
+ from data_store.relax_xml import fill_object_contents, xml_to_object
+ from lib.errors import RelaxError, RelaxFromXMLNotEmptyError
++from lib.periodic_table import periodic_table
+ from lib.structure import pdb_read
+ from lib.warnings import RelaxWarning
+ 
+@@ -154,6 +156,54 @@
+ 
+         # Else, throw a warning.
+         warn(RelaxWarning(&quot;Cannot determine the element associated with atom 
+'%s'.&quot; % atom_name))
++
++
++    def _parse_gaussian_record(self, record):
++        &quot;&quot;&quot;Parse the Gaussian log record string and return an array of the 
+corresponding atomic information.
++
++        The format of the Gaussian log records is::
++         
+__________________________________________________________________________________________
++         |         |              |                                          
+                     |
++         | Columns | Data type    | Description                              
+                     |
++         
+|_________|______________|_______________________________________________________________|
++         |         |              |                                          
+                     |
++         |  1      | int          | &quot;Center Number&quot; - the sequential atom 
+number.                 |
++         |  2      | int          | &quot;Atomic Number&quot; - the atomic number.     
+                     |
++         |  3      | int          | &quot;Atomic Type&quot; - the atomic type?         
+                     |
++         |  4      | float        | X coordinate in Angstrom                 
+                     |
++         |  5      | float        | Y coordinate in Angstrom                 
+                     |
++         |  6      | float        | Z coordinate in Angstrom                 
+                     |
++         
+|_________|______________|_______________________________________________________________|
++
++
++        @param record:  The single line Gaussian record.
++        @type record:   str
++        @return:        The list of atomic information
++        @rtype:         list of str
++        &quot;&quot;&quot;
++
++        # Skip the header.
++        if search(&quot;---------&quot;, record):
++            return None
++        if search(&quot;Center&quot;, record):
++            return None
++        if search(&quot;Number&quot;, record):
++            return None
++
++        # Initialise.
++        word = record.split()
++
++        # Proper records.
++        if len(word) == 6:
++            # Convert strings to numbers.
++            atom_number = int(word[0])
++            atomic_num = int(word[1])
++            x = float(word[3])
++            y = float(word[4])
++            z = float(word[5])
++
++            # Return the atomic info.
++            return atom_number, atomic_num, x, y, z
+ 
+ 
+     def _parse_xyz_record(self, record):
+@@ -276,6 +326,32 @@
+             self.bonded[index2].append(index1)
+ 
+ 
++    def fill_object_from_gaussian(self, records):
++        &quot;&quot;&quot;Method for generating a complete Structure_container object from 
+the given Gaussian log records.
++
++        @param records:         A list of structural Gaussian log records.
++        @type records:          list of str
++        &quot;&quot;&quot;
++
++        # Loop over the records.
++        for record in records:
++            # Parse the record.
++            data = self._parse_gaussian_record(record)
++
++            # Nothing to do.
++            if data == None:
++                continue
++
++            # Unpack.
++            atom_number, atomic_num, x, y, z = data
++
++            # Translate the atomic number to the atom name.
++            atom_name = periodic_table.lookup_z_to_symbol(atomic_num)
++
++            # Add.
++            self.atom_add(atom_name=atom_name, atom_num=atom_number, pos=[x, 
+y, z], element=atom_name)
++
++
+     def fill_object_from_pdb(self, records, alt_loc_select=None):
+         &quot;&quot;&quot;Method for generating a complete Structure_container object from 
+the given PDB records.
+ 
+
+Modified: trunk/lib/structure/internal/object.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/lib/structure/internal/object.py?rev=21733&amp;r1=21732&amp;r2=21733&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/lib/structure/internal/object.py?rev=21733&amp;r1=21732&amp;r2=21733&amp;view=diff</a>
+==============================================================================
+--- trunk/lib/structure/internal/object.py (original)
++++ trunk/lib/structure/internal/object.py Mon Dec  2 10:47:35 2013
+@@ -28,6 +28,7 @@
+ import os
+ from os import F_OK, access, curdir, sep
+ from os.path import abspath
++from re import search
+ from string import ascii_uppercase
+ from warnings import warn
+ 
+@@ -235,6 +236,59 @@
+         # Average vector.
+         if hetID == 'AVE':
+             return 'Average vector'
++
++
++    def _parse_models_gaussian(self, file_path):
++        &quot;&quot;&quot;Generator function for looping over the models in the Gaussian 
+log file.
++
++        @param file_path:   The full path of the Gaussian log file.
++        @type file_path:    str
++        @return:            The model number and all the records for that 
+model.
++        @rtype:             tuple of int and array of str
++        &quot;&quot;&quot;
++
++        # Open the file.
++        file = open_read_file(file_path)
++        lines = file.readlines()
++        file.close()
++
++        # Check for empty files.
++        if lines == []:
++            raise RelaxError(&quot;The Gaussian log file is empty.&quot;)
++
++        # Init.
++        found = False
++        str_index = 0
++        total_atom = 0
++        model = 0
++        records = []
++
++        # Loop over the data.
++        for i in range(len(lines)):
++            # Found a structure.
++            if search(&quot;Standard orientation&quot;, lines[i]):
++                found = True
++                str_index = 0
++                continue
++
++            # End of the model.
++            if found and str_index &gt; 4 and search(&quot;---------&quot;, lines[i]):
++                # Yield the info
++                yield records
++
++                # Reset.
++                records = []
++                found = False
++
++            # Not a structure line.
++            if not found:
++                continue
++
++            # Append the line as a record of the model.
++            records.append(lines[i])
++
++            # Increment the structure line index.
++            str_index += 1
+ 
+ 
+     def _parse_pdb_connectivity_annotation(self, lines):
+@@ -1622,6 +1676,67 @@
+                     return mol
+ 
+ 
++    def load_gaussian(self, file_path, set_mol_name=None, 
+set_model_num=None, verbosity=False):
++        &quot;&quot;&quot;Method for loading structures from a Gaussian log file.
++
++        @param file_path:       The full path of the Gaussian log file.
++        @type file_path:        str
++        @keyword set_mol_name:  Set the names of the molecules which are 
+loaded.  If set to None, then the molecules will be automatically labelled 
+based on the file name or other information.
++        @type set_mol_name:     None, str, or list of str
++        @keyword set_model_num: Set the model number of the loaded molecule. 
+ If set to None, then the Gaussian log model numbers will be preserved, if 
+they exist.
++        @type set_model_num:    None, int, or list of int
++        @keyword verbosity:     A flag which if True will cause messages to 
+be printed.
++        @type verbosity:        bool
++        @return:                The status of the loading of the Gaussian 
+log file.
++        @rtype:                 bool
++        &quot;&quot;&quot;
++
++        # Initial printout.
++        if verbosity:
++            print(&quot;\nInternal relax Gaussian log parser.&quot;)
++
++        # Test if the file exists.
++        if not access(file_path, F_OK):
++            # Exit indicating failure.
++            return False
++
++        # Separate the file name and path.
++        path, file_name = os.path.split(file_path)
++
++        # The absolute path.
++        path_abs = abspath(curdir) + sep + path
++
++        # Set up the molecule name data structure.
++        if set_mol_name:
++            if not isinstance(set_mol_name, list):
++                set_mol_name = [set_mol_name]
++        else:
++            set_mol_name = [file_root(file_name) + '_mol1']
++
++        # Set up the model number data structure.
++        if set_model_num:
++            if not isinstance(set_model_num, list):
++                set_model_num = [set_model_num]
++        else:
++            set_model_num = [1]
++
++        # Loop over all models in the Gaussian log file, doing nothing so 
+the last model records are stored.
++        for model_records in self._parse_models_gaussian(file_path):
++            pass
++
++        # Generate the molecule container.
++        mol = MolContainer()
++
++        # Fill the molecular data object.
++        mol.fill_object_from_gaussian(model_records)
++
++        # Create the structural data data structures.
++        self.pack_structs([[mol]], orig_model_num=[1], 
+set_model_num=set_model_num, orig_mol_num=[0], set_mol_name=set_mol_name, 
+file_name=file_name, file_path=path, file_path_abs=path_abs)
++
++        # Loading worked.
++        return True
++
++
+     def load_pdb(self, file_path, read_mol=None, set_mol_name=None, 
+read_model=None, set_model_num=None, alt_loc=None, verbosity=False, 
+merge=False):
+         &quot;&quot;&quot;Method for loading structures from a PDB file.
+ 
+
+Modified: trunk/pipe_control/structure/main.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/pipe_control/structure/main.py?rev=21733&amp;r1=21732&amp;r2=21733&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/pipe_control/structure/main.py?rev=21733&amp;r1=21732&amp;r2=21733&amp;view=diff</a>
+==============================================================================
+--- trunk/pipe_control/structure/main.py (original)
++++ trunk/pipe_control/structure/main.py Mon Dec  2 10:47:35 2013
+@@ -617,6 +617,52 @@
+ 
+     # Print out.
+     write_spin_data(file=sys.stdout, mol_names=mol_names, res_nums=res_nums, 
+res_names=res_names, spin_nums=spin_nums, spin_names=spin_names)
++
++
++def read_gaussian(file=None, dir=None, set_mol_name=None, 
+set_model_num=None, verbosity=1, fail=True):
++    &quot;&quot;&quot;Read structures from a Gaussian log file.
++
++
++    @keyword file:          The name of the Gaussian log file to read.
++    @type file:             str
++    @keyword dir:           The directory where the Gaussian log file is 
+located.  If set to None, then the file will be searched for in the current 
+directory.
++    @type dir:              str or None
++    @keyword set_mol_name:  Set the names of the molecules which are loaded. 
+ If set to None, then the molecules will be automatically labelled based on 
+the file name or other information.
++    @type set_mol_name:     None, str, or list of str
++    @keyword set_model_num: Set the model number of the loaded molecule.
++    @type set_model_num:    None, int, or list of int
++    @keyword fail:          A flag which, if True, will cause a RelaxError 
+to be raised if the Gaussian log  file does not exist.  If False, then a 
+RelaxWarning will be trown instead.
++    @type fail:             bool
++    @keyword verbosity:     The amount of information to print to screen.  
+Zero corresponds to minimal output while higher values increase the amount of 
+output.  The default value is 1.
++    @type verbosity:        int
++    @raise RelaxFileError:  If the fail flag is set, then a RelaxError is 
+raised if the Gaussian log file does not exist.
++    &quot;&quot;&quot;
++
++    # Test if the current data pipe exists.
++    pipes.test()
++
++    # The file path.
++    file_path = get_file_path(file, dir)
++
++    # Try adding '.log' to the end of the file path, if the file can't be 
+found.
++    if not access(file_path, F_OK):
++        file_path_orig = file_path
++        file_path = file_path + '.log'
++
++    # Test if the file exists.
++    if not access(file_path, F_OK):
++        if fail:
++            raise RelaxFileError('Gaussian log', file_path_orig)
++        else:
++            warn(RelaxNoPDBFileWarning(file_path))
++            return
++
++    # Place the  structural object into the relax data store.
++    if not hasattr(cdp, 'structure'):
++        cdp.structure = Internal()
++
++    # Load the structures.
++    cdp.structure.load_gaussian(file_path, set_mol_name=set_mol_name, 
+set_model_num=set_model_num, verbosity=verbosity)
+ 
+ 
+ def read_pdb(file=None, dir=None, read_mol=None, set_mol_name=None, 
+read_model=None, set_model_num=None, alt_loc=None, verbosity=1, merge=False, 
+fail=True):
+
+Modified: trunk/user_functions/structure.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/user_functions/structure.py?rev=21733&amp;r1=21732&amp;r2=21733&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/user_functions/structure.py?rev=21733&amp;r1=21732&amp;r2=21733&amp;view=diff</a>
+==============================================================================
+--- trunk/user_functions/structure.py (original)
++++ trunk/user_functions/structure.py Mon Dec  2 10:47:35 2013
+@@ -607,6 +607,58 @@
+ uf.wizard_height_desc = 300
+ uf.wizard_size = (800, 600)
+ uf.wizard_image = WIZARD_IMAGE_PATH + 'structure' + sep + 'load_spins.png'
++
++
++# The structure.read_gaussian user function.
++uf = uf_info.add_uf('structure.read_gaussian')
++uf.title = &quot;Reading structures from Gaussian log files.&quot;
++uf.title_short = &quot;Gaussian log structure reading.&quot;
++uf.add_keyarg(
++    name = &quot;file&quot;,
++    py_type = &quot;str&quot;,
++    arg_type = &quot;file sel&quot;,
++    desc_short = &quot;file name&quot;,
++    desc = &quot;The name of the Gaussian log file.&quot;,
++    wiz_filesel_wildcard = &quot;Gaussian log files 
+(*.log)|*.log;*.log.gz;*.log.bz2&quot;,
++    wiz_filesel_style = FD_OPEN
++)
++uf.add_keyarg(
++    name = &quot;dir&quot;,
++    py_type = &quot;str&quot;,
++    arg_type = &quot;dir&quot;,
++    desc_short = &quot;directory name&quot;,
++    desc = &quot;The directory where the file is located.&quot;,
++    can_be_none = True
++)
++uf.add_keyarg(
++    name = &quot;set_mol_name&quot;,
++    py_type = &quot;str_or_str_list&quot;,
++    desc_short = &quot;setting of molecule names&quot;,
++    desc = &quot;Set the names of the read molecules.  If unset, then the 
+molecules will be automatically labelled based on the file name or other 
+information.  This can either be a single name or a list of names.&quot;,
++    can_be_none = True
++)
++uf.add_keyarg(
++    name = &quot;set_model_num&quot;,
++    py_type = &quot;int_or_int_list&quot;,
++    desc_short = &quot;setting of model numbers&quot;,
++    desc = &quot;Set the model numbers of the loaded molecules.  This can be a 
+single number or list of numbers.&quot;,
++    can_be_none = True
++)
++# Description.
++uf.desc.append(Desc_container())
++uf.desc[-1].add_paragraph(&quot;The atomic positions from a Gaussian log file can 
+be read into relax.  If optimisation has been preformed, the last set of 
+atomic coordinates from the log will be read to obtain the final structure.  
+The log file can be Gzip or Bzip2 compressed.&quot;)
++uf.desc[-1].add_paragraph(&quot;The setting of molecule names is used to name the 
+molecules within the Gaussian file.  If not set, then the molecules will be 
+named after the file name, with the molecule number appended if more than one 
+exists.  By setting the molecule name or setting the model number, the loaded 
+structure can be stored as a specific model or as a different molecule.&quot;)
++# Prompt examples.
++uf.desc.append(Desc_container(&quot;Prompt examples&quot;))
++uf.desc[-1].add_paragraph(&quot;To load all structures from the Gaussian file 
+'taxol.log' in the directory '~/logs', including all models and all 
+molecules, type one of:&quot;)
++uf.desc[-1].add_prompt(&quot;relax&gt; structure.read_gaussian('taxol.log', 
+'~/logs')&quot;)
++uf.desc[-1].add_prompt(&quot;relax&gt; structure.read_gaussian(file='taxol.log', 
+dir=logs')&quot;)
++uf.backend = pipe_control.structure.main.read_gaussian
++uf.menu_text = &quot;read_&amp;gaussian&quot;
++uf.gui_icon = &quot;oxygen.actions.document-open&quot;
++uf.wizard_height_desc = 400
++uf.wizard_size = (900, 600)
++uf.wizard_image = WIZARD_IMAGE_PATH + 'structure' + sep + 'read_xyz.png'
+ 
+ 
+ # The structure.read_pdb user function.
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Dec 02 11:00:02 2013</div>  
+</body>
+</html>

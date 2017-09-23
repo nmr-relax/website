@@ -1,0 +1,270 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r23476 &#45; /trunk/specific_analyses/frame_order/uf.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 27 May 2014 17:17:57 +0200 -->
+<!--X-Message-Id: E1WpJ8X&#45;0002CJ&#45;2w@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r23476 - /trunk/specific_analyses/frame_order/uf.py -- May 27, 2014 - 17:17</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r23476 - /trunk/specific_analyses/frame_order/uf.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00579" class="tabs">Index by Date</a> | <a href="threads.html#00579" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00578.html">Date Prev</a>] [<a href="msg00580.html">Date Next</a>] [<a href="msg00578.html">Thread Prev</a>] [<a href="msg00580.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 27 May 2014 15:17:57 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00579.html">E1WpJ8X-0002CJ-2w@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on May 27, 2014 - 17:17:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue May 27 17:17:56 2014
+New Revision: 23476
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=23476&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=23476&amp;view=rev</a>
+Log:
+Completed the frame_order.pdb_model user function backend for the frame order 
+PDB representation.
+
+Most of this backend, including the axes and cone representations, had been 
+broken for quite a while
+and were being skipped with an early return statement.  This has now been 
+made functional and a few
+fixes have been made.
+
+For the 'rotor' and 'free rotor' model, the neg_cone argument is now ignored 
+so that only one model
+is produced in the final frame order PDB representation file.  For all other 
+models, the rotor
+representation is no longer centred to the point on axis closest to the 
+centre of mass, as the pivot
+is unambiguously defined.  The rotor representation has also been made larger 
+in these models so
+that it is outside of the cone, and the propeller blades are now staggered.
+
+
+Modified:
+    trunk/specific_analyses/frame_order/uf.py
+
+Modified: trunk/specific_analyses/frame_order/uf.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/frame_order/uf.py?rev=23476&amp;r1=23475&amp;r2=23476&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/frame_order/uf.py?rev=23476&amp;r1=23475&amp;r2=23476&amp;view=diff</a>
+==============================================================================
+--- trunk/specific_analyses/frame_order/uf.py   (original)
++++ trunk/specific_analyses/frame_order/uf.py   Tue May 27 17:17:56 2014
+@@ -36,11 +36,12 @@
+ from lib.io import open_write_file
+ from lib.order import order_parameters
+ from lib.structure.cones import Iso_cone, Pseudo_elliptic
++from lib.structure.geometric import generate_vector_residues
+ from lib.structure.internal.object import Internal
++from lib.structure.represent.cone import cone
+ from lib.structure.represent.rotor import rotor_pdb
+ from lib.text.sectioning import subsection
+ from pipe_control import pipes
+-from pipe_control.structure import geometric
+ from pipe_control.structure.mass import pipe_centre_of_mass
+ from specific_analyses.frame_order.data import domain_moving, 
+translation_fixed
+ from specific_analyses.frame_order.parameters import update_model
+@@ -148,7 +149,7 @@
+     @type inc:              int
+     @keyword force:         Flag which if set to True will cause any 
+pre-existing file to be overwritten.
+     @type force:            bool
+-    @keyword neg_cone:      A flag which if True will cause the negative 
+cone to be added to the representation.
++    @keyword neg_cone:      A flag which if True will cause the negative 
+cone to be added to the representation.  This is ignored for the rotor models.
+     @type neg_cone:         bool
+     &quot;&quot;&quot;
+ 
+@@ -169,9 +170,13 @@
+     structure = Internal()
+ 
+     # Create model for the positive and negative images.
++    if cdp.model in ['rotor', 'free rotor']:
++        neg_cone = False
+     model = structure.add_model(model=1)
++    model_num = 1
+     if neg_cone:
+         model_neg = structure.add_model(model=2)
++        model_num = 2
+ 
+     # The pivot point.
+     pivot = array([cdp.pivot_x, cdp.pivot_y, cdp.pivot_z])
+@@ -185,7 +190,9 @@
+             rotor_angle = cdp.cone_sigma_max
+ 
+         # Get the CoM of the entire molecule to use as the centre of the 
+rotor.
+-        com = pipe_centre_of_mass(verbosity=0)
++        com = pivot
++        if cdp.model in ['rotor', 'free rotor']:
++            com = pipe_centre_of_mass(verbosity=0)
+ 
+         # Generate the rotor axis.
+         if cdp.model in ['rotor']:
+@@ -195,15 +202,14 @@
+         else:
+             axis = create_rotor_axis_euler(alpha=cdp.eigen_alpha, 
+beta=cdp.eigen_beta, gamma=cdp.eigen_gamma)
+ 
++        # The size of the rotor, taking the 30 Angstrom cone representation 
+into account.
++        if cdp.model in ['rotor', 'free rotor']:
++            span = 20e-10
++        else:
++            span = 35e-10
++
+         # Add the rotor object to the structure as a new molecule.
+-        rotor_pdb(structure=structure, rotor_angle=rotor_angle, axis=axis, 
+axis_pt=pivot, centre=com, span=2e-9, blade_length=5e-10, staggered=False)
+-
+-    # FIXME:  Temporary write out and exit.
+-    print(&quot;\nGenerating the PDB file.&quot;)
+-    pdb_file = open_write_file(file, dir, force=force)
+-    structure.write_pdb(pdb_file)
+-    pdb_file.close()
+-    return
++        rotor_pdb(structure=structure, rotor_angle=rotor_angle, axis=axis, 
+axis_pt=pivot, centre=com, span=span, blade_length=5e-10, staggered=True)
+ 
+     # Create the molecule.
+     structure.add_molecule(name='rest')
+@@ -254,11 +260,11 @@
+ 
+         # Generate the axis vectors.
+         print(&quot;\nGenerating the axis vectors.&quot;)
+-        res_num = geometric.generate_vector_residues(mol=mol, 
+vector=axis_pos, atom_name='z-ax', res_name_vect='AXE', 
+sim_vectors=axis_sim_pos, res_num=2, origin=pivot, scale=size)
++        res_num = generate_vector_residues(mol=mol, vector=axis_pos, 
+atom_name='z-ax', res_name_vect='AXE', sim_vectors=axis_sim_pos, res_num=2, 
+origin=pivot, scale=size)
+ 
+         # The negative.
+         if neg_cone:
+-            res_num = geometric.generate_vector_residues(mol=mol_neg, 
+vector=axis_neg, atom_name='z-ax', res_name_vect='AXE', 
+sim_vectors=axis_sim_neg, res_num=2, origin=pivot, scale=size)
++            res_num = generate_vector_residues(mol=mol_neg, vector=axis_neg, 
+atom_name='z-ax', res_name_vect='AXE', sim_vectors=axis_sim_neg, res_num=2, 
+origin=pivot, scale=size)
+ 
+     # The full axis system.
+     else:
+@@ -303,9 +309,9 @@
+                 axis_sim_neg = axes_sim_neg[:,:, j]
+ 
+             # The vectors.
+-            res_num = geometric.generate_vector_residues(mol=mol, 
+vector=axes_pos[:, j], atom_name='%s-ax'%label[j], res_name_vect='AXE', 
+sim_vectors=axis_sim_pos, res_num=2, origin=pivot, scale=size)
++            res_num = generate_vector_residues(mol=mol, vector=axes_pos[:, 
+j], atom_name='%s-ax'%label[j], res_name_vect='AXE', 
+sim_vectors=axis_sim_pos, res_num=2, origin=pivot, scale=size)
+             if neg_cone:
+-                res_num = geometric.generate_vector_residues(mol=mol_neg, 
+vector=axes_neg[:, j], atom_name='%s-ax'%label[j], res_name_vect='AXE', 
+sim_vectors=axis_sim_neg, res_num=2, origin=pivot, scale=size)
++                res_num = generate_vector_residues(mol=mol_neg, 
+vector=axes_neg[:, j], atom_name='%s-ax'%label[j], res_name_vect='AXE', 
+sim_vectors=axis_sim_neg, res_num=2, origin=pivot, scale=size)
+ 
+ 
+     # The cone object.
+@@ -326,7 +332,7 @@
+ 
+         # The pseudo-ellipse cone object.
+         if cdp.model in ['pseudo-ellipse', 'pseudo-ellipse, torsionless', 
+'pseudo-ellipse, free rotor']:
+-            cone = Pseudo_elliptic(cdp.cone_theta_x, cdp.cone_theta_y)
++            cone_obj = Pseudo_elliptic(cdp.cone_theta_x, cdp.cone_theta_y)
+ 
+         # The isotropic cone object.
+         else:
+@@ -337,14 +343,14 @@
+                 cone_theta = 
+order_parameters.iso_cone_S_to_theta(cdp.cone_s1)
+ 
+             # The object.
+-            cone = Iso_cone(cone_theta)
++            cone_obj = Iso_cone(cone_theta)
+ 
+         # Create the positive and negative cones.
+-        geometric.create_cone_pdb(mol=mol, cone=cone, 
+start_res=mol.res_num[-1]+1, apex=pivot, R=R_pos, inc=inc, 
+distribution='regular', axis_flag=False)
++        cone(mol=mol, cone_obj=cone_obj, start_res=mol.res_num[-1]+1, 
+apex=pivot, R=R_pos, inc=inc, distribution='regular', axis_flag=False)
+ 
+         # The negative.
+         if neg_cone:
+-            geometric.create_cone_pdb(mol=mol_neg, cone=cone, 
+start_res=mol_neg.res_num[-1]+1, apex=pivot, R=R_neg, inc=inc, 
+distribution='regular', axis_flag=False)
++            cone(mol=mol_neg, cone_obj=cone_obj, 
+start_res=mol_neg.res_num[-1]+1, apex=pivot, R=R_neg, inc=inc, 
+distribution='regular', axis_flag=False)
+ 
+ 
+     # Create the PDB file.
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue May 27 17:20:03 2014</div>  
+</body>
+</html>

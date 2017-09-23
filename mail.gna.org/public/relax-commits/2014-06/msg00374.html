@@ -1,0 +1,235 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r23987 &#45; /branches/disp_spin_speed/target_functions/relax_disp.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 16 Jun 2014 19:01:32 +0200 -->
+<!--X-Message-Id: E1WwaHk&#45;0007uE&#45;LU@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r23987 - /branches/disp_spin_speed/target_functions/relax_disp.py -- June 16, 2014 - 19:01</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r23987 - /branches/disp_spin_speed/target_functions/relax_disp.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00374" class="tabs">Index by Date</a> | <a href="threads.html#00374" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00373.html">Date Prev</a>] [<a href="msg00375.html">Date Next</a>] [<a href="msg00373.html">Thread Prev</a>] [<a href="msg00375.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 16 Jun 2014 17:01:32 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00374.html">E1WwaHk-0007uE-LU@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on June 16, 2014 - 19:01:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Mon Jun 16 19:01:32 2014
+New Revision: 23987
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=23987&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=23987&amp;view=rev</a>
+Log:
+Replaced the temporary structure self.cpmg_frqs_a to self.cpmg_frqs, which 
+works for all target functions
+
+Task #7807 (<a  rel="nofollow" href="https://gna.org/task/index.php?7807">https://gna.org/task/index.php?7807</a>): Speed-up of dispersion 
+models for Clustered analysis.
+
+Modified:
+    branches/disp_spin_speed/target_functions/relax_disp.py
+
+Modified: branches/disp_spin_speed/target_functions/relax_disp.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/disp_spin_speed/target_functions/relax_disp.py?rev=23987&amp;r1=23986&amp;r2=23987&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/disp_spin_speed/target_functions/relax_disp.py?rev=23987&amp;r1=23986&amp;r2=23987&amp;view=diff</a>
+==============================================================================
+--- branches/disp_spin_speed/target_functions/relax_disp.py     (original)
++++ branches/disp_spin_speed/target_functions/relax_disp.py     Mon Jun 16 
+19:01:32 2014
+@@ -177,8 +177,12 @@
+         self.NO = self.numpy_array_shape[3]
+         self.ND = self.numpy_array_shape[4]
+ 
++        # Create zero and one numpy structure.
++        numpy_array_zeros = zeros(self.numpy_array_shape, float64)
++        numpy_array_ones = ones(self.numpy_array_shape, float64)
++
+         # Create special numpy structures.
+-        self.no_nd_struct = ones([self.NO, self.ND], float64)
++        self.no_nd_ones = ones([self.NO, self.ND], float64)
+ 
+         # Store the arguments.
+         self.model = model
+@@ -189,9 +193,9 @@
+         self.values = values
+         self.errors = errors
+         self.missing = missing
+-        self.frqs = multiply.outer( asarray(frqs).reshape(self.NE, self.NS, 
+self.NM), self.no_nd_struct )
++        self.frqs = multiply.outer( asarray(frqs).reshape(self.NE, self.NS, 
+self.NM), self.no_nd_ones )
+         self.frqs_H = frqs_H
+-        self.cpmg_frqs = cpmg_frqs
++        self.cpmg_frqs = deepcopy(numpy_array_ones)
+         self.spin_lock_nu1 = spin_lock_nu1
+         self.chemical_shifts = chemical_shifts
+         self.offset = offset
+@@ -229,7 +233,9 @@
+                     for oi in range(self.num_offsets[ei][si][mi]):
+                         self.num_disp_points[ei][si][mi].append([])
+                         if cpmg_frqs != None and len(cpmg_frqs[ei][mi][oi]):
+-                            self.num_disp_points[ei][si][mi][oi] = 
+len(self.cpmg_frqs[ei][mi][oi])
++                            num_disp_points = len(cpmg_frqs[ei][mi][oi])
++                            self.num_disp_points[ei][si][mi][oi] = 
+num_disp_points
++                            self.cpmg_frqs[ei][si][mi][oi][:num_disp_points] 
+= cpmg_frqs[ei][mi][oi]
+                         elif spin_lock_nu1 != None and 
+len(spin_lock_nu1[ei][mi][oi]):
+                             self.num_disp_points[ei][si][mi][oi] = 
+len(self.spin_lock_nu1[ei][mi][oi])
+                         else:
+@@ -306,7 +312,7 @@
+ 
+                         # Normal value.
+                         else:
+-                            self.power[ei][mi][di] = 
+int(round(self.cpmg_frqs[ei][mi][0][di] * self.relax_times[ei][mi]))
++                            self.power[ei][mi][di] = 
+int(round(self.cpmg_frqs[ei][0][mi][0][di] * self.relax_times[ei][mi]))
+ 
+             # The tau_cpmg times.
+             self.tau_cpmg = []
+@@ -319,7 +325,7 @@
+                         if recalc_tau:
+                             self.tau_cpmg[ei][mi][di] = 0.25 * 
+self.relax_times[ei][mi] / self.power[ei][mi][di]
+                         else:
+-                            self.tau_cpmg[ei][mi][di] = 0.25 / 
+self.cpmg_frqs[ei][mi][0][di]
++                            self.tau_cpmg[ei][mi][di] = 0.25 / 
+self.cpmg_frqs[ei][0][mi][0][di]
+ 
+         # Convert the spin-lock data to rad.s^-1.
+         if spin_lock_nu1 != None:
+@@ -464,7 +470,6 @@
+         # Setup special numpy array structures, for higher dimensional 
+computation.
+         if model in test_models + [MODEL_NOREX]:
+             if model in MODEL_LIST_CPMG_FULL:
+-                self.cpmg_frqs_a = deepcopy(ones_a)
+                 self.phi_ex_struct = deepcopy(zeros_a)
+ 
+             if model in [MODEL_B14, MODEL_B14_FULL, MODEL_MMQ_CR72, 
+MODEL_NS_CPMG_2SITE_3D, MODEL_NS_CPMG_2SITE_3D_FULL, 
+MODEL_NS_CPMG_2SITE_EXPANDED, MODEL_NS_CPMG_2SITE_STAR, 
+MODEL_NS_CPMG_2SITE_STAR_FULL, MODEL_NS_MMQ_2SITE, MODEL_NS_MMQ_3SITE, 
+MODEL_NS_MMQ_3SITE_LINEAR, MODEL_TSMFK01, MODEL_NS_R1RHO_2SITE, 
+MODEL_NS_R1RHO_3SITE, MODEL_NS_R1RHO_3SITE_LINEAR]:
+@@ -496,7 +501,6 @@
+ 
+                             if model in MODEL_LIST_CPMG_FULL and model != 
+MODEL_NOREX:
+                                 # Extract cpmg_frqs and num_disp_points from 
+lists.
+-                                
+self.cpmg_frqs_a[ei][si][mi][oi][:num_disp_points] = 
+self.cpmg_frqs[ei][mi][oi]
+                                 
+self.num_disp_points_a[ei][si][mi][oi][:num_disp_points] = 
+self.num_disp_points[ei][si][mi][oi]
+ 
+                                 # Make a spin 1/0 file.
+@@ -607,7 +611,7 @@
+         self.r20b_struct[:] = multiply.outer( R20B.reshape(self.NE, self.NS, 
+self.NM), self.no_nd_struct )
+ 
+         ## Back calculate the R2eff values.
+-        r2eff_CR72(r20a=self.r20a_struct, r20a_orig=R20A, 
+r20b=self.r20b_struct, r20b_orig=R20B, pA=pA, dw=self.dw_struct, dw_orig=dw, 
+kex=kex, cpmg_frqs=self.cpmg_frqs_a, back_calc=self.back_calc_a)
++        r2eff_CR72(r20a=self.r20a_struct, r20a_orig=R20A, 
+r20b=self.r20b_struct, r20b_orig=R20B, pA=pA, dw=self.dw_struct, dw_orig=dw, 
+kex=kex, cpmg_frqs=self.cpmg_frqs, back_calc=self.back_calc_a)
+ 
+         # Clean the data for all values, which is left over at the end of 
+arrays.
+         self.back_calc_a = self.back_calc_a*self.disp_struct
+@@ -1085,7 +1089,7 @@
+         self.r20_struct[:] = multiply.outer( R20.reshape(self.NE, self.NS, 
+self.NM), self.no_nd_struct )
+ 
+         # Back calculate the R2eff values.
+-        r2eff_IT99(r20=self.r20_struct, pA=pA, dw=self.dw_struct, 
+dw_orig=dw, tex=tex, cpmg_frqs=self.cpmg_frqs_a, back_calc=self.back_calc_a)
++        r2eff_IT99(r20=self.r20_struct, pA=pA, dw=self.dw_struct, 
+dw_orig=dw, tex=tex, cpmg_frqs=self.cpmg_frqs, back_calc=self.back_calc_a)
+ 
+         # Clean the data for all values, which is left over at the end of 
+arrays.
+         self.back_calc_a = self.back_calc_a*self.disp_struct
+@@ -1180,7 +1184,7 @@
+         self.r20_struct[:] = multiply.outer( R20.reshape(self.NE, self.NS, 
+self.NM), self.no_nd_struct )
+ 
+         # Back calculate the R2eff values.
+-        r2eff_LM63(r20=self.r20_struct, phi_ex=self.phi_ex_struct, kex=kex, 
+cpmg_frqs=self.cpmg_frqs_a, back_calc=self.back_calc_a)
++        r2eff_LM63(r20=self.r20_struct, phi_ex=self.phi_ex_struct, kex=kex, 
+cpmg_frqs=self.cpmg_frqs, back_calc=self.back_calc_a)
+ 
+         # Clean the data for all values, which is left over at the end of 
+arrays.
+         self.back_calc_a = self.back_calc_a*self.disp_struct
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Jun 16 19:20:02 2014</div>  
+</body>
+</html>

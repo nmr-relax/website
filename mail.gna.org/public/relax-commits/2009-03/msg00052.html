@@ -1,0 +1,362 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r8946 &#45; in /branches/bmrb/bmrblib: ./ assembly_supercategory/	kinetics/ -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 10 Mar 2009 11:09:28 +0100 -->
+<!--X-Message-Id: E1Lgyts&#45;0007H4&#45;0p@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r8946 - in /branches/bmrb/bmrblib: ./ assembly_supercategory/	kinetics/ -- March 10, 2009 - 11:09</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r8946 - in /branches/bmrb/bmrblib: ./ assembly_supercategory/	kinetics/</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00052" class="tabs">Index by Date</a> | <a href="threads.html#00052" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00051.html">Date Prev</a>] [<a href="msg00053.html">Date Next</a>] [<a href="msg00051.html">Thread Prev</a>] [<a href="msg00053.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 10 Mar 2009 10:09:27 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00052.html">E1Lgyts-0007H4-0p@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on March 10, 2009 - 11:09:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Mar 10 11:09:26 2009
+New Revision: 8946
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=8946&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=8946&amp;view=rev</a>
+Log:
+Large code simplification via abstraction.
+
+Most of the code from the create() method of the non-free TagTables has been 
+abstracted away into
+the TagCategory.create_tag_table() method.
+
+
+Modified:
+    branches/bmrb/bmrblib/assembly_supercategory/entity.py
+    branches/bmrb/bmrblib/kinetics/heteronucl_NOEs.py
+    branches/bmrb/bmrblib/kinetics/heteronucl_T1_relaxation.py
+    branches/bmrb/bmrblib/kinetics/heteronucl_T2_relaxation.py
+    branches/bmrb/bmrblib/kinetics/relax_base.py
+    branches/bmrb/bmrblib/tag_category.py
+
+Modified: branches/bmrb/bmrblib/assembly_supercategory/entity.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/bmrb/bmrblib/assembly_supercategory/entity.py?rev=8946&amp;r1=8945&amp;r2=8946&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/bmrb/bmrblib/assembly_supercategory/entity.py?rev=8946&amp;r1=8945&amp;r2=8946&amp;view=diff</a>
+==============================================================================
+--- branches/bmrb/bmrblib/assembly_supercategory/entity.py (original)
++++ branches/bmrb/bmrblib/assembly_supercategory/entity.py Tue Mar 10 
+11:09:26 2009
+@@ -81,6 +81,9 @@
+ 
+         # Increment the number of entities.
+         self.entity_num = self.entity_num + 1
++
++        # The entity ID list.
++        self.entity_ids = [str(self.entity_num)]*len(self.res_nums)
+ 
+         # Initialise the save frame.
+         self.frame = SaveFrame(title=mol_name)
+@@ -196,26 +199,15 @@
+     def create(self):
+         &quot;&quot;&quot;Create the Entity tag category.&quot;&quot;&quot;
+ 
+-        # The tag names.
+-        tag_names = []
+-        missing = []
+-        for key in ['EntityCompIndexID', 'AuthSeqID', 'CompID', 'CompLabel', 
+'SfID', 'EntryID', 'EntityID']:
+-            if not self.tag_names.has_key(key):
+-                missing.append(key)
+-            else:
+-                tag_names.append(self.tag_names_full[key])
+-
+-        # The tag values.
+-        tag_values = []
+-        if 'EntityCompIndexID' not in missing:
+-            tag_values.append(self.sf.res_nums)
+-        if 'CompID' not in missing:
+-            tag_values.append(self.sf.res_names)
+-        if 'EntityID' not in missing:
+-            
+tag_values.append([str(self.sf.entity_num)]*len(self.sf.res_nums))
+-
+-        # Add the data.
+-        table = TagTable(tagnames=tag_names, tagvalues=tag_values)
++        # Keys and objects.
++        info = [
++            ['EntityCompIndexID',   'res_nums'],
++            ['CompID',              'res_names'],
++            ['EntityID',            'entity_ids']
++        ]
++
++        # Get the TabTable.
++        table = self.create_tag_table(info)
+ 
+         # Add the tagtable to the save frame.
+         self.sf.frame.tagtables.append(table)
+
+Modified: branches/bmrb/bmrblib/kinetics/heteronucl_NOEs.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/bmrb/bmrblib/kinetics/heteronucl_NOEs.py?rev=8946&amp;r1=8945&amp;r2=8946&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/bmrb/bmrblib/kinetics/heteronucl_NOEs.py?rev=8946&amp;r1=8945&amp;r2=8946&amp;view=diff</a>
+==============================================================================
+--- branches/bmrb/bmrblib/kinetics/heteronucl_NOEs.py (original)
++++ branches/bmrb/bmrblib/kinetics/heteronucl_NOEs.py Tue Mar 10 11:09:26 2009
+@@ -188,38 +188,6 @@
+ class HeteronuclNOE(Rx):
+     &quot;&quot;&quot;Base class for the HeteronuclNOE tag category.&quot;&quot;&quot;
+ 
+-    def create(self):
+-        &quot;&quot;&quot;Create the HeteronuclNOE tag category.&quot;&quot;&quot;
+-
+-        # The relaxation tag names.
+-        tag_names = []
+-        missing = []
+-        for key in ['CompIndexID', 'CompID', 'AtomID', 'Val', 'ValErr']:
+-            if not self.tag_names.has_key(key):
+-                missing.append(key)
+-            else:
+-                tag_names.append(self.tag_names_full[key])
+-
+-        # The tag values.
+-        tag_values = []
+-        if 'CompIndexID' not in missing:
+-            tag_values.append(self.sf.res_nums)
+-        if 'CompID' not in missing:
+-            tag_values.append(self.sf.res_names)
+-        if 'AtomID' not in missing:
+-            tag_values.append(self.sf.atom_names)
+-        if 'Val' not in missing:
+-            tag_values.append(self.sf.data)
+-        if 'ValErr' not in missing:
+-            tag_values.append(self.sf.errors)
+-
+-        # Add the data.
+-        table = TagTable(tagnames=tag_names, tagvalues=tag_values)
+-
+-        # Add the tagtable to the save frame.
+-        self.sf.frame.tagtables.append(table)
+-
+-
+     def tag_setup(self, tag_category_label=None, sep=None):
+         &quot;&quot;&quot;Replacement method for setting up the tag names.
+ 
+
+Modified: branches/bmrb/bmrblib/kinetics/heteronucl_T1_relaxation.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/bmrb/bmrblib/kinetics/heteronucl_T1_relaxation.py?rev=8946&amp;r1=8945&amp;r2=8946&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/bmrb/bmrblib/kinetics/heteronucl_T1_relaxation.py?rev=8946&amp;r1=8945&amp;r2=8946&amp;view=diff</a>
+==============================================================================
+--- branches/bmrb/bmrblib/kinetics/heteronucl_T1_relaxation.py (original)
++++ branches/bmrb/bmrblib/kinetics/heteronucl_T1_relaxation.py Tue Mar 10 
+11:09:26 2009
+@@ -197,38 +197,6 @@
+ class T1(Rx):
+     &quot;&quot;&quot;Base class for the T1 tag category.&quot;&quot;&quot;
+ 
+-    def create(self):
+-        &quot;&quot;&quot;Create the T1 tag category.&quot;&quot;&quot;
+-
+-        # The relaxation tag names.
+-        tag_names = []
+-        missing = []
+-        for key in ['CompIndexID', 'CompID', 'AtomID', 'Val', 'ValErr']:
+-            if not self.tag_names.has_key(key):
+-                missing.append(key)
+-            else:
+-                tag_names.append(self.tag_names_full[key])
+-
+-        # The tag values.
+-        tag_values = []
+-        if 'CompIndexID' not in missing:
+-            tag_values.append(self.sf.res_nums)
+-        if 'CompID' not in missing:
+-            tag_values.append(self.sf.res_names)
+-        if 'AtomID' not in missing:
+-            tag_values.append(self.sf.atom_names)
+-        if 'Val' not in missing:
+-            tag_values.append(self.sf.data)
+-        if 'ValErr' not in missing:
+-            tag_values.append(self.sf.errors)
+-
+-        # Add the data.
+-        table = TagTable(tagnames=tag_names, tagvalues=tag_values)
+-
+-        # Add the tagtable to the save frame.
+-        self.sf.frame.tagtables.append(table)
+-
+-
+     def tag_setup(self, tag_category_label=None, sep=None):
+         &quot;&quot;&quot;Replacement method for setting up the tag names.
+ 
+
+Modified: branches/bmrb/bmrblib/kinetics/heteronucl_T2_relaxation.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/bmrb/bmrblib/kinetics/heteronucl_T2_relaxation.py?rev=8946&amp;r1=8945&amp;r2=8946&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/bmrb/bmrblib/kinetics/heteronucl_T2_relaxation.py?rev=8946&amp;r1=8945&amp;r2=8946&amp;view=diff</a>
+==============================================================================
+--- branches/bmrb/bmrblib/kinetics/heteronucl_T2_relaxation.py (original)
++++ branches/bmrb/bmrblib/kinetics/heteronucl_T2_relaxation.py Tue Mar 10 
+11:09:26 2009
+@@ -197,38 +197,6 @@
+ class T2(Rx):
+     &quot;&quot;&quot;Base class for the T2 tag category.&quot;&quot;&quot;
+ 
+-    def create(self):
+-        &quot;&quot;&quot;Create the T2 tag category.&quot;&quot;&quot;
+-
+-        # The relaxation tag names.
+-        tag_names = []
+-        missing = []
+-        for key in ['CompIndexID', 'CompID', 'AtomID', 'Val', 'ValErr']:
+-            if not self.tag_names.has_key(key):
+-                missing.append(key)
+-            else:
+-                tag_names.append(self.tag_names_full[key])
+-
+-        # The tag values.
+-        tag_values = []
+-        if 'CompIndexID' not in missing:
+-            tag_values.append(self.sf.res_nums)
+-        if 'CompID' not in missing:
+-            tag_values.append(self.sf.res_names)
+-        if 'AtomID' not in missing:
+-            tag_values.append(self.sf.atom_names)
+-        if 'Val' not in missing:
+-            tag_values.append(self.sf.data)
+-        if 'ValErr' not in missing:
+-            tag_values.append(self.sf.errors)
+-
+-        # Add the data.
+-        table = TagTable(tagnames=tag_names, tagvalues=tag_values)
+-
+-        # Add the tagtable to the save frame.
+-        self.sf.frame.tagtables.append(table)
+-
+-
+     def tag_setup(self, tag_category_label=None, sep=None):
+         &quot;&quot;&quot;Replacement method for setting up the tag names.
+ 
+
+Modified: branches/bmrb/bmrblib/kinetics/relax_base.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/bmrb/bmrblib/kinetics/relax_base.py?rev=8946&amp;r1=8945&amp;r2=8946&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/bmrb/bmrblib/kinetics/relax_base.py?rev=8946&amp;r1=8945&amp;r2=8946&amp;view=diff</a>
+==============================================================================
+--- branches/bmrb/bmrblib/kinetics/relax_base.py (original)
++++ branches/bmrb/bmrblib/kinetics/relax_base.py Tue Mar 10 11:09:26 2009
+@@ -88,6 +88,25 @@
+ class Rx(TagCategory):
+     &quot;&quot;&quot;Base class for the Rx tag categories.&quot;&quot;&quot;
+ 
++    def create(self):
++        &quot;&quot;&quot;Create the Rx tag category.&quot;&quot;&quot;
++
++        # Keys and objects.
++        info = [
++            ['CompIndexID', 'res_nums'],
++            ['CompID',      'res_names'],
++            ['AtomID',      'atom_names'],
++            ['Val',         'data'],
++            ['ValErr',      'errors']
++        ]
++
++        # Get the TabTable.
++        table = self.create_tag_table(info)
++
++        # Add the tagtable to the save frame.
++        self.sf.frame.tagtables.append(table)
++
++
+     def read(self, tagtable):
+         &quot;&quot;&quot;Extract the Rx tag category info.
+ 
+
+Modified: branches/bmrb/bmrblib/tag_category.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/bmrb/bmrblib/tag_category.py?rev=8946&amp;r1=8945&amp;r2=8946&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/bmrb/bmrblib/tag_category.py?rev=8946&amp;r1=8945&amp;r2=8946&amp;view=diff</a>
+==============================================================================
+--- branches/bmrb/bmrblib/tag_category.py (original)
++++ branches/bmrb/bmrblib/tag_category.py Tue Mar 10 11:09:26 2009
+@@ -66,7 +66,7 @@
+         return self.tag_category_label_full + tag_name
+ 
+ 
+-    def create_tag_table(self, info):
++    def create_tag_table(self, info, free=False):
+         &quot;&quot;&quot;Create and return a tag table based on the info structure.
+ 
+         @param info:    The key and object pair list.  This consists of the 
+keys of
+@@ -74,6 +74,8 @@
+                         the second element, both of the second dimension.  
+The fist dimension are
+                         the different pairs.
+         @type info:     list of list of str
++        @keyword free:  Flag to create a free STAR table.
++        @type free:     bool
+         @return:        The tag table.
+         @rtype:         TagTable instance
+         &quot;&quot;&quot;
+@@ -95,7 +97,7 @@
+                 tag_values.append(getattr(self.sf, name))
+ 
+         # Add the data and return the table.
+-        return TagTable(tagnames=tag_names, tagvalues=tag_values)
++        return TagTable(free=free, tagnames=tag_names, tagvalues=tag_values)
+ 
+ 
+     def tag_setup(self, tag_category_label=None, sep=None):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Mar 10 11:40:04 2009</div>  
+</body>
+</html>

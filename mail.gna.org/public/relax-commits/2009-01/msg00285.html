@@ -1,0 +1,207 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r8510 &#45; /branches/multi_structure/generic_fns/structure/internal.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 19 Jan 2009 11:24:12 +0100 -->
+<!--X-Message-Id: E1LOrIi&#45;0002iw&#45;Cb@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r8510 - /branches/multi_structure/generic_fns/structure/internal.py -- January 19, 2009 - 11:24</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r8510 - /branches/multi_structure/generic_fns/structure/internal.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00285" class="tabs">Index by Date</a> | <a href="threads.html#00285" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00284.html">Date Prev</a>] [<a href="msg00286.html">Date Next</a>] [<a href="msg00284.html">Thread Prev</a>] [<a href="msg00286.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 19 Jan 2009 10:24:12 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00285.html">E1LOrIi-0002iw-Cb@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on January 19, 2009 - 11:24:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Mon Jan 19 11:24:12 2009
+New Revision: 8510
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=8510&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=8510&amp;view=rev</a>
+Log:
+Modified __bonded_atom() and __find_bonded_atoms() for the new structural 
+object design.
+
+
+Modified:
+    branches/multi_structure/generic_fns/structure/internal.py
+
+Modified: branches/multi_structure/generic_fns/structure/internal.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/multi_structure/generic_fns/structure/internal.py?rev=8510&amp;r1=8509&amp;r2=8510&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/multi_structure/generic_fns/structure/internal.py?rev=8510&amp;r1=8509&amp;r2=8510&amp;view=diff</a>
+==============================================================================
+--- branches/multi_structure/generic_fns/structure/internal.py (original)
++++ branches/multi_structure/generic_fns/structure/internal.py Mon Jan 19 
+11:24:12 2009
+@@ -66,15 +66,15 @@
+         self.pack_structs([[MolContainer()]], orig_model_num=[model], 
+set_mol_name=[name])
+ 
+ 
+-    def __bonded_atom(self, attached_atom, index, struct_index):
++    def __bonded_atom(self, attached_atom, index, mol):
+         &quot;&quot;&quot;Find the atom named attached_atom directly bonded to the atom 
+located at the index.
+ 
+         @param attached_atom:   The name of the attached atom to return.
+         @type attached_atom:    str
+         @param index:           The index of the atom which the attached 
+atom is attached to. 
+         @type index:            int
+-        @param struct_index:    The index of the structure.
+-        @type struct_index:     int
++        @param mol:             The molecule container.
++        @type mol:              MolContainer instance
+         @return:                A tuple of information about the bonded atom.
+         @rtype:                 tuple consisting of the atom number (int), 
+atom name (str), element
+                                 name (str), and atomic position (Numeric 
+array of len 3)
+@@ -82,16 +82,15 @@
+ 
+         # Init.
+         bonded_found = False
+-        struct = self.structural_data[struct_index]
+ 
+         # No bonded atoms, so go find everything within 1.2 Angstroms and 
+say they are bonded.
+-        if not struct.bonded[index]:
+-            self.__find_bonded_atoms(index, struct_index)
++        if not mol.bonded[index]:
++            self.__find_bonded_atoms(index, mol)
+ 
+         # Loop over the bonded atoms.
+         matching_list = []
+-        for bonded_index in struct.bonded[index]:
+-            if relax_re.search(struct.atom_name[bonded_index], 
+attached_atom):
++        for bonded_index in mol.bonded[index]:
++            if relax_re.search(mol.atom_name[bonded_index], attached_atom):
+                 matching_list.append(bonded_index)
+         num_attached = len(matching_list)
+ 
+@@ -100,7 +99,7 @@
+             # Get the atom names.
+             matching_names = []
+             for i in matching_list:
+-                matching_names.append(struct.atom_name[i])
++                matching_names.append(mol.atom_name[i])
+ 
+             # Return nothing but a warning.
+             return None, None, None, None, None, 'More than one attached 
+atom found: ' + `matching_names`
+@@ -111,17 +110,17 @@
+ 
+         # The bonded atom info.
+         index = matching_list[0]
+-        bonded_num = struct.atom_num[index]
+-        bonded_name = struct.atom_name[index]
+-        element = struct.element[index]
+-        pos = [struct.x[index], struct.y[index], struct.z[index]]
+-        attached_name = struct.atom_name[index]
++        bonded_num = mol.atom_num[index]
++        bonded_name = mol.atom_name[index]
++        element = mol.element[index]
++        pos = [mol.x[index], mol.y[index], mol.z[index]]
++        attached_name = mol.atom_name[index]
+ 
+         # Return the information.
+         return bonded_num, bonded_name, element, pos, attached_name, None
+ 
+ 
+-    def __find_bonded_atoms(self, index, struct_index, radius=1.2):
++    def __find_bonded_atoms(self, index, mol, radius=1.2):
+         &quot;&quot;&quot;Find all atoms within a sphere and say that they are attached to 
+the central atom.
+ 
+         The found atoms will be added to the 'bonded' data structure.
+@@ -129,20 +128,17 @@
+ 
+         @param index:           The index of the central atom.
+         @type index:            int
+-        @param struct_index:    The index of the structure.
+-        @type struct_index:     int
+-        &quot;&quot;&quot;
+-
+-        # Init.
+-        struct = self.structural_data[struct_index]
++        @param mol:             The molecule container.
++        @type mol:              MolContainer instance
++        &quot;&quot;&quot;
+ 
+         # Central atom info.
+-        centre = array([struct.x[index], struct.y[index], struct.z[index]], 
+float64)
++        centre = array([mol.x[index], mol.y[index], mol.z[index]], float64)
+ 
+         # Atom loop.
+-        for i in xrange(len(struct.atom_num)):
++        for i in xrange(len(mol.atom_num)):
+             # The atom's position.
+-            pos = array([struct.x[i], struct.y[i], struct.z[i]], float64)
++            pos = array([mol.x[i], mol.y[i], mol.z[i]], float64)
+ 
+             # The distance from the centre.
+             dist = linalg.norm(centre-pos)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Jan 19 11:40:02 2009</div>  
+</body>
+</html>

@@ -1,0 +1,193 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r10488 &#45; /branches/bieri_gui/gui_bieri/analyses/auto_model_free.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 28 Jan 2010 12:26:14 +0100 -->
+<!--X-Message-Id: E1NaSVp&#45;00032m&#45;TC@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r10488 - /branches/bieri_gui/gui_bieri/analyses/auto_model_free.py -- January 28, 2010 - 12:26</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r10488 - /branches/bieri_gui/gui_bieri/analyses/auto_model_free.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00390" class="tabs">Index by Date</a> | <a href="threads.html#00390" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00389.html">Date Prev</a>] [<a href="msg00391.html">Date Next</a>] [<a href="msg00389.html">Thread Prev</a>] [<a href="msg00391.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 28 Jan 2010 11:26:13 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00390.html">E1NaSVp-00032m-TC@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on January 28, 2010 - 12:26:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Jan 28 12:26:13 2010
+New Revision: 10488
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=10488&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=10488&amp;view=rev</a>
+Log:
+Big changes in how the automatic model-free protocol is executed.
+
+The call to gui_bieri.execution.calc_modelfree.start_modelfree() has been 
+eliminated.  This has been
+replaced by a call to self.execute().  This new method assembles the data 
+required for the protocol
+from the relax data store (by calling self.assemble_data() which doesn't 
+exist yet), and then starts
+and stores the thread which is executing dAuvergne_protocol.
+
+
+Modified:
+    branches/bieri_gui/gui_bieri/analyses/auto_model_free.py
+
+Modified: branches/bieri_gui/gui_bieri/analyses/auto_model_free.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/bieri_gui/gui_bieri/analyses/auto_model_free.py?rev=10488&amp;r1=10487&amp;r2=10488&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/bieri_gui/gui_bieri/analyses/auto_model_free.py?rev=10488&amp;r1=10487&amp;r2=10488&amp;view=diff</a>
+==============================================================================
+--- branches/bieri_gui/gui_bieri/analyses/auto_model_free.py (original)
++++ branches/bieri_gui/gui_bieri/analyses/auto_model_free.py Thu Jan 28 
+12:26:13 2010
+@@ -26,14 +26,17 @@
+ 
+ # Python module imports.
+ from os import getcwd, sep
++import thread
+ import wx
+ 
+ # relax module imports.
++from auto_analyses.dauvergne_protocol import dAuvergne_protocol
+ from data import Relax_data_store; ds = Relax_data_store()
+ 
+ # relax GUI module imports.
+ from gui_bieri.analyses.results_analysis import model_free_results, 
+see_results
+ from gui_bieri.analyses.select_model_calc import Select_tensor
++from gui_bieri.controller import Tread_container
+ from gui_bieri.derived_wx_classes import StructureTextCtrl
+ from gui_bieri.filedialog import opendir, openfile
+ from gui_bieri.message import missing_data
+@@ -544,7 +547,7 @@
+ 
+             # Loop over the global models solving for each, one after the 
+other.
+             for global_model in global_models:
+-                status = start_modelfree(global_model=global_model, 
+automatic=True)
++                status = self.execute(global_model=global_model, 
+automatic=True)
+ 
+                 # A problem was encountered, so do not continue (a dialog 
+should probably appear here).
+                 if not status:
+@@ -556,12 +559,12 @@
+             # All models, excluding the final run.
+             if which_model != 'final':
+                 # Solve for the local_tm, sphere, prolate, oblate, or 
+ellipsoid global models.
+-                enable_models = start_modelfree(global_model=which_model, 
+automatic=False)
++                enable_models = self.execute(global_model=which_model, 
+automatic=False)
+ 
+             # The final run.
+             else:
+                 # Execute the final run.
+-                results_for_table = 
+start_modelfree(global_model=which_model, automatic=False)
++                results_for_table = self.execute(global_model=which_model, 
+automatic=False)
+ 
+                 # set global results variables
+                 ds.relax_gui.table_residue = results_for_table[0]
+@@ -700,6 +703,28 @@
+ 
+         # Return the choice.
+         return dlg.selection
++
++
++    def execute(self, global_model=None, automatic=True):
++        &quot;&quot;&quot;Execute the calculations in a thread.
++
++        @keyword global_model:  The global model to solve.  This must be one 
+of 'local_tm', 'sphere', 'prolate', 'oblate', 'ellipsoid', or 'final'.
++        @type global_model:     str
++        &quot;&quot;&quot;
++
++        # Assemble all the data needed for the dAuvergne_protocol class.
++        diff_model, mf_models, local_tm_models, pdb_file, seq_args, 
+het_name, relax_data, unres, exclude, bond_length, csa, hetnuc, proton, 
+grid_inc, min_algor, mc_num, conv_loop = self.assemble_data()
++
++        # The thread object storage.
++        self.gui.calc_threads.append(Thread_container())
++
++        # Start the thread.
++        id = thread.start_new_thread(dAuvergne_protocol, (diff_model, 
+mf_models, local_tm_models, pdb_file, seq_args, het_name, relax_data, unres, 
+exclude, bond_length, csa, hetnuc, proton, grid_inc, min_algor, mc_num, 
+conv_loop), (diff_model, mf_models, local_tm_models, pdb_file, seq_args, 
+het_name, relax_data, unres, exclude, bond_length, csa, hetnuc, proton, 
+grid_inc, min_algor, mc_num, conv_loop))
++
++        # Add the thread info to the container.
++        self.gui.calc_threads[-1].id = id
++        self.gui.calc_threads[-1].analysis_type = 'model-free'
++        self.gui.calc_threads[-1].global_model = global_model
+ 
+ 
+     def model_noe1(self, event): # load noe1
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Jan 28 12:40:03 2010</div>  
+</body>
+</html>

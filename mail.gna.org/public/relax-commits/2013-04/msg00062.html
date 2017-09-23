@@ -1,0 +1,280 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r19343 &#45; /branches/relax_disp/specific_analyses/relax_disp.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 04 Apr 2013 09:44:42 +0200 -->
+<!--X-Message-Id: E1UNeqg&#45;0007w8&#45;JA@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r19343 - /branches/relax_disp/specific_analyses/relax_disp.py -- April 04, 2013 - 09:44</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r19343 - /branches/relax_disp/specific_analyses/relax_disp.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00062" class="tabs">Index by Date</a> | <a href="threads.html#00062" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00061.html">Date Prev</a>] [<a href="msg00063.html">Date Next</a>] [<a href="msg00061.html">Thread Prev</a>] [<a href="msg00063.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 04 Apr 2013 07:44:42 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00062.html">E1UNeqg-0007w8-JA@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on April 04, 2013 - 09:44:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Apr  4 09:44:42 2013
+New Revision: 19343
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=19343&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=19343&amp;view=rev</a>
+Log:
+Better management of the global relaxation dispersion data.
+
+The user functions relax_disp.cpmg_frq, relax_disp.spin_lock_nu1, and 
+relax_disp.relax_time now
+maintain data structures in the current data pipe of the unique frequencies, 
+fields, and times
+(sorted) as well as the number of frequencies, fields, and times.  This data 
+is used by the minimise
+user function back end to set up the target function, and will be required by 
+many other parts of
+the analysis.
+
+
+Modified:
+    branches/relax_disp/specific_analyses/relax_disp.py
+
+Modified: branches/relax_disp/specific_analyses/relax_disp.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp.py?rev=19343&amp;r1=19342&amp;r2=19343&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp.py?rev=19343&amp;r1=19342&amp;r2=19343&amp;view=diff</a>
+==============================================================================
+--- branches/relax_disp/specific_analyses/relax_disp.py (original)
++++ branches/relax_disp/specific_analyses/relax_disp.py Thu Apr  4 09:44:42 
+2013
+@@ -31,7 +31,6 @@
+ 
+ # relax module imports.
+ from lib.errors import RelaxError, RelaxFuncSetupError, RelaxLenError, 
+RelaxNoModelError, RelaxNoSequenceError, RelaxNoSpectraError
+-from lib.list import count_unique_elements
+ from lib.text.sectioning import subsection
+ from minfx.generic import generic_minimise
+ from pipe_control import pipes
+@@ -352,15 +351,22 @@
+         if spectrum_id not in cdp.spectrum_ids:
+             raise RelaxNoSpectraError(spectrum_id)
+ 
+-        # Initialise the global CPMG frequency data structure if needed.
++        # Initialise the global CPMG frequency data structures if needed.
+         if not hasattr(cdp, 'cpmg_frqs'):
+             cdp.cpmg_frqs = {}
++        if not hasattr(cdp, 'cpmg_frqs_list'):
++            cdp.cpmg_frqs_list = []
+ 
+         # Add the frequency at the correct position, converting to a float 
+if needed.
+         cdp.cpmg_frqs[spectrum_id] = float(cpmg_frq)
+ 
++        # The unique curves for the R2eff fitting (CPMG).
++        if cdp.cpmg_frqs[spectrum_id] not in cdp.cpmg_frqs_list:
++            cdp.cpmg_frqs_list.append(cdp.cpmg_frqs[spectrum_id])
++        cdp.cpmg_frqs_list.sort()
++
+         # Update the exponential curve count.
+-        cdp.curve_count = count_unique_elements(cdp.cpmg_frqs.values())
++        cdp.curve_count = len(cdp.cpmg_frqs_list)
+ 
+         # Printout.
+         print(&quot;Setting the '%s' spectrum CPMG frequency %s Hz.&quot; % 
+(spectrum_id, cdp.cpmg_frqs[spectrum_id]))
+@@ -779,12 +785,22 @@
+         if spectrum_id not in cdp.spectrum_ids:
+             raise RelaxNoSpectraError(spectrum_id)
+ 
+-        # Initialise the global relaxation time data structure if needed.
++        # Initialise the global relaxation time data structures if needed.
+         if not hasattr(cdp, 'relax_times'):
+             cdp.relax_times = {}
++        if not hasattr(cdp, 'relax_time_list'):
++            cdp.relax_time_list = []
+ 
+         # Add the time, converting to a float if needed.
+         cdp.relax_times[spectrum_id] = float(time)
++
++        # The unique time points.
++        if cdp.relax_times[spectrum_id] not in cdp.relax_time_list:
++            cdp.relax_time_list.append(cdp.relax_times[spectrum_id])
++        cdp.relax_time_list.sort()
++
++        # Update the exponential curve count.
++        cdp.num_time_pts = len(cdp.relax_time_list)
+ 
+         # Printout.
+         print(&quot;Setting the '%s' spectrum relaxation time period to %s s.&quot; % 
+(spectrum_id, cdp.relax_times[spectrum_id]))
+@@ -849,15 +865,22 @@
+         if spectrum_id not in cdp.spectrum_ids:
+             raise RelaxNoSpectraError(spectrum_id)
+ 
+-        # Initialise the global nu1 data structure if needed.
++        # Initialise the global nu1 data structures if needed.
+         if not hasattr(cdp, 'spin_lock_nu1'):
+             cdp.spin_lock_nu1 = {}
++        if not hasattr(cdp, 'spin_lock_nu1_list'):
++            cdp.spin_lock_nu1_list = []
+ 
+         # Add the frequency, converting to a float if needed.
+         cdp.spin_lock_nu1[spectrum_id] = float(field)
+ 
++        # The unique curves for the R2eff fitting (R1rho).
++        if cdp.spin_lock_nu1[spectrum_id] not in cdp.spin_lock_nu1_list:
++            cdp.spin_lock_nu1_list.append(cdp.spin_lock_nu1[spectrum_id])
++        cdp.spin_lock_nu1_list.sort()
++
+         # Update the exponential curve count.
+-        cdp.curve_count = count_unique_elements(cdp.spin_lock_nu1.values())
++        cdp.curve_count = len(cdp.spin_lock_nu1_list)
+ 
+         # Printout.
+         print(&quot;Setting the '%s' spectrum spin-lock field strength to %s 
+kHz.&quot; % (spectrum_id, cdp.spin_lock_nu1[spectrum_id]/1000.0))
+@@ -971,29 +994,11 @@
+             elif cdp.exp_type == 'r1rho':
+                 raise RelaxError(&quot;The spin-lock field strengths have not 
+been set up.&quot;)
+ 
+-        # The unique curves for the R2eff fitting (CPMG).
+-        cpmg_frqs = []
+-        if cdp.exp_type == 'cpmg':
+-            for frq in cdp.cpmg_frqs.values():
+-                if frq not in cpmg_frqs:
+-                    cpmg_frqs.append(frq)
+-            cpmg_frqs.sort()
+-
+-        # The unique curves for the R2eff fitting (R1rho).
+-        spin_lock_nu1 = []
+-        if cdp.exp_type == 'r1rho':
+-            for field in cdp.spin_lock_nu1.values():
+-                if field not in spin_lock_nu1:
+-                    spin_lock_nu1.append(field)
+-            spin_lock_nu1.sort()
+-
+-        # The relaxation time points (sorted).
+-        relax_times = []
+-        for time in cdp.relax_times.values():
+-            if time not in relax_times:
+-                relax_times.append(time)
+-        relax_times.sort()
+-        num_time_pts = len(relax_times)
++        # Initialise some empty data pipe structures so that the target 
+function set up does not fail.
++        if not hasattr(cdp, 'cpmg_frqs_list'):
++            cdp.cpmg_frqs_list = []
++        if not hasattr(cdp, 'spin_lock_nu1_list'):
++            cdp.spin_lock_nu1_list = []
+ 
+         # Loop over the spin blocks.
+         for spins, spin_ids in self._block_loop():
+@@ -1001,8 +1006,8 @@
+             spin_num = len(spins)
+ 
+             # Initialise the data structures for the target function.
+-            values = zeros((spin_num, cdp.curve_count, num_time_pts), 
+float64)
+-            errors = zeros((spin_num, cdp.curve_count, num_time_pts), 
+float64)
++            values = zeros((spin_num, cdp.curve_count, cdp.num_time_pts), 
+float64)
++            errors = zeros((spin_num, cdp.curve_count, cdp.num_time_pts), 
+float64)
+ 
+             # Pack the peak intensity data.
+             for spin_index in range(spin_num):
+@@ -1016,10 +1021,10 @@
+                 for key in keys:
+                     # The indices.
+                     if cdp.exp_type == 'cpmg':
+-                        curve_index = cpmg_frqs.index(cdp.cpmg_frqs[key])
++                        curve_index = 
+cdp.cpmg_frqs_list.index(cdp.cpmg_frqs[key])
+                     elif cdp.exp_type == 'r1rho':
+-                        curve_index = 
+spin_lock_nu1.index(cdp.spin_lock_nu1[key])
+-                    time_index = relax_times.index(cdp.relax_times[key])
++                        curve_index = 
+cdp.spin_lock_nu1_list.index(cdp.spin_lock_nu1[key])
++                    time_index = 
+cdp.relax_time_list.index(cdp.relax_times[key])
+ 
+                     # The values.
+                     if sim_index == None:
+@@ -1061,7 +1066,7 @@
+                     print(&quot;Unconstrained grid search size: %s (constraints 
+may decrease this size).\n&quot; % grid_size)
+ 
+             # Initialise the function to minimise.
+-            model = Dispersion(model=cdp.model, 
+num_params=self._param_num(spins=spins), num_times=num_time_pts, 
+curve_num=cdp.curve_count, values=values, errors=errors, cpmg_frqs=cpmg_frqs, 
+spin_lock_nu1=spin_lock_nu1, scaling_matrix=scaling_matrix)
++            model = Dispersion(model=cdp.model, 
+num_params=self._param_num(spins=spins), num_times=cdp.num_time_pts, 
+curve_num=cdp.curve_count, values=values, errors=errors, 
+relax_times=cdp.relax_time_list, cpmg_frqs=cdp.cpmg_frqs_list, 
+spin_lock_nu1=cdp.spin_lock_nu1_list, scaling_matrix=scaling_matrix)
+ 
+             # Setup the minimisation algorithm when constraints are present.
+             if constraints and not match('^[Gg]rid', min_algor):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Apr 04 10:40:02 2013</div>  
+</body>
+</html>

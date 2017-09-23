@@ -1,0 +1,152 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r7270 &#45; /1.3/specific_fns/model_free/main.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 24 Sep 2008 19:28:49 +0200 -->
+<!--X-Message-Id: E1KiYAT&#45;0002MI&#45;NE@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r7270 - /1.3/specific_fns/model_free/main.py -- September 24, 2008 - 19:28</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r7270 - /1.3/specific_fns/model_free/main.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00042" class="tabs">Index by Date</a> | <a href="threads.html#00042" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00041.html">Date Prev</a>] [<a href="msg00043.html">Date Next</a>] [<a href="msg00041.html">Thread Prev</a>] [<a href="msg00043.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 24 Sep 2008 17:28:49 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00042.html">E1KiYAT-0002MI-NE@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on September 24, 2008 - 19:28:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Sep 24 19:28:49 2008
+New Revision: 7270
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=7270&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=7270&amp;view=rev</a>
+Log:
+Wrote the model-free model_loop() generator method.
+
+
+Modified:
+    1.3/specific_fns/model_free/main.py
+
+Modified: 1.3/specific_fns/model_free/main.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/specific_fns/model_free/main.py?rev=7270&amp;r1=7269&amp;r2=7270&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/specific_fns/model_free/main.py?rev=7270&amp;r1=7269&amp;r2=7270&amp;view=diff</a>
+==============================================================================
+--- 1.3/specific_fns/model_free/main.py (original)
++++ 1.3/specific_fns/model_free/main.py Wed Sep 24 19:28:49 2008
+@@ -33,7 +33,7 @@
+ from data import Relax_data_store; ds = Relax_data_store()
+ from float import isNaN,isInf
+ from generic_fns import diffusion_tensor, pipes, relax_data, sequence
+-from generic_fns.mol_res_spin import convert_from_global_index, count_spins, 
+exists_mol_res_spin_data, return_spin, return_spin_from_index, spin_loop
++from generic_fns.mol_res_spin import convert_from_global_index, count_spins, 
+exists_mol_res_spin_data, return_spin, return_spin_from_index, 
+spin_index_loop, spin_loop
+ from maths_fns.mf import Mf
+ from minfx.generic import generic_minimise
+ from physical_constants import N15_CSA, NH_BOND_LENGTH
+@@ -1570,6 +1570,39 @@
+         elif param == 'csa':
+             return [-100 * 1e-6, -300 * 1e-6]
+ 
++
++    def model_loop(self, model_index, select_sim):
++        &quot;&quot;&quot;Generator method for looping over the models (global or local).
++
++        If the model type is 'all' or 'diff', then this yields the single 
+value of zero.  Otherwise
++        the global spin index is yielded.
++
++
++        @return:    The model index.  This is zero for the global models or 
+equal to the global spin
++                    index (which covers the molecule, residue, and spin 
+indices).
++        @rtype:     int
++        &quot;&quot;&quot;
++
++        # Determine the model type.
++        model_type = self.determine_model_type()
++
++        # Global model.
++        if model_type == 'all' or model_type == 'diff':
++            yield 0
++
++        # Spin specific models.
++        else:
++            # Loop over the spins.
++            for index in spin_index_loop():
++                # Get the spin container.
++                spin = return_spin_from_index(index)
++
++                # Skip deselected spins.
++                if not spin.select:
++                    continue
++
++                # Yield the spin index.
++                yield index
+ 
+     def model_setup(self, model=None, equation=None, params=None, 
+spin_id=None):
+         &quot;&quot;&quot;Function for updating various data structures depending on the 
+model selected.
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Sep 24 19:40:03 2008</div>  
+</body>
+</html>

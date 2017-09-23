@@ -1,0 +1,178 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r24807 &#45; /branches/frame_order_cleanup/auto_analyses/frame_order.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 29 Jul 2014 15:13:47 +0200 -->
+<!--X-Message-Id: E1XC7Du&#45;0000gx&#45;Tl@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r24807 - /branches/frame_order_cleanup/auto_analyses/frame_order.py -- July 29, 2014 - 15:13</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r24807 - /branches/frame_order_cleanup/auto_analyses/frame_order.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00441" class="tabs">Index by Date</a> | <a href="threads.html#00441" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00440.html">Date Prev</a>] [<a href="msg00442.html">Date Next</a>] [<a href="msg00440.html">Thread Prev</a>] [<a href="msg00442.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 29 Jul 2014 13:13:46 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00441.html">E1XC7Du-0000gx-Tl@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on July 29, 2014 - 15:13:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Jul 29 15:13:46 2014
+New Revision: 24807
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=24807&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=24807&amp;view=rev</a>
+Log:
+Created a method in the frame order auto-analysis to reorder the models.
+
+This is needed as the nested model parameter copying protocol requires the 
+simpler models to be
+optimised first.
+
+
+Modified:
+    branches/frame_order_cleanup/auto_analyses/frame_order.py
+
+Modified: branches/frame_order_cleanup/auto_analyses/frame_order.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/auto_analyses/frame_order.py?rev=24807&amp;r1=24806&amp;r2=24807&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/auto_analyses/frame_order.py?rev=24807&amp;r1=24806&amp;r2=24807&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/auto_analyses/frame_order.py   (original)
++++ branches/frame_order_cleanup/auto_analyses/frame_order.py   Tue Jul 29 
+15:13:46 2014
+@@ -47,7 +47,7 @@
+ from pipe_control.structure.mass import pipe_centre_of_mass
+ from prompt.interpreter import Interpreter
+ from specific_analyses.frame_order.data import generate_pivot
+-from specific_analyses.frame_order.variables import MODEL_FREE_ROTOR, 
+MODEL_ISO_CONE, MODEL_ISO_CONE_FREE_ROTOR, MODEL_ISO_CONE_TORSIONLESS, 
+MODEL_LIST_FREE_ROTORS, MODEL_LIST_NONREDUNDANT, MODEL_LIST_PSEUDO_ELLIPSE, 
+MODEL_PSEUDO_ELLIPSE, MODEL_PSEUDO_ELLIPSE_FREE_ROTOR, 
+MODEL_PSEUDO_ELLIPSE_TORSIONLESS, MODEL_RIGID, MODEL_ROTOR
++from specific_analyses.frame_order.variables import MODEL_DOUBLE_ROTOR, 
+MODEL_FREE_ROTOR, MODEL_ISO_CONE, MODEL_ISO_CONE_FREE_ROTOR, 
+MODEL_ISO_CONE_TORSIONLESS, MODEL_LIST_FREE_ROTORS, MODEL_LIST_NONREDUNDANT, 
+MODEL_LIST_PSEUDO_ELLIPSE, MODEL_PSEUDO_ELLIPSE, 
+MODEL_PSEUDO_ELLIPSE_FREE_ROTOR, MODEL_PSEUDO_ELLIPSE_TORSIONLESS, 
+MODEL_RIGID, MODEL_ROTOR
+ from status import Status; status = Status()
+ 
+ 
+@@ -112,7 +112,9 @@
+         self.mc_sim_num = mc_sim_num
+         self.mc_int_pts = mc_int_pts
+         self.mc_func_tol = mc_func_tol
+-        self.models = models
++
++        # Re-order the models to enable the parameter nesting protocol.
++        self.models = self.reorder_models(models)
+ 
+         # A dictionary and list of the data pipe names.
+         self.pipe_name_dict = {}
+@@ -700,6 +702,44 @@
+         return True
+ 
+ 
++    def reorder_models(self, models=None):
++        &quot;&quot;&quot;Reorder the frame order models to enable the nested parameter 
+copying protocol.
++
++        @keyword models:    The frame order models to be used in the 
+auto-analysis.
++        @type models:       list of str
++        @return:            The reordered frame order models.
++        @rtype:             list of str
++        &quot;&quot;&quot;
++
++        # The correct order for the nesting protocol.
++        order = [
++            MODEL_RIGID,
++            MODEL_ROTOR,
++            MODEL_ISO_CONE,
++            MODEL_PSEUDO_ELLIPSE,
++            MODEL_ISO_CONE_TORSIONLESS,
++            MODEL_PSEUDO_ELLIPSE_TORSIONLESS,
++            MODEL_FREE_ROTOR,
++            MODEL_ISO_CONE_FREE_ROTOR,
++            MODEL_PSEUDO_ELLIPSE_FREE_ROTOR,
++            MODEL_DOUBLE_ROTOR
++        ]
++
++        # Create the new list.
++        new = []
++        for i in range(len(order)):
++            if order[i] in models:
++                new.append(order[i])
++
++        # Sanity check - the models must all be in this list.
++        for i in range(len(models)):
++            if models[i] not in order:
++                raise RelaxError(&quot;The frame order model '%s' is unknown.&quot; % 
+models[i])
++
++        # Return the reordered list.
++        return new
++
++
+     def visualisation(self, model=None):
+         &quot;&quot;&quot;Create visual representations of the frame order results for the 
+given model.
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Jul 29 15:20:02 2014</div>  
+</body>
+</html>

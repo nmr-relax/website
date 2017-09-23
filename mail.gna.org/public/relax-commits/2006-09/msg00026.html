@@ -1,0 +1,526 @@
+<!-- MHonArc v2.6.10 -->
+<!--X-Subject: r2565 &#45; /1.2/sconstruct -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 18 Sep 2006 05:46:51 +0200 -->
+<!--X-Message-Id: E1GPA5N&#45;0004ti&#45;Eq@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r2565 - /1.2/sconstruct -- September 18, 2006 - 05:46</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r2565 - /1.2/sconstruct</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00026" class="tabs">Index by Date</a> | <a href="threads.html#00026" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00025.html">Date Prev</a>] [<a href="msg00027.html">Date Next</a>] [<a href="msg00025.html">Thread Prev</a>] [<a href="msg00027.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 18 Sep 2006 03:46:21 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00026.html">E1GPA5N-0004ti-Eq@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on September 18, 2006 - 05:46:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Mon Sep 18 05:46:20 2006
+New Revision: 2565
+
+URL: <a  href="http://svn.gna.org/viewcvs/relax?rev=2565&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=2565&amp;view=rev</a>
+Log:
+A number of changes for cross platform support within the sconstruct file 
+(specifically for MS Windows).
+
+The scons targets for packaging and signing the binary and source 
+distributions have been modified to not be tar file specific.  The targets 
+'tar_bin' and 'tar_src' have been renamed to 'package_bin' and 'package_src' 
+respectively.
+
+The parent directory specifier '..' has been replaced with the 'os' object 
+'path.pardir' (however this cross platform compatibility change may never 
+have been an issue).
+
+The MS Windows distribution files have been changed from tar files to zip 
+files.
+
+The 'self.set_paths()' function has been rewritten so that each operating 
+system is handled within if blocks.  The MS Windows files names have been 
+changed as 'platform.uname()[4]' is an empty string.  The form of the Windows 
+distribution files names is now 'relax-x.x.x.Win32.zip' and 
+'relax-x.x.x.src.zip'.
+
+The relax manual compilation commands have been modified for MS Windows 
+compatibility.  Firstly the LaTeX file extensions have all been dropped (this 
+works in both Linux and Windows).  The 'ps2pdf' command has also been 
+modified, in Windows its options are set using the '#' character rather than 
+'=' (a Windows cmd.exe parsing feature)!
+
+The MS Windows DLL file extension has been moved from the temporary file list 
+to the general clean function.
+
+
+Modified:
+    1.2/sconstruct
+
+Modified: 1.2/sconstruct
+URL: 
+<a  href="http://svn.gna.org/viewcvs/relax/1.2/sconstruct?rev=2565&amp;r1=2564&amp;r2=2565&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.2/sconstruct?rev=2565&amp;r1=2564&amp;r2=2565&amp;view=diff</a>
+==============================================================================
+--- 1.2/sconstruct (original)
++++ 1.2/sconstruct Mon Sep 18 05:46:20 2006
+@@ -33,6 +33,7 @@
+ from shutil import copytree, move
+ import sys
+ from tarfile import TarFile
++from zipfile import ZipFile
+ 
+ from version import version
+ 
+@@ -84,8 +85,8 @@
+         binary_dist_env.Depends('binary_dist', 'manual_dist')             # 
+Compile the manual.
+         binary_dist_env.Depends('binary_dist', 'manual_clean_nodeps')     # 
+Clean up the temporary manual files.
+         binary_dist_env.Depends('binary_dist', 'clean_temp')              # 
+Then clean up all other temporary files.
+-        binary_dist_env.Depends('binary_dist', 'tar_bin')                 # 
+Create the tar.bz2 file of the binary distribution.
+-        binary_dist_env.Depends('binary_dist', 'gpg_bin')                 # 
+GPG sign the tar.bz2 file.
++        binary_dist_env.Depends('binary_dist', 'package_bin')             # 
+Package the binary distribution.
++        binary_dist_env.Depends('binary_dist', 'gpg_bin')                 # 
+GPG sign the binary distribution file.
+ 
+         # Target for creating the source distribution file.
+         source_dist_env = Environment(BUILDERS = {'dummy' : 
+Builder(action=self.dummy)})
+@@ -94,20 +95,20 @@
+         source_dist_env.Depends('source_dist', 'manual_dist')             # 
+Compile the manual.
+         binary_dist_env.Depends('source_dist', 'manual_clean_nodeps')     # 
+Clean up the temporary manual files.
+         source_dist_env.Depends('source_dist', 'clean')                   # 
+Then clean up the sources.
+-        source_dist_env.Depends('source_dist', 'tar_src')                 # 
+Create the tar.bz2 file of the source distribution.
+-        source_dist_env.Depends('source_dist', 'gpg_src')                 # 
+GPG sign the tar.bz2 file.
+-
+-        # Target for creating the tar file of the binary distribution.
+-        tar_bin_env = Environment(BUILDERS = {'archive' : 
+Builder(action=self.tar)})
+-        tar_bin_env.archive(target='tar_bin', source=None)
+-        tar_bin_env.Prepend(TAR_FILE = self.TAR_BIN_FILE)
+-        tar_bin_env.Depends('tar_bin', 'version_check')     # Check the 
+program version number first.
+-
+-        # Target for creating the tar file of the source distribution.
+-        tar_src_env = Environment(BUILDERS = {'archive' : 
+Builder(action=self.tar)})
+-        tar_src_env.archive(target='tar_src', source=None)
+-        tar_src_env.Prepend(TAR_FILE = self.TAR_SRC_FILE)
+-        tar_src_env.Depends('tar_bin', 'version_check')     # Check the 
+program version number first.
++        source_dist_env.Depends('source_dist', 'package_src')             # 
+Package the source distribution.
++        source_dist_env.Depends('source_dist', 'gpg_src')                 # 
+GPG sign the source distribution file.
++
++        # Target for packaging the binary distribution.
++        package_bin_env = Environment(BUILDERS = {'archive' : 
+Builder(action=self.package)})
++        package_bin_env.archive(target='package_bin', source=None)
++        package_bin_env.Prepend(DIST_FILE = self.BIN_FILE)
++        package_bin_env.Depends('package_bin', 'version_check')     # Check 
+the program version number first.
++
++        # Target for packaging the source distribution.
++        package_src_env = Environment(BUILDERS = {'archive' : 
+Builder(action=self.package)})
++        package_src_env.archive(target='package_src', source=None)
++        package_src_env.Prepend(DIST_FILE = self.SRC_FILE)
++        package_src_env.Depends('package_bin', 'version_check')     # Check 
+the program version number first.
+ 
+         # Target for creating a GPG signature of the binary distribution 
+file.
+         gpg_bin_env = Environment(BUILDERS = {'sign' : 
+Builder(action=self.gpg_bin_sign)})
+@@ -144,7 +145,7 @@
+         print &quot;###############\n\n&quot;
+ 
+         # Extensions of files to remove.
+-        temp_extns = ['so', 'sconsign']
++        temp_extns = ['so', 'sconsign', 'dll']
+ 
+         # Print out.
+         print &quot;\nRemoving the files ending in &quot; + `temp_extns` + &quot;.\n&quot;
+@@ -172,7 +173,7 @@
+         print &quot;###############################\n\n&quot;
+ 
+         # Extensions of temporary files.
+-        temp_extns = ['pyc', 'bak', 'o', 'os', 'obj', 'dll', 'exp', 'lib']
++        temp_extns = ['pyc', 'bak', 'o', 'os', 'obj', 'exp', 'lib']
+ 
+         # Print out.
+         print &quot;\nRemoving the files ending in &quot; + `temp_extns` + &quot;.\n&quot;
+@@ -206,7 +207,7 @@
+         print &quot;############################################\n\n&quot;
+ 
+         # Run the 'gpg' command.
+-        system(&quot;gpg --detach-sign --default-key relax ..&quot; + sep + 
+self.TAR_BIN_FILE)
++        system(&quot;gpg --detach-sign --default-key relax &quot; + path.pardir + 
+path.sep + self.BIN_FILE)
+ 
+         # Final print out.
+         print &quot;\n\n\n&quot;
+@@ -222,7 +223,7 @@
+         print &quot;############################################\n\n&quot;
+ 
+         # Run the 'gpg' command.
+-        system(&quot;gpg --detach-sign --default-key relax ..&quot; + sep + 
+self.TAR_SRC_FILE)
++        system(&quot;gpg --detach-sign --default-key relax &quot; + path.pardir + 
+path.sep + self.SRC_FILE)
+ 
+         # Final print out.
+         print &quot;\n\n\n&quot;
+@@ -384,38 +385,53 @@
+     def set_paths(self):
+         &quot;&quot;&quot;Function for setting the paths and file names.&quot;&quot;&quot;
+ 
+-        # The system architecture.
++        # The machine type.
+         self.MACH = platform.uname()[4]
+ 
+-        # System specific string.
++        # Symbolic link flag.
++        self.symlink_flag = 1
++
++        # GNU/Linux.
+         if self.system == 'Linux':
++            # System specific string.
+             self.SYS = 'GNU-Linux'
++
++            # Linux installation path.
++            self.INSTALL_PATH = '/usr/local'
++
++        # MS Windows.
+         elif self.system == 'Windows':
+-            if self.MACH in ['i386', 'i486', 'i586', 'i686']:
++            # Architecture.
++            arch = platform.architecture()[0]
++
++            # 32 bit.
++            if arch == '32bit':
+                 self.SYS = 'Win32'
++            elif arch == '64bit':
++                self.SYS = 'Win64'
+             else:
+                 self.SYS = 'Win'
+-        else:
++
++            # Windows installation path.
++            self.INSTALL_PATH = 'C:\\'
++
++            # No symlinks!
++            self.symlink_flag = 0
++
++        # Mac OS X.
++        elif self.system == 'Darwin':
++            # System specific string.
+             self.SYS = self.system
+ 
+-        # Symbolic link flag.
+-        self.symlink_flag = 1
+-
+-        # Linux installation path.
+-        if self.system == 'Linux':
+-            self.INSTALL_PATH = '/usr/local'
+-
+-        # Mac OS X installation path.
+-        elif self.system == 'Darwin':
++            # Mac OS X installation path.
+             self.INSTALL_PATH = sys.prefix + sep + 'local'
+-
+-        # Windows installation path.
+-        elif self.system == 'Windows':
+-            self.INSTALL_PATH = 'C:\\'
+-            self.symlink_flag = 0
+ 
+         # All other operating systems.
+         else:
++            # System specific string.
++            self.SYS = self.system
++
++            # Installation path.
+             self.INSTALL_PATH = sys.prefix + sep + 'local'
+ 
+         # Relax installation directory.
+@@ -428,30 +444,41 @@
+         self.SYMLINK = self.BIN_PATH + sep + 'relax'
+ 
+         # The distribution files.
+-        self.TAR_BIN_FILE = 'relax-' + version + '.' + self.SYS + '.' + 
+self.MACH + '.tar.bz2'
+-        self.TAR_SRC_FILE = 'relax-' + version + '.src.tar.bz2'
+-
+-
+-    def tar(self, target=None, source=None, env=None):
+-        &quot;&quot;&quot;Builder action for creating the tar archive.&quot;&quot;&quot;
++        if self.system == 'Windows':
++            self.BIN_FILE = 'relax-' + version + '.' + self.SYS + '.zip'
++            self.SRC_FILE = 'relax-' + version + '.src.zip'
++            self.DIST_TYPE = 'zip'
++        else:
++            self.BIN_FILE = 'relax-' + version + '.' + self.SYS + '.tar.bz2'
++            self.SRC_FILE = 'relax-' + version + '.src.tar.bz2'
++            self.DIST_TYPE = 'tar'
++
++
++    def package(self, target=None, source=None, env=None):
++        &quot;&quot;&quot;Builder action for packaging the distribution archives.&quot;&quot;&quot;
+ 
+         # The file name.
+-        file_name = env.subst('$TAR_FILE')
++        file_name = env.subst('$DIST_FILE')
+ 
+         # Print out.
+         print
+         print &quot;#######################&quot;
+         print &quot;# Packaging the files #&quot;
+         print &quot;#######################\n\n&quot;
+-        print &quot;Creating the tar archive &quot; + `file_name` + &quot;.\n&quot;
+-
+-        # Open the tar file.
+-        if search('.bz2$', file_name):
+-            archive = TarFile.bz2open(&quot;..&quot; + sep + env.subst('$TAR_FILE'), 
+'w')
+-        elif search('.gz$', file_name):
+-            archive = TarFile.gzopen(&quot;..&quot; + sep + env.subst('$TAR_FILE'), 
+'w')
+-        else:
+-            archive = TarFile.open(&quot;..&quot; + sep + env.subst('$TAR_FILE'), 'w')
++        print &quot;Creating the package distribution &quot; + `file_name` + &quot;.\n&quot;
++
++        # Open the Zip distribution file.
++        if self.DIST_TYPE == 'zip':
++            archive = ZipFile(path.pardir + path.sep + 
+env.subst('$DIST_FILE'), 'w', compression=8)
++
++        # Open the Tar distribution file.
++        elif self.DIST_TYPE == 'tar':
++            if search('.bz2$', file_name):
++                archive = TarFile.bz2open(path.pardir + path.sep + 
+env.subst('$DIST_FILE'), 'w')
++            elif search('.gz$', file_name):
++                archive = TarFile.gzopen(path.pardir + path.sep + 
+env.subst('$DIST_FILE'), 'w')
++            else:
++                archive = TarFile.open(path.pardir + path.sep + 
+env.subst('$DIST_FILE'), 'w')
+ 
+         # Base directory.
+         base = getcwd() + sep
+@@ -464,26 +491,40 @@
+ 
+             # Add the files in the current directory to the archive.
+             for i in xrange(len(files)):
+-                # Skip any '.sconsign' files, hidden files, byte-compiled 
+'*.pyc' files, or binary objects '.o' and '.os'.
+-                if search(&quot;\.sconsign&quot;, files[i]) or search(&quot;^\.&quot;, files[i]) 
+or search(&quot;\.pyc$&quot;, files[i]) or search(&quot;\.o$&quot;, files[i]) or search(&quot;\.os$&quot;, 
+files[i]):
++                # Skip any '.sconsign' files, hidden files, byte-compiled 
+'*.pyc' files, or binary objects '.o', '.os', 'obj', 'lib', and 'exp'.
++                if search(&quot;\.sconsign&quot;, files[i]) or search(&quot;^\.&quot;, files[i]) 
+or search(&quot;\.pyc$&quot;, files[i]) or search(&quot;\.o$&quot;, files[i]) or search(&quot;\.os$&quot;, 
+files[i]) or search(&quot;\.obj$&quot;, files[i]) or search(&quot;\.lib$&quot;, files[i]) or 
+search(&quot;\.exp$&quot;, files[i]):
+                     continue
+-
+-                # Open the file.
+-                file = open(path.join(root, files[i]))
+ 
+                 # Create the file name (without the base directory).
+                 name = path.join(root, files[i])
+                 name = name[len(base):]
+                 print 'relax-' + version + path.sep + name
+ 
+-                # Tar information.
+-                tarinfo = archive.gettarinfo(name, 'relax-' + version + 
+path.sep + name)
+-
+-                # Add the file.
+-                archive.addfile(tarinfo, file)
+-
+-                # Close the file.
+-                file.close()
++                # The archive file name.
++                arcname = 'relax-' + version + path.sep + name
++
++                # Zip archives.
++                if self.DIST_TYPE == 'zip':
++                    archive.write(filename=name, arcname=arcname)
++
++                # Tar archives.
++                if self.DIST_TYPE == 'tar':
++                    archive.add(name=name, arcname=arcname)
++
++                    # Open the file.
++                    #file = open(path.join(root, files[i]))
++
++                    # Tar information.
++                    #tarinfo = archive.gettarinfo(name, arcname)
++
++                    # Add the file.
++                    #archive.addfile(tarinfo, file)
++
++                    # Close the file.
++                    #file.close()
++
++        # Close the archive.
++        archive.close()
+ 
+         # Final print out.
+         print &quot;\n\n\n&quot;
+@@ -574,6 +615,9 @@
+ class Manual:
+     def __init__(self):
+         &quot;&quot;&quot;Initialise the manual building targets.&quot;&quot;&quot;
++
++        # The operating system.
++        self.system = platform.uname()[0]
+ 
+         # Documentation directory.
+         self.DOCS_DIR = 'docs' + sep
+@@ -739,8 +783,8 @@
+         chdir(self.LATEX_DIR)
+ 
+         # Get the docstrings.
+-        print &quot;Running the command:\n$ latex2html -split +3 -html_version 
+4.0 -dir ..&quot; + sep + &quot;html relax.tex\n\n\n&quot;
+-        system(&quot;latex2html -split +3 -html_version 4.0 -dir ..&quot; + sep + 
+&quot;html relax.tex&quot;)
++        print &quot;Running the command:\n$ latex2html -split +3 -html_version 
+4.0 -dir &quot; + path.pardir + path.sep + &quot;html relax.tex\n\n\n&quot;
++        system(&quot;latex2html -split +3 -html_version 4.0 -dir &quot; + path.pardir 
++ path.sep + &quot;html relax.tex&quot;)
+ 
+         # Return to the base directory.
+         chdir(base_dir)
+@@ -763,34 +807,41 @@
+         chdir(self.LATEX_DIR)
+ 
+         print &quot;\n\n\n &lt;&lt;&lt; LaTeX (first round) &gt;&gt;&gt;\n\n\n&quot;
+-        system('latex relax.tex')
++        system('latex relax')
+ 
+         print &quot;\n\n\n &lt;&lt;&lt; Bibtex &gt;&gt;&gt;\n\n\n&quot;
+-        system('bibtex relax.aux')
++        system('bibtex relax')
+ 
+         print &quot;\n\n\n &lt;&lt;&lt; Makeindex &gt;&gt;&gt;\n\n\n&quot;
+-        system('makeindex relax.idx')
++        system('makeindex relax')
+ 
+         print &quot;\n\n\n &lt;&lt;&lt; LaTeX (second round) &gt;&gt;&gt;\n\n\n&quot;
+-        system('latex relax.tex')
++        system('latex relax')
+ 
+         print &quot;\n\n\n &lt;&lt;&lt; LaTeX (third round) &gt;&gt;&gt;\n\n\n&quot;
+-        system('latex relax.tex')
++        system('latex relax')
+ 
+         print &quot;\n\n\n &lt;&lt;&lt; LaTeX (fourth round) &gt;&gt;&gt;\n\n\n&quot;
+-        system('latex relax.tex')
++        system('latex relax')
+ 
+         print &quot;\n\n\n &lt;&lt;&lt; dvips &gt;&gt;&gt;\n\n\n&quot;
+         system('dvips -o relax.ps relax.dvi')
+ 
+         print &quot;\n\n\n &lt;&lt;&lt; ps2pdf &gt;&gt;&gt;\n\n\n&quot;
+-        system('ps2pdf -dAutoFilterColorImages=false 
+-dAutoFilterGrayImages=false -dColorImageFilter=/FlateEncode 
+-dColorImageFilter=/FlateEncode -dGrayImageFilter=/FlateEncode 
+-dMonoImageFilter=/FlateEncode -dPDFSETTINGS=/prepress relax.ps')
++        if self.system == 'Windows':
++            # According to the Ghostscript documentation, &quot;When passing 
+options to ghostcript through a batch
++            # file wrapper such as ps2pdf.bat you need to substitute '#' for 
+'=' as the separator between options
++            # and their arguments.&quot;
++            assign = '#'
++        else:
++            assign = '='
++        system('ps2pdf -dAutoFilterColorImages' + assign + 'false 
+-dAutoFilterGrayImages' + assign + 'false -dColorImageFilter' + assign + 
+'/FlateEncode -dColorImageFilter' + assign + '/FlateEncode -dGrayImageFilter' 
++ assign + '/FlateEncode -dMonoImageFilter' + assign + '/FlateEncode 
+-dPDFSETTINGS' + assign + '/prepress relax.ps relax.pdf')
+ 
+         print &quot;\n\n\n &lt;&lt;&lt; Removing the PS file and shifting the PDF down a 
+directory &gt;&gt;&gt;\n\n\n&quot;
+         if access('relax.ps', F_OK):
+             remove('relax.ps')
+         if access('relax.pdf', F_OK):
+-            move('relax.pdf', '..')
++            move('relax.pdf', path.pardir)
+ 
+         # Return to the base directory.
+         chdir(base_dir)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Sep 18 06:40:06 2006</div>  
+</body>
+</html>

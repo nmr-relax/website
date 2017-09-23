@@ -1,0 +1,200 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r23434 &#45; in /branches/disp_speed: lib/dispersion/m61b.py target_functions/relax_disp.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 26 May 2014 20:14:01 +0200 -->
+<!--X-Message-Id: E1WozPN&#45;0007zN&#45;Mf@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r23434 - in /branches/disp_speed: lib/dispersion/m61b.py target_functions/relax_disp.py -- May 26, 2014 - 20:14</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r23434 - in /branches/disp_speed: lib/dispersion/m61b.py target_functions/relax_disp.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00537" class="tabs">Index by Date</a> | <a href="threads.html#00537" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00536.html">Date Prev</a>] [<a href="msg00538.html">Date Next</a>] [<a href="msg00536.html">Thread Prev</a>] [<a href="msg00538.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 26 May 2014 18:14:01 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00537.html">E1WozPN-0007zN-Mf@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on May 26, 2014 - 20:14:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Mon May 26 20:14:01 2014
+New Revision: 23434
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=23434&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=23434&amp;view=rev</a>
+Log:
+Math-domain catching for model M61b.
+
+task #7793: (<a  rel="nofollow" href="https://gna.org/task/?7793">https://gna.org/task/?7793</a>) Speed-up of dispersion models.
+
+This is to implement catching of math domain errors, before they occur.
+These can be found via the --numpy-raise function to the systemtests.
+
+To make the code look clean, the class object &quot;back_calc&quot; is no longer
+being updated per time point, but is updated in the relax_disp target 
+function in
+one go.
+
+Modified:
+    branches/disp_speed/lib/dispersion/m61b.py
+    branches/disp_speed/target_functions/relax_disp.py
+
+Modified: branches/disp_speed/lib/dispersion/m61b.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/disp_speed/lib/dispersion/m61b.py?rev=23434&amp;r1=23433&amp;r2=23434&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/disp_speed/lib/dispersion/m61b.py?rev=23434&amp;r1=23433&amp;r2=23434&amp;view=diff</a>
+==============================================================================
+--- branches/disp_speed/lib/dispersion/m61b.py  (original)
++++ branches/disp_speed/lib/dispersion/m61b.py  Mon May 26 20:14:01 2014
+@@ -59,8 +59,10 @@
+     - U{relaxation dispersion page of the relax 
+website&lt;<a  rel="nofollow" href="http://www.nmr-relax.com/analyses/relaxation_dispersion.html#M61_skew">http://www.nmr-relax.com/analyses/relaxation_dispersion.html#M61_skew</a>&gt;}.
+ &quot;&quot;&quot;
+ 
++# Python module imports.
++from numpy import abs, array, isfinite, min, sum
+ 
+-def r1rho_M61b(r1rho_prime=None, pA=None, dw=None, kex=None, 
+spin_lock_fields=None, back_calc=None, num_points=None):
++def r1rho_M61b(r1rho_prime=None, pA=None, dw=None, kex=None, 
+spin_lock_fields2=None, num_points=None):
+     &quot;&quot;&quot;Calculate the R1rho values for the M61 skew model.
+ 
+     See the module docstring for details.
+@@ -76,9 +78,7 @@
+     @type kex:                  float
+     @keyword spin_lock_fields2: The R1rho spin-lock field strengths squared 
+(in rad^2.s^-2).
+     @type spin_lock_fields2:    numpy rank-1 float array
+-    @keyword back_calc:         The array for holding the back calculated 
+R1rho values.  Each element corresponds to one of the spin-lock fields.
+-    @type back_calc:            numpy rank-1 float array
+-    @keyword num_points:        The number of points on the dispersion 
+curve, equal to the length of the spin_lock_fields and back_calc arguments.
++    @keyword num_points:        The number of points on the dispersion 
+curve, equal to the length of the spin_lock_fields.
+     @type num_points:           int
+     &quot;&quot;&quot;
+ 
+@@ -92,20 +92,26 @@
+     # The numerator.
+     numer = pA2dw2 * pB * kex
+ 
+-    # Loop over the dispersion points, back calculating the R1rho values.
+-    for i in range(num_points):
+-        # Catch zeros (to avoid pointless mathematical operations).
+-        if numer == 0.0:
+-            back_calc[i] = r1rho_prime
+-            continue
++    # Catch zeros (to avoid pointless mathematical operations).
++    # This will result in no exchange, returning flat lines.
++    if numer == 0.0:
++        return array([r1rho_prime]*num_points)
+ 
+-        # Denominator.
+-        denom = kex2_pA2dw2 + spin_lock_fields2[i]
++    # Denominator.
++    denom = kex2_pA2dw2 + spin_lock_fields2
+ 
+-        # Avoid divide by zero.
+-        if denom == 0.0:
+-            back_calc[i] = 1e100
+-            continue
++    # Catch math domain error of dividing with 0.
++    # This is when denom=0.
++    if min(abs(denom)) == 0:
++        return array([1e100]*num_points)
+ 
+-        # R1rho calculation.
+-        back_calc[i] = r1rho_prime + numer / denom
++
++    # R1rho calculation.
++    R1rho = r1rho_prime + numer / denom
++
++    # Catch errors, taking a sum over array is the fastest way to check for
++    # +/- inf (infinity) and nan (not a number).
++    if not isfinite(sum(R1rho)):
++        return array([1e100]*num_points)
++
++    return R1rho
+
+Modified: branches/disp_speed/target_functions/relax_disp.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/disp_speed/target_functions/relax_disp.py?rev=23434&amp;r1=23433&amp;r2=23434&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/disp_speed/target_functions/relax_disp.py?rev=23434&amp;r1=23433&amp;r2=23434&amp;view=diff</a>
+==============================================================================
+--- branches/disp_speed/target_functions/relax_disp.py  (original)
++++ branches/disp_speed/target_functions/relax_disp.py  Mon May 26 20:14:01 
+2014
+@@ -1210,7 +1210,7 @@
+                 dw_frq = dw[si] * self.frqs[0][si][mi]
+ 
+                 # Back calculate the R1rho values.
+-                r1rho_M61b(r1rho_prime=R20[r20_index], pA=pA, dw=dw_frq, 
+kex=kex, spin_lock_fields2=self.spin_lock_omega1_squared[0][mi][0], 
+back_calc=self.back_calc[0][si][mi][0], 
+num_points=self.num_disp_points[0][si][mi][0])
++                self.back_calc[0][si][mi][0] = 
+r1rho_M61b(r1rho_prime=R20[r20_index], pA=pA, dw=dw_frq, kex=kex, 
+spin_lock_fields2=self.spin_lock_omega1_squared[0][mi][0], 
+num_points=self.num_disp_points[0][si][mi][0])
+ 
+                 # For all missing data points, set the back-calculated value 
+to the measured values so that it has no effect on the chi-squared value.
+                 for di in range(self.num_disp_points[0][si][mi][0]):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon May 26 20:20:03 2014</div>  
+</body>
+</html>

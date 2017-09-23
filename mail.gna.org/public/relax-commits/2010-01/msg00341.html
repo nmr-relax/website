@@ -1,0 +1,214 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r10439 &#45; /branches/bieri_gui/gui_bieri/relax_gui.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 27 Jan 2010 15:50:13 +0100 -->
+<!--X-Message-Id: E1Na9Dh&#45;0002pI&#45;1Z@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r10439 - /branches/bieri_gui/gui_bieri/relax_gui.py -- January 27, 2010 - 15:50</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r10439 - /branches/bieri_gui/gui_bieri/relax_gui.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00341" class="tabs">Index by Date</a> | <a href="threads.html#00341" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00340.html">Date Prev</a>] [<a href="msg00342.html">Date Next</a>] [<a href="msg00340.html">Thread Prev</a>] [<a href="msg00342.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 27 Jan 2010 14:50:12 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00341.html">E1Na9Dh-0002pI-1Z@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on January 27, 2010 - 15:50:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Jan 27 15:50:12 2010
+New Revision: 10439
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=10439&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=10439&amp;view=rev</a>
+Log:
+Added the initial code for data synchronisation between the GUI and the relax 
+data store.
+
+The state_load() and state_save() methods now call the new sync_ds() method 
+of the main GUI class,
+as well as sync_ds() methods for each analysis type.
+
+The analysis specific synchronisation is performed as follows.  There will be 
+a list in the main
+class called self.analysis_frames.  This list will contain all the analysis 
+frame objects open in
+the GUI.  Each analysis type is expected to be a class instance, all located 
+in
+gui_bieri/auto_analyses/.  As these frames are initialised, they are appended 
+to the main GUI
+self.analysis_frames list.  Initialisation also creates a container in 
+ds.relax_gui.analyses and
+this is stored in the analysis class namespace as self.data.
+
+Therefore if the model-free analysis is the 7th analysis opened, from within 
+the main relax GUI
+class the frame can be reached as:
+
+self.analysis_frames[6]
+
+Its method sync_ds() is reachable as:
+
+self.analysis_frames[6].sync_ds()
+
+The relax data store element for that analysis is reachable as:
+
+ds.relax_gui.analyses[6]
+
+or as an alias as:
+
+self.analysis_frames[6].data
+
+Within the frame instance namespace (in the class), the main GUI object is 
+reachable as:
+
+self.gui
+
+This object oriented design will allow easy integration between the main 
+window and the analysis
+frames, however they may be laid out, and easy integration between analyses 
+and the relax data
+store.
+
+
+Modified:
+    branches/bieri_gui/gui_bieri/relax_gui.py
+
+Modified: branches/bieri_gui/gui_bieri/relax_gui.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/bieri_gui/gui_bieri/relax_gui.py?rev=10439&amp;r1=10438&amp;r2=10439&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/bieri_gui/gui_bieri/relax_gui.py?rev=10439&amp;r1=10438&amp;r2=10439&amp;view=diff</a>
+==============================================================================
+--- branches/bieri_gui/gui_bieri/relax_gui.py (original)
++++ branches/bieri_gui/gui_bieri/relax_gui.py Wed Jan 27 15:50:12 2010
+@@ -2564,13 +2564,30 @@
+         # Open the dialog.
+         filename = openfile(msg='Select file to open', filetype='state.bz2', 
+default='relax save files (*.bz2)|*.bz2|all files (*.*)|*.*')
+ 
+-        # A file has been selected.
+-        if filename:
+-            # Reset the relax data store.
+-            reset()
+-
+-            # Load the relax state.
+-            state.load_state(filename)
++        # No file has been selected.
++        if not filename:
++            # Skip the event.
++            event.Skip()
++
++            # Don't do anything.
++            return
++
++        # Reset the relax data store.
++        reset()
++
++        # Load the relax state.
++        state.load_state(filename)
++
++        # Update the core of the GUI to match the new data store.
++        self.sync_ds(upload=False)
++
++        # Build and upload the data to the analysis frames.
++        for i in range(len(ds.relax_gui.analyses)):
++            # Build the frame.
++            analysis = self.create_frame(i)
++
++            # Execute the analysis frame specific update methods.
++            analysis.sync_ds(upload=False)
+ 
+         # Skip the event.
+         event.Skip()
+@@ -2586,8 +2603,28 @@
+         # Open the dialog.
+         filename = savefile(msg='Select file to save', filetype='state.bz2', 
+default='relax save files (*.bz2)|*.bz2|all files (*.*)|*.*')
+ 
++        # Update the data store to match the GUI.
++        self.sync_ds(upload=True)
++
++        # Analyses updates of the new data store.
++        for i in range(len(self.analysis_frames)):
++            # Execute the analysis frame specific update methods.
++            self.analysis_frames[i].sync_ds(upload=True)
++
+         # Save the relax state.
+         state.save_state(filename, force=True)
+ 
+         # Skip the event.
+         event.Skip()
++
++
++    def sync_ds(self, upload=False):
++        &quot;&quot;&quot;Synchronise the GUI and the relax data store, both ways.
++
++        This method allows the GUI information to be uploaded into the relax 
+data store, or for the information in the relax data store to be downloaded 
+by the GUI.
++
++        @keyword upload:    A flag which if True will cause the GUI to send 
+data to the relax data store.  If False, data will be downloaded from the 
+relax data store to update the GUI.
++        @type upload:       bool
++        &quot;&quot;&quot;
++
++        # Dummy function (for the time being).
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Jan 27 17:20:02 2010</div>  
+</body>
+</html>

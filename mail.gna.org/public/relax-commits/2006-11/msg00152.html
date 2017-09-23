@@ -1,0 +1,303 @@
+<!-- MHonArc v2.6.10 -->
+<!--X-Subject: r2875 &#45; /1.2/sample_scripts/full_analysis.py -->
+<!--X-From-R13: rqjneq.qnhiretarNtznvy.pbz -->
+<!--X-Date: Thu, 23 Nov 2006 06:44:44 +0100 -->
+<!--X-Message-Id: E1Gn7Nd&#45;0007wv&#45;8X@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r2875 - /1.2/sample_scripts/full_analysis.py -- November 23, 2006 - 06:44</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r2875 - /1.2/sample_scripts/full_analysis.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00152" class="tabs">Index by Date</a> | <a href="threads.html#00152" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00151.html">Date Prev</a>] [<a href="msg00153.html">Date Next</a>] [<a href="msg00151.html">Thread Prev</a>] [<a href="msg00153.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 23 Nov 2006 05:44:12 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00152.html">E1Gn7Nd-0007wv-8X@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward . dauvergne</strong> on November 23, 2006 - 06:44:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Nov 23 06:44:10 2006
+New Revision: 2875
+
+URL: <a  href="http://svn.gna.org/viewcvs/relax?rev=2875&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=2875&amp;view=rev</a>
+Log:
+Ported r2864 and r2865 from the 1.3 line.
+
+The command used was:
+svn merge -r2863:2865 svn+ssh://bugman@xxxxxxxxxxx/svn/relax/1.3
+
+This adds convergence tests to the 'full_analysis.py' script so that the user 
+is told whether
+convergence has occured.
+
+
+Modified:
+    1.2/sample_scripts/full_analysis.py
+
+Modified: 1.2/sample_scripts/full_analysis.py
+URL: 
+<a  href="http://svn.gna.org/viewcvs/relax/1.2/sample_scripts/full_analysis.py?rev=2875&amp;r1=2874&amp;r2=2875&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.2/sample_scripts/full_analysis.py?rev=2875&amp;r1=2874&amp;r2=2875&amp;view=diff</a>
+==============================================================================
+--- 1.2/sample_scripts/full_analysis.py (original)
++++ 1.2/sample_scripts/full_analysis.py Thu Nov 23 06:44:10 2006
+@@ -9,6 +9,7 @@
+ # Import functions from the python modules 'os' and 're'.
+ from os import getcwd, listdir
+ from re import search
++from string import lower
+ 
+ 
+ class Main:
+@@ -211,7 +212,7 @@
+                 self.multi_model()
+ 
+                 # Delete the run containing the optimised diffusion tensor.
+-                run.delete('tensor')
++                run.delete('previous')
+ 
+                 # Create the final run (for model selection and final 
+optimisation).
+                 name = 'final'
+@@ -229,6 +230,10 @@
+                 # Write the results.
+                 dir = self.base_dir + 'opt'
+                 results.write(run=name, file='results', dir=dir, force=1)
++
++                # Test for convergence.
++                self.convergence(run=name)
++
+ 
+ 
+         # Final run.
+@@ -299,6 +304,128 @@
+ 
+         else:
+             raise RelaxError, &quot;Unknown diffusion model, change the value of 
+'self.diff_model'&quot;
++
++
++    def convergence(self, run=None):
++        &quot;&quot;&quot;Test for the convergence of the global model.&quot;&quot;&quot;
++
++        # Print out.
++        print &quot;\n\n\n&quot;
++        print &quot;#####################&quot;
++        print &quot;# Convergence tests #&quot;
++        print &quot;#####################\n\n&quot;
++
++        # Convergence flags.
++        chi2_converged = 1
++        models_converged = 1
++        params_converged = 1
++
++
++        # Chi-squared test.
++        ###################
++
++        print &quot;# Chi-squared test.\n&quot;
++        print &quot;chi2 (k-1): %s&quot; + self.relax.data.chi2['previous']
++        print &quot;chi2 (k):   %s&quot; + self.relax.data.chi2[run]
++        if self.relax.data.chi2['previous'] == self.relax.data.chi2[run]:
++            print &quot;The chi-squared value has converged.\n&quot;
++        else:
++            print &quot;The chi-squared value has not converged.\n&quot;
++            chi2_converged = 0
++
++
++        # Identical model-free model test.
++        ##################################
++
++        print &quot;# Identical model-free models test.&quot;
++
++        # Create a string representation of the model-free models of the 
+previous run.
++        prev_models = ''
++        for i in xrange(len(self.relax.data.res['previous'])):
++            prev_models = prev_models + 
+self.relax.data.res['previous'][i].model
++
++        # Create a string representation of the model-free models of the 
+current run.
++        curr_models = ''
++        for i in xrange(len(self.relax.data.res[run])):
++            curr_models = curr_models + self.relax.data.res[run][i].model
++
++        # The test.
++        if prev_models == curr_models:
++            print &quot;The model-free models have converged.\n&quot;
++        else:
++            print &quot;The model-free models have not converged.\n&quot;
++            models_converged = 0
++
++
++        # Identical parameter value test.
++        #################################
++
++        print &quot;# Identical parameter test.&quot;
++
++        # Only run the tests if the model-free models have converged.
++        if models_converged:
++            # Diffusion parameter array.
++            if self.diff_model == 'sphere':
++                params = ['tm']
++            elif self.diff_model == 'oblate' or self.diff_model == 'prolate':
++                params = ['tm', 'Da', 'theta', 'phi']
++            elif self.diff_model == 'ellipsoid':
++                params = ['tm', 'Da', 'Dr', 'alpha', 'beta', 'gamma']
++
++            # Tests.
++            for param in params:
++                # Get the parameter values.
++                prev_val = getattr(self.relax.data.diff['previous'], param)
++                curr_val = getattr(self.relax.data.diff[run], param)
++
++                # Test if not identical.
++                if prev_val != curr_val:
++                    print &quot;Parameter:   &quot; + param
++                    print &quot;Value (k-1): &quot; + `prev_val`
++                    print &quot;Value (k):   &quot; + `curr_val`
++                    print &quot;The diffusion parameters have not converged.\n&quot;
++                    params_converged = 0
++
++            # Skip the rest if the diffusion tensor parameters have not 
+converged.
++            if not param_converged:
++                break
++
++            # Loop over the spin systems.
++            for i in xrange(len(self.relax.data.res[run])):
++                # Skip if the parameters have not converged.
++                if not params_converged:
++                    break
++
++                # Loop over the parameters.
++                for j in xrange(len(self.relax.data.res[run][i].params)):
++                    # Get the parameter values.
++                    prev_val = getattr(self.relax.data.res['previous'][i], 
+lower(self.relax.data.res['previous'][i].params[j]))
++                    curr_val = getattr(self.relax.data.res[run][i], 
+lower(self.relax.data.res[run][i].params[j]))
++
++                    # Test if not identical.
++                    if prev_val != curr_val:
++                        print &quot;Spin system: &quot; + 
+`self.relax.data.res[run][i].num` + ' ' + self.relax.data.res[run][i].name
++                        print &quot;Parameter:   &quot; + 
+self.relax.data.res[run][i].params[j]
++                        print &quot;Value (k-1): &quot; + `prev_val`
++                        print &quot;Value (k):   &quot; + `curr_val`
++                        print &quot;The model-free parameters have not 
+converged.\n&quot;
++                        params_converged = 0
++                        break
++
++        # The model-free models haven't converged hence the parameter values 
+haven't converged.
++        else:
++            print &quot;The model-free models haven't converged hence the 
+parameters haven't converged.&quot;
++            params_converged = 0
++
++
++        # Final print out.
++        ##################
++
++        print &quot;\n# Convergence:&quot;
++        if chi2_converged and models_converged and paras_converged:
++            print &quot;    [ Yes ]&quot;
++        else:
++            print &quot;    [ No ]&quot;
+ 
+ 
+     def determine_rnd(self, model=None):
+@@ -341,15 +468,15 @@
+         &quot;&quot;&quot;Function for loading the optimised diffusion tensor.&quot;&quot;&quot;
+ 
+         # Create the run for the previous data.
+-        run.create('tensor', 'mf')
++        run.create('previous', 'mf')
+ 
+         # Load the optimised diffusion tensor from the initial round.
+         if self.round == 1:
+-            results.read('tensor', 'results', self.diff_model + '/init')
++            results.read('previous', 'results', self.diff_model + '/init')
+ 
+         # Load the optimised diffusion tensor from the previous round.
+         else:
+-            results.read('tensor', 'results', self.diff_model + '/round_' + 
+`self.round - 1` + '/opt')
++            results.read('previous', 'results', self.diff_model + '/round_' 
++ `self.round - 1` + '/opt')
+ 
+ 
+     def model_selection(self, run=None, dir=None, write_flag=1):
+@@ -402,7 +529,7 @@
+ 
+             # Copy the diffusion tensor from the run 'opt' and prevent it 
+from being minimised.
+             if not local_tm:
+-                diffusion_tensor.copy('tensor', name)
++                diffusion_tensor.copy('previous', name)
+                 fix(name, 'diff')
+ 
+             # Set the bond length and CSA values.
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Nov 23 07:00:07 2006</div>  
+</body>
+</html>

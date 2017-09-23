@@ -1,0 +1,358 @@
+<!-- MHonArc v2.6.10 -->
+<!--X-Subject: Re: r2540 &#45; in /branches/warning: errors.py generic_fns/pdb.py relax -->
+<!--X-From-R13: Quevf [npDnvyq <p.n.znpenvyqNyrrqf.np.hx> -->
+<!--X-Date: Wed, 30 Aug 2006 11:43:42 +0200 -->
+<!--X-Message-Id: 1156930961.28764.881.camel@fbsdpcu021 -->
+<!--X-Content-Type: text/plain -->
+<!--X-Reference: E1GDknf&#45;00066r&#45;01@subversion.gna.org -->
+<!--X-Reference: 7f080ed10608292250u3bc0a0b0ud7a319e05ee70f28@mail.gmail.com -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>Re: r2540 - in /branches/warning: errors.py generic_fns/pdb.py relax -- August 30, 2006 - 11:43</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />Re: r2540 - in /branches/warning: errors.py generic_fns/pdb.py relax</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00083" class="tabs">Index by Date</a> | <a href="threads.html#00083" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00082.html">Date Prev</a>] [<a href="msg00084.html">Date Next</a>] [<a href="msg00082.html">Thread Prev</a>] [<a href="msg00084.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: Edward d'Auvergne &lt;edward@xxxxxxxxxxxxx&gt;</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 30 Aug 2006 10:42:41 +0100</li>
+<li class="menuitem">
+<em>Cc</em>: relax-devel@xxxxxxx</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00083.html">1156930961.28764.881.camel@fbsdpcu021</a>&gt;</li>
+<li class="menuitem">
+<em>References</em>: &lt;E1GDknf-00066r-01@subversion.gna.org&gt;	&lt;<a href="msg00082.html">7f080ed10608292250u3bc0a0b0ud7a319e05ee70f28@mail.gmail.com</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>Chris MacRaild</strong> on August 30, 2006 - 11:43:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">On Wed, 2006-08-30 at 15:50 +1000, Edward d'Auvergne wrote:
+</pre><blockquote class="blockquote"><pre style="margin: 0em;">Thanks, these changes look very promising.  A few things need to be
+discussed and tested before merging this code back into the main 1.2
+line.  I have a few points below interspersed between your code.
+Firstly I have committed a change which affects the order of
+initialisation so that the RelaxErrors and RelaxWarnings are
+initialised after the pedantic flag but before the command line
+parsing (see 
+<a  href="https://mail.gna.org/public/relax-commits/2006-08/msg00014.html">https://mail.gna.org/public/relax-commits/2006-08/msg00014.html</a>,
+Message-id: &lt;E1GIIBN-00026c-Ga@xxxxxxxxxxxxxxxxxx&gt;).  This removes the
+missing AllRelaxErrors error.
+
+</pre></blockquote><pre style="margin: 0em;">
+
+
+</pre><blockquote class="blockquote"><blockquote class="blockquote"><pre style="margin: 0em;">+# Warning objects.
++##################
++
++class RelaxWarnings:
++    def __init__(self):
++        &quot;&quot;&quot;Class for placing all the warnings below into __builtin__&quot;&quot;&quot;
++
++        # Loop over all objects in 'self'.
++        for name in dir(self):
++            # Get the object.
++            object = getattr(self, name)
++
++            # Skip over all non-warning class objects.
++            if type(object) != ClassType or not match('Relax', name):
++                continue
++
++            # Place the warnings into __builtin__
++            __builtin__.__setattr__(name, object)
++
++            # Tuple of all the warnings.
++            if hasattr(__builtin__, 'AllRelaxWarnings'):
++                __builtin__.AllRelaxWarnings = 
+__builtin__.AllRelaxWarnings, object
++            else:
++                __builtin__.AllRelaxWarnings = object,
++
++        # Format warning messages.
++        def format(message, category, filename, lineno):
+</pre></blockquote><pre style="margin: 0em;">
+
+Should this function be indented so that it is located within
+self.__init__() or should it be referred to as self.function()?  I'd
+prefer to stay away from functions nested within other functions.
+This nesting is very rare in relax and I'm slowly trying to eliminate
+all instances of it.
+
+</pre></blockquote><pre style="margin: 0em;">
+
+Fine.
+
+</pre><blockquote class="blockquote"><blockquote class="blockquote"><pre style="margin: 0em;">+            if issubclass(category, self.BaseWarning):
++                message = &quot;RelaxWarning: %s\n\n&quot; % message
++
++            if Debug:
++                tb = &quot;&quot;
++                for frame in inspect.stack()[4:]:
+</pre></blockquote><pre style="margin: 0em;">
+
+It's probably worth trimming the other side of the stack as well, see below.
+
+</pre><blockquote class="blockquote"><pre style="margin: 0em;">+                    file = frame[1]
++                    lineNo = frame[2]
++                    func = frame[3]
++                    tb_frame = '  File &quot;%s&quot;, line %i, in %s\n' % (file, 
+lineNo, func)
++                    try:
++                        context = frame[4][frame[5]]
++                    except TypeError:
++                        pass
++                    else:
++                        tb_frame = '%s    %s\n' % (tb_frame, 
+context.strip())
++                    tb = tb_frame + tb
++                tb = &quot;Traceback (most recent call last):\n%s&quot; % tb
++                message = tb + message
++
++            return message
++
++        warnings.formatwarning = format
+</pre></blockquote><pre style="margin: 0em;">
+
+I had a very similar logic in the code which was rolled back at
+<a  href="https://mail.gna.org/public/relax-commits/2006-08/msg00010.html">https://mail.gna.org/public/relax-commits/2006-08/msg00010.html</a>
+(Message-id: &lt;E1GDk40-0003vf-Do@xxxxxxxxxxxxxxxxxx&gt;) and discussed at
+the thread starting at
+<a  href="https://mail.gna.org/public/relax-devel/2006-08/msg00052.html">https://mail.gna.org/public/relax-devel/2006-08/msg00052.html</a>
+(Message-id: &lt;7f080ed10608100336r3dc92d80h1ce3251e55b49347@xxxxxxxxxxxxxx&gt;).
+ However I used the 'extract_stack' function to get the stack instead
+and then used the 'format_list' function to do the formatting similar
+to that which you have coded.  The relevant code was in the traceback
+function which I've reproduced below.  Some of the ideas in the code
+may be useful to further customise the traceback message.
+</pre></blockquote><pre style="margin: 0em;">
+
+Do you have anything specific in mind? Clearly your code is more
+generally flexible, but is there anything you would like to apply that
+flexibility to? If so feel free to modify/replace my suggestions.
+
+</pre><blockquote class="blockquote"><pre style="margin: 0em;">
+
+-    def traceback(self):
+-        &quot;&quot;&quot;Function for formatting and printing out the traceback.&quot;&quot;&quot;
+-
+-        # Get the stack.
+-        stack = extract_stack()
+-
+-        # Initialise the trimmed stack and stack start flag.
+-        trimmed_stack = []
+-        start = 0
+-
+-        # Trim the stack (script mode):
+-        if self.UI_mode == 'script':
+-            for i in xrange(len(stack)):
+-                # Find the 'interact_script()' function, the start of
+the scripting.
+-                if stack[i][2] == 'interact_script':
+-                    start = 1
+-                    continue
+-
+-                # Not at the start of the script section of the stack.
+-                if not start:
+-                    continue
+-
+-                # Append the next item.
+-                trimmed_stack.append(stack[i])
+-
+-                # Find the RelaxError and then stop.
+-                if search('^Relax.*Error', stack[i][3]):
+-                    break
+-
+-        # Trim the stack (default).
+-        else:
+-            for i in xrange(len(stack)):
+-                # Append the next item.
+-                trimmed_stack.append(stack[i])
+-
+-                # Find the RelaxError and then stop.
+-                if search('^Relax.*Error', stack[i][3]):
+-                    break
+-
+-        # Default formatting of the stack.
+-        string_stack = format_list(trimmed_stack)
+-
+-        # Print out the formatted stack.
+-        for i in xrange(len(string_stack)):
+-            sys.stderr.write(string_stack[i])
+
+</pre><blockquote class="blockquote"><pre style="margin: 0em;">+
++        # Set warning filters.
++        if Pedantic:
++            warnings.filterwarnings('error', category=self.BaseWarning)
++        else:
++            warnings.filterwarnings('always', category=self.BaseWarning)
++
++
++    # Base class for all warnings.
++    ############################
++
++    class BaseWarning(Warning, RelaxErrors.BaseError):
++        def __str__(self):
++            return self.text
+</pre></blockquote><pre style="margin: 0em;">
+
+Does this need to be a subclass of RelaxErrors.BaseError?
+</pre></blockquote><pre style="margin: 0em;">
+
+I thought this was the best way to do it, but I'm happy to consider
+other arguments. My logic was that if a warning is upgraded to an
+exception, then it should be treated like any other relax error. This
+means that when we need to catch all relax errors (eg. for UI specific
+error handling) then we just need 'except BaseError' to do that. Are
+there any reasons you are uncomfortable with this approach?
+
+</pre><blockquote class="blockquote"><pre style="margin: 0em;">
+
+</pre><blockquote class="blockquote"><pre style="margin: 0em;">+
++
++    # Standard warnings.
++    ####################
++
++    class RelaxWarning(BaseWarning):
++        def __init__(self, text):
++            self.text = text
++
++
++    # Zero length vector.
++    #####################
++
++    class RelaxZeroVectorWarning(BaseWarning):
++        def __init__(self, res):
++            self.text = &quot;The XH bond vector for residue &quot; + `res` + &quot; is 
+of zero length.&quot;
++
++    # PDB warnings.
++    ###############
++
++    class RelaxNoAtomWarning(BaseWarning):
++        def __init__(self, atom, res):
++            self.text = &quot;The atom %s could not be found for residue %i&quot; 
+% (atom, res)
++
++    class RelaxNoPDBFileWarning(BaseWarning):
++        def __init__(self, file):
++            self.text = &quot;The PDB file %s cannot be found, no structures 
+will be loaded.&quot; % file
++
+</pre></blockquote><pre style="margin: 0em;">
+
+Although obvious I like comments above each class describing in a
+little more detail, compared to the class name, what each object is
+used for.  I can add these if you don't mind Chris.
+</pre></blockquote><pre style="margin: 0em;">
+
+Of course. Feel free to modify as you like.
+
+</pre><blockquote class="blockquote"><pre style="margin: 0em;">
+
+</pre><blockquote class="blockquote"><pre style="margin: 0em;">
+
+Modified: branches/warning/generic_fns/pdb.py
+URL: 
+<a  href="http://svn.gna.org/viewcvs/relax/branches/warning/generic_fns/pdb.py?rev=2540&amp;r1=2539&amp;r2=2540&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/warning/generic_fns/pdb.py?rev=2540&amp;r1=2539&amp;r2=2540&amp;view=diff</a>
+==============================================================================
+--- branches/warning/generic_fns/pdb.py (original)
++++ branches/warning/generic_fns/pdb.py Thu Aug 17 18:32:54 2006
+@@ -153,7 +153,7 @@
+                 raise RelaxFileError, ('PDB', self.file_path)
+             else:
+                 if self.print_flag:
+-                    print &quot;The PDB file &quot; + `self.file_path` + &quot; cannot 
+be found, no structures will be loaded.&quot;
++                    warn(RelaxNoPDBFileWarning(self.file_path))
+                 return
+
+
+@@ -239,13 +239,13 @@
+                 # Test if the proton atom exists for residue i.
+                 if not pdb_res.atoms.has_key(self.proton):
+                     if self.print_flag:
+-                        print &quot;The proton atom &quot; + `self.proton` + &quot; 
+could not be found for residue '&quot; + 
+`self.relax.data.res[self.run][j].num` + &quot; &quot; + 
+self.relax.data.res[self.run][j].name + &quot;'.&quot;
++                        warn(RelaxNoAtomWarning(self.proton, 
+self.relax.data.res[self.run][j].num))
+</pre></blockquote><pre style="margin: 0em;">
+
+Perfect place for a warning.  I'll have to do a code audit one day and
+change numerous print messages to warning messages.  There are a lot
+of places in the code where warnings presented using print statements
+exist. I think there are even cases where I print warning messages to
+stderr - the system is not very consistent.  The rest of the changes
+are all good, so I won't reproduce any more.  The pedantic option and
+the traceback when in debug mode will be very useful debugging tools.
+
+Thanks again,
+
+Edward
+
+</pre></blockquote><pre style="margin: 0em;">
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<ul><li><strong>Follow-Ups</strong>:
+<ul>
+<li><strong><a name="00084" href="msg00084.html">Re: r2540 - in /branches/warning: errors.py generic_fns/pdb.py relax</a></strong>
+<ul><li><em>From:</em> Edward d'Auvergne</li></ul></li>
+</ul></li></ul>
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<ul><li><strong>References</strong>:
+<ul>
+<li><strong><a name="00082" href="msg00082.html">Re: r2540 - in /branches/warning: errors.py generic_fns/pdb.py relax</a></strong>
+<ul><li><em>From:</em> Edward d'Auvergne</li></ul></li>
+</ul></li></ul>
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Aug 30 12:21:05 2006</div>  
+</body>
+</html>

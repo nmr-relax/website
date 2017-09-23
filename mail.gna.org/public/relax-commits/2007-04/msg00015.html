@@ -1,0 +1,399 @@
+<!-- MHonArc v2.6.10 -->
+<!--X-Subject: r3258 &#45; in /1.3: generic_fns/selection.py test_suite/unit_tests/generic_fns/test_selection.py -->
+<!--X-From-R13: p.n.znpenvyqNyrrqf.np.hx -->
+<!--X-Date: Fri, 30 Mar 2007 18:41:33 +0200 -->
+<!--X-Message-Id: E1HXK9v&#45;0001Ov&#45;KB@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r3258 - in /1.3: generic_fns/selection.py test_suite/unit_tests/generic_fns/test_selection.py -- March 30, 2007 - 18:41</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r3258 - in /1.3: generic_fns/selection.py test_suite/unit_tests/generic_fns/test_selection.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00015" class="tabs">Index by Date</a> | <a href="threads.html#00015" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00014.html">Date Prev</a>] [<a href="msg00016.html">Date Next</a>] [<a href="msg00014.html">Thread Prev</a>] [<a href="msg00016.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 30 Mar 2007 16:41:03 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00015.html">E1HXK9v-0001Ov-KB@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>c . a . macraild</strong> on March 30, 2007 - 18:41:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: macraild
+Date: Fri Mar 30 18:41:01 2007
+New Revision: 3258
+
+URL: <a  href="http://svn.gna.org/viewcvs/relax?rev=3258&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=3258&amp;view=rev</a>
+Log:
+Further mol-res-spin selection improvements. Work still needed on
+boolean logic.
+
+Modified:
+    1.3/generic_fns/selection.py
+    1.3/test_suite/unit_tests/generic_fns/test_selection.py
+
+Modified: 1.3/generic_fns/selection.py
+URL: 
+<a  href="http://svn.gna.org/viewcvs/relax/1.3/generic_fns/selection.py?rev=3258&amp;r1=3257&amp;r2=3258&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/generic_fns/selection.py?rev=3258&amp;r1=3257&amp;r2=3258&amp;view=diff</a>
+==============================================================================
+--- 1.3/generic_fns/selection.py (original)
++++ 1.3/generic_fns/selection.py Fri Mar 30 18:41:01 2007
+@@ -58,9 +58,17 @@
+ 
+ 
+ class Selection(object):
+-    &quot;&quot;&quot;An object containing mol-res-spin selections&quot;&quot;&quot;
++    &quot;&quot;&quot;An object containing mol-res-spin selections.
++    
++    A Selection object represents either a set of selected 
++    molecules, residues and spins, or the union or intersection
++    of two other Selection objects.&quot;&quot;&quot;
+ 
+     def __init__(self, select_string):
++        &quot;&quot;&quot;Initialise a Selection object.
++
++        @type select_string: string
++        @param select_string: a mol-res-spin selection string&quot;&quot;&quot;
+ 
+         self._union = None
+         self._intersect = None
+@@ -91,29 +99,49 @@
+             self.spins = parse_token(spin_token)
+ 
+     def __contains__(self, obj):
+-
+         if self._union:
+             return (obj in self._union[0]) or (obj in self._union[1])
+         elif self._intersect:
+             return (obj in self._intersect[0]) and (obj in 
+self._intersect[1])
+-        elif isinstance(obj, MoleculeContainer) and obj.name in 
+self.molecules:
+-            return True
+-        elif isinstance(obj, ResidueContainer) and obj.name in self.residues:
+-            return True
+-        elif isinstance(obj, SpinContainer) and obj.name in self.spins:
+-            return True
+-        else:
+-            return False
++        elif isinstance(obj, MoleculeContainer):
++            if not self.molecules:
++                return True
++            elif obj.name in self.molecules:
++                return True
++        elif isinstance(obj, ResidueContainer):
++            if not self.residues:
++                return True
++            elif obj.name in self.residues or obj.num in self.residues:
++                return True
++        elif isinstance(obj, SpinContainer):
++            if not self.spins:
++                return True
++            elif obj.name in self.spins or obj.num in self.spins:
++                return True
++
++        return False
+ 
+     def intersection(self, select_obj0, select_obj1):
++        &quot;&quot;&quot;Make a Selection object the intersection of two Selection objects
+         
+-        if self._union or self._intersect:
++        @type select_obj0: Instance of class Selection
++        @param select_obj0: First Selection object in intersection
++        @type select_obj1: Instance of class Selection
++        @param select_obj1: First Selection object in intersection&quot;&quot;&quot;
++        
++        if self._union or self._intersect or self.molecules or self.residues 
+or self.spins:
+             raise RelaxError, &quot;Cannot define multiple Boolean relationships 
+between Selection objects&quot;
+         self._intersect = (select_obj0, select_obj1)
+    
+     def union(self, select_obj0, select_obj1):
+-
+-        if self._union or self._intersect:
++        &quot;&quot;&quot;Make a Selection object the union of two Selection objects
++
++        @type select_obj0: Instance of class Selection
++        @param select_obj0: First Selection object in union
++        @type select_obj1: Instance of class Selection
++        @param select_obj1: First Selection object in union&quot;&quot;&quot;
++
++        if self._union or self._intersect or self.molecules or self.residues 
+or self.spins:
+             raise RelaxError, &quot;Cannot define multiple Boolean relationships 
+between Selection objects&quot;
+         self._union = (select_obj0, select_obj1)
+ 
+@@ -278,18 +306,18 @@
+     &quot;&quot;&quot;
+ 
+     # Parse the selection string.
+-    selectObj = Selection(selection)
++    select_obj = Selection(selection)
+ 
+     # Disallowed selections.
+-    if selectObj.residues:
++    if select_obj.residues:
+         raise RelaxResSelectDisallowError
+-    if selectObj.spins:
++    if select_obj.spins:
+         raise RelaxSpinSelectDisallowError
+ 
+     # Loop over the molecules.
+     for mol in relax_data_store[relax_data_store.current_pipe].mol:
+         # Skip the molecule if there is no match to the selection.
+-        if selectObj.molecules and mol.name not in selectObj:
++        if mol not in select_obj:
+             continue
+ 
+         # Yield the molecule data container.
+@@ -379,23 +407,25 @@
+     &quot;&quot;&quot;
+ 
+     # Parse the selection string.
+-    selectObj = Selection(selection)
++    select_obj = Selection(selection)
+         
+     # Disallowed selections.
+-    if selectObj.spins:
++    if select_obj.spins:
+         raise RelaxSpinSelectDisallowError
+ 
+     # Loop over the molecules.
+     for mol in relax_data_store[relax_data_store.current_pipe].mol:
+         # Skip the molecule if there is no match to the selection.
+-        if selectObj.molecules and mol.name not in selectObj:
++        if mol not in select_obj:
+             continue
++        print mol
+ 
+         # Loop over the residues.
+         for res in mol.res:
+             # Skip the residue if there is no match to the selection.
+-            if selectObj.residues and res.name not in selectObj:
++            if res not in select_obj:
+                 continue
++            print res
+ 
+             # Yield the residue data container.
+             yield res
+@@ -630,24 +660,24 @@
+     &quot;&quot;&quot;
+ 
+     # Parse the selection string.
+-    selectObj = Selection(selection)
++    select_obj = Selection(selection)
+ 
+     # Loop over the molecules.
+     for mol in relax_data_store[relax_data_store.current_pipe].mol:
+         # Skip the molecule if there is no match to the selection.
+-        if selectObj.molecules and mol.name not in selectObj:
++        if mol not in select_obj:
+             continue
+ 
+         # Loop over the residues.
+         for res in mol.res:
+             # Skip the residue if there is no match to the selection.
+-            if selectObj.residues and res.name not in selectObj:
++            if res not in select_obj:
+                 continue
+ 
+             # Loop over the spins.
+             for spin in res.spin:
+                 # Skip the spin if there is no match to the selection.
+-                if selectObj.spins and spin.name not in selectObj:
++                if spin not in select_obj:
+                     continue
+ 
+                 # Yield the spin system data container.
+
+Modified: 1.3/test_suite/unit_tests/generic_fns/test_selection.py
+URL: 
+<a  href="http://svn.gna.org/viewcvs/relax/1.3/test_suite/unit_tests/generic_fns/test_selection.py?rev=3258&amp;r1=3257&amp;r2=3258&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/test_suite/unit_tests/generic_fns/test_selection.py?rev=3258&amp;r1=3257&amp;r2=3258&amp;view=diff</a>
+==============================================================================
+--- 1.3/test_suite/unit_tests/generic_fns/test_selection.py (original)
++++ 1.3/test_suite/unit_tests/generic_fns/test_selection.py Fri Mar 30 
+18:41:01 2007
+@@ -85,6 +85,9 @@
+             # Test the molecule name.
+             self.assertEqual(mol.name, 'RNA')
+ 
++        # Test loop length.
++        self.assertEqual(len(list(selection.molecule_loop('#RNA'))), 1)
++
+ 
+     def test_molecule_loop_no_selection(self):
+         &quot;&quot;&quot;Test the proper operation of the molecule loop when no selection 
+is present.
+@@ -103,6 +106,10 @@
+ 
+             # Increment i.
+             i = i + 1
++        
++        # Test loop length.
++        self.assertEqual(len(list(selection.molecule_loop())), 2)
++                
+ 
+ 
+     def test_parse_token_single_element_num(self):
+@@ -268,7 +275,10 @@
+         for res in selection.residue_loop('#Ap4Aase:Glu'):
+             # Test the selection.
+             self.assertEqual(res.num, 2)
+-
++        
++        # Test loop length.
++        self.assertEqual(len(list(selection.residue_loop('#Ap4Aase:Glu'))), 
+1)
++                
+ 
+     def test_residue_loop_no_selection(self):
+         &quot;&quot;&quot;Test the proper operation of the residue loop when no selection 
+is present.
+@@ -292,7 +302,9 @@
+             # Increment i.
+             i = i + 1
+ 
+-
++        # Test loop length.
++        self.assertEqual(i, 5)
++        
+     def test_reverse(self):
+         &quot;&quot;&quot;Test spin system selection reversal.
+ 
+@@ -335,6 +347,10 @@
+ 
+             # Increment i.
+             i = i + 1
++        
++        # Test loop length.
++        self.assertEqual(i, 2)
++                
+ 
+ 
+     def test_spin_loop_no_selection(self):
+@@ -358,12 +374,10 @@
+ 
+             # Increment i.
+             i = i + 1
+-
+-    def test_boolean_selection1(self):
+-        &quot;&quot;&quot;Test boolean mol-res-spin selections.&quot;&quot;&quot;
+-
+-        # The selection object:
+-        sel = selection.Selection(&quot;#Ap4Aase | #RNA@N5&quot;)
++        
++        # Test loop length.
++        self.assertEqual(i, 7)
++                
+ 
+     def test_tokenise1(self):
+         &quot;&quot;&quot;Test the generic_fns.selection.tokenise() function on the string 
+'@1'.&quot;&quot;&quot;
+@@ -662,26 +676,41 @@
+     def test_boolean_or_selection(self):
+         &quot;&quot;&quot;Test boolean or in mol-res-spin selections.&quot;&quot;&quot;
+ 
+-        self.assert_(list(selection.spin_loop(&quot;#Ap4Aase | #RNA@N5&quot;)) == 
+list(selection.spin_loop())
++        self.assert_(list(selection.spin_loop(&quot;#Ap4Aase | #RNA@N5&quot;)) == 
+list(selection.spin_loop()))
+    
+                 
+     def test_boolean_and_selection(self):
+         &quot;&quot;&quot;Test boolean and in mol-res-spin selections.&quot;&quot;&quot;
+         
+         # The selection loop:
+-        sel = selection.residue_loop(&quot;#Ap4Aase:4 &amp; :Pro&quot;)
++        sel = list(selection.residue_loop(&quot;#Ap4Aase:4 &amp; :Pro&quot;))
+         
+         # Test:
++        self.assertEqual(len(sel), 1)
+         for res in sel:
+             self.assert_(res.name == &quot;Pro&quot; and res.num == 4)
+        
+                 
+     def test_boolean_complex_selection(self):
+         &quot;&quot;&quot;Test complex boolean mol-res-spin selections.&quot;&quot;&quot;
+-        a syntax error
+-        # The selection loops:
+-        sel = selection.residue_loop(&quot;#Ap4Aase:4 &amp; :Pro | #RNA@N5&quot;)
++        
++        # The selection loop:
++        sel = list(selection.residue_loop(&quot;#Ap4Aase:4 &amp; :Pro | #RNA&quot;))
+ 
+         # Test:
++        self.assertEqual(len(sel), 3)
+         for res in sel:
+             self.assert_(res.num in [-5,-4,4])
++    
++
++    def test_boolean_parenthesis_selection(self):
++        &quot;&quot;&quot;Test complex boolean mol-res-spin selections with parenthesis.&quot;&quot;&quot;
++
++        # The selection loop:
++        sel = list(selection.residue_loop(&quot;(#Ap4Aase &amp; :Pro) | (#RNA &amp; 
+:-4)&quot;))
++
++        # Test:
++        self.assertEqual(len(sel), 2)
++        for res in sel:
++            self.assert_(res.num in [-4,4])
++       
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Apr 03 13:40:05 2007</div>  
+</body>
+</html>

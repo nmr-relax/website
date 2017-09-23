@@ -1,0 +1,433 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r27479 &#45; in /trunk: gui/pipe_editor.py gui/results_viewer.py test_suite/gui_tests/base_classes.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 03 Feb 2015 16:30:53 +0100 -->
+<!--X-Message-Id: E1YIfRE&#45;0007ro&#45;TI@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r27479 - in /trunk: gui/pipe_editor.py gui/results_viewer.py test_suite/gui_tests/base_classes.py -- February 03, 2015 - 16:30</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r27479 - in /trunk: gui/pipe_editor.py gui/results_viewer.py test_suite/gui_tests/base_classes.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00044" class="tabs">Index by Date</a> | <a href="threads.html#00044" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00043.html">Date Prev</a>] [<a href="msg00045.html">Date Next</a>] [<a href="msg00043.html">Thread Prev</a>] [<a href="msg00045.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 03 Feb 2015 15:30:52 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00044.html">E1YIfRE-0007ro-TI@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on February 03, 2015 - 16:30:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Feb  3 16:30:52 2015
+New Revision: 27479
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=27479&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=27479&amp;view=rev</a>
+Log:
+Changes for how the main GUI windows are destroyed by the GUI test tearDown() 
+method.
+
+These changes revert some of the code of previous commits.  The recently 
+introduced pipe editor and
+results viewer windows Delete() methods have been deleted.  Instead the 
+Close() methods are called
+in the tearDown() method to unregister the windows from the observer objects, 
+followed by a
+wx.Yield() call to flush the wx events, and then the clean_up_windows() GUI 
+test base method is
+called within a wx.CallAfter() call.  This avoids the racing induced 
+segfaults in the GUI tests.
+
+
+Modified:
+    trunk/gui/pipe_editor.py
+    trunk/gui/results_viewer.py
+    trunk/test_suite/gui_tests/base_classes.py
+
+Modified: trunk/gui/pipe_editor.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/gui/pipe_editor.py?rev=27479&amp;r1=27478&amp;r2=27479&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/gui/pipe_editor.py?rev=27479&amp;r1=27478&amp;r2=27479&amp;view=diff</a>
+==============================================================================
+--- trunk/gui/pipe_editor.py    (original)
++++ trunk/gui/pipe_editor.py    Tue Feb  3 16:30:52 2015
+@@ -104,20 +104,6 @@
+         self.update_grid()
+ 
+ 
+-    def Destroy(self, event=None):
+-        &quot;&quot;&quot;Cleanly destroy the window.
+-
+-        @param event:   The wx event.
+-        @type event:    wx event
+-        &quot;&quot;&quot;
+-
+-        # Unregister the methods from the observers to avoid unnecessary 
+updating.
+-        self.observer_setup(register=False)
+-
+-        # Call the parent Destroy() method.
+-        super(Pipe_editor, self).Destroy()
+-
+-
+     def activate(self):
+         &quot;&quot;&quot;Activate or deactivate certain elements in response to the 
+execution lock.&quot;&quot;&quot;
+ 
+
+Modified: trunk/gui/results_viewer.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/gui/results_viewer.py?rev=27479&amp;r1=27478&amp;r2=27479&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/gui/results_viewer.py?rev=27479&amp;r1=27478&amp;r2=27479&amp;view=diff</a>
+==============================================================================
+--- trunk/gui/results_viewer.py (original)
++++ trunk/gui/results_viewer.py Tue Feb  3 16:30:52 2015
+@@ -106,8 +106,108 @@
+         self.name = 'results viewer'
+ 
+ 
+-    def Destroy(self, event=None):
+-        &quot;&quot;&quot;Cleanly destroy the window.
++    def Show(self, show=True):
++        &quot;&quot;&quot;Change the behaviour of showing the window to update the content.
++
++        @keyword show:  A flag which is True shows the window.
++        @type show:     bool
++        &quot;&quot;&quot;
++
++        # Register a few methods in the observer objects.
++        status.observers.gui_uf.register(self.name, self.refresh, 
+method_name='refresh')
++        status.observers.pipe_alteration.register(self.name, self.refresh, 
+method_name='refresh')
++        status.observers.result_file.register(self.name, self.refresh, 
+method_name='refresh')
++        status.observers.exec_lock.register(self.name, self.activate, 
+method_name='activate')
++
++        # First update.
++        self.refresh()
++
++        # Activate or deactivate the frame.
++        self.activate()
++
++        # Show the window using the base class method.
++        if status.show_gui:
++            super(Results_viewer, self).Show(show)
++
++
++    def activate(self):
++        &quot;&quot;&quot;Activate or deactivate certain elements in response to the 
+execution lock.&quot;&quot;&quot;
++
++        # Flag for enabling or disabling the elements.
++        enable = False
++        if not status.exec_lock.locked():
++            enable = True
++
++        # The pipe selector.
++        wx.CallAfter(self.pipe_name.Enable, enable)
++
++        # The open button.
++        wx.CallAfter(self.button_open.Enable, enable)
++
++
++    def add_files(self, box):
++        &quot;&quot;&quot;Create the list of results files.
++
++        @param box:     The box sizer to pack the box into.
++        @type box:      wx.BoxSizer instance
++        @return:        The list box element.
++        @rtype:         wx.ListBox element
++        &quot;&quot;&quot;
++
++        # Initialise the list box.
++        self.file_list = wx.ListCtrl(self.main_panel, -1, 
+style=wx.BORDER_SUNKEN|wx.LC_REPORT)
++
++        # Properties.
++        self.file_list.SetFont(font.normal)
++
++        # Store the base heights.
++        self.height_char = self.file_list.GetCharHeight()
++
++        # The headers.
++        self.file_list.InsertColumn(0, &quot;File type&quot;)
++        self.file_list.InsertColumn(1, &quot;File path&quot;)
++
++        # Add to the sizer.
++        box.Add(self.file_list, 1, wx.ALL|wx.EXPAND, 0)
++
++        # Bind events.
++        self.file_list.Bind(wx.EVT_SIZE, self.resize)
++        self.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.open_result_file, 
+self.file_list)
++
++
++    def build_pipe_sel(self, box):
++        &quot;&quot;&quot;Create the data pipe selection element.
++
++        @param box: The horizontal box element to pack the elements into.
++        @type box:  wx.BoxSizer instance
++        &quot;&quot;&quot;
++
++        # Use a horizontal packing of elements.
++        sizer = wx.BoxSizer(wx.HORIZONTAL)
++
++        # The text.
++        label = wx.StaticText(self.main_panel, -1, &quot;Data pipe selection&quot;)
++
++        # The font and label properties.
++        label.SetFont(font.subtitle)
++
++        # Add the label to the box.
++        sizer.Add(label, 0, wx.ALIGN_CENTER_VERTICAL|wx.ADJUST_MINSIZE, 0)
++
++        # Add a spacer.
++        sizer.AddSpacer(self.border)
++
++        # A combo box.
++        self.pipe_name = wx.ComboBox(self.main_panel, -1, value='', 
+style=wx.CB_DROPDOWN|wx.CB_READONLY, choices=[])
++        self.pipe_name.SetMinSize((50, 27))
++        sizer.Add(self.pipe_name, 1, 
+wx.ALIGN_CENTER_VERTICAL|wx.ADJUST_MINSIZE, 0)
++
++        # Add the pipe sizer to the main sizer.
++        box.Add(sizer, 0, wx.ALL|wx.EXPAND, 0)
++
++
++    def handler_close(self, event):
++        &quot;&quot;&quot;Event handler for the close window action.
+ 
+         @param event:   The wx event.
+         @type event:    wx event
+@@ -119,123 +219,6 @@
+         status.observers.result_file.unregister(self.name)
+         status.observers.exec_lock.unregister(self.name)
+ 
+-        # Call the parent Destroy() method.
+-        super(Results_viewer, self).Destroy()
+-
+-
+-    def Show(self, show=True):
+-        &quot;&quot;&quot;Change the behaviour of showing the window to update the content.
+-
+-        @keyword show:  A flag which is True shows the window.
+-        @type show:     bool
+-        &quot;&quot;&quot;
+-
+-        # Register a few methods in the observer objects.
+-        status.observers.gui_uf.register(self.name, self.refresh, 
+method_name='refresh')
+-        status.observers.pipe_alteration.register(self.name, self.refresh, 
+method_name='refresh')
+-        status.observers.result_file.register(self.name, self.refresh, 
+method_name='refresh')
+-        status.observers.exec_lock.register(self.name, self.activate, 
+method_name='activate')
+-
+-        # First update.
+-        self.refresh()
+-
+-        # Activate or deactivate the frame.
+-        self.activate()
+-
+-        # Show the window using the base class method.
+-        if status.show_gui:
+-            super(Results_viewer, self).Show(show)
+-
+-
+-    def activate(self):
+-        &quot;&quot;&quot;Activate or deactivate certain elements in response to the 
+execution lock.&quot;&quot;&quot;
+-
+-        # Flag for enabling or disabling the elements.
+-        enable = False
+-        if not status.exec_lock.locked():
+-            enable = True
+-
+-        # The pipe selector.
+-        wx.CallAfter(self.pipe_name.Enable, enable)
+-
+-        # The open button.
+-        wx.CallAfter(self.button_open.Enable, enable)
+-
+-
+-    def add_files(self, box):
+-        &quot;&quot;&quot;Create the list of results files.
+-
+-        @param box:     The box sizer to pack the box into.
+-        @type box:      wx.BoxSizer instance
+-        @return:        The list box element.
+-        @rtype:         wx.ListBox element
+-        &quot;&quot;&quot;
+-
+-        # Initialise the list box.
+-        self.file_list = wx.ListCtrl(self.main_panel, -1, 
+style=wx.BORDER_SUNKEN|wx.LC_REPORT)
+-
+-        # Properties.
+-        self.file_list.SetFont(font.normal)
+-
+-        # Store the base heights.
+-        self.height_char = self.file_list.GetCharHeight()
+-
+-        # The headers.
+-        self.file_list.InsertColumn(0, &quot;File type&quot;)
+-        self.file_list.InsertColumn(1, &quot;File path&quot;)
+-
+-        # Add to the sizer.
+-        box.Add(self.file_list, 1, wx.ALL|wx.EXPAND, 0)
+-
+-        # Bind events.
+-        self.file_list.Bind(wx.EVT_SIZE, self.resize)
+-        self.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.open_result_file, 
+self.file_list)
+-
+-
+-    def build_pipe_sel(self, box):
+-        &quot;&quot;&quot;Create the data pipe selection element.
+-
+-        @param box: The horizontal box element to pack the elements into.
+-        @type box:  wx.BoxSizer instance
+-        &quot;&quot;&quot;
+-
+-        # Use a horizontal packing of elements.
+-        sizer = wx.BoxSizer(wx.HORIZONTAL)
+-
+-        # The text.
+-        label = wx.StaticText(self.main_panel, -1, &quot;Data pipe selection&quot;)
+-
+-        # The font and label properties.
+-        label.SetFont(font.subtitle)
+-
+-        # Add the label to the box.
+-        sizer.Add(label, 0, wx.ALIGN_CENTER_VERTICAL|wx.ADJUST_MINSIZE, 0)
+-
+-        # Add a spacer.
+-        sizer.AddSpacer(self.border)
+-
+-        # A combo box.
+-        self.pipe_name = wx.ComboBox(self.main_panel, -1, value='', 
+style=wx.CB_DROPDOWN|wx.CB_READONLY, choices=[])
+-        self.pipe_name.SetMinSize((50, 27))
+-        sizer.Add(self.pipe_name, 1, 
+wx.ALIGN_CENTER_VERTICAL|wx.ADJUST_MINSIZE, 0)
+-
+-        # Add the pipe sizer to the main sizer.
+-        box.Add(sizer, 0, wx.ALL|wx.EXPAND, 0)
+-
+-
+-    def handler_close(self, event):
+-        &quot;&quot;&quot;Event handler for the close window action.
+-
+-        @param event:   The wx event.
+-        @type event:    wx event
+-        &quot;&quot;&quot;
+-
+-        # Unregister the methods from the observers to avoid unnecessary 
+updating.
+-        status.observers.gui_uf.unregister(self.name)
+-        status.observers.pipe_alteration.unregister(self.name)
+-        status.observers.result_file.unregister(self.name)
+-        status.observers.exec_lock.unregister(self.name)
+-
+         # Close the window.
+         self.Hide()
+ 
+
+Modified: trunk/test_suite/gui_tests/base_classes.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/test_suite/gui_tests/base_classes.py?rev=27479&amp;r1=27478&amp;r2=27479&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/test_suite/gui_tests/base_classes.py?rev=27479&amp;r1=27478&amp;r2=27479&amp;view=diff</a>
+==============================================================================
+--- trunk/test_suite/gui_tests/base_classes.py  (original)
++++ trunk/test_suite/gui_tests/base_classes.py  Tue Feb  3 16:30:52 2015
+@@ -173,14 +173,9 @@
+             del self.app.gui.pipe_editor
+ 
+         # Kill the results viewer window.
+-        #if hasattr(self.app.gui, 'results_viewer'):
+-        #    self.app.gui.results_viewer.Destroy()
+-        #    del self.app.gui.results_viewer
+-
+-        # Kill the prompt window.
+-        if hasattr(self.app.gui, 'relax_prompt'):
+-            self.app.gui.relax_prompt.Destroy()
+-            del self.app.gui.relax_prompt
++        if hasattr(self.app.gui, 'results_viewer'):
++            self.app.gui.results_viewer.Destroy()
++            del self.app.gui.results_viewer
+ 
+ 
+     def new_analysis_wizard(self, analysis_type=None, analysis_name=None, 
+pipe_name=None, pipe_bundle=None):
+@@ -290,6 +285,13 @@
+         # Get the wx app.
+         self.app = wx.GetApp()
+ 
++        # Close all windows to unregister the observer objects.
++        if hasattr(self.app.gui, 'pipe_editor'):
++            self.app.gui.pipe_editor.Close()
++        if hasattr(self.app.gui, 'results_viewer'):
++            self.app.gui.results_viewer.Close()
++        wx.Yield()
++
+         # Kill all windows.
+         wx.CallAfter(self.clean_up_windows)
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Feb 03 16:40:01 2015</div>  
+</body>
+</html>

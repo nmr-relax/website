@@ -1,0 +1,166 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r17063 &#45; /branches/interatomic/generic_fns/interatomic.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 26 Jun 2012 17:32:10 +0200 -->
+<!--X-Message-Id: E1SjXkQ&#45;0003Tr&#45;2Y@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r17063 - /branches/interatomic/generic_fns/interatomic.py -- June 26, 2012 - 17:32</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r17063 - /branches/interatomic/generic_fns/interatomic.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00508" class="tabs">Index by Date</a> | <a href="threads.html#00508" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00507.html">Date Prev</a>] [<a href="msg00509.html">Date Next</a>] [<a href="msg00507.html">Thread Prev</a>] [<a href="msg00509.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 26 Jun 2012 15:32:10 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00508.html">E1SjXkQ-0003Tr-2Y@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on June 26, 2012 - 17:32:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Jun 26 17:32:09 2012
+New Revision: 17063
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=17063&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=17063&amp;view=rev</a>
+Log:
+Modified the interatomic_loop() function so that spin IDs can be used to 
+restrict the looping.
+
+
+Modified:
+    branches/interatomic/generic_fns/interatomic.py
+
+Modified: branches/interatomic/generic_fns/interatomic.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/interatomic/generic_fns/interatomic.py?rev=17063&amp;r1=17062&amp;r2=17063&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/interatomic/generic_fns/interatomic.py?rev=17063&amp;r1=17062&amp;r2=17063&amp;view=diff</a>
+==============================================================================
+--- branches/interatomic/generic_fns/interatomic.py (original)
++++ branches/interatomic/generic_fns/interatomic.py Tue Jun 26 17:32:09 2012
+@@ -158,23 +158,51 @@
+     return True
+ 
+ 
+-def interatomic_loop(pipe=None):
++def interatomic_loop(selection1=None, selection2=None, pipe=None):
+     &quot;&quot;&quot;Generator function for looping over all the interatomic data 
+containers.
+ 
+-    @keyword pipe:      The data pipe containing the spin.  Defaults to the 
+current data pipe.
+-    @type pipe:         str
+-    &quot;&quot;&quot;
+-
+-    # The data pipe.
+-    if pipe == None:
+-        pipe = pipes.cdp_name()
+-
+-    # Get the data pipe.
+-    dp = pipes.get_pipe(pipe)
++    @keyword selection1:    The optional spin ID selection of the first atom.
++    @type selection1:       str
++    @keyword selection2:    The optional spin ID selection of the second 
+atom.
++    @type selection2:       str
++    @keyword pipe:          The data pipe containing the spin.  Defaults to 
+the current data pipe.
++    @type pipe:             str
++    &quot;&quot;&quot;
++
++    # The data pipe.
++    if pipe == None:
++        pipe = pipes.cdp_name()
++
++    # Get the data pipe.
++    dp = pipes.get_pipe(pipe)
++
++    # Parse the spin ID selection strings.
++    select_obj = None
++    select_obj1 = None
++    select_obj2 = None
++    if selection1 and selection2:
++        select_obj1 = Selection(selection1)
++        select_obj2 = Selection(selection2)
++    elif selection1:
++        select_obj = Selection(selection1)
++    elif selection2:
++        select_obj = Selection(selection2)
+ 
+     # Loop over the containers, yielding them.
+     for i in range(len(dp.interatomic)):
+-        yield dp.interatomic[i]
++        # Alias.
++        interatom = dp.interatomic[i]
++
++        # Check that the selections are met.
++        if select_obj:
++            if interatom.spin_id1 not in select_obj:
++                continue
++        if select_obj1:
++            if not (interatom.spin_id1 in select_obj1 or interatom.spin_id2 
+in select_obj1) or not (interatom.spin_id1 in select_obj2 or 
+interatom.spin_id2 in select_obj2):
++                continue
++
++        # Return the container.
++        yield interatom
+ 
+ 
+ def return_interatom(spin_id1=None, spin_id2=None, pipe=None):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Jun 26 18:00:02 2012</div>  
+</body>
+</html>

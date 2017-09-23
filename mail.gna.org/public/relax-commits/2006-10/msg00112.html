@@ -1,0 +1,316 @@
+<!-- MHonArc v2.6.10 -->
+<!--X-Subject: r2677 &#45; /branches/tensor_pdb/data.py -->
+<!--X-From-R13: rqjneq.qnhiretarNtznvy.pbz -->
+<!--X-Date: Sun, 29 Oct 2006 03:30:21 +0100 -->
+<!--X-Message-Id: E1Ge0Qp&#45;0001md&#45;Fp@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r2677 - /branches/tensor_pdb/data.py -- October 29, 2006 - 03:30</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r2677 - /branches/tensor_pdb/data.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00112" class="tabs">Index by Date</a> | <a href="threads.html#00112" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00111.html">Date Prev</a>] [<a href="msg00113.html">Date Next</a>] [<a href="msg00111.html">Thread Prev</a>] [<a href="msg00113.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Sun, 29 Oct 2006 02:29:51 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00112.html">E1Ge0Qp-0001md-Fp@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward . dauvergne</strong> on October 29, 2006 - 03:30:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Sun Oct 29 03:29:50 2006
+New Revision: 2677
+
+URL: <a  href="http://svn.gna.org/viewcvs/relax?rev=2677&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=2677&amp;view=rev</a>
+Log:
+The diffusion tensor data structure now returns unit vectors parallel to the 
+tensor axes.
+
+The 'self.__getattr__()' function has been expanded.  The docstring now 
+describes all the equations
+used in the calculation of the parameters Diso, Dper, Dpar, Dratio, Dx, Dy, 
+and Dz.  It also
+describes how the unit vectors parallel to Dpar, Dx, Dy, and Dz are related 
+to the spherical or
+Euler angles.
+
+Dper, Dpar, and Dratio are now only calculated if the diffusion tensor is 
+spheroidal and Dx, Dy, and
+Dz are only calculated if the diffusion is ellipsoidal.
+
+The Dpar, Dx, Dy, and Dz unit vectors are calculated and a Numeric array is 
+returned.
+
+
+Modified:
+    branches/tensor_pdb/data.py
+
+Modified: branches/tensor_pdb/data.py
+URL: 
+<a  href="http://svn.gna.org/viewcvs/relax/branches/tensor_pdb/data.py?rev=2677&amp;r1=2676&amp;r2=2677&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/tensor_pdb/data.py?rev=2677&amp;r1=2676&amp;r2=2677&amp;view=diff</a>
+==============================================================================
+--- branches/tensor_pdb/data.py (original)
++++ branches/tensor_pdb/data.py Sun Oct 29 03:29:50 2006
+@@ -21,7 +21,8 @@
+ 
+###############################################################################
+ 
+ 
+-from math import pi
++from Numeric import Float64, zeros
++from math import cos, pi, sin
+ from re import match
+ from types import DictType, ListType
+ 
+@@ -64,7 +65,6 @@
+         self.g_count = {}
+         self.h_count = {}
+         self.warning = {}
+-
+ 
+ 
+     def __repr__(self):
+@@ -150,7 +150,7 @@
+ 
+     def add_item(self, key):
+         &quot;&quot;&quot;Function for adding an empty container to the dictionary.
+-        
++
+         This overwrites the function from the parent class SpecificData.
+         &quot;&quot;&quot;
+ 
+@@ -164,7 +164,64 @@
+ 
+ 
+     def __getattr__(self, name):
+-        &quot;&quot;&quot;Function for calculating the parameters on the fly.&quot;&quot;&quot;
++        &quot;&quot;&quot;Function for calculating the parameters and unit vectors on the 
+fly.
++
++        All tensor types
++        ================
++
++        The equation for calculating Diso is
++
++            Diso  =  1 / (6tm).
++
++
++        Spheroidal diffusion
++        ====================
++
++        The equations for the parameters Dper, Dpar, and Dratio are
++
++            Dper  =  Diso - 1/3 Da,
++
++            Dpar  =  Diso + 2/3 Da,
++
++            Dratio  =  Dpar / Dper.
++
++        The unit vector parallel to the unique axis of the diffusion tensor 
+is
++
++                          | sin(theta) * cos(phi) |
++            Dpar_unit  =  | sin(theta) * sin(phi) |.
++                          |      cos(theta)       |
++
++
++        Ellipsoidal diffusion
++        =====================
++
++        The equations for the parameters Dx, Dy, and Dz are
++
++            Dx  =  Diso - 1/3 Da(1 + 3Dr),
++
++            Dy  =  Diso - 1/3 Da(1 - 3Dr),
++
++            Dz  =  Diso + 2/3 Da.
++
++        The unit Dx vector is
++
++                        | -sin(alpha) * sin(gamma) + cos(alpha) * cos(beta) 
+* cos(gamma) |
++            Dx_unit  =  | -sin(alpha) * cos(gamma) - cos(alpha) * cos(beta) 
+* sin(gamma) |,
++                        |                    cos(alpha) * sin(beta)          
+            |
++
++        the unit Dy vector is
++
++                        | cos(alpha) * sin(gamma) + sin(alpha) * cos(beta) * 
+cos(gamma) |
++            Dy_unit  =  | cos(alpha) * cos(gamma) - sin(alpha) * cos(beta) * 
+sin(gamma) |,
++                        |                   sin(alpha) * sin(beta)           
+           |
++
++        and the unit Dz vector is
++
++                        | -sin(beta) * cos(gamma) |
++            Dz_unit  =  |  sin(beta) * sin(gamma) |.
++                        |        cos(beta)        |
++
++        &quot;&quot;&quot;
+ 
+         # All tensor types.
+         ###################
+@@ -177,33 +234,85 @@
+         # Spheroidal diffusion.
+         #######################
+ 
+-        # Dper = Diso - 1/3Da.
+-        if name == 'Dper':
++        # Dper.
++        if name == 'Dper' and self.type == 'spheroid':
+             return self.Diso - 1.0/3.0 * self.Da
+ 
+-        # Dpar = Diso + 2/3Da.
+-        if name == 'Dpar':
++        # Dpar.
++        if name == 'Dpar' and self.type == 'spheroid':
+             return self.Diso + 2.0/3.0 * self.Da
+ 
+-        # Dratio = Dpar / Dper.
+-        if name == 'Dratio':
++        # Dratio.
++        if name == 'Dratio' and self.type == 'spheroid':
+             return self.Dpar / self.Dper
+ 
+-        
++        # Dpar unit vector.
++        if name == 'Dpar_unit' and self.type == 'spheroid':
++            # Initilise the vector.
++            Dpar_unit = zeros(3, Float64)
++
++            # Calculate the x, y, and z components.
++            Dpar_unit[0] = sin(self.theta) * cos(self.phi)
++            Dpar_unit[1] = sin(self.theta) * sin(self.phi)
++            Dpar_unit[2] = cos(self.theta)
++
++            # Return the unit vector.
++            return Dpar_unit
++
++
+         # Ellipsoidal diffusion.
+         ########################
+ 
+-        # Dx = Diso - 1/3Da(1 + 3Dr).
+-        if name == 'Dx':
++        # Dx.
++        if name == 'Dx' and self.type == 'ellipsoid':
+             return self.Diso - 1.0/3.0 * self.Da * (1.0 + 3.0*self.Dr)
+ 
+-        # Dy = Diso - 1/3Da(1 - 3Dr).
+-        if name == 'Dy':
++        # Dy.
++        if name == 'Dy' and self.type == 'ellipsoid':
+             return self.Diso - 1.0/3.0 * self.Da * (1.0 - 3.0*self.Dr)
+ 
+-        # Dz = Diso + 2/3Da.
+-        if name == 'Dz':
++        # Dz.
++        if name == 'Dz' and self.type == 'ellipsoid':
+             return self.Diso + 2.0/3.0 * self.Da
++
++        # Dx unit vector.
++        if name == 'Dx_unit' and self.type == 'ellipsoid':
++            # Initilise the vector.
++            Dx_unit = zeros(3, Float64)
++
++            # Calculate the x, y, and z components.
++            Dx_unit[0] = -sin(self.alpha) * sin(self.gamma)  +  
+cos(self.alpha) * cos(self.beta) * cos(self.gamma)
++            Dx_unit[1] = -sin(self.alpha) * cos(self.gamma)  -  
+cos(self.alpha) * cos(self.beta) * sin(self.gamma)
++            Dx_unit[2] = cos(self.alpha) * sin(self.beta)
++
++            # Return the unit vector.
++            return Dx_unit
++
++        # Dy unit vector.
++        if name == 'Dy_unit' and self.type == 'ellipsoid':
++            # Initilise the vector.
++            Dy_unit = zeros(3, Float64)
++
++            # Calculate the x, y, and z components.
++            Dy_unit[0] = cos(self.alpha) * sin(self.gamma)  +  
+sin(self.alpha) * cos(self.beta) * cos(self.gamma)
++            Dy_unit[1] = cos(self.alpha) * cos(self.gamma)  -  
+sin(self.alpha) * cos(self.beta) * sin(self.gamma)
++            Dy_unit[2] = sin(self.alpha) * sin(self.beta)
++
++            # Return the unit vector.
++            return Dy_unit
++
++        # Dz unit vector.
++        if name == 'Dz_unit' and self.type == 'ellipsoid':
++            # Initilise the vector.
++            Dz_unit = zeros(3, Float64)
++
++            # Calculate the x, y, and z components.
++            Dz_unit[0] = -sin(self.beta) * cos(self.gamma)
++            Dz_unit[1] = sin(self.beta) * sin(self.gamma)
++            Dz_unit[2] = cos(self.beta)
++
++            # Return the unit vector.
++            return Dz_unit
+ 
+ 
+         # The attribute asked for does not exist.
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Sun Oct 29 03:40:08 2006</div>  
+</body>
+</html>

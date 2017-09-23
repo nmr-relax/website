@@ -1,0 +1,213 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r9404 &#45; /1.3/relax_errors.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 28 Aug 2009 10:51:22 +0200 -->
+<!--X-Message-Id: E1MgxB4&#45;0001BA&#45;Gc@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r9404 - /1.3/relax_errors.py -- August 28, 2009 - 10:51</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r9404 - /1.3/relax_errors.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00128" class="tabs">Index by Date</a> | <a href="threads.html#00128" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00127.html">Date Prev</a>] [<a href="msg00129.html">Date Next</a>] [<a href="msg00127.html">Thread Prev</a>] [<a href="msg00129.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 28 Aug 2009 08:51:22 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00128.html">E1MgxB4-0001BA-Gc@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on August 28, 2009 - 10:51:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Aug 28 10:51:22 2009
+New Revision: 9404
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=9404&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=9404&amp;view=rev</a>
+Log:
+Started to redesign to simplify the argument RelaxError classes.
+
+
+Modified:
+    1.3/relax_errors.py
+
+Modified: 1.3/relax_errors.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/relax_errors.py?rev=9404&amp;r1=9403&amp;r2=9404&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/relax_errors.py?rev=9404&amp;r1=9403&amp;r2=9404&amp;view=diff</a>
+==============================================================================
+--- 1.3/relax_errors.py (original)
++++ 1.3/relax_errors.py Fri Aug 28 10:51:22 2009
+@@ -36,8 +36,14 @@
+ import time
+ from types import ClassType
+ 
++
+ # Global variables.
+ Debug = False
++
++# Text variables.
++NONE = 'None'
++NUM = 'a number'
++NUM_TUPLE = 'a tuple of numbers'
+ 
+ 
+ def save_state():
+@@ -74,13 +80,64 @@
+ ############################
+ 
+ class BaseError(Exception):
++    &quot;&quot;&quot;The base class for all RelaxErrors.&quot;&quot;&quot;
++
+     def __str__(self):
++        &quot;&quot;&quot;Modify the behaviour of the error system.&quot;&quot;&quot;
++
+         # Save the state if debugging is turned on.
+         if Debug:
+             save_state()
+ 
+         # Modify the error message to include 'RelaxError' at the start.
+         return (&quot;RelaxError: &quot; + self.text + &quot;\n&quot;)
++
++
++class BaseArgError(BaseError):
++    &quot;&quot;&quot;The base class for all the argument related RelaxErrors.&quot;&quot;&quot;
++
++    # The allowed simple types.
++    simple_types = []
++
++    # The allowed list types (anything with a length).
++    list_types = []
++
++
++    def __init__(self, name, value, length=None):
++        &quot;&quot;&quot;A default initialisation and error message formatting method.&quot;&quot;&quot;
++
++        # The initial part of the message.
++        self.text = &quot;The %s argument '%s' must be &quot; % (name, value)
++
++        # Append the fixed length to the list types.
++        if length != None:
++            for i in range(len(self.list_types)):
++                self.list_types[i] = self.list_types[i] + &quot; of length %s&quot; % 
+length
++
++        # Combine all elements.
++        all_types = self.simple_types + self.list_types
++
++        # Multiple elements.
++        if len(all_types) &gt; 1:
++            self.text = self.text + &quot;either &quot;
++
++        # Generate the list string.
++        for i in range(len(all_types)):
++            # Separators.
++            if i &gt; 0:
++                # Or.
++                if i == len(all_types)-1:
++                    self.text = self.text + &quot;, or &quot;
++
++                # Commas.
++                else:
++                    self.text = self.text + &quot;, &quot;
++
++            # Append the text.
++            self.text = self.text + all_types[i]
++
++        # The end.
++        self.text = self.text + &quot;.&quot;
+ 
+ 
+ # Standard errors.
+@@ -463,23 +520,16 @@
+ 
+ # Number or tuple.
+ class RelaxNumTupleError(BaseError):
+-    def __init__(self, name, value):
+-        self.text = &quot;The &quot; + name + &quot; argument &quot; + repr(value) + &quot; must 
+either be a number or tuple of numbers.&quot;
++    list_types = [NUM_TUPLE]
+ 
+ # Number or tuple of numbers.
+-class RelaxNumTupleNumError(BaseError):
+-    def __init__(self, name, value, length=None):
+-        if length == None:
+-            self.text = &quot;The %s argument '%s' must be a number or a tuple of 
+numbers.&quot; % (name, value)
+-        else:
+-            self.text = &quot;The %s argument '%s' must be a number or a tuple of 
+numbers of length %s.&quot; % (name, value, length)
+-
+-class RelaxNoneNumTupleNumError(BaseError):
+-    def __init__(self, name, value, length=None):
+-        if length == None:
+-            self.text = &quot;The %s argument '%s' must be a number, a tuple of 
+numbers or None.&quot; % (name, value)
+-        else:
+-            self.text = &quot;The %s argument '%s' must be a number, a tuple of 
+numbers of length %s or None.&quot; % (name, value, length)
++class RelaxNumTupleNumError(BaseArgError):
++    simple_types = [NUM]
++    list_types = [NUM_TUPLE]
++
++class RelaxNoneNumTupleNumError(BaseArgError):
++    simple_types = [NONE, NUM]
++    list_types = [NUM_TUPLE]
+ 
+ 
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Sep 02 21:20:10 2009</div>  
+</body>
+</html>

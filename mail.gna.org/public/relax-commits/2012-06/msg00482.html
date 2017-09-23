@@ -1,0 +1,227 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r17037 &#45; /branches/interatomic/specific_fns/consistency_tests.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 22 Jun 2012 17:01:25 +0200 -->
+<!--X-Message-Id: E1Si5MT&#45;0005WM&#45;N7@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r17037 - /branches/interatomic/specific_fns/consistency_tests.py -- June 22, 2012 - 17:01</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r17037 - /branches/interatomic/specific_fns/consistency_tests.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00482" class="tabs">Index by Date</a> | <a href="threads.html#00482" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00481.html">Date Prev</a>] [<a href="msg00483.html">Date Next</a>] [<a href="msg00481.html">Thread Prev</a>] [<a href="msg00483.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 22 Jun 2012 15:01:25 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00482.html">E1Si5MT-0005WM-N7@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on June 22, 2012 - 17:01:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Jun 22 17:01:25 2012
+New Revision: 17037
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=17037&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=17037&amp;view=rev</a>
+Log:
+Converted the consistency testing specific analysis code to the interatomic 
+data design.
+
+
+Modified:
+    branches/interatomic/specific_fns/consistency_tests.py
+
+Modified: branches/interatomic/specific_fns/consistency_tests.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/interatomic/specific_fns/consistency_tests.py?rev=17037&amp;r1=17036&amp;r2=17037&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/interatomic/specific_fns/consistency_tests.py?rev=17037&amp;r1=17036&amp;r2=17037&amp;view=diff</a>
+==============================================================================
+--- branches/interatomic/specific_fns/consistency_tests.py (original)
++++ branches/interatomic/specific_fns/consistency_tests.py Fri Jun 22 
+17:01:25 2012
+@@ -28,6 +28,7 @@
+ # relax module imports.
+ from api_base import API_base
+ from api_common import API_common
++from generic_fns.interatomic import return_interatom
+ from generic_fns.mol_res_spin import exists_mol_res_spin_data, return_spin, 
+spin_loop
+ from generic_fns import pipes
+ from maths_fns.consistency_tests import Consistency
+@@ -108,20 +109,20 @@
+         if not exists_mol_res_spin_data():
+             raise RelaxNoSequenceError
+ 
+-        # Test if the CSA, bond length, angle Theta and correlation time 
+values have been set.
+-        for spin in spin_loop(spin_id):
++        # Test if the spin data has been set.
++        for spin, id in spin_loop(spin_id, return_id=True):
+             # Skip deselected spins.
+             if not spin.select:
+                 continue
+ 
++            # Test if the nuclear isotope type has been set.
++            if not hasattr(spin, 'isotope'):
++                raise RelaxSpinTypeError
++
+             # Test if the CSA value has been set.
+             if not hasattr(spin, 'csa') or spin.csa == None:
+                 raise RelaxNoValueError(&quot;CSA&quot;)
+ 
+-            # Test if the bond length has been set.
+-            if not hasattr(spin, 'r') or spin.r == None:
+-                raise RelaxNoValueError(&quot;bond length&quot;)
+-
+             # Test if the angle Theta has been set.
+             if not hasattr(spin, 'orientation') or spin.orientation == None:
+                 raise RelaxNoValueError(&quot;angle Theta&quot;)
+@@ -130,20 +131,34 @@
+             if not hasattr(spin, 'tc') or spin.tc == None:
+                 raise RelaxNoValueError(&quot;correlation time&quot;)
+ 
+-            # Test if the spin type has been set.
+-            if not hasattr(spin, 'heteronuc_type'):
+-                raise RelaxSpinTypeError
+-
+-            # Test if the type attached proton has been set.
+-            if not hasattr(spin, 'proton_type'):
+-                raise RelaxProtonTypeError
++            # Test the interatomic data.
++            interatoms = return_interatom(id)
++            for interatom in interatoms:
++                # No relaxation mechanism.
++                if not interatom.dipole_pair:
++                    continue
++
++                # The interacting spin.
++                if id != interatom.spin_id1:
++                    spin_id2 = interatom.spin_id1
++                else:
++                    spin_id2 = interatom.spin_id2
++                spin2 = return_spin(spin_id2)
++
++                # Test if the nuclear isotope type has been set.
++                if not hasattr(spin2, 'isotope'):
++                    raise RelaxSpinTypeError
++
++                # Test if the interatomic distance has been set.
++                if not hasattr(interatom, 'r') or interatom.r == None:
++                    raise RelaxNoValueError(&quot;interatomic distance&quot;, 
+spin_id=spin_id, spin_id2=spin_id2)
+ 
+         # Frequency index.
+         if cdp.ct_frq not in cdp.frq.values():
+             raise RelaxError(&quot;No relaxation data corresponding to the 
+frequency %s has been loaded.&quot; % cdp.ct_frq)
+ 
+         # Consistency testing.
+-        for spin in spin_loop(spin_id):
++        for spin, id in spin_loop(spin_id, return_id=True):
+             # Skip deselected spins.
+             if not spin.select:
+                 continue
+@@ -184,11 +199,32 @@
+             if r1 == None or r2 == None or noe == None:
+                 continue
+ 
++            # Loop over the interatomic data.
++            interatoms = return_interatom(id)
++            for i in range(len(interatoms)):
++                # No relaxation mechanism.
++                if not interatoms[i].dipole_pair:
++                    continue
++
++                # The surrounding spins.
++                if id != interatoms[i].spin_id1:
++                    spin_id2 = interatoms[i].spin_id1
++                else:
++                    spin_id2 = interatoms[i].spin_id2
++                spin2 = return_spin(spin_id2)
++
++                # Gyromagnetic ratios.
++                gx = return_gyromagnetic_ratio(spin.isotope)
++                gh = return_gyromagnetic_ratio(spin2.isotope)
++
++                # The interatomic distance.
++                r = interatoms[i].r
++
+             # Initialise the function to calculate.
+-            self.ct = Consistency(frq=cdp.ct_frq, 
+gx=return_gyromagnetic_ratio(spin.heteronuc_type), 
+gh=return_gyromagnetic_ratio(spin.proton_type), mu0=mu0, h_bar=h_bar)
++            self.ct = Consistency(frq=cdp.ct_frq, gx=gx, gh=gh, mu0=mu0, 
+h_bar=h_bar)
+ 
+             # Calculate the consistency tests values.
+-            j0, f_eta, f_r2 = self.ct.func(orientation=spin.orientation, 
+tc=spin.tc, r=spin.r, csa=spin.csa, r1=r1, r2=r2, noe=noe)
++            j0, f_eta, f_r2 = self.ct.func(orientation=spin.orientation, 
+tc=spin.tc, r=r, csa=spin.csa, r1=r1, r2=r2, noe=noe)
+ 
+             # Consistency tests values.
+             if sim_index == None:
+@@ -211,7 +247,6 @@
+                 spin.f_r2_sim.append(f_r2)
+ 
+ 
+-
+     def data_init(self, data_cont, sim=False):
+         &quot;&quot;&quot;Initialise the data structures.
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Jun 22 17:20:02 2012</div>  
+</body>
+</html>

@@ -1,0 +1,218 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r26392 &#45; /branches/frame_order_cleanup/auto_analyses/frame_order.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 23 Oct 2014 16:32:16 +0200 -->
+<!--X-Message-Id: E1XhJR1&#45;0001Bo&#45;SP@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r26392 - /branches/frame_order_cleanup/auto_analyses/frame_order.py -- October 23, 2014 - 16:32</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r26392 - /branches/frame_order_cleanup/auto_analyses/frame_order.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00288" class="tabs">Index by Date</a> | <a href="threads.html#00288" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00287.html">Date Prev</a>] [<a href="msg00289.html">Date Next</a>] [<a href="msg00287.html">Thread Prev</a>] [<a href="msg00289.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 23 Oct 2014 14:32:15 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00288.html">E1XhJR1-0001Bo-SP@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on October 23, 2014 - 16:32:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Oct 23 16:32:15 2014
+New Revision: 26392
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=26392&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=26392&amp;view=rev</a>
+Log:
+The pivot point can now be excluded from the grid search in the frame order 
+auto-analysis.
+
+If the initial pivot point is known to be reasonable, then it may be possible 
+to skip it in the grid
+search for the rotor frame order model.  This can lead to a speed up of the 
+analysis and can help
+with stability.  The pivot_search argument has been added to the auto-analysis
+Optimisation.add_grid() method to enable this.  The get_grid_pivot_search() 
+method has also been
+added to allow the auto-analysis to query this and turn it off if desired.
+
+
+Modified:
+    branches/frame_order_cleanup/auto_analyses/frame_order.py
+
+Modified: branches/frame_order_cleanup/auto_analyses/frame_order.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/auto_analyses/frame_order.py?rev=26392&amp;r1=26391&amp;r2=26392&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/auto_analyses/frame_order.py?rev=26392&amp;r1=26391&amp;r2=26392&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/auto_analyses/frame_order.py   (original)
++++ branches/frame_order_cleanup/auto_analyses/frame_order.py   Thu Oct 23 
+16:32:15 2014
+@@ -619,15 +619,17 @@
+             raise RelaxError(&quot;The mc_sim_num user variable '%s' is 
+incorrectly set.  It should be an integer.&quot; % self.mc_sim_num)
+ 
+ 
+-    def custom_grid_incs(self, model, inc=None):
++    def custom_grid_incs(self, model, inc=None, pivot_search=True):
+         &quot;&quot;&quot;Set up a customised grid search increment number for each model.
+ 
+-        @param model:   The frame order model.
+-        @type model:    str
+-        @keyword inc:   The number of grid search increments to use for each 
+dimension.
+-        @type inc:      int
+-        @return:        The list of increment values.
+-        @rtype:         list of int and None
++        @param model:           The frame order model.
++        @type model:            str
++        @keyword inc:           The number of grid search increments to use 
+for each dimension.
++        @type inc:              int
++        @keyword pivot_search:  A flag which if False will prevent the pivot 
+point from being included in the grid search.
++        @type pivot_search:     bool
++        @return:                The list of increment values.
++        @rtype:                 list of int and None
+         &quot;&quot;&quot;
+ 
+         # Initialise the structure.
+@@ -636,7 +638,7 @@
+         # The pivot parameters.
+         if hasattr(cdp, 'pivot_fixed') and not cdp.pivot_fixed:
+             # Optimise the pivot for the rotor model.
+-            if model == MODEL_ROTOR:
++            if pivot_search and model == MODEL_ROTOR:
+                 incs += [inc, inc, inc]
+ 
+             # Otherwise use preset values (copied from other models).
+@@ -1016,7 +1018,7 @@
+                 intermediate_dir += '_zoom%i' % zoom
+ 
+             # Set up the custom grid increments.
+-            incs = self.custom_grid_incs(model, inc=opt.get_grid_inc(i))
++            incs = self.custom_grid_incs(model, inc=opt.get_grid_inc(i), 
+pivot_search=opt.get_grid_pivot_search(i))
+             intermediate_dir += '_inc%i' % opt.get_grid_inc(i)
+ 
+             # The numerical optimisation settings.
+@@ -1442,6 +1444,7 @@
+         self._grid_sobol_max_points = []
+         self._grid_sobol_oversample = []
+         self._grid_quad_int = []
++        self._grid_pivot_search = []
+ 
+         # Initialise some private structures for the minimisation.
+         self._min_count = 0
+@@ -1473,7 +1476,7 @@
+             raise RelaxError(&quot;The iteration index %i is too high, only %i 
+minimisations are set up.&quot; % (i, self._min_count))
+ 
+ 
+-    def add_grid(self, inc=None, zoom=None, sobol_max_points=None, 
+sobol_oversample=None, quad_int=False):
++    def add_grid(self, inc=None, zoom=None, sobol_max_points=None, 
+sobol_oversample=None, quad_int=False, pivot_search=True):
+         &quot;&quot;&quot;Add a grid search step.
+ 
+         @keyword inc:               The grid search size (the number of 
+increments per dimension).
+@@ -1486,6 +1489,8 @@
+         @type sobol_oversample:     None or int
+         @keyword quad_int:          The SciPy quadratic integration flag.  
+See the frame_order.quad_int user function for details.
+         @type quad_int:             bool
++        @keyword pivot_search:      A flag which if False will prevent the 
+pivot point from being included in the grid search.
++        @type pivot_search:         bool
+         &quot;&quot;&quot;
+ 
+         # Value checking, as this will be set up by a user.
+@@ -1501,6 +1506,7 @@
+         self._grid_sobol_max_points.append(sobol_max_points)
+         self._grid_sobol_oversample.append(sobol_oversample)
+         self._grid_quad_int.append(quad_int)
++        self._grid_pivot_search.append(pivot_search)
+ 
+         # Increment the count.
+         self._grid_count += 1
+@@ -1559,6 +1565,22 @@
+         return self._grid_incs[i]
+ 
+ 
++    def get_grid_pivot_search(self, i):
++        &quot;&quot;&quot;Return the pivot grid search flag.
++
++        @param i:   The grid search iteration from the loop_grid() method.
++        @type i:    int
++        @return:    The pivot grid search flag.
++        @rtype:     bool
++        &quot;&quot;&quot;
++
++        # Check the index.
++        self._check_index(i, iter_type='grid')
++
++        # Return the value.
++        return self._grid_pivot_search[i]
++
++
+     def get_grid_quad_int(self, i):
+         &quot;&quot;&quot;Return the SciPy quadratic integration flag for the given 
+iteration.
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Oct 28 11:40:03 2014</div>  
+</body>
+</html>

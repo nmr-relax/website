@@ -1,0 +1,170 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r6699 &#45; /branches/rdc_analysis/generic_fns/structure/main.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Sat, 05 Jul 2008 00:37:57 +0200 -->
+<!--X-Message-Id: E1KEtf0&#45;0006Ws&#45;QG@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r6699 - /branches/rdc_analysis/generic_fns/structure/main.py -- July 05, 2008 - 00:37</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r6699 - /branches/rdc_analysis/generic_fns/structure/main.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00096" class="tabs">Index by Date</a> | <a href="threads.html#00096" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00102.html">Date Prev</a>] [<a href="msg00097.html">Date Next</a>] [<a href="msg00102.html">Thread Prev</a>] [<a href="msg00097.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 04 Jul 2008 22:21:46 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00096.html">E1KEtf0-0006Ws-QG@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on July 05, 2008 - 00:37:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Sat Jul  5 00:21:37 2008
+New Revision: 6699
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=6699&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=6699&amp;view=rev</a>
+Log:
+Created the write_pdb() function.
+
+
+Modified:
+    branches/rdc_analysis/generic_fns/structure/main.py
+
+Modified: branches/rdc_analysis/generic_fns/structure/main.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/rdc_analysis/generic_fns/structure/main.py?rev=6699&amp;r1=6698&amp;r2=6699&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/rdc_analysis/generic_fns/structure/main.py?rev=6699&amp;r1=6698&amp;r2=6699&amp;view=diff</a>
+==============================================================================
+--- branches/rdc_analysis/generic_fns/structure/main.py (original)
++++ branches/rdc_analysis/generic_fns/structure/main.py Sat Jul  5 00:21:37 
+2008
+@@ -24,6 +24,7 @@
+ from math import sqrt
+ from numpy import dot, float64, ndarray, zeros
+ from os import F_OK, access
++from re import search
+ import sys
+ from warnings import warn
+ 
+@@ -35,7 +36,7 @@
+ from generic_fns.structure.internal import Internal
+ from generic_fns.structure.scientific import Scientific_data
+ from relax_errors import RelaxError, RelaxFileError, RelaxNoPipeError, 
+RelaxNoSequenceError, RelaxPdbError
+-from relax_io import get_file_path
++from relax_io import get_file_path, open_write_file
+ from relax_warnings import RelaxWarning, RelaxNoPDBFileWarning, 
+RelaxZeroVectorWarning
+ 
+ 
+@@ -304,3 +305,47 @@
+ 
+         # Print out of modified spins.
+         write_line(sys.stdout, mol_name, res_num, res_name, spin.num, 
+spin.name, mol_name_flag=True, res_num_flag=True, res_name_flag=True, 
+spin_num_flag=True, spin_name_flag=True)
++
++
++def write_pdb(file=None, dir=None, struct_index=None, force=False):
++    &quot;&quot;&quot;The PDB writing function.
++
++    @keyword file:          The name of the PDB file to write.
++    @type file:             str
++    @keyword dir:           The directory where the PDB file will be placed. 
+ If set to None, then
++                            the file will be placed in the current directory.
++    @type dir:              str or None
++    @keyword stuct_index:   The index of the structure to write.  If set to 
+None, then all
++                            structures will be written.
++    @type stuct_index:      int or None
++    @keyword force:         The force flag which if True will cause the file 
+to be overwritten.
++    @type force:            bool
++    &quot;&quot;&quot;
++
++    # Test if the current data pipe exists.
++    if not ds.current_pipe:
++        raise RelaxNoPipeError
++
++    # Alias the current data pipe.
++    cdp = ds[ds.current_pipe]
++
++    # Check if the structural object exists.
++    if not hasattr(cdp, 'structure'):
++        raise RelaxError, &quot;No structural data is present in the current data 
+pipe.&quot;
++
++    # Check if the structural object is writable.
++    if cdp.structure.id in ['scientific']:
++        raise RelaxError, &quot;The structures from the &quot; + cdp.structure.id + &quot; 
+parser are not writable.&quot;
++
++    # The file path.
++    file_path = get_file_path(file, dir)
++
++    # Add '.pdb' to the end of the file path if it isn't there yet.
++    if not search(&quot;.pdb$&quot;, file_path):
++        file_path = file_path + '.pdb'
++
++    # Open the file for writing.
++    file = open_write_file(file_path, force=force)
++
++    # Write the structures.
++    cdp.structure.write_pdb(file_path, struct_index=struct_index)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Sat Jul 05 01:20:20 2008</div>  
+</body>
+</html>

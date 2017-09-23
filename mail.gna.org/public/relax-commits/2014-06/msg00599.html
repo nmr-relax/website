@@ -1,0 +1,164 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r24212 &#45; /branches/disp_spin_speed/lib/dispersion/ns_mmq_3site.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 20 Jun 2014 17:42:57 +0200 -->
+<!--X-Message-Id: E1Wy0xt&#45;0002M4&#45;Az@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r24212 - /branches/disp_spin_speed/lib/dispersion/ns_mmq_3site.py -- June 20, 2014 - 17:42</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r24212 - /branches/disp_spin_speed/lib/dispersion/ns_mmq_3site.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00599" class="tabs">Index by Date</a> | <a href="threads.html#00599" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00598.html">Date Prev</a>] [<a href="msg00600.html">Date Next</a>] [<a href="msg00598.html">Thread Prev</a>] [<a href="msg00600.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 20 Jun 2014 15:42:57 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00599.html">E1Wy0xt-0002M4-Az@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on June 20, 2014 - 17:42:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Fri Jun 20 17:42:56 2014
+New Revision: 24212
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=24212&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=24212&amp;view=rev</a>
+Log:
+Moved the calculation of the matrix exponential out of for loops for ns mmq 
+3site mq.
+
+Task #7807 (<a  rel="nofollow" href="https://gna.org/task/index.php?7807">https://gna.org/task/index.php?7807</a>): Speed-up of dispersion 
+models for Clustered analysis.
+
+Modified:
+    branches/disp_spin_speed/lib/dispersion/ns_mmq_3site.py
+
+Modified: branches/disp_spin_speed/lib/dispersion/ns_mmq_3site.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/disp_spin_speed/lib/dispersion/ns_mmq_3site.py?rev=24212&amp;r1=24211&amp;r2=24212&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/disp_spin_speed/lib/dispersion/ns_mmq_3site.py?rev=24212&amp;r1=24211&amp;r2=24212&amp;view=diff</a>
+==============================================================================
+--- branches/disp_spin_speed/lib/dispersion/ns_mmq_3site.py     (original)
++++ branches/disp_spin_speed/lib/dispersion/ns_mmq_3site.py     Fri Jun 20 
+17:42:56 2014
+@@ -62,7 +62,7 @@
+ # relax module imports.
+ from lib.float import isNaN
+ from lib.dispersion.ns_matrices import rmmq_3site, rmmq_3site_rankN
+-from lib.linear_algebra.matrix_exponential import matrix_exponential
++from lib.linear_algebra.matrix_exponential import matrix_exponential, 
+matrix_exponential_rankN
+ from lib.linear_algebra.matrix_power import square_matrix_power
+ 
+ 
+@@ -150,6 +150,16 @@
+     # Z- matrix component.
+     m2_mat = rmmq_3site_rankN(R20A=R20A, R20B=R20B, R20C=R20C, dw_AB=dw_AB - 
+dwH_AB, dw_AC=dw_AC - dwH_AC, k_AB=k_AB, k_BA=k_BA, k_BC=k_BC, k_CB=k_CB, 
+k_AC=k_AC, k_CA=k_CA, tcp=tcp)
+ 
++    # The M1 and M2 matrices.
++    # Equivalent to D+.
++    M1_mat = matrix_exponential_rankN(m1_mat)
++    # Equivalent to Z-.
++    M2_mat = matrix_exponential_rankN(m2_mat)
++
++    # The complex conjugates M1* and M2*
++    M1_star_mat = conj(M1_mat)
++    M2_star_mat = conj(M2_mat)
++
+     # Loop over spins.
+     for si in range(NS):
+         # Loop over the spectrometer frequencies.
+@@ -162,20 +172,24 @@
+                 # Loop over the time points, back calculating the R2eff 
+values.
+                 for i in range(num_points_i):
+                     # The M1 and M2 matrices.
+-                    M1 = matrix_exponential(m1_mat[si, mi, oi, i])    # 
+Equivalent to D+.
+-                    M2 = matrix_exponential(m2_mat[si, mi, oi, i])    # 
+Equivalent to Z-.
++                    # Equivalent to D+.
++                    M1_i = M1_mat[si, mi, oi, i]
++                    # Equivalent to Z-.
++                    M2_i = M2_mat[si, mi, oi, i]
+ 
+                     # The complex conjugates M1* and M2*
+-                    M1_star = conj(M1)    # Equivalent to D+*.
+-                    M2_star = conj(M2)    # Equivalent to Z-*.
++                    # Equivalent to D+*.
++                    M1_star_i = M1_star_mat[si, mi, oi, i]
++                    # Equivalent to Z-*.
++                    M2_star_i = M2_star_mat[si, mi, oi, i]
+ 
+                     # Repetitive dot products (minimised for speed).
+-                    M1_M2 = dot(M1, M2)
+-                    M2_M1 = dot(M2, M1)
++                    M1_M2 = dot(M1_i, M2_i)
++                    M2_M1 = dot(M2_i, M1_i)
+                     M1_M2_M2_M1 = dot(M1_M2, M2_M1)
+                     M2_M1_M1_M2 = dot(M2_M1, M1_M2)
+-                    M1_M2_star = dot(M1_star, M2_star)
+-                    M2_M1_star = dot(M2_star, M1_star)
++                    M1_M2_star = dot(M1_star_i, M2_star_i)
++                    M2_M1_star = dot(M2_star_i, M1_star_i)
+                     M1_M2_M2_M1_star = dot(M1_M2_star, M2_M1_star)
+                     M2_M1_M1_M2_star = dot(M2_M1_star, M1_M2_star)
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Jun 20 18:00:03 2014</div>  
+</body>
+</html>

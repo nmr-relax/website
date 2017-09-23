@@ -1,0 +1,304 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r23615 &#45; /branches/frame_order_cleanup/lib/frame_order/ -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 03 Jun 2014 09:16:09 +0200 -->
+<!--X-Message-Id: E1Wrix7&#45;0002ex&#45;Kr@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r23615 - /branches/frame_order_cleanup/lib/frame_order/ -- June 03, 2014 - 09:16</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r23615 - /branches/frame_order_cleanup/lib/frame_order/</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00002" class="tabs">Index by Date</a> | <a href="threads.html#00002" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00001.html">Date Prev</a>] [<a href="msg00003.html">Date Next</a>] [<a href="msg00001.html">Thread Prev</a>] [<a href="msg00003.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 03 Jun 2014 07:16:09 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00002.html">E1Wrix7-0002ex-Kr@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on June 03, 2014 - 09:16:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Jun  3 09:16:09 2014
+New Revision: 23615
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=23615&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=23615&amp;view=rev</a>
+Log:
+Proper edge case handling and slight speed up of the frame order PCS 
+integration functions.
+
+The case whereby no Sobol' points in the numerical integration lie within the 
+motional distribution
+is now caught and the rotation matrix set to the motional eigenframe to 
+simulate the rigid state.
+As the code for averaging the PCS was changed, it was also simplified by 
+removing an unnecessary
+loop over all spins.  This should speed up the PCS integration by a tiny 
+amount.
+
+
+Modified:
+    branches/frame_order_cleanup/lib/frame_order/double_rotor.py
+    branches/frame_order_cleanup/lib/frame_order/iso_cone.py
+    branches/frame_order_cleanup/lib/frame_order/iso_cone_torsionless.py
+    branches/frame_order_cleanup/lib/frame_order/pseudo_ellipse.py
+    branches/frame_order_cleanup/lib/frame_order/pseudo_ellipse_torsionless.py
+    branches/frame_order_cleanup/lib/frame_order/rotor.py
+
+Modified: branches/frame_order_cleanup/lib/frame_order/double_rotor.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/frame_order/double_rotor.py?rev=23615&amp;r1=23614&amp;r2=23615&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/frame_order/double_rotor.py?rev=23615&amp;r1=23614&amp;r2=23615&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/lib/frame_order/double_rotor.py        
+(original)
++++ branches/frame_order_cleanup/lib/frame_order/double_rotor.py        Tue 
+Jun  3 09:16:09 2014
+@@ -129,11 +129,14 @@
+         # Increment the number of points.
+         num += 1
+ 
+-    # Calculate the PCS and error.
+-    for i in range(len(pcs_theta)):
+-        for j in range(len(pcs_theta[i])):
+-            # The average PCS.
+-            pcs_theta[i, j] = c[i] * pcs_theta[i, j] / float(num)
++    # Default to the rigid state if no points lie in the distribution.
++    if num == 0:
++        pcs_pivot_motion_double_rotor(full_in_ref_frame=full_in_ref_frame, 
+r_pivot_atom=r_pivot_atom, r_pivot_atom_rev=r_pivot_atom_rev, 
+r_ln_pivot=r_ln_pivot, A=A, R_eigen=R_eigen, RT_eigen=RT_eigen, 
+Ri_prime=R_eigen, pcs_theta=pcs_theta, pcs_theta_err=pcs_theta_err, 
+missing_pcs=missing_pcs)
++
++    # Average the PCS.
++    else:
++        for i in range(len(pcs_theta)):
++            pcs_theta[i] = c[i] * pcs_theta[i] / float(num)
+ 
+ 
+ def pcs_pivot_motion_double_rotor(full_in_ref_frame=None, r_pivot_atom=None, 
+r_pivot_atom_rev=None, r_ln_pivot=None, A=None, R_eigen=None, RT_eigen=None, 
+Ri_prime=None, pcs_theta=None, pcs_theta_err=None, missing_pcs=None):
+
+Modified: branches/frame_order_cleanup/lib/frame_order/iso_cone.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/frame_order/iso_cone.py?rev=23615&amp;r1=23614&amp;r2=23615&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/frame_order/iso_cone.py?rev=23615&amp;r1=23614&amp;r2=23615&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/lib/frame_order/iso_cone.py    (original)
++++ branches/frame_order_cleanup/lib/frame_order/iso_cone.py    Tue Jun  3 
+09:16:09 2014
+@@ -109,11 +109,14 @@
+         # Increment the number of points.
+         num += 1
+ 
+-    # Calculate the PCS and error.
+-    for i in range(len(pcs_theta)):
+-        for j in range(len(pcs_theta[i])):
+-            # The average PCS.
+-            pcs_theta[i, j] = c[i] * pcs_theta[i, j] / float(num)
++    # Default to the rigid state if no points lie in the distribution.
++    if num == 0:
++        pcs_pivot_motion_full_qrint(full_in_ref_frame=full_in_ref_frame, 
+r_pivot_atom=r_pivot_atom, r_pivot_atom_rev=r_pivot_atom_rev, 
+r_ln_pivot=r_ln_pivot, A=A, R_eigen=R_eigen, RT_eigen=RT_eigen, 
+Ri_prime=R_eigen, pcs_theta=pcs_theta, pcs_theta_err=pcs_theta_err, 
+missing_pcs=missing_pcs)
++
++    # Average the PCS.
++    else:
++        for i in range(len(pcs_theta)):
++            pcs_theta[i] = c[i] * pcs_theta[i] / float(num)
+ 
+ 
+ def populate_1st_eigenframe_iso_cone(matrix, angle):
+
+Modified: branches/frame_order_cleanup/lib/frame_order/iso_cone_torsionless.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/frame_order/iso_cone_torsionless.py?rev=23615&amp;r1=23614&amp;r2=23615&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/frame_order/iso_cone_torsionless.py?rev=23615&amp;r1=23614&amp;r2=23615&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/lib/frame_order/iso_cone_torsionless.py      
+  (original)
++++ branches/frame_order_cleanup/lib/frame_order/iso_cone_torsionless.py      
+  Tue Jun  3 09:16:09 2014
+@@ -128,8 +128,11 @@
+         # Increment the number of points.
+         num += 1
+ 
+-    # Calculate the PCS and error.
+-    for i in range(len(pcs_theta)):
+-        for j in range(len(pcs_theta[i])):
+-            # The average PCS.
+-            pcs_theta[i, j] = c[i] * pcs_theta[i, j] / float(num)
++    # Default to the rigid state if no points lie in the distribution.
++    if num == 0:
++        
+pcs_pivot_motion_torsionless_qrint(full_in_ref_frame=full_in_ref_frame, 
+r_pivot_atom=r_pivot_atom, r_pivot_atom_rev=r_pivot_atom_rev, 
+r_ln_pivot=r_ln_pivot, A=A, R_eigen=R_eigen, RT_eigen=RT_eigen, 
+Ri_prime=R_eigen, pcs_theta=pcs_theta, pcs_theta_err=pcs_theta_err, 
+missing_pcs=missing_pcs)
++
++    # Average the PCS.
++    else:
++        for i in range(len(pcs_theta)):
++            pcs_theta[i] = c[i] * pcs_theta[i] / float(num)
+
+Modified: branches/frame_order_cleanup/lib/frame_order/pseudo_ellipse.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/frame_order/pseudo_ellipse.py?rev=23615&amp;r1=23614&amp;r2=23615&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/frame_order/pseudo_ellipse.py?rev=23615&amp;r1=23614&amp;r2=23615&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/lib/frame_order/pseudo_ellipse.py      
+(original)
++++ branches/frame_order_cleanup/lib/frame_order/pseudo_ellipse.py      Tue 
+Jun  3 09:16:09 2014
+@@ -653,11 +653,14 @@
+         # Increment the number of points.
+         num += 1
+ 
+-    # Calculate the PCS and error.
+-    for i in range(len(pcs_theta)):
+-        for j in range(len(pcs_theta[i])):
+-            # The average PCS.
+-            pcs_theta[i, j] = c[i] * pcs_theta[i, j] / float(num)
++    # Default to the rigid state if no points lie in the distribution.
++    if num == 0:
++        pcs_pivot_motion_full_qrint(full_in_ref_frame=full_in_ref_frame, 
+r_pivot_atom=r_pivot_atom, r_pivot_atom_rev=r_pivot_atom_rev, 
+r_ln_pivot=r_ln_pivot, A=A, R_eigen=R_eigen, RT_eigen=RT_eigen, 
+Ri_prime=R_eigen, pcs_theta=pcs_theta, pcs_theta_err=pcs_theta_err, 
+missing_pcs=missing_pcs)
++
++    # Average the PCS.
++    else:
++        for i in range(len(pcs_theta)):
++            pcs_theta[i] = c[i] * pcs_theta[i] / float(num)
+ 
+ 
+ def tmax_pseudo_ellipse(phi, theta_x, theta_y):
+
+Modified: 
+branches/frame_order_cleanup/lib/frame_order/pseudo_ellipse_torsionless.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/frame_order/pseudo_ellipse_torsionless.py?rev=23615&amp;r1=23614&amp;r2=23615&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/frame_order/pseudo_ellipse_torsionless.py?rev=23615&amp;r1=23614&amp;r2=23615&amp;view=diff</a>
+==============================================================================
+--- 
+branches/frame_order_cleanup/lib/frame_order/pseudo_ellipse_torsionless.py  
+(original)
++++ 
+branches/frame_order_cleanup/lib/frame_order/pseudo_ellipse_torsionless.py  
+Tue Jun  3 09:16:09 2014
+@@ -314,8 +314,11 @@
+         # Increment the number of points.
+         num += 1
+ 
+-    # Calculate the PCS and error.
+-    for i in range(len(pcs_theta)):
+-        for j in range(len(pcs_theta[i])):
+-            # The average PCS.
+-            pcs_theta[i, j] = c[i] * pcs_theta[i, j] / float(num)
++    # Default to the rigid state if no points lie in the distribution.
++    if num == 0:
++        
+pcs_pivot_motion_torsionless_qrint(full_in_ref_frame=full_in_ref_frame, 
+r_pivot_atom=r_pivot_atom, r_pivot_atom_rev=r_pivot_atom_rev, 
+r_ln_pivot=r_ln_pivot, A=A, R_eigen=R_eigen, RT_eigen=RT_eigen, 
+Ri_prime=R_eigen, pcs_theta=pcs_theta, pcs_theta_err=pcs_theta_err, 
+missing_pcs=missing_pcs)
++
++    # Average the PCS.
++    else:
++        for i in range(len(pcs_theta)):
++            pcs_theta[i] = c[i] * pcs_theta[i] / float(num)
+
+Modified: branches/frame_order_cleanup/lib/frame_order/rotor.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/frame_order/rotor.py?rev=23615&amp;r1=23614&amp;r2=23615&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/frame_order/rotor.py?rev=23615&amp;r1=23614&amp;r2=23615&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/lib/frame_order/rotor.py       (original)
++++ branches/frame_order_cleanup/lib/frame_order/rotor.py       Tue Jun  3 
+09:16:09 2014
+@@ -130,14 +130,14 @@
+         # Increment the number of points.
+         num += 1
+ 
+-    # Calculate the PCS and error.
+-    for i in range(len(pcs_theta)):
+-        for j in range(len(pcs_theta[i])):
+-            if num == 0:
+-                continue
++    # Default to the rigid state if no points lie in the distribution.
++    if num == 0:
++        pcs_pivot_motion_rotor_qrint(full_in_ref_frame=full_in_ref_frame, 
+r_pivot_atom=r_pivot_atom, r_pivot_atom_rev=r_pivot_atom_rev, 
+r_ln_pivot=r_ln_pivot, A=A, R_eigen=R_eigen, RT_eigen=RT_eigen, 
+Ri_prime=R_eigen, pcs_theta=pcs_theta, pcs_theta_err=pcs_theta_err, 
+missing_pcs=missing_pcs)
+ 
+-            # The average PCS.
+-            pcs_theta[i, j] = c[i] * pcs_theta[i, j] / float(num)
++    # Average the PCS.
++    else:
++        for i in range(len(pcs_theta)):
++            pcs_theta[i] = c[i] * pcs_theta[i] / float(num)
+ 
+ 
+ def pcs_pivot_motion_rotor_qrint(full_in_ref_frame=None, r_pivot_atom=None, 
+r_pivot_atom_rev=None, r_ln_pivot=None, A=None, R_eigen=None, RT_eigen=None, 
+Ri_prime=None, pcs_theta=None, pcs_theta_err=None, missing_pcs=None):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Jun 03 11:20:03 2014</div>  
+</body>
+</html>

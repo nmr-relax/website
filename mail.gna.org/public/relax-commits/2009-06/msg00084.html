@@ -1,0 +1,227 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r9150 &#45; /branches/frame_order/specific_fns/frame_order.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 25 Jun 2009 14:24:52 +0200 -->
+<!--X-Message-Id: E1MJo0a&#45;0001n3&#45;6V@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r9150 - /branches/frame_order/specific_fns/frame_order.py -- June 25, 2009 - 14:24</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r9150 - /branches/frame_order/specific_fns/frame_order.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00084" class="tabs">Index by Date</a> | <a href="threads.html#00084" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00083.html">Date Prev</a>] [<a href="msg00085.html">Date Next</a>] [<a href="msg00083.html">Thread Prev</a>] [<a href="msg00085.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 25 Jun 2009 12:24:52 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00084.html">E1MJo0a-0001n3-6V@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on June 25, 2009 - 14:24:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Jun 25 14:24:51 2009
+New Revision: 9150
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=9150&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=9150&amp;view=rev</a>
+Log:
+Wrote the cone_pdb() and pivot() methods.
+
+
+Modified:
+    branches/frame_order/specific_fns/frame_order.py
+
+Modified: branches/frame_order/specific_fns/frame_order.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order/specific_fns/frame_order.py?rev=9150&amp;r1=9149&amp;r2=9150&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order/specific_fns/frame_order.py?rev=9150&amp;r1=9149&amp;r2=9150&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order/specific_fns/frame_order.py (original)
++++ branches/frame_order/specific_fns/frame_order.py Thu Jun 25 14:24:51 2009
+@@ -32,7 +32,11 @@
+ # relax module imports.
+ from float import isNaN, isInf
+ from generic_fns import pipes
++from generic_fns.structure.geometric import cone_edge, generate_vector_dist, 
+generate_vector_residues, stitch_cap_to_cone
++from generic_fns.structure.internal import Internal
+ from maths_fns import frame_order_models
++from maths_fns.frame_order_matrix_ops import generate_vector
++from maths_fns.rotation_matrix import R_2vect
+ from relax_errors import RelaxInfError, RelaxNaNError, RelaxNoModelError
+ from specific_fns.base_class import Common_functions
+ 
+@@ -264,6 +268,76 @@
+         &quot;&quot;&quot;
+ 
+         yield None
++
++
++    def cone_pdb(self, scale=1.0, file=None, dir=None, inc=20, force=False):
++        &quot;&quot;&quot;Create a PDB file containing a geometric object representing the 
+Frame Order cone models.
++
++        @param scale:       The size of the geometric object is equal to 10 
+Angstroms multiplied by
++                            this scaling factor.
++        @type scale:        float
++        @param inc:         The number of increments for the filling of the 
+cone objects.
++        @type inc:          int
++        @param file:        The name of the PDB file to create.
++        @type file:         str
++        @param dir:         The name of the directory to place the PDB file 
+into.
++        @type dir:          str
++        @param force:       Flag which if set to True will cause any 
+pre-existing file to be
++                            overwritten.
++        @type force:        bool
++        &quot;&quot;&quot;
++
++        # Test if the current data pipe exists.
++        pipes.test()
++
++        # Alias the current data pipe.
++        cdp = pipes.get_pipe()
++
++        # The cone axis. 
++        cone_axis = zeros(3, float64)
++        generate_vector(cone_axis, cdp.theta_axis, cdp.phi_axis)
++
++        # Cone axis from simulations.
++        cone_axis_sim = zeros((cdp.sim_number, 3), float64)
++        for i in range(cdp.sim_number):
++            generate_vector(cone_axis_sim[i], cdp.theta_axis_sim[i], 
+cdp.phi_axis_sim[i])
++
++        # The rotation matrix (rotation from the z-axis to the cone axis).
++        R = zeros((3,3), float64)
++        R_2vect(R, array([0,0,1], float64), cone_axis)
++
++        # Create the structural object.
++        structure = Internal()
++
++        # Add a molecule.
++        structure.add_molecule(name='iso cone')
++
++        # Alias the single molecule from the single model.
++        mol = structure.structural_data[0].mol[0]
++
++        # Add the pivot point.
++        mol.atom_add(pdb_record='HETATM', atom_num=1, atom_name='R', 
+res_name='PIV', res_num=1, pos=cdp.pivot, element='C')
++
++        # Generate the axis vectors.
++        print &quot;\nGenerating the axis vectors.&quot;
++        res_num = generate_vector_residues(mol=mol, vector=cone_axis, 
+atom_name='Axe', res_name_vect='AXE', sim_vectors=cone_axis_sim, res_num=2, 
+origin=cdp.pivot, scale=scale)
++
++        # Generate the cone outer edge.
++        print &quot;\nGenerating the cone outer edge.&quot;
++        cap_start_atom = mol.atom_num[-1]+1
++        cone_edge(mol=mol, res_name='CON', res_num=3, apex=cdp.pivot, R=R, 
+angle=cdp.theta_cone, length=10, inc=inc)
++
++        # Generate the cone cap, and stitch it to the cone edge.
++        print &quot;\nGenerating the cone cap.&quot;
++        cone_start_atom = mol.atom_num[-1]+1
++        generate_vector_dist(mol=mol, res_name='CON', res_num=3, 
+centre=cdp.pivot, R=R, max_angle=cdp.theta_cone, scale=10, inc=inc)
++        stitch_cap_to_cone(mol=mol, cone_start=cone_start_atom, 
+cap_start=cap_start_atom+1, max_angle=cdp.theta_cone, inc=inc)
++
++        # Create the PDB file.
++        print &quot;\nGenerating the PDB file.&quot;
++        pdb_file = open_write_file(file, dir, force=force)
++        structure.write_pdb(pdb_file)
++        pdb_file.close()
+ 
+ 
+     def create_mc_data(self, index):
+@@ -481,6 +555,28 @@
+         yield None
+ 
+ 
++    def pivot(self, pivot=None):
++        &quot;&quot;&quot;Set the pivot point for the 2 body motion.
++
++        @param pivot:   The pivot point of the two bodies (domains, etc.) in 
+the structural
++                        coordinate system.
++        @type pivot:    list of num
++        &quot;&quot;&quot;
++
++        # Test if the current data pipe exists.
++        pipes.test()
++
++        # Alias the current data pipe.
++        cdp = pipes.get_pipe()
++
++        # Set the pivot point.
++        cdp.pivot = pivot
++
++        # Convert to floats.
++        for i in range(3):
++            cdp.pivot[i] = float(cdp.pivot[i])
++
++
+     def return_error(self, index):
+         &quot;&quot;&quot;Return the alignment tensor error structure.
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Jun 25 15:20:04 2009</div>  
+</body>
+</html>

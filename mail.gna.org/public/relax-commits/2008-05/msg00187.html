@@ -1,0 +1,179 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r6202 &#45; /1.3/specific_fns/relax_fit.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 21 May 2008 22:41:32 +0200 -->
+<!--X-Message-Id: E1Jyv7r&#45;0000cF&#45;BL@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r6202 - /1.3/specific_fns/relax_fit.py -- May 21, 2008 - 22:41</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r6202 - /1.3/specific_fns/relax_fit.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00187" class="tabs">Index by Date</a> | <a href="threads.html#00187" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00186.html">Date Prev</a>] [<a href="msg00188.html">Date Next</a>] [<a href="msg00186.html">Thread Prev</a>] [<a href="msg00188.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 21 May 2008 20:41:31 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00187.html">E1Jyv7r-0000cF-BL@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on May 21, 2008 - 22:41:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed May 21 22:41:26 2008
+New Revision: 6202
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=6202&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=6202&amp;view=rev</a>
+Log:
+A few fixes for the minimise() and grid_search_setup() methods.
+
+
+Modified:
+    1.3/specific_fns/relax_fit.py
+
+Modified: 1.3/specific_fns/relax_fit.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/specific_fns/relax_fit.py?rev=6202&amp;r1=6201&amp;r2=6202&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/specific_fns/relax_fit.py?rev=6202&amp;r1=6201&amp;r2=6202&amp;view=diff</a>
+==============================================================================
+--- 1.3/specific_fns/relax_fit.py (original)
++++ 1.3/specific_fns/relax_fit.py Wed May 21 22:41:26 2008
+@@ -31,7 +31,7 @@
+ from data import Data as relax_data_store
+ from base_class import Common_functions
+ from generic_fns import intensity
+-from generic_fns.mol_res_spin import count_spins, exists_mol_res_spin_data, 
+spin_loop
++from generic_fns.mol_res_spin import count_spins, exists_mol_res_spin_data, 
+generate_spin_id, spin_loop
+ from minimise.generic import generic_minimise
+ from relax_errors import RelaxError, RelaxFuncSetupError, RelaxLenError, 
+RelaxNoModelError, RelaxNoPipeError, RelaxNoSequenceError
+ 
+@@ -428,10 +428,11 @@
+         @type inc:                  array of int
+         @keyword scaling_matrix:    The scaling matrix.
+         @type scaling_matrix:       numpy diagonal matrix
+-        @return:                    The minimisation options.  The first 
+dimension corresponds to
+-                                    the model parameter.  The second 
+dimension is a list of the
+-                                    number of increments, the lower bound, 
+and upper bound.
+-        @rtype:                     list of lists [int, float, float]
++        @return:                    A tuple of the grid size and the 
+minimisation options.  For the
++                                    minimisation options, the first 
+dimension corresponds to the
++                                    model parameter.  The second dimension 
+is a list of the number
++                                    of increments, the lower bound, and 
+upper bound.
++        @rtype:                     (int, list of lists [int, float, float])
+         &quot;&quot;&quot;
+ 
+         # The length of the parameter array.
+@@ -508,7 +509,7 @@
+             min_options[j][1] = min_options[j][1] / scaling_matrix[j, j]
+             min_options[j][2] = min_options[j][2] / scaling_matrix[j, j]
+ 
+-        return min_options
++        return grid_size, min_options
+ 
+ 
+     def linear_constraints(self, spin=None, scaling_matrix=None):
+@@ -766,19 +767,19 @@
+ 
+             # Get the grid search minimisation options.
+             if match('^[Gg]rid', min_algor):
+-                min_options = self.grid_search_setup(spin=spin, 
+param_vector=param_vector, lower=lower, upper=upper, inc=inc, 
+scaling_matrix=scaling_matrix)
++                grid_size, min_options = self.grid_search_setup(spin=spin, 
+param_vector=param_vector, lower=lower, upper=upper, inc=inc, 
+scaling_matrix=scaling_matrix)
+ 
+             # Linear constraints.
+             if constraints:
+                 A, b = self.linear_constraints(spin=spin, 
+scaling_matrix=scaling_matrix)
+ 
+             # Print out.
+-            if self.verbosity &gt;= 1:
++            if verbosity &gt;= 1:
+                 # Get the spin id string.
+                 spin_id = generate_spin_id(mol_name, res_num, res_name, 
+spin.num, spin.name)
+ 
+                 # Individual spin print out.
+-                if self.verbosity &gt;= 2:
++                if verbosity &gt;= 2:
+                     print &quot;\n\n&quot;
+ 
+                 string = &quot;Fitting to spin &quot; + `spin_id`
+@@ -787,7 +788,7 @@
+ 
+                 # Grid search print out.
+                 if match('^[Gg]rid', min_algor):
+-                    print &quot;Unconstrained grid search size: &quot; + 
+`self.grid_size` + &quot; (constraints may decrease this size).\n&quot;
++                    print &quot;Unconstrained grid search size: &quot; + `grid_size` + 
+&quot; (constraints may decrease this size).\n&quot;
+ 
+ 
+             # Initialise the function to minimise.
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed May 21 23:00:25 2008</div>  
+</body>
+</html>

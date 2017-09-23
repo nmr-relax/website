@@ -1,0 +1,163 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r21590 &#45; in /branches/relax_disp: lib/dispersion/mq_cr72.py	target_functions/relax_disp.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 21 Nov 2013 22:31:41 +0100 -->
+<!--X-Message-Id: E1Vjbqf&#45;0007lK&#45;28@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r21590 - in /branches/relax_disp: lib/dispersion/mq_cr72.py	target_functions/relax_disp.py -- November 21, 2013 - 22:31</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r21590 - in /branches/relax_disp: lib/dispersion/mq_cr72.py	target_functions/relax_disp.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00248" class="tabs">Index by Date</a> | <a href="threads.html#00248" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00247.html">Date Prev</a>] [<a href="msg00249.html">Date Next</a>] [<a href="msg00247.html">Thread Prev</a>] [<a href="msg00249.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 21 Nov 2013 21:31:41 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00248.html">E1Vjbqf-0007lK-28@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on November 21, 2013 - 22:31:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Nov 21 22:31:40 2013
+New Revision: 21590
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=21590&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=21590&amp;view=rev</a>
+Log:
+Another bug fix for the 'MQ CR72' dispersion model.
+
+The nu_CPMG value rather than the relaxation time was being used to calculate 
+the R2eff values as
+the division by 'n' was missing.
+
+
+Modified:
+    branches/relax_disp/lib/dispersion/mq_cr72.py
+    branches/relax_disp/target_functions/relax_disp.py
+
+Modified: branches/relax_disp/lib/dispersion/mq_cr72.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/lib/dispersion/mq_cr72.py?rev=21590&amp;r1=21589&amp;r2=21590&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_disp/lib/dispersion/mq_cr72.py?rev=21590&amp;r1=21589&amp;r2=21590&amp;view=diff</a>
+==============================================================================
+--- branches/relax_disp/lib/dispersion/mq_cr72.py (original)
++++ branches/relax_disp/lib/dispersion/mq_cr72.py Thu Nov 21 22:31:40 2013
+@@ -31,7 +31,7 @@
+ from numpy import arccosh, cos, cosh, log, sin, sqrt
+ 
+ 
+-def r2eff_mq_cr72(r20=None, pA=None, pB=None, dw=None, dwH=None, kex=None, 
+k_AB=None, k_BA=None, cpmg_frqs=None, tcp=None, back_calc=None, 
+num_points=None, power=None):
++def r2eff_mq_cr72(r20=None, pA=None, pB=None, dw=None, dwH=None, kex=None, 
+k_AB=None, k_BA=None, cpmg_frqs=None, inv_tcpmg=None, tcp=None, 
+back_calc=None, num_points=None, power=None):
+     &quot;&quot;&quot;The CR72 model extended to MQ CPMG data.
+ 
+     This function calculates and stores the R2eff values.
+@@ -55,6 +55,8 @@
+     @type k_BA:             float
+     @keyword cpmg_frqs:     The CPMG nu1 frequencies.
+     @type cpmg_frqs:        numpy rank-1 float array
++    @keyword inv_tcpmg:     The inverse of the total duration of the CPMG 
+element (in inverse seconds).
++    @type inv_tcpmg:        float
+     @keyword tcp:           The tau_CPMG times (1 / 4.nu1).
+     @type tcp:              numpy rank-1 float array
+     @keyword back_calc:     The array for holding the back calculated R2eff 
+values.  Each element corresponds to one of the CPMG nu1 frequencies.
+@@ -129,4 +131,4 @@
+         lambda1 = r20_kex - cpmg_frqs[i] * arccosh(part)
+ 
+         # The full formula.
+-        back_calc[i] = lambda1.real - cpmg_frqs[i] * log(Q) / power[i]
++        back_calc[i] = lambda1.real - inv_tcpmg * log(Q) / power[i]
+
+Modified: branches/relax_disp/target_functions/relax_disp.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/target_functions/relax_disp.py?rev=21590&amp;r1=21589&amp;r2=21590&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_disp/target_functions/relax_disp.py?rev=21590&amp;r1=21589&amp;r2=21590&amp;view=diff</a>
+==============================================================================
+--- branches/relax_disp/target_functions/relax_disp.py (original)
++++ branches/relax_disp/target_functions/relax_disp.py Thu Nov 21 22:31:40 
+2013
+@@ -1042,7 +1042,7 @@
+                         aliased_dwH = dw_frq
+ 
+                     # Back calculate the R2eff values.
+-                    r2eff_mq_cr72(r20=R20[r20_index], pA=pA, pB=pB, 
+dw=aliased_dw, dwH=aliased_dwH, kex=kex, k_AB=k_AB, k_BA=k_BA, 
+cpmg_frqs=self.cpmg_frqs[exp_index][frq_index], 
+tcp=self.tau_cpmg[exp_index][frq_index], 
+back_calc=self.back_calc[exp_index][spin_index][frq_index], 
+num_points=self.num_disp_points[exp_index][frq_index], 
+power=self.power[exp_index][frq_index])
++                    r2eff_mq_cr72(r20=R20[r20_index], pA=pA, pB=pB, 
+dw=aliased_dw, dwH=aliased_dwH, kex=kex, k_AB=k_AB, k_BA=k_BA, 
+cpmg_frqs=self.cpmg_frqs[exp_index][frq_index], 
+inv_tcpmg=self.inv_relax_times[exp_index][frq_index], 
+tcp=self.tau_cpmg[exp_index][frq_index], 
+back_calc=self.back_calc[exp_index][spin_index][frq_index], 
+num_points=self.num_disp_points[exp_index][frq_index], 
+power=self.power[exp_index][frq_index])
+ 
+                     # For all missing data points, set the back-calculated 
+value to the measured values so that it has no effect on the chi-squared 
+value.
+                     for point_index in 
+range(self.num_disp_points[exp_index][frq_index]):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Nov 21 23:00:03 2013</div>  
+</body>
+</html>

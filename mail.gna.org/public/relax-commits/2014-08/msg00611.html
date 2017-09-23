@@ -1,0 +1,268 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r25477 &#45; /trunk/test_suite/shared_data/curve_fitting/numeric_topology/estimate_errors_analyse.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Sun, 31 Aug 2014 08:50:03 +0200 -->
+<!--X-Message-Id: E1XNyxe&#45;0001ZC&#45;P7@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r25477 - /trunk/test_suite/shared_data/curve_fitting/numeric_topology/estimate_errors_analyse.py -- August 31, 2014 - 08:50</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r25477 - /trunk/test_suite/shared_data/curve_fitting/numeric_topology/estimate_errors_analyse.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00611" class="tabs">Index by Date</a> | <a href="threads.html#00611" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00610.html">Date Prev</a>] [<a href="msg00612.html">Date Next</a>] [<a href="msg00610.html">Thread Prev</a>] [<a href="msg00612.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Sun, 31 Aug 2014 06:50:02 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00611.html">E1XNyxe-0001ZC-P7@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on August 31, 2014 - 08:50:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Sun Aug 31 08:50:01 2014
+New Revision: 25477
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=25477&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=25477&amp;view=rev</a>
+Log:
+Improved analysing test script, with plotting. It seems that R2eff error 
+estimation always get the same result.
+
+task #7822(<a  rel="nofollow" href="https://gna.org/task/index.php?7822">https://gna.org/task/index.php?7822</a>): Implement user function to 
+estimate R2eff and associated errors for exponential curve fitting.
+
+Modified:
+    
+trunk/test_suite/shared_data/curve_fitting/numeric_topology/estimate_errors_analyse.py
+
+Modified: 
+trunk/test_suite/shared_data/curve_fitting/numeric_topology/estimate_errors_analyse.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/test_suite/shared_data/curve_fitting/numeric_topology/estimate_errors_analyse.py?rev=25477&amp;r1=25476&amp;r2=25477&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/test_suite/shared_data/curve_fitting/numeric_topology/estimate_errors_analyse.py?rev=25477&amp;r1=25476&amp;r2=25477&amp;view=diff</a>
+==============================================================================
+--- 
+trunk/test_suite/shared_data/curve_fitting/numeric_topology/estimate_errors_analyse.py
+      (original)
++++ 
+trunk/test_suite/shared_data/curve_fitting/numeric_topology/estimate_errors_analyse.py
+      Sun Aug 31 08:50:01 2014
+@@ -5,25 +5,142 @@
+ from collections import OrderedDict
+ #import pickle
+ import cPickle as pickle
++from numpy import array, asarray, ones, std
+ 
+ # Open data.
+ dic = pickle.load( open( &quot;estimate_errors.p&quot;, &quot;rb&quot; ) )
+ 
++# Extract
++R = dic['R']
++I0 = dic['I0']
++params = dic['params']
++np = dic['np']
++sim = dic['sim']
++nt_min = dic['nt_min']
++nt_max = dic['nt_max']
++all_times = dic['all_times']
++I_err_level = dic['I_err_level']
++I_err_std = dic['I_err_std']
++all_errors = dic['all_errors']
+ 
+ # Make plots?
+-make_plots = False
++make_plots = True
+ if make_plots:
+-    from pylab import show, plot
++    from pylab import show, plot, legend, figure, title, subplots
++    from matplotlib.font_manager import FontProperties
++    fontP = FontProperties()
++    fontP.set_size('small')
+ 
+-#    if make_plots:
+-#        plot(times, I, 'b.', label='I')
+-#        plot(times, I_err, 'r.', label='I_err')
++# Print to screen?
++print_log = True
+ 
++nt_l = []
++R_e_l = []
++R_ew_l = []
++sigma_R_l = []
++R_m_l = []
++R_m_l = []
++I0_m_l = []
++sigma_R_covar_l = []
++sigma_I0_covar_l = []
++sigma_R_sim_l = []
++sigma_I0_sim_l = []
+ 
+-# Loop over dic.
+-if False:
+-    for i, i_dic in dic.iteritems():
+-        print i, i_dic
++# Loop over dic to collect data.
++if print_log:
++    text = &quot;#%7s %-7s %-7s %-7s %-7s %-7s %-10s %-7s&quot; % ('i', 'R_e', 'R_ew', 
+'R_m', 'sigma_R_covar', 'sigma_I0_covar', 'sigma_R_sim', 'sigma_I0_sim')
++    print(text)
++
++#for i in range(1):
++for i in range(np):
++    # Base data
++    nt = dic[i]['nt']
++    nt_l.append(nt)
++    times = dic[i]['times']
++    indexes = dic[i]['indexes']
++    errors = dic[i]['errors']
++    I = dic[i]['I']
++    I_err = dic[i]['I_err']
++
++    # Estimated from linear problem.
++    R_e = dic[i]['R_e']
++    R_e_l.append(R_e)
++    I0_e = dic[i]['I0_e']
++
++    # Estimated from weighted linear problem.
++    R_ew = dic[i]['R_ew']
++    R_ew_l.append(R_ew)
++    I0_ew = dic[i]['I0_ew']
++
++    # Estimated from propagation of errors.
++    sigma_R = dic[i]['sigma_R']
++    sigma_R_l.append(std(sigma_R))
++
++    # Output from minfx.
++    R_m = dic[i]['R_m']
++    I0_m = dic[i]['I0_m']
++
++    # Co-variance estimation.
++    jacobian = dic[i]['jacobian']
++    weights = dic[i]['weights']
++    pcov = dic[i]['pcov']
++
++    # The sigma from Co-variance.
++    sigma_R_covar = dic[i]['sigma_R_covar']
++    sigma_R_covar_l.append(sigma_R_covar)
++    sigma_I0_covar = dic[i]['sigma_I0_covar']
++    sigma_I0_covar_l.append(sigma_I0_covar)
++
++    # The sigma from Monte-Carlo.
++    sigma_R_sim = dic[i]['sigma_R_sim']
++    sigma_R_sim_l.append(sigma_R_sim)
++    sigma_I0_sim = dic[i]['sigma_I0_sim']
++    sigma_I0_sim_l.append(sigma_I0_sim)
++
++    if print_log:
++        text = &quot; %6i   %1.2f   %1.2f   %4.2f   %4.8f   %4.8f   %4.8f   
+%4.8f&quot; % (i, R_e, R_ew, R_m, sigma_R_covar, sigma_I0_covar, sigma_R_sim, 
+sigma_I0_sim)
++        print(text)
++
++# Printout.
++#print(&quot;\n\nParameter errors:&quot;)
++#print(&quot;Monte-Carlo sigma_R_minfx:   %25.20f&quot; % sigma_R_minfx)
++#print(&quot;Monte-Carlo sigma_I0_minfx:  %25.20f&quot; % sigma_I0_minfx)
++#print(&quot;Intensity errror level was: %3.3f&quot; % (I_err_level) )
++#print(&quot;Intensity std dev was: %3.3f&quot; % (I_err_std) )
++#I0_err_str = &quot; &quot;.join(format(x, &quot;1.2f&quot;) for x in all_errors)
++#print(&quot;I0 errors was drawn from: %s&quot; % (I0_err_str) )
+ 
+ if make_plots:
+-    show()
++    # sigma R
++    fig = figure(num=1, figsize=(20, 8))
++
++    ax1 = fig.add_subplot(121)
++    title(&quot;Correlation plot of Sigma R\n per R2eff point. Estimation method 
+vs Monte-Carlo.&quot;)
++
++    ax2 = ax1.twinx()
++    ax1.set_xlabel('R_err')
++    ax1.set_ylabel('R_err')
++    ax2.set_ylabel('Nr of points')
++
++    ax1.plot(asarray(sigma_R_sim_l), asarray(sigma_R_sim_l), 'b.', 
+label='Monte-Carlo')
++    ax1.plot(asarray(sigma_R_sim_l), asarray(sigma_R_covar_l), 'r.', 
+label='Covar')
++    ax2.plot(asarray(sigma_R_sim_l), asarray(nt_l), 'k.', label='Number of 
+points')
++
++    ax1.legend(loc='upper left', shadow=True, prop = fontP)
++    ax2.legend(loc='upper right', shadow=True, prop = fontP)
++
++    # sigma I0
++    ax1 = fig.add_subplot(122)
++    title(&quot;Correlation plot of Sigma I\n per R2eff point. Estimation method 
+vs Monte-Carlo.&quot;)
++
++    ax2 = ax1.twinx()
++    ax1.set_xlabel('I_err')
++    ax1.set_ylabel('I_err')
++    ax2.set_ylabel('Nr of points')
++
++    ax1.plot(asarray(sigma_I0_sim_l), asarray(sigma_I0_sim_l), 'b.', 
+label='Monte-Carlo')
++    ax1.plot(asarray(sigma_I0_sim_l), asarray(sigma_I0_covar_l), 'r.', 
+label='Covar')
++    ax2.plot(asarray(sigma_I0_sim_l), asarray(nt_l), 'k.', label='Number of 
+points')
++
++if make_plots:
++    show()
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Sun Aug 31 10:40:02 2014</div>  
+</body>
+</html>

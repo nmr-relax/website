@@ -1,0 +1,233 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r26590 &#45; in /branches/frame_order_cleanup: ./ pipe_control/relax_data.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 17 Nov 2014 10:28:11 +0100 -->
+<!--X-Message-Id: E1XqIbT&#45;0005Ml&#45;87@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r26590 - in /branches/frame_order_cleanup: ./ pipe_control/relax_data.py -- November 17, 2014 - 10:28</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r26590 - in /branches/frame_order_cleanup: ./ pipe_control/relax_data.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00194" class="tabs">Index by Date</a> | <a href="threads.html#00194" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00193.html">Date Prev</a>] [<a href="msg00195.html">Date Next</a>] [<a href="msg00193.html">Thread Prev</a>] [<a href="msg00195.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 17 Nov 2014 09:28:11 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00194.html">E1XqIbT-0005Ml-87@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on November 17, 2014 - 10:28:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Mon Nov 17 10:28:10 2014
+New Revision: 26590
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=26590&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=26590&amp;view=rev</a>
+Log:
+Merged revisions 26588 via svnmerge from 
+svn+ssh://bugman@xxxxxxxxxxx/svn/relax/trunk
+
+........
+  r26588 | bugman | 2014-11-17 10:20:31 +0100 (Mon, 17 Nov 2014) | 13 lines
+  
+  Fix for bug #22961 (<a  rel="nofollow" href="https://gna.org/bugs/?22961">https://gna.org/bugs/?22961</a>)
+  
+  This is the failure of relaxation data loading with the message 
+&quot;IndexError: list index out of
+  range&quot;.  The bug was found by Julien Orts.
+  
+  It is triggered by loading relaxation data from a file containing spin name 
+information and
+  supplying the spin ID using the spin name to restrict data loading to a 
+spin subset.  To solve the
+  problem, the pipe_control.relax_data.pack_data() function has been 
+redesigned.  Now the selection
+  union concept of Chris MacRaild's selection object is being used by joining 
+the spin ID constructed
+  from the data file and the user supplied spin ID with '&amp;', and using this 
+to isolate the correct
+  spin system.
+........
+
+Modified:
+    branches/frame_order_cleanup/   (props changed)
+    branches/frame_order_cleanup/pipe_control/relax_data.py
+
+Propchange: branches/frame_order_cleanup/
+------------------------------------------------------------------------------
+--- svnmerge-integrated (original)
++++ svnmerge-integrated Mon Nov 17 10:28:10 2014
+@@ -1 +1 @@
+-/trunk:1-26586
++/trunk:1-26589
+
+Modified: branches/frame_order_cleanup/pipe_control/relax_data.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/pipe_control/relax_data.py?rev=26590&amp;r1=26589&amp;r2=26590&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/pipe_control/relax_data.py?rev=26590&amp;r1=26589&amp;r2=26590&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/pipe_control/relax_data.py     (original)
++++ branches/frame_order_cleanup/pipe_control/relax_data.py     Mon Nov 17 
+10:28:10 2014
+@@ -750,63 +750,45 @@
+     # Loop over the spin data.
+     data = []
+     for i in range(N):
++        # A selection union.
++        select_id = spin_ids[i]
++        if spin_id != None:
++            select_id = &quot;%s&amp;%s&quot; % (select_id, spin_id)
++
+         # Get the corresponding spin container.
+-        match_mol_names, match_res_nums, match_res_names, spins = 
+return_spin_from_selection(spin_ids[i], full_info=True, multi=True)
+-        if spins in [None, []]:
++        match_mol_names, match_res_nums, match_res_names, spins = 
+return_spin_from_selection(select_id, full_info=True, multi=True)
++
++        # No spin.
++        if len(spins) == 0:
++            continue
++
++        # Check that only a singe spin is present.
++        if len(spins) &gt; 1:
++            if ids:
++                raise RelaxMultiSpinIDError(spin_ids[i], ids)
++            else:
++                raise RelaxMultiSpinIDError(spin_ids[i], ids)
++        if len(spins) == 0:
+             raise RelaxNoSpinError(spin_ids[i])
+ 
+-        # Remove non-matching spins.
+-        if select_obj:
+-            new_spins = []
+-            new_mol_names = []
+-            new_res_nums = []
+-            new_res_names = []
+-            new_ids = []
+-            for j in range(len(spins)):
+-                if select_obj.contains_spin(spin_num=spins[j].num, 
+spin_name=spins[j].name, res_num=match_res_nums[j], 
+res_name=match_res_names[j], mol=match_mol_names[j]):
+-                    new_spins.append(spins[j])
+-                    new_mol_names.append(match_mol_names[j])
+-                    new_res_nums.append(match_res_nums[j])
+-                    new_res_names.append(match_res_names[j])
+-                    
+new_ids.append(generate_spin_id_unique(mol_name=mol_names[i], 
+res_num=res_nums[i], res_name=res_names[i], spin_num=spins[j].num, 
+spin_name=spins[j].name))
+-            new_id = new_ids[0]
+-
+-        # Aliases for normal operation.
+-        else:
+-            new_spins = spins
+-            new_mol_names = match_mol_names
+-            new_res_nums = match_res_nums
+-            new_res_names = match_res_names
+-            new_id = spin_ids[i]
+-            new_ids = None
+-
+-        # Check that only a singe spin is present.
+-        if len(new_spins) &gt; 1:
+-            if new_ids:
+-                raise RelaxMultiSpinIDError(spin_ids[i], new_ids)
+-            else:
+-                raise RelaxMultiSpinIDError(spin_ids[i], new_ids)
+-        if len(new_spins) == 0:
+-            raise RelaxNoSpinError(spin_ids[i])
+-
+         # Loop over the spins.
+-        for j in range(len(new_spins)):
++        for j in range(len(spins)):
+             # No match to the selection.
+-            if select_obj and not 
+select_obj.contains_spin(spin_num=new_spins[j].num, 
+spin_name=new_spins[j].name, res_num=new_res_nums[j], 
+res_name=new_res_names[j], mol=new_mol_names[j]):
++            if select_obj and not 
+select_obj.contains_spin(spin_num=spins[j].num, spin_name=spins[j].name, 
+res_num=res_nums[j], res_name=res_names[j], mol=mol_names[j]):
+                 continue
+ 
+             # Initialise the spin data if necessary.
+-            if not hasattr(new_spins[j], 'ri_data') or new_spins[j].ri_data 
+== None:
+-                new_spins[j].ri_data = {}
+-            if not hasattr(new_spins[j], 'ri_data_err') or 
+new_spins[j].ri_data_err == None:
+-                new_spins[j].ri_data_err = {}
++            if not hasattr(spins[j], 'ri_data') or spins[j].ri_data == None:
++                spins[j].ri_data = {}
++            if not hasattr(spins[j], 'ri_data_err') or spins[j].ri_data_err 
+== None:
++                spins[j].ri_data_err = {}
+ 
+             # Update all data structures.
+-            new_spins[j].ri_data[ri_id] = values[i]
+-            new_spins[j].ri_data_err[ri_id] = errors[i]
++            spins[j].ri_data[ri_id] = values[i]
++            spins[j].ri_data_err[ri_id] = errors[i]
+ 
+             # Append the data for printing out.
+-            data.append([new_id, repr(values[i]), repr(errors[i])])
++            data.append([spin_ids[j], repr(values[i]), repr(errors[i])])
+ 
+     # Print out.
+     if verbose:
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Nov 17 10:40:02 2014</div>  
+</body>
+</html>

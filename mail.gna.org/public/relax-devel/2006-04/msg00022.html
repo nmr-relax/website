@@ -1,0 +1,230 @@
+<!-- MHonArc v2.6.10 -->
+<!--X-Subject: Re: [bug #5746] TypeError on dx.map() &#45; Bad call to	specific.model_free.model_statistics() ? -->
+<!--X-From-R13: "Sqjneq q'Ohiretar" <rqjneq.qnhiretarNtznvy.pbz> -->
+<!--X-Date: Wed, 12 Apr 2006 10:11:15 +0200 -->
+<!--X-Message-Id: 7f080ed10604120109w77b61123we4e0e710d20f6805@mail.gmail.com -->
+<!--X-Content-Type: text/plain -->
+<!--X-Reference: 20060410&#45;104402.sv4125.58048@gna.org -->
+<!--X-Reference: 7f080ed10604102345r1bfb002fle059d7043025ed9e@mail.gmail.com -->
+<!--X-Reference: 7f080ed10604110003i51ff96c4ja78da8d089b4a040@mail.gmail.com -->
+<!--X-Reference: 1144755191.17200.110.camel@fbsdpcu021 -->
+<!--X-Reference: 7f080ed10604120046p56d51b1bl1815e3138212933a@mail.gmail.com -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>Re: [bug #5746] TypeError on dx.map() - Bad call to	specific.model_free.model_statistics() ? -- April 12, 2006 - 10:11</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />Re: [bug #5746] TypeError on dx.map() - Bad call to	specific.model_free.model_statistics() ?</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00022" class="tabs">Index by Date</a> | <a href="threads.html#00022" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00021.html">Date Prev</a>] [<a href="msg00023.html">Date Next</a>] [<a href="msg00021.html">Thread Prev</a>] [<a href="msg00023.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-devel@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 12 Apr 2006 18:09:00 +1000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00022.html">7f080ed10604120109w77b61123we4e0e710d20f6805@mail.gmail.com</a>&gt;</li>
+<li class="menuitem">
+<em>References</em>: &lt;20060410-104402.sv4125.58048@gna.org&gt;	&lt;<a href="msg00018.html">7f080ed10604102345r1bfb002fle059d7043025ed9e@mail.gmail.com</a>&gt;	&lt;<a href="msg00019.html">7f080ed10604110003i51ff96c4ja78da8d089b4a040@mail.gmail.com</a>&gt;	&lt;<a href="msg00020.html">1144755191.17200.110.camel@fbsdpcu021</a>&gt;	&lt;<a href="msg00021.html">7f080ed10604120046p56d51b1bl1815e3138212933a@mail.gmail.com</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>Edward d'Auvergne</strong> on April 12, 2006 - 10:11:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">I've reverted the change made at r2462 which was an attempt at fixing
+bug #5746 located at
+<a  href="https://gna.org/bugs/?func=detailitem&amp;item_id=5746">https://gna.org/bugs/?func=detailitem&amp;item_id=5746</a>.
+
+Edward
+
+
+On 4/12/06, Edward d'Auvergne &lt;edward.dauvergne@xxxxxxxxx&gt; wrote:
+</pre><blockquote class="blockquote"><pre style="margin: 0em;">Damn. I think that the entire 'self.model_statistics()' function needs
+to be rethought.  The use of the 'instance', 'min_instances', and
+'num_instances' keyword arguments and the 'global_data' and 'combine'
+variables is very unclear, is not robust, and was not thought out.  It
+was the result of the gradual addition of small changes to the
+function to make the OpenDX mapping and other functions work.
+
+A number of things need to be taken into account.  Firstly for
+model-free analysis, the parameter set type needs to be determined
+using the 'self.determine_param_set_type()' function and the correct
+stats returned.  If the function returns 'all' or 'diff', then the
+instance=0 should return the global stats in self.relax.data.chi2,
+etc.  If the function returns 'mf' or 'local_tm', then the stats of
+the residue corresponding to the 'instance' should be returned.
+
+This algorithm however breaks when running the 'dx.map()' user
+function when trying to map the space of the diffusion tensor
+parameters.  This is what caused the 'combine' variable to be added.
+The reason is because all parameter values are set by the mapping code
+and then the specific 'calculate()' function is executed to generate
+the statistics (the chi-squared value is used in the map).  This
+function does a per residue calculation of the chi-squared value.
+
+The fix could be to modify the 'self.calculate()' function to handle
+the different parameter set types and make the
+'self.model_statistics()' also behave dependent on the set type.  This
+clean but non-trivial approach is likely to cause breakages.  Another
+option is to sanitise the 'self.model_statistics()' function to handle
+the behaviour of the 'self.calculate()' function.
+
+The data attached to bug #5746 located at
+<a  href="https://gna.org/bugs/index.php?func=detailitem&amp;item_id=5746">https://gna.org/bugs/index.php?func=detailitem&amp;item_id=5746</a> could be
+used for debugging.  To test the OpenDX code, mapping of three spaces
+can be used to probe the different configurations.  These include the
+spheroid parameters {Diso, Da, theta}, model m5, and model tm2.  The
+other test would be to use AIC model selection to select between the
+four types of model-free parameter set.  All these tests could be
+coded into the test suite.  There could also be other parts of the
+program which may fail due to any changes.
+
+Unless someone feels like taking on a huge challenge, I'll work on the
+fix.  As I'm currently trying to add more functionality to the Molmol
+code, it may take me a while to get onto this.  Although I've reopened
+Chris's bug report
+(<a  href="https://gna.org/bugs/index.php?func=detailitem&amp;item_id=5746">https://gna.org/bugs/index.php?func=detailitem&amp;item_id=5746</a>), I may
+create a new, more general report with all this info and mark #5746 as
+a duplicate of it.
+
+Edward
+
+
+On 4/11/06, Chris MacRaild &lt;c.a.macraild@xxxxxxxxxxx&gt; wrote:
+</pre><blockquote class="blockquote"><pre style="margin: 0em;">
+
+On Tue, 2006-04-11 at 17:03 +1000, Edward d'Auvergne wrote:
+</pre><blockquote class="blockquote"><pre style="margin: 0em;">I've solved the problem to bug #5746 located at
+<a  href="https://gna.org/bugs/?func=detailitem&amp;item_id=5746">https://gna.org/bugs/?func=detailitem&amp;item_id=5746</a>.  The issue was
+simply an incorrect test in the 'self.model_statistics()' function of
+the model-free specific code.  The diff of the fix is:
+
+Index: specific_fns/model_free.py
+===================================================================
+--- specific_fns/model_free.py  (revision 2461)
++++ specific_fns/model_free.py  (working copy)
+@@ -2515,7 +2515,7 @@
+
+         # Sequence specific data.
+         # Statistics for a single residue.
+-        if not global_stats and not combine:
++        if not global_stats or not combine:
+             # Skip unselected residues.model_selection('AIC', run)
+             if not self.relax.data.res[self.run][instance].select:
+                 return None, None, None
+
+</pre></blockquote><pre style="margin: 0em;">
+
+This change breaks model selection of diffusion tensors.
+
+If the attached state file is loaded into r2464, and I do eliminate(),
+model_selection('AIC', 'final') I get:
+
+AIC model selection.
+
+Instance 0.
+
+Run                  Num_params_(k)       Num_data_sets_(n)    Chi2
+Criterion
+
+The model from the run None has been selected.
+
+
+
+If I revert the above change (by hand), I get the expected behaviour:
+
+
+AIC model selection.
+
+Instance 0.
+
+Run                  Num_params_(k)       Num_data_sets_(n)    Chi2
+Criterion
+sphere               35                   133                  380.01225
+450.01225
+prolate              35                   126                  316.95532
+386.95532
+
+The model from the run 'prolate' has been selected.
+
+Chris
+
+
+_______________________________________________
+relax (<a  href="http://nmr-relax.com">http://nmr-relax.com</a>)
+
+This is the relax-devel mailing list
+relax-devel@xxxxxxx
+
+To unsubscribe from this list, get a password
+reminder, or change your subscription options,
+visit the list information page at
+<a  href="https://mail.gna.org/listinfo/relax-devel">https://mail.gna.org/listinfo/relax-devel</a>
+
+
+
+
+</pre></blockquote><pre style="margin: 0em;">
+
+</pre></blockquote><pre style="margin: 0em;">
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<ul><li><strong>References</strong>:
+<ul>
+<li><strong><a name="00018" href="msg00018.html">Re: [bug #5746] TypeError on dx.map() - Bad call to	specific.model_free.model_statistics() ?</a></strong>
+<ul><li><em>From:</em> Edward d'Auvergne</li></ul></li>
+<li><strong><a name="00019" href="msg00019.html">Re: [bug #5746] TypeError on dx.map() - Bad call to	specific.model_free.model_statistics() ?</a></strong>
+<ul><li><em>From:</em> Edward d'Auvergne</li></ul></li>
+<li><strong><a name="00020" href="msg00020.html">Re: [bug #5746] TypeError on dx.map() - Bad call to	specific.model_free.model_statistics() ?</a></strong>
+<ul><li><em>From:</em> Chris MacRaild</li></ul></li>
+<li><strong><a name="00021" href="msg00021.html">Re: [bug #5746] TypeError on dx.map() - Bad call to	specific.model_free.model_statistics() ?</a></strong>
+<ul><li><em>From:</em> Edward d'Auvergne</li></ul></li>
+</ul></li></ul>
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Apr 13 13:20:12 2006</div>  
+</body>
+</html>

@@ -1,0 +1,541 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r25803 &#45; in /trunk: auto_analyses/relax_disp_repeat_cpmg.py test_suite/system_tests/relax_disp.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 12 Sep 2014 16:56:16 +0200 -->
+<!--X-Message-Id: E1XSSGm&#45;0007Fn&#45;3Z@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r25803 - in /trunk: auto_analyses/relax_disp_repeat_cpmg.py test_suite/system_tests/relax_disp.py -- September 12, 2014 - 16:56</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r25803 - in /trunk: auto_analyses/relax_disp_repeat_cpmg.py test_suite/system_tests/relax_disp.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00309" class="tabs">Index by Date</a> | <a href="threads.html#00309" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00308.html">Date Prev</a>] [<a href="msg00310.html">Date Next</a>] [<a href="msg00308.html">Thread Prev</a>] [<a href="msg00310.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 12 Sep 2014 14:56:15 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00309.html">E1XSSGm-0007Fn-3Z@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on September 12, 2014 - 16:56:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Fri Sep 12 16:56:15 2014
+New Revision: 25803
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=25803&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=25803&amp;view=rev</a>
+Log:
+Further improved the plotting of data in repeated analysis.
+
+Task #7826 (<a  rel="nofollow" href="https://gna.org/task/index.php?7826">https://gna.org/task/index.php?7826</a>): Write an python class for 
+the repeated analysis of dispersion data.
+
+Modified:
+    trunk/auto_analyses/relax_disp_repeat_cpmg.py
+    trunk/test_suite/system_tests/relax_disp.py
+
+Modified: trunk/auto_analyses/relax_disp_repeat_cpmg.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/auto_analyses/relax_disp_repeat_cpmg.py?rev=25803&amp;r1=25802&amp;r2=25803&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/auto_analyses/relax_disp_repeat_cpmg.py?rev=25803&amp;r1=25802&amp;r2=25803&amp;view=diff</a>
+==============================================================================
+--- trunk/auto_analyses/relax_disp_repeat_cpmg.py       (original)
++++ trunk/auto_analyses/relax_disp_repeat_cpmg.py       Fri Sep 12 16:56:15 
+2014
+@@ -31,7 +31,8 @@
+ from datetime import datetime
+ from glob import glob
+ from os import F_OK, access, getcwd, sep
+-from numpy import asarray, std
++from numpy import asarray, mean, sqrt, std, sum
++from scipy.stats import pearsonr
+ import sys
+ from warnings import warn
+ 
+@@ -210,7 +211,7 @@
+             self.interpreter.results.write(file=resfile, dir=path, 
+force=force)
+ 
+ 
+-    def set_intensity_and_error(self, pipe_name, glob_ini=None):
++    def set_intensity_and_error(self, pipe_name, glob_ini=None, 
+set_rmsd=None):
+         # Read the intensity per spectrum id and set the RMSD error.
+ 
+         # Switch to the pipe.
+@@ -241,29 +242,30 @@
+             for peaks_file in peaks_file_list:
+                 self.interpreter.spectrum.read_intensities(file=peaks_file, 
+spectrum_id=spectrum_ids, int_method=self.int_method, 
+int_col=range(len(spectrum_ids)))
+ 
+-            # Get the folder for rmsd files.
+-            rmsd_folder = getattr(self, key)['rmsd_folder']
+-
+-            # Define glop pattern for rmsd files.
+-            rmsd_glob_pat = '%s*%.rmsd' % (glob_ini, self.method)
+-
+-            # Get the file list.
+-            rmsd_file_list = glob(rmsd_folder + sep + rmsd_glob_pat)
+-
+-            # Sort the file list Alphanumeric.
+-            rmsd_file_list = sort_filenames(filenames=rmsd_file_list)
+-
+-            # Loop over spectrum ids
+-            for j, spectrum_id in enumerate(spectrum_ids):
+-                # Set the peak intensity errors, as defined as the baseplane 
+RMSD.
+-                rmsd_file = rmsd_file_list[j]
+-
+-                # Extract rmsd from line 0, and column 0.
+-                rmsd = float(extract_data(file=rmsd_file)[0][0])
+-                self.interpreter.spectrum.baseplane_rmsd(error=rmsd, 
+spectrum_id=spectrum_id)
+-
+-
+-    def do_spectrum_error_analysis(self, pipe_name):
++            if set_rmsd:
++                # Get the folder for rmsd files.
++                rmsd_folder = getattr(self, key)['rmsd_folder']
++
++                # Define glop pattern for rmsd files.
++                rmsd_glob_pat = '%s*%s.rmsd' % (glob_ini, self.method)
++
++                # Get the file list.
++                rmsd_file_list = glob(rmsd_folder + sep + rmsd_glob_pat)
++
++                # Sort the file list Alphanumeric.
++                rmsd_file_list = sort_filenames(filenames=rmsd_file_list)
++
++                # Loop over spectrum ids
++                for j, spectrum_id in enumerate(spectrum_ids):
++                    # Set the peak intensity errors, as defined as the 
+baseplane RMSD.
++                    rmsd_file = rmsd_file_list[j]
++
++                    # Extract rmsd from line 0, and column 0.
++                    rmsd = float(extract_data(file=rmsd_file)[0][0])
++                    self.interpreter.spectrum.baseplane_rmsd(error=rmsd, 
+spectrum_id=spectrum_id)
++
++
++    def do_spectrum_error_analysis(self, pipe_name, set_rep=None):
+         &quot;&quot;&quot;Do spectrum error analysis, where both replicates per 
+spectrometer frequency and subset is taken into consideration.&quot;&quot;&quot;
+ 
+ 
+@@ -282,23 +284,24 @@
+             # Get the spectrum ids.
+             spectrum_ids = cdp.dic_spectrum_ids[key]
+ 
+-            # Get the spectrum ids replicates.
+-            spectrum_ids_replicates = cdp.dic_spectrum_ids_replicates[key]
+-
+-            # Check if there are any replicates.
+-            for replicate in spectrum_ids_replicates:
+-                spectrum_id, rep_list = replicate
+-
+-                # If there is a replicated list, specify it.
+-                if len(rep_list) &gt; 0:
+-                    # Define the replicates.
+-                    
+self.interpreter.spectrum.replicated(spectrum_ids=rep_list)
++            if set_rep:
++                # Get the spectrum ids replicates.
++                spectrum_ids_replicates = 
+cdp.dic_spectrum_ids_replicates[key]
++
++                # Check if there are any replicates.
++                for replicate in spectrum_ids_replicates:
++                    spectrum_id, rep_list = replicate
++
++                    # If there is a replicated list, specify it.
++                    if len(rep_list) &gt; 0:
++                        # Define the replicates.
++                        
+self.interpreter.spectrum.replicated(spectrum_ids=rep_list)
+ 
+             # Run the error analysis on the subset.
+             self.interpreter.spectrum.error_analysis(subset=spectrum_ids)
+ 
+ 
+-    def set_int(self, methods=None, list_glob_ini=None, force=False):
++    def set_int(self, methods=None, list_glob_ini=None, set_rmsd=True, 
+set_rep=False, force=False):
+         &quot;&quot;&quot;Call both the setup of data and the error analysis&quot;&quot;&quot;
+ 
+         # Define model
+@@ -326,10 +329,10 @@
+                     self.interpreter.pipe.switch(pipe_name)
+ 
+                     # Call set intensity.
+-                    self.set_intensity_and_error(pipe_name=pipe_name, 
+glob_ini=glob_ini)
++                    self.set_intensity_and_error(pipe_name=pipe_name, 
+glob_ini=glob_ini, set_rmsd=set_rmsd)
+ 
+                     # Call error analysis.
+-                    self.do_spectrum_error_analysis(pipe_name=pipe_name)
++                    self.do_spectrum_error_analysis(pipe_name=pipe_name, 
+set_rep=set_rep)
+ 
+                     # Save results, and store the current settings dic to 
+pipe.
+                     cdp.settings = self.settings
+@@ -920,7 +923,7 @@
+         # Nr of columns is number of datasets.
+         nr_cols = len(corr_data)
+         # Nr of rows, is 2. With and without scaling.
+-        nr_rows = 3
++        nr_rows = 4
+ 
+         # Define figure
+         fig, axises = plt.subplots(nrows=nr_rows, ncols=nr_cols)
+@@ -947,12 +950,12 @@
+ 
+                 # If row 1.
+                 if i == 0:
+-                    ax.plot(x, x, '-', label='%s vs. %s' % (method_x, 
+method_x))
++                    ax.plot(x, x, 'o', label='%s vs. %s' % (method_x, 
+method_x))
+                     ax.plot(x, y, '.', label='%s vs. %s' % (method_y, 
+method_x) )
+ 
+                     np = len(y)
+                     ax.set_title(r'$I$' + ' for %s %i vs. %s %i. np=%i' % 
+(method_y, glob_ini_y, method_x, glob_ini_x, np), fontsize=10)
+-                    ax.legend(loc='upper left', shadow=True, prop = fontP)
++                    ax.legend(loc='upper center', shadow=True, prop = fontP)
+                     ax.ticklabel_format(style='sci', axis='x', 
+scilimits=(0,0))
+                     ax.ticklabel_format(style='sci', axis='y', 
+scilimits=(0,0))
+                     ax.set_xlabel(r'$I$')
+@@ -964,28 +967,41 @@
+                     x_norm = x / x.max()
+                     y_norm = y / y.max()
+ 
+-                    ax.plot(x_norm, x_norm, '-', label='%s vs. %s' % 
+(method_x, method_x))
+-                    ax.plot(x_norm, y_norm, '.', label='%s vs. %s' % 
+(method_y, method_x) )
++                    ax.plot(x_norm, x_norm, 'o', label='%s vs. %s' % 
+(method_x, method_x))
++                    ax.plot(x_norm, y_norm, '.', label='%s vs. %s' % 
+(method_y, method_x))
+ 
+                     np = len(y_norm)
+                     ax.set_title('Normalised intensity for %s %i vs. %s %i. 
+np=%i' % (method_y, glob_ini_y, method_x, glob_ini_x, np), fontsize=10)
+-                    ax.legend(loc='upper left', shadow=True, prop = fontP)
++                    ax.legend(loc='upper center', shadow=True, prop = fontP)
+                     ax.set_xlabel(r'$\mathrm{Norm.} I$')
+                     ax.set_ylabel(r'$\mathrm{Norm.} I$')
+ 
+ 
++                # Error.
++                if i == 2:
++
++                    ax.plot(x_err, x_err, 'o', label='%s vs. %s' % 
+(method_x, method_x))
++                    ax.plot(x_err, y_err, '.', label='%s vs. %s' % 
+(method_y, method_x))
++
++                    np = len(y_err)
++                    ax.set_title(r'$\sigma(I)$' + ' for %s %i vs. %s %i. 
+np=%i' % (method_y, glob_ini_y, method_x, glob_ini_x, np), fontsize=10)
++                    ax.legend(loc='upper center', shadow=True, prop = fontP)
++                    ax.set_xlabel(r'$\sigma(I)$')
++                    ax.set_ylabel(r'$\sigma(I)$')
++
++
+                 # Intensity to error.
+-                if i == 2:
++                if i == 3:
+                 
+                     x_to_x_err = x / x_err
+                     y_to_y_err = y / y_err
+ 
+-                    ax.plot(x_to_x_err, x_to_x_err, '-', label='%s vs. %s' % 
+(method_x, method_x))
+-                    ax.plot(x_to_x_err, y_to_y_err, '.', label='%s vs. %s' % 
+(method_y, method_x) )
++                    ax.plot(x_to_x_err, x_to_x_err, 'o', label='%s vs. %s' % 
+(method_x, method_x))
++                    ax.plot(x_to_x_err, y_to_y_err, '.', label='%s vs. %s' % 
+(method_y, method_x))
+ 
+                     np = len(y_to_y_err)
+                     ax.set_title(r'$I/\sigma(I)$' + ' for %s %i vs. %s %i. 
+np=%i' % (method_y, glob_ini_y, method_x, glob_ini_x, np), fontsize=10)
+-                    ax.legend(loc='upper left', shadow=True, prop = fontP)
++                    ax.legend(loc='upper center', shadow=True, prop = fontP)
+                     ax.set_xlabel(r'$I/\sigma(I)$')
+                     ax.set_ylabel(r'$I/\sigma(I)$')
+ 
+@@ -1081,7 +1097,7 @@
+ 
+                 # If row 1.
+                 if i == 0:
+-                    ax.plot(x, x, '-', label='%s vs. %s' % (method_x, 
+method_x))
++                    ax.plot(x, x, 'o', label='%s vs. %s' % (method_x, 
+method_x))
+                     ax.plot(x, y, '.', label='%s vs. %s' % (method_y, 
+method_x) )
+ 
+                     np = len(y)
+@@ -1098,7 +1114,7 @@
+                     x_to_x_err = x / x_err
+                     y_to_y_err = y / y_err
+ 
+-                    ax.plot(x_to_x_err, x_to_x_err, '-', label='%s vs. %s' % 
+(method_x, method_x))
++                    ax.plot(x_to_x_err, x_to_x_err, 'o', label='%s vs. %s' % 
+(method_x, method_x))
+                     ax.plot(x_to_x_err, y_to_y_err, '.', label='%s vs. %s' % 
+(method_y, method_x) )
+ 
+                     np = len(y_to_y_err)
+@@ -1126,6 +1142,8 @@
+             # Let the reference R2eff array be the initial glob.
+             r2eff_arr_ref = r2eff_dic_ref[str(list_glob_ini[0])]['r2eff_arr']
+             res_dic['r2eff_arr_ref'] = r2eff_arr_ref
++            r2eff_err_arr_ref = 
+r2eff_dic_ref[str(list_glob_ini[0])]['r2eff_err_arr']
++            res_dic['r2eff_err_arr_ref'] = r2eff_err_arr_ref
+ 
+             # Get the current method
+             method_cur = r2eff_dic['method']
+@@ -1140,12 +1158,32 @@
+                 if str(glob_ini) not in r2eff_dic:
+                     continue
+ 
++                # Get the data.
+                 r2eff_arr = r2eff_dic[str(glob_ini)]['r2eff_arr']
++                r2eff_err_arr = r2eff_dic[str(glob_ini)]['r2eff_err_arr']
+ 
+                 # Make a normalised R2eff array according to reference.
+                 # This require that all number of points are equal.
++                # If they are not of same length, then dont even bother to 
+continue.
+                 if len(r2eff_arr) != len(r2eff_arr_ref):
+                     continue
++
++                # Calculate the R2eff versus R2eff error.
++                r2eff_vs_err_ref = r2eff_arr_ref / r2eff_err_arr_ref
++                r2eff_vs_err = r2eff_arr / r2eff_err_arr
++
++                # Get the statistics from scipy.
++                pearsons_correlation_coefficient, two_tailed_p_value = 
+pearsonr(r2eff_vs_err_ref, r2eff_vs_err)
++
++                # Calculate manual.
++                x = r2eff_vs_err_ref
++                x_m = mean(x)
++                y = r2eff_vs_err
++                y_m = mean(r2eff_vs_err)
++
++                r = sum( (x - x_m)*(y - y_m)  ) / sqrt( sum((x - x_m)**2) * 
+sum((y - y_m)**2) )
++
++                #print method_ref, method_cur, glob_ini, 
+pearsons_correlation_coefficient, r
+ 
+                 # Get the normalised array.
+                 r2eff_norm_arr = r2eff_arr/r2eff_arr_ref
+
+Modified: trunk/test_suite/system_tests/relax_disp.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/test_suite/system_tests/relax_disp.py?rev=25803&amp;r1=25802&amp;r2=25803&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/test_suite/system_tests/relax_disp.py?rev=25803&amp;r1=25802&amp;r2=25803&amp;view=diff</a>
+==============================================================================
+--- trunk/test_suite/system_tests/relax_disp.py (original)
++++ trunk/test_suite/system_tests/relax_disp.py Fri Sep 12 16:56:15 2014
+@@ -5970,10 +5970,11 @@
+         #methods = ['FT']
+ 
+         # Set the intensity.
+-        RDR.set_int(methods=methods, list_glob_ini=[128, 126])
++        #RDR.set_int(methods=methods, list_glob_ini=[128, 126], 
+set_rmsd=False, set_rep=True)
++        RDR.set_int(methods=methods, list_glob_ini=[128, 126], 
+set_rmsd=True, set_rep=False)
+ 
+         # Try plot some intensity correlations.
+-        if True:
++        if False:
+             # Collect intensity values.
+             # For all spins, ft
+             int_ft_all = RDR.col_int(method='FT', list_glob_ini=[128, 126], 
+selection=None)
+@@ -5993,9 +5994,20 @@
+             fig2 = [[int_ft_sel, int_mdd_sel], ['FT sel', 'MDD sel'], [128, 
+128]]
+             corr_data = [fig1, fig2]
+ 
+-            RDR.plot_int_corr(corr_data=corr_data, show=False)
+-
+-
++            fig3 = [[int_ft_all, int_mdd_all], ['FT', 'FT'], [128, 126]]
++            fig4 = [[int_ft_all, int_mdd_all], ['FT', 'MDD'], [128, 126]]
++            corr_data = [fig3, fig4]
++
++            #fig5 = [[int_ft_all, int_mdd_all], ['FT', 'MDD'], [128, 128]]
++            fig5 = [[int_ft_all, int_mdd_all], ['FT', 'MDD'], [128, 126]]
++            fig6 = [[int_ft_all, int_ft_all], ['FT', 'FT'], [128, 126]]
++            #fig6 = [[int_mdd_all, int_mdd_all], ['MDD', 'MDD'], [128, 126]]
++            corr_data = [fig5, fig6]
++
++            RDR.plot_int_corr(corr_data=corr_data, show=True)
++
++
++        # Try plot some R2eff correlations.
+         if False:
+             # Now calculate R2eff.
+             RDR.calc_r2eff(methods=methods, list_glob_ini=[128, 126])
+@@ -6003,18 +6015,50 @@
+             # Try for bad data.
+             #RDR.calc_r2eff(methods=['FT'], list_glob_ini=[6, 4])
+ 
+-            if True:
+-                # Collect r2eff values.
+-                r2eff_ft = RDR.col_r2eff(method='FT', list_glob_ini=[128, 
+126])
+-
+-                # Collect r2eff values.
+-                r2eff_mdd = RDR.col_r2eff(method='MDD', list_glob_ini=[128, 
+126])
+-
+-                # Get R2eff stats.
+-                r2eff_stat_dic = 
+RDR.get_r2eff_stat_dic(list_r2eff_dics=[r2eff_ft, r2eff_mdd], 
+list_glob_ini=[128, 126, 6])
+-
+-                # Plot R2eff stats
+-                RDR.plot_r2eff_stat(r2eff_stat_dic=r2eff_stat_dic, 
+methods=['FT', 'MDD'], list_glob_ini=[128, 126, 6], show=False)
++            # Collect r2eff values.
++            r2eff_ft_all = RDR.col_r2eff(method='FT', list_glob_ini=[128, 
+126], selection=None)
++
++            # Now make a spin selection.
++            selection = ':2,3'
++            r2eff_ft_sel = RDR.col_r2eff(method='FT', list_glob_ini=[128, 
+126], selection=selection)
++            # Print the length of datasets, depending on selection.
++            print( &quot;All spins&quot;, len(r2eff_ft_all['128']['r2eff_arr']), 
+&quot;Selection spins&quot;, len(r2eff_ft_sel['128']['r2eff_arr']) )
++
++            # For all spins, mdd
++            r2eff_mdd_all = RDR.col_r2eff(method='MDD', list_glob_ini=[128, 
+126], selection=None)
++            r2eff_mdd_sel = RDR.col_r2eff(method='MDD', list_glob_ini=[128, 
+126], selection=selection)
++
++            # Plot correlation of intensity
++            fig1 = [[r2eff_ft_all, r2eff_mdd_all], ['FT', 'MDD'], [128, 128]]
++            fig2 = [[r2eff_ft_sel, r2eff_mdd_sel], ['FT sel', 'MDD sel'], 
+[128, 128]]
++            corr_data = [fig1, fig2]
++
++            fig3 = [[r2eff_ft_all, r2eff_ft_all], ['FT', 'FT'], [128, 126]]
++            fig4 = [[r2eff_ft_all, r2eff_mdd_all], ['FT', 'MDD'], [128, 126]]
++            corr_data = [fig3, fig4]
++
++            #fig5 = [[r2eff_ft_all, r2eff_mdd_all], ['FT', 'MDD'], [128, 
+128]]
++            fig5 = [[r2eff_ft_all, r2eff_mdd_all], ['FT', 'MDD'], [128, 126]]
++            fig6 = [[r2eff_ft_all, r2eff_ft_all], ['FT', 'FT'], [128, 126]]
++            #fig6 = [[r2eff_mdd_all, r2eff_mdd_all], ['MDD', 'MDD'], [128, 
+126]]
++            corr_data = [fig5, fig6]
++
++            RDR.plot_r2eff_corr(corr_data=corr_data, show=True)
++
++
++        # Try plot some R2eff statistics.
++        if False:
++            # Collect r2eff values.
++            selection = ':2,3'
++            r2eff_ft_sel = RDR.col_r2eff(method='FT', list_glob_ini=[128, 
+126], selection=selection)
++            r2eff_mdd_sel = RDR.col_r2eff(method='MDD', list_glob_ini=[128, 
+126], selection=selection)
++
++            # Get R2eff stats.
++            r2eff_stat_dic = 
+RDR.get_r2eff_stat_dic(list_r2eff_dics=[r2eff_ft_sel, r2eff_mdd_sel], 
+list_glob_ini=[128, 126])
++
++            ## Plot R2eff stats
++            #RDR.plot_r2eff_stat(r2eff_stat_dic=r2eff_stat_dic, 
+methods=['FT', 'MDD'], list_glob_ini=[128, 126], show=False)
++
+ 
+         # Do minimisation
+         if False:
+@@ -6049,7 +6093,7 @@
+             RDR.spin_display_params(pipe_name=test_pipe_name)
+ 
+         # Print the pipes.
+-        display(sort=True, rev=True)
++        #display(sort=True, rev=True)
+ 
+ 
+     def test_r1rho_kjaergaard_auto(self):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Sep 12 17:20:02 2014</div>  
+</body>
+</html>

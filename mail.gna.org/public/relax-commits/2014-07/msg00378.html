@@ -1,0 +1,407 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r24744 &#45; /branches/r1rho_plotting/specific_analyses/relax_disp/data.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 25 Jul 2014 13:59:23 +0200 -->
+<!--X-Message-Id: E1XAe9i&#45;0005kW&#45;Re@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r24744 - /branches/r1rho_plotting/specific_analyses/relax_disp/data.py -- July 25, 2014 - 13:59</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r24744 - /branches/r1rho_plotting/specific_analyses/relax_disp/data.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00378" class="tabs">Index by Date</a> | <a href="threads.html#00378" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00377.html">Date Prev</a>] [<a href="msg00379.html">Date Next</a>] [<a href="msg00377.html">Thread Prev</a>] [<a href="msg00379.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 25 Jul 2014 11:59:22 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00378.html">E1XAe9i-0005kW-Re@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on July 25, 2014 - 13:59:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Fri Jul 25 13:59:22 2014
+New Revision: 24744
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=24744&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=24744&amp;view=rev</a>
+Log:
+Split out the interpolating in 
+specific_analyses.relax_disp.data.plot_disp_curves() into separate function.
+
+This is to prepare for a interpolating function for spin-lock offset rather 
+than spin-lock field strength for R1rho models.
+
+sr #3124(<a  rel="nofollow" href="https://gna.org/support/?3124">https://gna.org/support/?3124</a>): Grace graphs production for R1rho 
+analysis with R2_eff as function of Omega_eff.
+sr #3138(<a  rel="nofollow" href="https://gna.org/support/?3138">https://gna.org/support/?3138</a>): Interpolating theta through 
+spin-lock offset [Omega], rather than spin-lock field strength [w1].
+
+Modified:
+    branches/r1rho_plotting/specific_analyses/relax_disp/data.py
+
+Modified: branches/r1rho_plotting/specific_analyses/relax_disp/data.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/r1rho_plotting/specific_analyses/relax_disp/data.py?rev=24744&amp;r1=24743&amp;r2=24744&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/r1rho_plotting/specific_analyses/relax_disp/data.py?rev=24744&amp;r1=24743&amp;r2=24744&amp;view=diff</a>
+==============================================================================
+--- branches/r1rho_plotting/specific_analyses/relax_disp/data.py        
+(original)
++++ branches/r1rho_plotting/specific_analyses/relax_disp/data.py        Fri 
+Jul 25 13:59:22 2014
+@@ -1580,8 +1580,11 @@
+         linetype = []
+         linestyle = []
+ 
+-        # The unique file name.
+-        file_name = &quot;disp%s.agr&quot; % spin_id.replace('#', '_').replace(':', 
+'_').replace('@', '_')
++        # Set up the interpolated curve data structures.
++        interpolated_flag = False
++        if not spin.model in [MODEL_R2EFF]:
++            # Interpolate through disp points.
++            file_name, interpolated_flag, back_calc, cpmg_frqs_new, 
+spin_lock_nu1_new = plot_disp_curves_interpolate_disp(spin, spin_id, 
+num_points, extend)
+ 
+         # Open the file for writing.
+         file_path = get_file_path(file_name, dir)
+@@ -1591,117 +1594,6 @@
+         proton = None
+         if proton_mmq_flag:
+             proton = return_attached_protons(spin_id)[0]
+-
+-        # Set up the interpolated curve data structures.
+-        interpolated_flag = False
+-        if not spin.model in [MODEL_R2EFF]:
+-            # Set the flag.
+-            interpolated_flag = True
+-
+-            # Initialise some structures.
+-            cpmg_frqs_new = None
+-            spin_lock_nu1_new = None
+-
+-            # Interpolate the CPMG frequencies (numeric models).
+-            if spin.model in MODEL_LIST_NUMERIC_CPMG or spin.model in 
+[MODEL_B14, MODEL_B14_FULL]:
+-                cpmg_frqs = return_cpmg_frqs(ref_flag=False)
+-                relax_times = return_relax_times()
+-                if cpmg_frqs != None and len(cpmg_frqs[0][0]):
+-                    cpmg_frqs_new = []
+-                    for ei in range(len(cpmg_frqs)):
+-                        # Add a new dimension.
+-                        cpmg_frqs_new.append([])
+-
+-                        # Then loop over the spectrometer frequencies.
+-                        for mi in range(len(cpmg_frqs[ei])):
+-                            # Add a new dimension.
+-                            cpmg_frqs_new[ei].append([])
+-
+-                            # Finally the offsets.
+-                            for oi in range(len(cpmg_frqs[ei][mi])):
+-                                # Add a new dimension.
+-                                cpmg_frqs_new[ei][mi].append([])
+-
+-                                # No data.
+-                                if not len(cpmg_frqs[ei][mi][oi]):
+-                                    continue
+-
+-                                # The minimum frequency unit.
+-                                min_frq = 1.0 / relax_times[ei][mi]
+-                                max_frq = max(cpmg_frqs[ei][mi][oi]) + 
+round(extend / min_frq) * min_frq
+-                                num_points = int(round(max_frq / min_frq))
+-
+-                                # Interpolate (adding the extended amount to 
+the end).
+-                                for di in range(num_points):
+-                                    point = (di + 1) * min_frq
+-                                    cpmg_frqs_new[ei][mi][oi].append(point)
+-
+-                                # Convert to a numpy array.
+-                                cpmg_frqs_new[ei][mi][oi] = 
+array(cpmg_frqs_new[ei][mi][oi], float64)
+-
+-            # Interpolate the CPMG frequencies (analytic models).
+-            else:
+-                cpmg_frqs = return_cpmg_frqs(ref_flag=False)
+-                if cpmg_frqs != None and len(cpmg_frqs[0][0]):
+-                    cpmg_frqs_new = []
+-                    for ei in range(len(cpmg_frqs)):
+-                        # Add a new dimension.
+-                        cpmg_frqs_new.append([])
+-
+-                        # Then loop over the spectrometer frequencies.
+-                        for mi in range(len(cpmg_frqs[ei])):
+-                            # Add a new dimension.
+-                            cpmg_frqs_new[ei].append([])
+-
+-                            # Finally the offsets.
+-                            for oi in range(len(cpmg_frqs[ei][mi])):
+-                                # Add a new dimension.
+-                                cpmg_frqs_new[ei][mi].append([])
+-
+-                                # No data.
+-                                if not len(cpmg_frqs[ei][mi][oi]):
+-                                    continue
+-
+-                                # Interpolate (adding the extended amount to 
+the end).
+-                                for di in range(num_points):
+-                                    point = (di + 1) * 
+(max(cpmg_frqs[ei][mi][oi])+extend) / num_points
+-                                    cpmg_frqs_new[ei][mi][oi].append(point)
+-
+-                                # Convert to a numpy array.
+-                                cpmg_frqs_new[ei][mi][oi] = 
+array(cpmg_frqs_new[ei][mi][oi], float64)
+-
+-            # Interpolate the spin-lock field strengths.
+-            spin_lock_nu1 = return_spin_lock_nu1(ref_flag=False)
+-            if spin_lock_nu1 != None and len(spin_lock_nu1[0][0][0]):
+-                spin_lock_nu1_new = []
+-                for ei in range(len(spin_lock_nu1)):
+-                    # Add a new dimension.
+-                    spin_lock_nu1_new.append([])
+-
+-                    # Then loop over the spectrometer frequencies.
+-                    for mi in range(len(spin_lock_nu1[ei])):
+-                        # Add a new dimension.
+-                        spin_lock_nu1_new[ei].append([])
+-
+-                        # Finally the offsets.
+-                        for oi in range(len(spin_lock_nu1[ei][mi])):
+-                            # Add a new dimension.
+-                            spin_lock_nu1_new[ei][mi].append([])
+-
+-                            # No data.
+-                            if not len(spin_lock_nu1[ei][mi][oi]):
+-                                continue
+-
+-                            # Interpolate (adding the extended amount to the 
+end).
+-                            for di in range(num_points):
+-                                point = (di + 1) * 
+(max(spin_lock_nu1[ei][mi][oi])+extend) / num_points
+-                                spin_lock_nu1_new[ei][mi][oi].append(point)
+-
+-                            # Convert to a numpy array.
+-                            spin_lock_nu1_new[ei][mi][oi] = 
+array(spin_lock_nu1_new[ei][mi][oi], float64)
+-
+-            # Back calculate R2eff data for the second sets of plots.
+-            back_calc = 
+specific_analyses.relax_disp.optimisation.back_calc_r2eff(spin=spin, 
+spin_id=spin_id, cpmg_frqs=cpmg_frqs_new, spin_lock_nu1=spin_lock_nu1_new)
+ 
+         # Loop over each experiment type.
+         graph_index = 0
+@@ -1976,6 +1868,135 @@
+     else:
+         file_name = expanduser(file_name)
+         chmod(file_name, S_IRWXU|S_IRGRP|S_IROTH)
++
++
++def plot_disp_curves_interpolate_disp(spin, spin_id, num_points, extend):
++    &quot;&quot;&quot;Interpolate function for 2D Grace plotting function for the 
+dispersion curves.
++
++    @keyword spin:          The specific spin data container.
++    @type spin:             SpinContainer instance.
++    @keyword spin_id:       The spin ID string.
++    @type spin_id:          str
++    @keyword num_points:    The number of points to generate the 
+interpolated fitted curves with.
++    @type num_points:       int
++    @keyword extend:        How far to extend the interpolated fitted curves 
+to (in Hz).
++    @type extend:           float
++    @return:                The file_name, the interpolated_flag, list of 
+R2eff values for back_calc, list of frequencies in Hz for interpolated 
+cpmg_frqs_new and spin_lock_nu1_new.
++    @rtype:                 string, boolean, numpy rank-1 float64 array, 
+numpy rank-1 float64 array, numpy rank-1 float64 array
++    &quot;&quot;&quot;
++
++    # The unique file name.
++    file_name = &quot;disp%s.agr&quot; % spin_id.replace('#', '_').replace(':', 
+'_').replace('@', '_')
++
++    # Set the flag.
++    interpolated_flag = True
++
++    # Initialise some structures.
++    cpmg_frqs_new = None
++    spin_lock_nu1_new = None
++
++    # Interpolate the CPMG frequencies (numeric models).
++    if spin.model in MODEL_LIST_NUMERIC_CPMG or spin.model in [MODEL_B14, 
+MODEL_B14_FULL]:
++        cpmg_frqs = return_cpmg_frqs(ref_flag=False)
++        relax_times = return_relax_times()
++        if cpmg_frqs != None and len(cpmg_frqs[0][0]):
++            cpmg_frqs_new = []
++            for ei in range(len(cpmg_frqs)):
++                # Add a new dimension.
++                cpmg_frqs_new.append([])
++
++                # Then loop over the spectrometer frequencies.
++                for mi in range(len(cpmg_frqs[ei])):
++                    # Add a new dimension.
++                    cpmg_frqs_new[ei].append([])
++
++                    # Finally the offsets.
++                    for oi in range(len(cpmg_frqs[ei][mi])):
++                        # Add a new dimension.
++                        cpmg_frqs_new[ei][mi].append([])
++
++                        # No data.
++                        if not len(cpmg_frqs[ei][mi][oi]):
++                            continue
++
++                        # The minimum frequency unit.
++                        min_frq = 1.0 / relax_times[ei][mi]
++                        max_frq = max(cpmg_frqs[ei][mi][oi]) + round(extend 
+/ min_frq) * min_frq
++                        num_points = int(round(max_frq / min_frq))
++
++                        # Interpolate (adding the extended amount to the 
+end).
++                        for di in range(num_points):
++                            point = (di + 1) * min_frq
++                            cpmg_frqs_new[ei][mi][oi].append(point)
++
++                        # Convert to a numpy array.
++                        cpmg_frqs_new[ei][mi][oi] = 
+array(cpmg_frqs_new[ei][mi][oi], float64)
++
++    # Interpolate the CPMG frequencies (analytic models).
++    else:
++        cpmg_frqs = return_cpmg_frqs(ref_flag=False)
++        if cpmg_frqs != None and len(cpmg_frqs[0][0]):
++            cpmg_frqs_new = []
++            for ei in range(len(cpmg_frqs)):
++                # Add a new dimension.
++                cpmg_frqs_new.append([])
++
++                # Then loop over the spectrometer frequencies.
++                for mi in range(len(cpmg_frqs[ei])):
++                    # Add a new dimension.
++                    cpmg_frqs_new[ei].append([])
++
++                    # Finally the offsets.
++                    for oi in range(len(cpmg_frqs[ei][mi])):
++                        # Add a new dimension.
++                        cpmg_frqs_new[ei][mi].append([])
++
++                        # No data.
++                        if not len(cpmg_frqs[ei][mi][oi]):
++                            continue
++
++                        # Interpolate (adding the extended amount to the 
+end).
++                        for di in range(num_points):
++                            point = (di + 1) * 
+(max(cpmg_frqs[ei][mi][oi])+extend) / num_points
++                            cpmg_frqs_new[ei][mi][oi].append(point)
++
++                        # Convert to a numpy array.
++                        cpmg_frqs_new[ei][mi][oi] = 
+array(cpmg_frqs_new[ei][mi][oi], float64)
++
++    # Interpolate the spin-lock field strengths.
++    spin_lock_nu1 = return_spin_lock_nu1(ref_flag=False)
++    if spin_lock_nu1 != None and len(spin_lock_nu1[0][0][0]):
++        spin_lock_nu1_new = []
++        for ei in range(len(spin_lock_nu1)):
++            # Add a new dimension.
++            spin_lock_nu1_new.append([])
++
++            # Then loop over the spectrometer frequencies.
++            for mi in range(len(spin_lock_nu1[ei])):
++                # Add a new dimension.
++                spin_lock_nu1_new[ei].append([])
++
++                # Finally the offsets.
++                for oi in range(len(spin_lock_nu1[ei][mi])):
++                    # Add a new dimension.
++                    spin_lock_nu1_new[ei][mi].append([])
++
++                    # No data.
++                    if not len(spin_lock_nu1[ei][mi][oi]):
++                        continue
++
++                    # Interpolate (adding the extended amount to the end).
++                    for di in range(num_points):
++                        point = (di + 1) * 
+(max(spin_lock_nu1[ei][mi][oi])+extend) / num_points
++                        spin_lock_nu1_new[ei][mi][oi].append(point)
++
++                    # Convert to a numpy array.
++                    spin_lock_nu1_new[ei][mi][oi] = 
+array(spin_lock_nu1_new[ei][mi][oi], float64)
++
++    # Back calculate R2eff data for the second sets of plots.
++    back_calc = 
+specific_analyses.relax_disp.optimisation.back_calc_r2eff(spin=spin, 
+spin_id=spin_id, cpmg_frqs=cpmg_frqs_new, spin_lock_nu1=spin_lock_nu1_new)
++
++    return file_name, interpolated_flag, back_calc, cpmg_frqs_new, 
+spin_lock_nu1_new
+ 
+ 
+ def plot_exp_curves(file=None, dir=None, force=None, norm=None):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Jul 25 14:00:03 2014</div>  
+</body>
+</html>

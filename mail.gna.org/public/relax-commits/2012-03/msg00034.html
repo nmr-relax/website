@@ -1,0 +1,201 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r15449 &#45; in /branches/frame_order_testing/maths_fns: frame_order.py	frame_order_matrix_ops.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 07 Mar 2012 11:34:59 +0100 -->
+<!--X-Message-Id: E1S5ECx&#45;0007NV&#45;OU@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r15449 - in /branches/frame_order_testing/maths_fns: frame_order.py	frame_order_matrix_ops.py -- March 07, 2012 - 11:34</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r15449 - in /branches/frame_order_testing/maths_fns: frame_order.py	frame_order_matrix_ops.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00034" class="tabs">Index by Date</a> | <a href="threads.html#00034" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00033.html">Date Prev</a>] [<a href="msg00035.html">Date Next</a>] [<a href="msg00033.html">Thread Prev</a>] [<a href="msg00035.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 07 Mar 2012 10:34:59 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00034.html">E1S5ECx-0007NV-OU@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on March 07, 2012 - 11:34:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Mar  7 11:34:59 2012
+New Revision: 15449
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=15449&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=15449&amp;view=rev</a>
+Log:
+Shifted the slave command setup from the target function to the frame order 
+__init__() method.
+
+This is in preparation for transfer of data to the slaves prior to the target 
+function calls.
+
+
+Modified:
+    branches/frame_order_testing/maths_fns/frame_order.py
+    branches/frame_order_testing/maths_fns/frame_order_matrix_ops.py
+
+Modified: branches/frame_order_testing/maths_fns/frame_order.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_testing/maths_fns/frame_order.py?rev=15449&amp;r1=15448&amp;r2=15449&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_testing/maths_fns/frame_order.py?rev=15449&amp;r1=15448&amp;r2=15449&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_testing/maths_fns/frame_order.py (original)
++++ branches/frame_order_testing/maths_fns/frame_order.py Wed Mar  7 11:34:59 
+2012
+@@ -271,12 +271,13 @@
+             self.drdc_theta = zeros((self.total_num_params, self.num_align, 
+self.num_rdc), float64)
+             self.d2rdc_theta = zeros((self.total_num_params, 
+self.total_num_params, self.num_align, self.num_rdc), float64)
+ 
+-        # Get the Processor box singleton (it contains the Processor 
+instance) and alias the Processor.
+-        processor_box = Processor_box() 
+-        self.processor = processor_box.processor
+-
+-        # The Sobol' sequence data and target function aliases (quasi-random 
+integration).
++        # The quasi-random integration via the multi-processor.
+         if not quad_int:
++            # Get the Processor box singleton (it contains the Processor 
+instance) and alias the Processor.
++            processor_box = Processor_box() 
++            self.processor = processor_box.processor
++
++            # The Sobol' sequence data and target function aliases 
+(quasi-random integration).
+             if model == 'pseudo-ellipse':
+                 self.create_sobol_data(n=self.num_int_pts, dims=['theta', 
+'phi', 'sigma'])
+                 self.func = self.func_pseudo_ellipse_qrint
+@@ -313,6 +314,11 @@
+                 self.create_sobol_data(n=self.num_int_pts, dims=['sigma'])
+                 self.func = self.func_free_rotor_qrint
+ 
++            # Set up the slave processors.
++            self.slaves = []
++            for i in range(self.processor.processor_size()):
++                self.slaves.append(Slave_command_pcs_pseudo_ellipse_qrint())
++
+         # The target function aliases (Scipy numerical integration).
+         else:
+             if model == 'pseudo-ellipse':
+@@ -1167,15 +1173,19 @@
+             data.pcs_theta = self.pcs_theta
+ 
+             # Subdivide the points.
++            i = 0
+             for block in subdivide(self.sobol_angles, 
+self.processor.processor_size()):
+                 # Initialise the slave command and memo.
+-                command = 
+Slave_command_pcs_pseudo_ellipse_qrint(points=block, theta_x=cone_theta_x, 
+theta_y=cone_theta_x, sigma_max=cone_sigma_max, 
+full_in_ref_frame=self.full_in_ref_frame, r_pivot_atom=self.r_pivot_atom, 
+r_pivot_atom_rev=self.r_pivot_atom_rev, r_ln_pivot=self.r_ln_pivot, 
+A=self.A_3D, R_eigen=self.R_eigen, RT_eigen=RT_eigen, Ri_prime=self.Ri_prime, 
+pcs_theta=deepcopy(self.pcs_theta), pcs_theta_err=self.pcs_theta_err, 
+missing_pcs=self.missing_pcs)
++                self.slaves[i].load_data(points=block, theta_x=cone_theta_x, 
+theta_y=cone_theta_x, sigma_max=cone_sigma_max, 
+full_in_ref_frame=self.full_in_ref_frame, r_pivot_atom=self.r_pivot_atom, 
+r_pivot_atom_rev=self.r_pivot_atom_rev, r_ln_pivot=self.r_ln_pivot, 
+A=self.A_3D, R_eigen=self.R_eigen, RT_eigen=RT_eigen, Ri_prime=self.Ri_prime, 
+pcs_theta=deepcopy(self.pcs_theta), pcs_theta_err=self.pcs_theta_err, 
+missing_pcs=self.missing_pcs)
+ 
+                 # Initialise the memo.
+                 memo = Memo_pcs_pseudo_ellipse_qrint(data)
+ 
+                 # Queue the block.
+-                self.processor.add_to_queue(command, memo)
++                self.processor.add_to_queue(self.slaves[i], memo)
++
++                # Increment the slave count.
++                i += 1
+ 
+             # Wait for completion.
+             self.processor.run_queue()
+
+Modified: branches/frame_order_testing/maths_fns/frame_order_matrix_ops.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_testing/maths_fns/frame_order_matrix_ops.py?rev=15449&amp;r1=15448&amp;r2=15449&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_testing/maths_fns/frame_order_matrix_ops.py?rev=15449&amp;r1=15448&amp;r2=15449&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_testing/maths_fns/frame_order_matrix_ops.py 
+(original)
++++ branches/frame_order_testing/maths_fns/frame_order_matrix_ops.py Wed Mar  
+7 11:34:59 2012
+@@ -2447,7 +2447,7 @@
+ class Slave_command_pcs_pseudo_ellipse_qrint(Slave_command):
+     &quot;&quot;&quot;The slave command for the quasi-random pseudo-ellipse PCS numerical 
+integration.&quot;&quot;&quot;
+ 
+-    def __init__(self, points=None, theta_x=None, theta_y=None, 
+sigma_max=None, full_in_ref_frame=None, r_pivot_atom=None, 
+r_pivot_atom_rev=None, r_ln_pivot=None, A=None, R_eigen=None, RT_eigen=None, 
+Ri_prime=None, pcs_theta=None, pcs_theta_err=None, missing_pcs=None):
++    def load_data(self, points=None, theta_x=None, theta_y=None, 
+sigma_max=None, full_in_ref_frame=None, r_pivot_atom=None, 
+r_pivot_atom_rev=None, r_ln_pivot=None, A=None, R_eigen=None, RT_eigen=None, 
+Ri_prime=None, pcs_theta=None, pcs_theta_err=None, missing_pcs=None):
+         &quot;&quot;&quot;Set up the slave command, storing the integration points.
+ 
+         @keyword points:            The subdivision of points to process on 
+the slave processor.
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Mar 07 11:40:02 2012</div>  
+</body>
+</html>

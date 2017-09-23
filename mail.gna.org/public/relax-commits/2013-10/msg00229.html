@@ -1,0 +1,233 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r21235 &#45; in /branches/relax_disp: specific_analyses/relax_disp/	target_functions/ user_functions/ -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 25 Oct 2013 18:56:21 +0200 -->
+<!--X-Message-Id: E1VZkgP&#45;0003w1&#45;6l@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r21235 - in /branches/relax_disp: specific_analyses/relax_disp/	target_functions/ user_functions/ -- October 25, 2013 - 18:56</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r21235 - in /branches/relax_disp: specific_analyses/relax_disp/	target_functions/ user_functions/</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00229" class="tabs">Index by Date</a> | <a href="threads.html#00229" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00228.html">Date Prev</a>] [<a href="msg00230.html">Date Next</a>] [<a href="msg00228.html">Thread Prev</a>] [<a href="msg00230.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 25 Oct 2013 16:56:21 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00229.html">E1VZkgP-0003w1-6l@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on October 25, 2013 - 18:56:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Oct 25 18:56:20 2013
+New Revision: 21235
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=21235&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=21235&amp;view=rev</a>
+Log:
+Completed the support for ZQ and DQ CPMG experiment types in relax.
+
+This is needed for the 'MQ NS CPMG 2-site' model change to 'MMQ 2-site' and 
+follows from the post at
+<a  rel="nofollow" href="http://article.gmane.org/gmane.science.nmr.relax.devel/4734">http://article.gmane.org/gmane.science.nmr.relax.devel/4734</a>.
+
+This follows the tutorial for adding relaxation dispersion models at:
+<a  rel="nofollow" href="http://wiki.nmr-relax.com/Tutorial_for_adding_relaxation_dispersion_models_to_relax#Creating_a_new_experiment_type">http://wiki.nmr-relax.com/Tutorial_for_adding_relaxation_dispersion_models_to_relax#Creating_a_new_experiment_type</a>.
+
+
+Modified:
+    branches/relax_disp/specific_analyses/relax_disp/checks.py
+    branches/relax_disp/target_functions/relax_disp.py
+    branches/relax_disp/user_functions/relax_disp.py
+
+Modified: branches/relax_disp/specific_analyses/relax_disp/checks.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp/checks.py?rev=21235&amp;r1=21234&amp;r2=21235&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp/checks.py?rev=21235&amp;r1=21234&amp;r2=21235&amp;view=diff</a>
+==============================================================================
+--- branches/relax_disp/specific_analyses/relax_disp/checks.py (original)
++++ branches/relax_disp/specific_analyses/relax_disp/checks.py Fri Oct 25 
+18:56:20 2013
+@@ -29,7 +29,7 @@
+ from dep_check import C_module_exp_fn
+ from lib.errors import RelaxError, RelaxFuncSetupError, 
+RelaxNoPeakIntensityError
+ import specific_analyses
+-from specific_analyses.relax_disp.variables import EXP_TYPE_CPMG, 
+EXP_TYPE_MQ_CPMG, EXP_TYPE_MQ_R1RHO, EXP_TYPE_R1RHO
++from specific_analyses.relax_disp.variables import EXP_TYPE_LIST_CPMG, 
+EXP_TYPE_LIST_R1RHO
+ 
+ 
+ def check_c_modules():
+@@ -60,12 +60,12 @@
+     # Check each spectrum ID.
+     for id in cdp.spectrum_ids:
+         # CPMG data.
+-        if cdp.exp_type[id] in [EXP_TYPE_CPMG, EXP_TYPE_MQ_CPMG]:
++        if cdp.exp_type[id] in EXP_TYPE_LIST_CPMG:
+             if id not in cdp.cpmg_frqs:
+                 raise RelaxError(&quot;The nu_CPMG frequency has not been set for 
+the '%s' spectrum.&quot; % id)
+ 
+         # R1rho data.
+-        elif cdp.exp_type[id] in [EXP_TYPE_R1RHO, EXP_TYPE_MQ_R1RHO]:
++        elif cdp.exp_type[id] in EXP_TYPE_LIST_R1RHO:
+             if id not in cdp.spin_lock_nu1:
+                 raise RelaxError(&quot;The spin-lock field strength has not been 
+set for the '%s' spectrum.&quot; % id)
+ 
+
+Modified: branches/relax_disp/target_functions/relax_disp.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/target_functions/relax_disp.py?rev=21235&amp;r1=21234&amp;r2=21235&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_disp/target_functions/relax_disp.py?rev=21235&amp;r1=21234&amp;r2=21235&amp;view=diff</a>
+==============================================================================
+--- branches/relax_disp/target_functions/relax_disp.py (original)
++++ branches/relax_disp/target_functions/relax_disp.py Fri Oct 25 18:56:20 
+2013
+@@ -442,8 +442,8 @@
+         For the single experiment type models, the first dimension of the 
+values, errors, and missing data structures will be removed to simplify the 
+target functions.
+         &quot;&quot;&quot;
+ 
+-        # The CPMG and R1rho single models.
+-        if self.model in MODEL_LIST_CPMG + MODEL_LIST_R1RHO + 
+MODEL_LIST_MQ_CPMG + MODEL_LIST_MQ_R1RHO:
++        # The non-combined data models.
++        if not self.model in [MODEL_MMQ_2SITE]:
+             # Remove the first dimension of the data structures.
+             self.values = self.values[0]
+             self.errors = self.errors[0]
+
+Modified: branches/relax_disp/user_functions/relax_disp.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/user_functions/relax_disp.py?rev=21235&amp;r1=21234&amp;r2=21235&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_disp/user_functions/relax_disp.py?rev=21235&amp;r1=21234&amp;r2=21235&amp;view=diff</a>
+==============================================================================
+--- branches/relax_disp/user_functions/relax_disp.py (original)
++++ branches/relax_disp/user_functions/relax_disp.py Fri Oct 25 18:56:20 2013
+@@ -42,7 +42,7 @@
+ from specific_analyses.relax_disp.nessy import nessy_input
+ from specific_analyses.relax_disp.parameters import copy
+ from specific_analyses.relax_disp.sherekhan import sherekhan_input
+-from specific_analyses.relax_disp.variables import EXP_TYPE_CPMG, 
+EXP_TYPE_MQ_CPMG, EXP_TYPE_MQ_R1RHO, EXP_TYPE_R1RHO, MODEL_CR72, 
+MODEL_CR72_FULL, MODEL_DPL94, MODEL_IT99, MODEL_LM63, MODEL_LM63_3SITE, 
+MODEL_M61, MODEL_M61B, MODEL_MMQ_2SITE, MODEL_MQ_CR72, MODEL_NOREX, 
+MODEL_R2EFF, MODEL_NS_CPMG_2SITE_3D, MODEL_NS_CPMG_2SITE_3D_FULL, 
+MODEL_NS_CPMG_2SITE_EXPANDED, MODEL_NS_CPMG_2SITE_STAR, 
+MODEL_NS_CPMG_2SITE_STAR_FULL, MODEL_NS_R1RHO_2SITE, MODEL_TP02, MODEL_TSMFK01
++from specific_analyses.relax_disp.variables import EXP_TYPE_CPMG, 
+EXP_TYPE_DQ_CPMG, EXP_TYPE_MQ_CPMG, EXP_TYPE_MQ_R1RHO, EXP_TYPE_R1RHO, 
+EXP_TYPE_ZQ_CPMG, MODEL_CR72, MODEL_CR72_FULL, MODEL_DPL94, MODEL_IT99, 
+MODEL_LM63, MODEL_LM63_3SITE, MODEL_M61, MODEL_M61B, MODEL_MMQ_2SITE, 
+MODEL_MQ_CR72, MODEL_NOREX, MODEL_R2EFF, MODEL_NS_CPMG_2SITE_3D, 
+MODEL_NS_CPMG_2SITE_3D_FULL, MODEL_NS_CPMG_2SITE_EXPANDED, 
+MODEL_NS_CPMG_2SITE_STAR, MODEL_NS_CPMG_2SITE_STAR_FULL, 
+MODEL_NS_R1RHO_2SITE, MODEL_TP02, MODEL_TSMFK01
+ from specific_analyses.setup import relax_disp_obj
+ from user_functions.data import Uf_info; uf_info = Uf_info()
+ from user_functions.objects import Desc_container
+@@ -310,12 +310,18 @@
+     desc = &quot;The type of relaxation dispersion experiment performed.&quot;,
+     wiz_element_type = &quot;combo&quot;,
+     wiz_combo_choices = [
+-        &quot;CPMG&quot;,
+-        r1rho
++        &quot;CPMG-type data&quot;,
++        &quot;multiple quantum (MQ) CPMG-type data&quot;,
++        &quot;zero quantum (ZQ) CPMG-type data&quot;,
++        &quot;double quantum (DQ) CPMG-type data&quot;,
++        &quot;%s-type data&quot; % r1rho
+     ],
+     wiz_combo_data = [
+-        &quot;CPMG&quot;,
+-        &quot;R1rho&quot;
++        EXP_TYPE_CPMG,
++        EXP_TYPE_MQ_CPMG,
++        EXP_TYPE_ZQ_CPMG,
++        EXP_TYPE_DQ_CPMG,
++        EXP_TYPE_R1RHO
+     ],
+     wiz_read_only = True
+ )
+@@ -324,9 +330,10 @@
+ uf.desc[-1].add_paragraph(&quot;For each peak intensity set loaded into relax, 
+the type of experiment it comes from needs to be specified.  By specifying 
+this for each spectrum ID, multiple experiment types can be analysed 
+simultaneously.  This is assuming that an appropriate dispersion model exists 
+for the experiment combination.&quot;)
+ uf.desc[-1].add_paragraph(&quot;The currently supported experiments include:&quot;)
+ uf.desc[-1].add_item_list_element(repr(EXP_TYPE_CPMG), &quot;The CPMG-type 
+experiments,&quot;)
++uf.desc[-1].add_item_list_element(repr(EXP_TYPE_MQ_CPMG), &quot;The multiple 
+quantum (MQ) CPMG-type experiments,&quot;)
++uf.desc[-1].add_item_list_element(repr(EXP_TYPE_ZQ_CPMG), &quot;The zero quantum 
+(ZQ) CPMG-type experiments,&quot;)
++uf.desc[-1].add_item_list_element(repr(EXP_TYPE_DQ_CPMG), &quot;The double 
+quantum (DQ) CPMG-type experiments,&quot;)
+ uf.desc[-1].add_item_list_element(repr(EXP_TYPE_R1RHO), &quot;The R1rho-type 
+experiments.&quot;)
+-uf.desc[-1].add_item_list_element(repr(EXP_TYPE_MQ_CPMG), &quot;The multi-quantum 
+CPMG-type experiments,&quot;)
+-uf.desc[-1].add_item_list_element(repr(EXP_TYPE_MQ_R1RHO), &quot;The 
+multi-quantum R1rho-type experiments.&quot;)
+ # Prompt examples.
+ uf.desc.append(Desc_container(&quot;Prompt examples&quot;))
+ uf.desc[-1].add_paragraph(&quot;To set the experiment type to 'CPMG' for the 
+spectrum ID 'nu_4500.0_800MHz', type one of:&quot;)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Oct 25 19:20:01 2013</div>  
+</body>
+</html>

@@ -1,0 +1,257 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r22054 &#45; in /branches/double_rotor: ./	lib/structure/internal/models.py lib/structure/internal/object.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 27 Jan 2014 22:06:35 +0100 -->
+<!--X-Message-Id: E1W7tO7&#45;0003fM&#45;LK@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r22054 - in /branches/double_rotor: ./	lib/structure/internal/models.py lib/structure/internal/object.py -- January 27, 2014 - 22:06</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r22054 - in /branches/double_rotor: ./	lib/structure/internal/models.py lib/structure/internal/object.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00101" class="tabs">Index by Date</a> | <a href="threads.html#00101" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00100.html">Date Prev</a>] [<a href="msg00102.html">Date Next</a>] [<a href="msg00100.html">Thread Prev</a>] [<a href="msg00102.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 27 Jan 2014 21:06:35 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00101.html">E1W7tO7-0003fM-LK@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on January 27, 2014 - 22:06:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Mon Jan 27 22:06:35 2014
+New Revision: 22054
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=22054&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=22054&amp;view=rev</a>
+Log:
+Merged revisions 22051-22053 via svnmerge from 
+svn+ssh://bugman@xxxxxxxxxxx/svn/relax/trunk
+
+........
+  r22051 | bugman | 2014-01-27 19:23:47 +0100 (Mon, 27 Jan 2014) | 6 lines
+  
+  More speed ups for the internal structural object when huge numbers of 
+models are present.
+  
+  Another loop over the structural_data object has been eliminated from the 
+PDB reading load_pdb()
+  method.
+........
+  r22052 | bugman | 2014-01-27 20:42:01 +0100 (Mon, 27 Jan 2014) | 6 lines
+  
+  Another optimisation for the internal structural object for large numbers 
+of models.
+  
+  The ModelList.add_item() method no longer loops over all models to check if 
+a model is already
+  present, instead using the new current_models list.
+........
+  r22053 | bugman | 2014-01-27 21:49:32 +0100 (Mon, 27 Jan 2014) | 8 lines
+  
+  Yet more optimisation for handling large quantities of models in the 
+internal structural model.
+  
+  Now when adding new models to the object, the model_indices and model_list 
+objects are no longer
+  created.  This saves much time as the large model_list is now not sorted.  
+A number of structural
+  object methods have been updated to handle the change by switching to the 
+model_loop() method for
+  looping over the models, rather than using the model_indices and model_list 
+objects.
+........
+
+Modified:
+    branches/double_rotor/   (props changed)
+    branches/double_rotor/lib/structure/internal/models.py
+    branches/double_rotor/lib/structure/internal/object.py
+
+Propchange: branches/double_rotor/
+------------------------------------------------------------------------------
+--- svnmerge-integrated (original)
++++ svnmerge-integrated Mon Jan 27 22:06:35 2014
+@@ -1,1 +1,1 @@
+-/trunk:1-22049
++/trunk:1-22053
+
+Modified: branches/double_rotor/lib/structure/internal/models.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/double_rotor/lib/structure/internal/models.py?rev=22054&amp;r1=22053&amp;r2=22054&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/double_rotor/lib/structure/internal/models.py?rev=22054&amp;r1=22053&amp;r2=22054&amp;view=diff</a>
+==============================================================================
+--- branches/double_rotor/lib/structure/internal/models.py (original)
++++ branches/double_rotor/lib/structure/internal/models.py Mon Jan 27 
+22:06:35 2014
+@@ -75,24 +75,14 @@
+         # Otherwise append an empty ModelContainer.
+         else:
+             # Test if the model number already exists.
+-            for i in range(len(self)):
+-                if self[i].num == model_num:
+-                    raise RelaxError(&quot;The model '&quot; + repr(model_num) + &quot;' 
+already exists.&quot;)
++            if model_num in self.current_models:
++                raise RelaxError(&quot;The model '&quot; + repr(model_num) + &quot;' 
+already exists.&quot;)
+ 
+             # Append an empty ModelContainer.
+             self.append(ModelContainer(model_num))
+ 
+         # Update the current model list.
+         self.current_models.append(model_num)
+-
+-        # Store the model indices.
+-        if not hasattr(self, 'model_indices'):
+-            self.model_indices = {}
+-        self.model_indices[model_num] = len(self) - 1
+-
+-        # The sorted model numbers.
+-        self.model_list = list(self.model_indices.keys())
+-        self.model_list.sort()
+ 
+ 
+     def is_empty(self):
+
+Modified: branches/double_rotor/lib/structure/internal/object.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/double_rotor/lib/structure/internal/object.py?rev=22054&amp;r1=22053&amp;r2=22054&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/double_rotor/lib/structure/internal/object.py?rev=22054&amp;r1=22053&amp;r2=22054&amp;view=diff</a>
+==============================================================================
+--- branches/double_rotor/lib/structure/internal/object.py (original)
++++ branches/double_rotor/lib/structure/internal/object.py Mon Jan 27 
+22:06:35 2014
+@@ -1261,14 +1261,9 @@
+                         pos = zeros(3, float64)
+ 
+                         # Loop over the models.
+-                        for j in range(len(self.structural_data)):
+-                            # A single model.
+-                            if model_num != None and 
+self.structural_data[j].num != model_num:
+-                                continue
+-
++                        for model in self.model_loop(model=model_num):
+                             # Alias.
+-                            model_index = 
+self.structural_data.model_indices[self.structural_data.model_list[j]]
+-                            mol2 = 
+self.structural_data[model_index].mol[mol_index]
++                            mol2 = model.mol[mol_index]
+ 
+                             # Some sanity checks.
+                             if mol2.atom_num[i] != atom_num:
+@@ -1286,14 +1281,9 @@
+                         pos = []
+ 
+                         # Loop over the models.
+-                        for j in range(len(self.structural_data)):
+-                            # A single model.
+-                            if model_num != None and 
+self.structural_data[j].num != model_num:
+-                                continue
+-
++                        for model in self.model_loop(model=model_num):
+                             # Alias.
+-                            model_index = 
+self.structural_data.model_indices[self.structural_data.model_list[j]]
+-                            mol2 = 
+self.structural_data[model_index].mol[mol_index]
++                            mol2 = model.mol[mol_index]
+ 
+                             # Append the position.
+                             pos.append([mol2.x[i], mol2.y[i], mol2.z[i]])
+@@ -1389,14 +1379,9 @@
+             # Found the atom.
+             if index != None:
+                 # Loop over the models.
+-                for j in range(len(self.structural_data)):
+-                    # A single model.
+-                    if model_num != None and self.structural_data[j].num != 
+model_num:
+-                        continue
+-
+-                    # Alias the molecule.
+-                    model_index = 
+self.structural_data.model_indices[self.structural_data.model_list[j]]
+-                    mol = self.structural_data[model_index].mol[mol_index]
++                for model in self.model_loop(model=model_num):
++                    # Alias.
++                    mol = model.mol[mol_index]
+ 
+                     # Get the atom bonded to this 
+model/molecule/residue/atom.
+                     bonded_num, bonded_name, element, pos, attached_name, 
+warnings = self._bonded_atom(attached_atom, index, mol)
+@@ -1856,9 +1841,8 @@
+                 else:
+                     # Number of structures already present for the model.
+                     num_struct = 0
+-                    for model in self.structural_data:
+-                        if not set_model_num or (model_index &lt;= 
+len(set_model_num) and set_model_num[model_index] == model.num):
+-                            num_struct = len(model.mol)
++                    if self.structural_data != None and 
+len(self.structural_data) and (not set_model_num or (model_index &lt;= 
+len(set_model_num) and set_model_num[model_index] == 
+self.structural_data[0].num)):
++                        num_struct = len(self.structural_data[0].mol)
+ 
+                     # Set the name to the file name plus the structure 
+number.
+                     new_mol_name.append(file_root(file) + '_mol' + 
+repr(mol_num+num_struct))
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Jan 28 11:40:01 2014</div>  
+</body>
+</html>

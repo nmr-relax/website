@@ -1,0 +1,213 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r14843 &#45; /1.3/maths_fns/n_state_model.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 12 Oct 2011 16:47:54 +0200 -->
+<!--X-Message-Id: E1RE066&#45;0004Q6&#45;0a@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r14843 - /1.3/maths_fns/n_state_model.py -- October 12, 2011 - 16:47</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r14843 - /1.3/maths_fns/n_state_model.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00075" class="tabs">Index by Date</a> | <a href="threads.html#00075" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00074.html">Date Prev</a>] [<a href="msg00076.html">Date Next</a>] [<a href="msg00074.html">Thread Prev</a>] [<a href="msg00076.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 12 Oct 2011 14:47:53 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00075.html">E1RE066-0004Q6-0a@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on October 12, 2011 - 16:47:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Oct 12 16:47:53 2011
+New Revision: 14843
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=14843&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=14843&amp;view=rev</a>
+Log:
+Fixes for the population N-state model for when subsets of alignment tensors 
+are fixed.
+
+This is in the function, gradient, and Hessian code.
+
+
+Modified:
+    1.3/maths_fns/n_state_model.py
+
+Modified: 1.3/maths_fns/n_state_model.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/maths_fns/n_state_model.py?rev=14843&amp;r1=14842&amp;r2=14843&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/maths_fns/n_state_model.py?rev=14843&amp;r1=14842&amp;r2=14843&amp;view=diff</a>
+==============================================================================
+--- 1.3/maths_fns/n_state_model.py (original)
++++ 1.3/maths_fns/n_state_model.py Wed Oct 12 16:47:53 2011
+@@ -626,6 +626,7 @@
+             self.paramag_info()
+ 
+         # Loop over each alignment.
++        index = 0
+         for i in xrange(self.num_align):
+             # Create tensor i from the parameters.
+             if self.fixed_tensors[i]:
+@@ -645,6 +646,10 @@
+                     if not self.missing_deltaij[i, j]:
+                         self.deltaij_theta[i, j] = 
+ave_pcs_tensor(self.pcs_const[i, j], self.paramag_unit_vect[j], self.N, 
+self.A[i], weights=self.probs)
+ 
++            # Skip the rest if the tensor is fixed.
++            if self.fixed_tensors[i]:
++                continue
++
+             # Calculate and sum the single alignment chi-squared value (for 
+the RDC).
+             if self.rdc_flag:
+                 chi2_sum = chi2_sum + chi2(self.Dij[i], self.Dij_theta[i], 
+self.rdc_sigma_ij[i])
+@@ -652,6 +657,9 @@
+             # Calculate and sum the single alignment chi-squared value (for 
+the PCS).
+             if self.pcs_flag:
+                 chi2_sum = chi2_sum + chi2(self.deltaij[i], 
+self.deltaij_theta[i], self.pcs_sigma_ij[i])
++
++            # Increment the index.
++            index += 1
+ 
+         # Return the chi-squared value.
+         return chi2_sum
+@@ -1041,7 +1049,12 @@
+         self.dchi2 = self.dchi2 * 0.0
+ 
+         # Loop over each alignment.
++        index = 0
+         for i in xrange(self.num_align):
++            # Fixed tensor, so skip.
++            if self.fixed_tensors[i]:
++                continue
++
+             # Construct the Amn partial derivative components.
+             for j in xrange(self.num_spins):
+                 # RDC.
+@@ -1085,6 +1098,9 @@
+                 if self.pcs_flag:
+                     self.dchi2[k] = self.dchi2[k] + 
+dchi2_element(self.deltaij[i], self.deltaij_theta[i], self.ddeltaij_theta[k, 
+i], self.pcs_sigma_ij[i])
+ 
++            # Increment the index.
++            index += 0
++
+         # Diagonal scaling.
+         if self.scaling_flag:
+             self.dchi2 = dot(self.dchi2, self.scaling_matrix)
+@@ -1425,7 +1441,12 @@
+         self.d2chi2 = self.d2chi2 * 0.0
+ 
+         # Loop over each alignment.
++        index = 0
+         for i in xrange(self.num_align):
++            # Fixed tensor, so skip.
++            if self.fixed_tensors[i]:
++                continue
++
+             # Construct the pc-Amn second partial derivative Hessian 
+components.
+             for c in xrange(self.N - 1):
+                 # Index in the parameter array.
+@@ -1449,6 +1470,9 @@
+                         self.d2deltaij_theta[pc_index, i*5+3, i, j] = 
+self.d2deltaij_theta[i*5+3, pc_index, i, j] = pcs_tensor(self.pcs_const[i, j, 
+c], self.paramag_unit_vect[j, c], self.dA[3])
+                         self.d2deltaij_theta[pc_index, i*5+4, i, j] = 
+self.d2deltaij_theta[i*5+4, pc_index, i, j] = pcs_tensor(self.pcs_const[i, j, 
+c], self.paramag_unit_vect[j, c], self.dA[4])
+ 
++            # Increment the index.
++            index += 0
++
+         # Loop over each alignment.
+         for i in xrange(self.num_align):
+             # Construct the chi-squared Hessian element for parameters j and 
+k, alignment i.
+@@ -1568,7 +1592,12 @@
+         self.d2chi2 = self.d2chi2 * 0.0
+ 
+         # Loop over each alignment.
++        index = 0
+         for i in xrange(self.num_align):
++            # Fixed tensor, so skip.
++            if self.fixed_tensors[i]:
++                continue
++
+             # Construct the chi-squared Hessian element for parameters j and 
+k, alignment i.
+             for j in xrange(self.total_num_params):
+                 for k in xrange(self.total_num_params):
+@@ -1580,6 +1609,9 @@
+                     if self.pcs_flag:
+                         self.d2chi2[j, k] = self.d2chi2[j, k] + 
+d2chi2_element(self.deltaij[i], self.deltaij_theta[i], self.ddeltaij_theta[j, 
+i], self.ddeltaij_theta[k, i], self.zero_hessian, self.pcs_sigma_ij[i])
+ 
++            # Increment the index.
++            index += 0
++
+         # Diagonal scaling.
+         if self.scaling_flag:
+             self.d2chi2 = dot(self.d2chi2, self.scaling_matrix)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Oct 12 17:00:01 2011</div>  
+</body>
+</html>

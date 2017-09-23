@@ -1,0 +1,478 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r27645 &#45; in /branches/frame_order_cleanup: lib/frame_order/ specific_analyses/frame_order/ user_functions/ -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 16 Feb 2015 09:58:09 +0100 -->
+<!--X-Message-Id: E1YNHVJ&#45;0006bU&#45;3o@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r27645 - in /branches/frame_order_cleanup: lib/frame_order/ specific_analyses/frame_order/ user_functions/ -- February 16, 2015 - 09:58</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r27645 - in /branches/frame_order_cleanup: lib/frame_order/ specific_analyses/frame_order/ user_functions/</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00210" class="tabs">Index by Date</a> | <a href="threads.html#00210" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00209.html">Date Prev</a>] [<a href="msg00211.html">Date Next</a>] [<a href="msg00209.html">Thread Prev</a>] [<a href="msg00211.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 16 Feb 2015 08:58:09 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00210.html">E1YNHVJ-0006bU-3o@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on February 16, 2015 - 09:58:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Mon Feb 16 09:58:08 2015
+New Revision: 27645
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=27645&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=27645&amp;view=rev</a>
+Log:
+Implemented the back-end of the frame_order.distribute user function.
+
+This follows the design of the pseudo-Brownian simulation 
+frame_order.simulate user function.  The
+specific_analyses.frame_order.uf.distribute() function has been created as a 
+modified copy of the
+simulate() function of the same module.  This simply performs checks and 
+assembles the data, passing
+into the new lib.frame_order.simulate.uniform_distribution() function, which 
+itself is a modified
+copy of the brownian() function in the same module.
+
+
+Modified:
+    branches/frame_order_cleanup/lib/frame_order/simulation.py
+    branches/frame_order_cleanup/specific_analyses/frame_order/uf.py
+    branches/frame_order_cleanup/user_functions/frame_order.py
+
+Modified: branches/frame_order_cleanup/lib/frame_order/simulation.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/frame_order/simulation.py?rev=27645&amp;r1=27644&amp;r2=27645&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/frame_order/simulation.py?rev=27645&amp;r1=27644&amp;r2=27645&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/lib/frame_order/simulation.py  (original)
++++ branches/frame_order_cleanup/lib/frame_order/simulation.py  Mon Feb 16 
+09:58:08 2015
+@@ -1,6 +1,6 @@
+ 
+###############################################################################
+ #                                                                            
+ #
+-# Copyright (C) 2014 Edward d'Auvergne                                       
+ #
++# Copyright (C) 2014-2015 Edward d'Auvergne                                  
+ #
+ #                                                                            
+ #
+ # This file is part of the program relax (<a  rel="nofollow" href="http://www.nmr-relax.com">http://www.nmr-relax.com</a>).         
+ #
+ #                                                                            
+ #
+@@ -31,7 +31,7 @@
+ from lib.errors import RelaxError
+ from lib.frame_order.variables import MODEL_DOUBLE_ROTOR
+ from lib.geometry.angles import wrap_angles
+-from lib.geometry.rotations import axis_angle_to_R, R_to_tilt_torsion, 
+tilt_torsion_to_R
++from lib.geometry.rotations import axis_angle_to_R, R_random_hypersphere, 
+R_to_tilt_torsion, tilt_torsion_to_R
+ from lib.geometry.vectors import random_unit_vector
+ 
+ 
+@@ -209,3 +209,165 @@
+ 
+     # Save the result.
+     structure.write_pdb(file=file)
++
++
++def uniform_distribution(file=None, model=None, structure=None, 
+parameters={}, eigenframe=None, pivot=None, atom_id=None, total=1000):
++    &quot;&quot;&quot;Uniform distribution of the frame order motions.
++
++    @keyword file:          The opened and writable file object to place the 
+PDB models of the distribution into.
++    @type file:             str
++    @keyword structure:     The internal structural object containing the 
+domain to distribute as a single model.
++    @type structure:        lib.structure.internal.object.Internal instance
++    @keyword model:         The frame order model to distribute.
++    @type model:            str
++    @keyword parameters:    The dictionary of model parameter values.  The 
+key is the parameter name and the value is the value.
++    @type parameters:       dict of float
++    @keyword eigenframe:    The full 3D eigenframe of the frame order 
+motions.
++    @type eigenframe:       numpy rank-2, 3D float64 array
++    @keyword pivot:         The list of pivot points of the frame order 
+motions.
++    @type pivot:            numpy rank-2 (N, 3) float64 array
++    @keyword atom_id:       The atom ID string for the atoms in the 
+structure to rotate - i.e. the moving domain.
++    @type atom_id:          None or str
++    @keyword total:         The total number of states in the distribution.
++    @type total:            int
++    &quot;&quot;&quot;
++
++    # Check the structural object.
++    if structure.num_models() &gt; 1:
++        raise RelaxError(&quot;Only a single model is supported.&quot;)
++
++    # Set the model number.
++    structure.set_model(model_orig=None, model_new=1)
++
++    # Generate the internal structural selection object.
++    selection = structure.selection(atom_id)
++
++    # The initial states and motional limits.
++    num_states = len(pivot)
++    states = zeros((num_states, 3, 3), float64)
++    theta_max = []
++    sigma_max = []
++    for i in range(num_states):
++        states[i] = eye(3)
++        theta_max.append(None)
++        sigma_max.append(None)
++
++    # Initialise the rotation matrix data structures.
++    R = eye(3, dtype=float64)
++
++    # Axis permutations.
++    perm = [None]
++    if model == MODEL_DOUBLE_ROTOR:
++        perm = [[2, 0, 1], [1, 2, 0]]
++        perm_rev = [[1, 2, 0], [2, 0, 1]]
++
++    # The maximum cone opening angles (isotropic cones).
++    if 'cone_theta' in parameters:
++        theta_max[0] = parameters['cone_theta']
++
++    # The maximum cone opening angles (isotropic cones).
++    theta_x = None
++    theta_y = None
++    if 'cone_theta_x' in parameters:
++        theta_x = parameters['cone_theta_x']
++        theta_y = parameters['cone_theta_y']
++
++    # The maximum torsion angle.
++    if 'cone_sigma_max' in parameters:
++        sigma_max[0] = parameters['cone_sigma_max']
++    elif 'free rotor' in model:
++        sigma_max[0] = pi
++
++    # The second torsion angle.
++    if 'cone_sigma_max_2' in parameters:
++        sigma_max[1] = parameters['cone_sigma_max_2']
++
++    # Printout.
++    print(&quot;\nGenerating the distribution:&quot;)
++
++    # Distribution.
++    current_state = 1
++    while True:
++        # End.
++        if current_state == total:
++            break
++
++        # Loop over each state, or motional mode.
++        inside = True
++        for i in range(num_states):
++            # The random rotation matrix.
++            R_random_hypersphere(R)
++
++            # Shift the current state.
++            states[i] = dot(R, states[i])
++
++            # Rotation in the eigenframe.
++            R_eigen = dot(transpose(eigenframe), dot(states[i], eigenframe))
++
++            # Axis permutation to shift each rotation axis to Z.
++            if perm[i] != None:
++                for j in range(3):
++                    R_eigen[:, j] = R_eigen[perm[i], j]
++                for j in range(3):
++                    R_eigen[j, :] = R_eigen[j, perm[i]]
++
++            # The angles.
++            phi, theta, sigma = R_to_tilt_torsion(R_eigen)
++            sigma = wrap_angles(sigma, -pi, pi)
++
++            # Determine theta_max for the pseudo-ellipse models.
++            if theta_x != None:
++                theta_max[i] = 1.0 / sqrt((cos(phi) / theta_x)**2 + 
+(sin(phi) / theta_y)**2)
++
++            # The cone opening angle is outside of the limit.
++            if theta_max[i] != None:
++                if theta &gt; theta_max[i]:
++                    inside = False
++
++            # No tilt component.
++            else:
++                theta = 0.0
++                phi = 0.0
++
++            # The torsion angle is outside of the limits.
++            if sigma_max[i] != None:
++                if sigma &gt; sigma_max[i]:
++                    inside = False
++                elif sigma &lt; -sigma_max[i]:
++                    inside = False
++            else:
++                sigma = 0.0
++
++            # Reconstruct the rotation matrix, in the eigenframe, without 
+sigma.
++            tilt_torsion_to_R(phi, theta, sigma, R_eigen)
++
++            # Reverse axis permutation to shift each rotation z-axis back.
++            if perm[i] != None:
++                for j in range(3):
++                    R_eigen[:, j] = R_eigen[perm_rev[i], j]
++                for j in range(3):
++                    R_eigen[j, :] = R_eigen[j, perm_rev[i]]
++
++            # Rotate back out of the eigenframe.
++            states[i] = dot(eigenframe, dot(R_eigen, transpose(eigenframe)))
++
++        # The state is outside of the distribution.
++        if not inside:
++            continue
++
++        # Progress.
++        sys.stdout.write('.')
++        sys.stdout.flush()
++
++        # Increment the snapshot number.
++        current_state += 1
++
++        # Copy the original structural data.
++        structure.add_model(model=current_state, coords_from=1)
++
++        # Rotate the model.
++        for i in range(num_states):
++            structure.rotate(R=states[i], origin=pivot[i], 
+model=current_state, selection=selection)
++
++    # Save the result.
++    structure.write_pdb(file=file)
+
+Modified: branches/frame_order_cleanup/specific_analyses/frame_order/uf.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/specific_analyses/frame_order/uf.py?rev=27645&amp;r1=27644&amp;r2=27645&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/specific_analyses/frame_order/uf.py?rev=27645&amp;r1=27644&amp;r2=27645&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/specific_analyses/frame_order/uf.py    
+(original)
++++ branches/frame_order_cleanup/specific_analyses/frame_order/uf.py    Mon 
+Feb 16 09:58:08 2015
+@@ -1,6 +1,6 @@
+ 
+###############################################################################
+ #                                                                            
+ #
+-# Copyright (C) 2009-2014 Edward d'Auvergne                                  
+ #
++# Copyright (C) 2009-2015 Edward d'Auvergne                                  
+ #
+ #                                                                            
+ #
+ # This file is part of the program relax (<a  rel="nofollow" href="http://www.nmr-relax.com">http://www.nmr-relax.com</a>).         
+ #
+ #                                                                            
+ #
+@@ -33,7 +33,7 @@
+ from lib.arg_check import is_float_array
+ from lib.check_types import is_float
+ from lib.errors import RelaxError, RelaxFault
+-from lib.frame_order.simulation import brownian
++from lib.frame_order.simulation import brownian, uniform_distribution
+ from lib.frame_order.variables import MODEL_DOUBLE_ROTOR, MODEL_ISO_CONE, 
+MODEL_ISO_CONE_FREE_ROTOR, MODEL_ISO_CONE_TORSIONLESS, MODEL_LIST, 
+MODEL_LIST_FREE_ROTORS, MODEL_LIST_ISO_CONE, MODEL_LIST_PSEUDO_ELLIPSE, 
+MODEL_LIST_RESTRICTED_TORSION, MODEL_PSEUDO_ELLIPSE, 
+MODEL_PSEUDO_ELLIPSE_TORSIONLESS, MODEL_RIGID
+ from lib.geometry.coord_transform import cartesian_to_spherical, 
+spherical_to_cartesian
+ from lib.geometry.rotations import euler_to_R_zyz, R_to_euler_zyz
+@@ -45,6 +45,73 @@
+ from specific_analyses.frame_order.geometric import average_position, 
+create_ave_pos, create_geometric_rep, generate_axis_system
+ from specific_analyses.frame_order.optimisation import count_sobol_points
+ from specific_analyses.frame_order.parameters import assemble_param_vector, 
+update_model
++
++
++def distribute(file=&quot;distribution.pdb.bz2&quot;, dir=None, total=1000, model=1, 
+force=True):
++    &quot;&quot;&quot;Create a uniform distribution of structures for the frame order 
+motions.
++
++    @keyword file:      The PDB file for storing the frame order motional 
+distribution.  The compression is determined automatically by the file 
+extensions '*.pdb', '*.pdb.gz', and '*.pdb.bz2'.
++    @type file:         str
++    @keyword dir:       The directory name to place the file into.
++    @type dir:          str or None
++    @keyword total:     The total number of states/model/structures in the 
+distribution.
++    @type total:        int
++    @keyword model:     Only one model from an analysed ensemble of 
+structures can be used for the distribution, as the corresponding PDB file 
+consists of one model per state.
++    @type model:        int
++    @keyword force:     A flag which, if set to True, will overwrite the any 
+pre-existing file.
++    @type force:        bool
++    &quot;&quot;&quot;
++
++    # Printout.
++    print(&quot;Uniform distribution of structures representing the frame order 
+motions.&quot;)
++
++    # Checks.
++    check_pipe()
++    check_model()
++    check_domain()
++    check_parameters()
++    check_pivot()
++
++    # Skip the rigid model.
++    if cdp.model == MODEL_RIGID:
++        print(&quot;Skipping the rigid model.&quot;)
++        return
++
++    # Open the output file.
++    file = open_write_file(file_name=file, dir=dir, force=force)
++
++    # The parameter values.
++    values = assemble_param_vector()
++    params = {}
++    i = 0
++    for name in cdp.params:
++        params[name] = values[i]
++        i += 1
++
++    # The structure.
++    structure = deepcopy(cdp.structure)
++    if structure.num_models() &gt; 1:
++        structure.collapse_ensemble(model_num=model)
++
++    # The pivot points.
++    num_states = 1
++    if cdp.model == MODEL_DOUBLE_ROTOR:
++        num_states = 2
++    pivot = zeros((num_states, 3), float64)
++    for i in range(num_states):
++        pivot[i] = generate_pivot(order=i+1, pdb_limit=True)
++
++    # Shift to the average position.
++    average_position(structure=structure, models=[None])
++
++    # The motional eigenframe.
++    frame = generate_axis_system()
++
++    # Create the distribution.
++    uniform_distribution(file=file, model=cdp.model, structure=structure, 
+parameters=params, eigenframe=frame, pivot=pivot, atom_id=domain_moving(), 
+total=total)
++
++    # Close the file.
++    file.close()
+ 
+ 
+ def pdb_model(ave_pos=&quot;ave_pos&quot;, rep=&quot;frame_order&quot;, dir=None, 
+compress_type=0, size=30.0, inc=36, model=1, force=False):
+
+Modified: branches/frame_order_cleanup/user_functions/frame_order.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/user_functions/frame_order.py?rev=27645&amp;r1=27644&amp;r2=27645&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/user_functions/frame_order.py?rev=27645&amp;r1=27644&amp;r2=27645&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/user_functions/frame_order.py  (original)
++++ branches/frame_order_cleanup/user_functions/frame_order.py  Mon Feb 16 
+09:58:08 2015
+@@ -34,7 +34,7 @@
+ from graphics import WIZARD_IMAGE_PATH
+ from lib.frame_order.variables import MODEL_DOUBLE_ROTOR, MODEL_FREE_ROTOR, 
+MODEL_ISO_CONE, MODEL_ISO_CONE_FREE_ROTOR, MODEL_ISO_CONE_TORSIONLESS, 
+MODEL_PSEUDO_ELLIPSE, MODEL_PSEUDO_ELLIPSE_FREE_ROTOR, 
+MODEL_PSEUDO_ELLIPSE_TORSIONLESS, MODEL_RIGID, MODEL_ROTOR
+ from specific_analyses.frame_order.optimisation import count_sobol_points
+-from specific_analyses.frame_order.uf import sobol_setup, pdb_model, 
+permute_axes, pivot, quad_int, ref_domain, select_model, simulate
++from specific_analyses.frame_order.uf import distribute, sobol_setup, 
+pdb_model, permute_axes, pivot, quad_int, ref_domain, select_model, simulate
+ from user_functions.data import Uf_info; uf_info = Uf_info()
+ from user_functions.data import Uf_tables; uf_tables = Uf_tables()
+ from user_functions.objects import Desc_container
+@@ -116,7 +116,7 @@
+ uf.desc[-1].add_paragraph(&quot;To visualise the frame order motions, this user 
+function generates a distribution of structures randomly within the bounds of 
+the uniform distribution of the frame order model.  The original structure is 
+rotated randomly and only accepted for the distribution if it is within the 
+bounds.  This is a more faithful representation of the dynamics than the 
+pseudo-Brownian simulation user function.&quot;)
+ uf.desc[-1].add_paragraph(&quot;Note that the RDC and PCS data does not contain 
+information about all parts of the real distribution of structures.  
+Therefore the structures in this distribution only represent the components 
+of the distribution present in the data, as modelled by the frame order 
+models.&quot;)
+ uf.desc[-1].add_paragraph(&quot;As the distribution consists of one model per 
+state, if an ensemble of structures has been analysed, only one model from 
+the ensemble can be used for the representation.&quot;)
+-uf.backend = simulate
++uf.backend = distribute
+ uf.menu_text = &quot;&amp;distribute&quot;
+ uf.gui_icon = &quot;oxygen.actions.document-save&quot;
+ uf.wizard_height_desc = 420
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Feb 16 10:20:03 2015</div>  
+</body>
+</html>

@@ -1,0 +1,139 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r25215 &#45; /trunk/specific_analyses/relax_disp/optimisation.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 22 Aug 2014 14:48:18 +0200 -->
+<!--X-Message-Id: E1XKoGQ&#45;00006E&#45;GN@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r25215 - /trunk/specific_analyses/relax_disp/optimisation.py -- August 22, 2014 - 14:48</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r25215 - /trunk/specific_analyses/relax_disp/optimisation.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00349" class="tabs">Index by Date</a> | <a href="threads.html#00349" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00348.html">Date Prev</a>] [<a href="msg00350.html">Date Next</a>] [<a href="msg00348.html">Thread Prev</a>] [<a href="msg00350.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 22 Aug 2014 12:48:18 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00349.html">E1XKoGQ-00006E-GN@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on August 22, 2014 - 14:48:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Fri Aug 22 14:48:18 2014
+New Revision: 25215
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=25215&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=25215&amp;view=rev</a>
+Log:
+Modified back_calc_r2eff() to accept interpolated timepoints.
+
+bug #22461(<a  rel="nofollow" href="https://gna.org/bugs/?22461">https://gna.org/bugs/?22461</a>): NS R1rho 2-site_fit_r1 has extremely 
+high chi2 value in systemtest Relax_disp.test_r1rho_kjaergaard_missing_r1.
+
+Modified:
+    trunk/specific_analyses/relax_disp/optimisation.py
+
+Modified: trunk/specific_analyses/relax_disp/optimisation.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/relax_disp/optimisation.py?rev=25215&amp;r1=25214&amp;r2=25215&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/relax_disp/optimisation.py?rev=25215&amp;r1=25214&amp;r2=25215&amp;view=diff</a>
+==============================================================================
+--- trunk/specific_analyses/relax_disp/optimisation.py  (original)
++++ trunk/specific_analyses/relax_disp/optimisation.py  Fri Aug 22 14:48:18 
+2014
+@@ -104,7 +104,7 @@
+     return results
+ 
+ 
+-def back_calc_r2eff(spin=None, spin_id=None, cpmg_frqs=None, 
+spin_lock_offset=None, spin_lock_nu1=None, store_chi2=False):
++def back_calc_r2eff(spin=None, spin_id=None, cpmg_frqs=None, 
+spin_lock_offset=None, spin_lock_nu1=None, relax_times_new=None, 
+store_chi2=False):
+     &quot;&quot;&quot;Back-calculation of R2eff/R1rho values for the given spin.
+ 
+     @keyword spin:              The specific spin data container.
+@@ -117,6 +117,8 @@
+     @type spin_lock_offset:     list of lists of numpy rank-1 float arrays
+     @keyword spin_lock_nu1:     The spin-lock field strengths to use instead 
+of the user loaded values - to enable interpolation.
+     @type spin_lock_nu1:        list of lists of numpy rank-1 float arrays
++    @keyword relax_times_new:   The interpolated experiment specific fixed 
+time period for relaxation (in seconds).  The dimensions are {Ei, Mi, Oi, Di, 
+Ti}.
++    @type relax_times_new:      rank-4 list of floats
+     @keyword store_chi2:        A flag which if True will cause the spin 
+specific chi-squared value to be stored in the spin container.
+     @type store_chi2:           bool
+     @return:                    The back-calculated R2eff/R1rho value for 
+the given spin.
+@@ -145,6 +147,10 @@
+     offsets, spin_lock_fields_inter, chemical_shifts, tilt_angles, 
+Delta_omega, w_eff = return_offset_data(spins=[spin], spin_ids=[spin_id], 
+field_count=field_count, spin_lock_offset=spin_lock_offset, 
+fields=spin_lock_nu1)
+     r1 = return_r1_data(spins=[spin], spin_ids=[spin_id], 
+field_count=field_count)
+     r1_fit = is_r1_optimised(spin.model)
++
++    # The relaxation times.
++    if relax_times_new != None:
++        relax_times = relax_times_new
+ 
+     # The dispersion data.
+     recalc_tau = True
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Aug 22 15:00:02 2014</div>  
+</body>
+</html>

@@ -1,0 +1,269 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r12706 &#45; in /branches/relax_data/data: mol_res_spin.py	pipe_container.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 02 Mar 2011 13:47:14 +0100 -->
+<!--X-Message-Id: E1PulSU&#45;0008Gz&#45;AP@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r12706 - in /branches/relax_data/data: mol_res_spin.py	pipe_container.py -- March 02, 2011 - 13:47</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r12706 - in /branches/relax_data/data: mol_res_spin.py	pipe_container.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00070" class="tabs">Index by Date</a> | <a href="threads.html#00070" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00069.html">Date Prev</a>] [<a href="msg00071.html">Date Next</a>] [<a href="msg00069.html">Thread Prev</a>] [<a href="msg00071.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 02 Mar 2011 12:47:14 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00070.html">E1PulSU-0008Gz-AP@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on March 02, 2011 - 13:47:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Mar  2 13:47:13 2011
+New Revision: 12706
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=12706&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=12706&amp;view=rev</a>
+Log:
+Added backwards compatibility for the old relaxation data structures in the 
+spin container.
+
+The methods _back_compat_hook() and _back_compat_hook_ri_data() have been 
+added to allow the base
+data structures of the spin container to be updated to the new structures.  
+The version information
+is now being passed from the data pipe from_xml() method.
+
+
+Modified:
+    branches/relax_data/data/mol_res_spin.py
+    branches/relax_data/data/pipe_container.py
+
+Modified: branches/relax_data/data/mol_res_spin.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_data/data/mol_res_spin.py?rev=12706&amp;r1=12705&amp;r2=12706&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_data/data/mol_res_spin.py?rev=12706&amp;r1=12705&amp;r2=12706&amp;view=diff</a>
+==============================================================================
+--- branches/relax_data/data/mol_res_spin.py (original)
++++ branches/relax_data/data/mol_res_spin.py Wed Mar  2 13:47:13 2011
+@@ -79,6 +79,61 @@
+         return text
+ 
+ 
++    def _back_compat_hook(self, file_version=None):
++        &quot;&quot;&quot;Method for converting old spin data structures to the new ones.
++
++        @keyword file_version:  The relax version used to create the XML 
+file.
++        @type file_version:     str
++        &quot;&quot;&quot;
++
++        # Relaxation data.
++        self._back_compat_hook_ri_data()
++
++
++    def _back_compat_hook_ri_data(self):
++        &quot;&quot;&quot;Converting the old spin relaxation data structures to the new 
+ones.&quot;&quot;&quot;
++
++        # Nothing to do.
++        if not (hasattr(cdp, 'frq_labels') and hasattr(cdp, 'noe_r1_table') 
+and hasattr(cdp, 'remap_table')):
++            return
++
++        # Initialise the new structures.
++        self.ri_data = {}
++        self.ri_data_err = {}
++
++        # Generate the new structures.
++        for i in range(cdp.num_ri):
++            # The ID.
++            ri_id = &quot;%s_%s&quot; % (cdp.ri_labels[i], 
+cdp.frq_labels[cdp.remap_table[i]])
++
++            # Not unique.
++            if ri_id in cdp.ri_ids:
++                # Loop until a unique ID is found.
++                for i in range(100):
++                    # New id.
++                    new_id = &quot;%s_%s&quot; % (ri_id, i)
++
++                    # Unique.
++                    if not new_id in cdp.ri_ids:
++                        ri_id = new_id
++                        break
++
++            # The relaxation data.
++            self.ri_data[ri_id] = self.relax_data[i]
++            self.ri_data_err[ri_id] = self.relax_error[i]
++
++        # Delete the old structures.
++        del cdp.frq
++        del cdp.frq_labels
++        del cdp.noe_r1_table
++        del cdp.num_frq
++        del cdp.num_ri
++        del cdp.ri_labels
++        del cdp.remap_table
++        del cdp.relax_data
++        del cdp.relax_error
++
++
+     def is_empty(self):
+         &quot;&quot;&quot;Method for testing if this SpinContainer object is empty.
+ 
+@@ -184,11 +239,13 @@
+         return False
+ 
+ 
+-    def from_xml(self, spin_nodes):
++    def from_xml(self, spin_nodes, file_version=None):
+         &quot;&quot;&quot;Recreate a spin list data structure from the XML spin nodes.
+ 
+-        @param spin_nodes:  The spin XML nodes.
+-        @type spin_nodes:   xml.dom.minicompat.NodeList instance
++        @param spin_nodes:      The spin XML nodes.
++        @type spin_nodes:       xml.dom.minicompat.NodeList instance
++        @keyword file_version:  The relax version used to create the XML 
+file.
++        @type file_version:     str
+         &quot;&quot;&quot;
+ 
+         # Test if empty.
+@@ -206,6 +263,9 @@
+ 
+             # Recreate the current spin container.
+             xml_to_object(spin_node, self[-1])
++
++            # Backwards compatibility transformations.
++            self[-1]._back_compat_hook(file_version)
+ 
+ 
+     def to_xml(self, doc, element):
+@@ -439,11 +499,13 @@
+         return False
+ 
+ 
+-    def from_xml(self, res_nodes):
++    def from_xml(self, res_nodes, file_version=None):
+         &quot;&quot;&quot;Recreate a residue list data structure from the XML residue nodes.
+ 
+-        @param res_nodes:   The residue XML nodes.
+-        @type res_nodes:    xml.dom.minicompat.NodeList instance
++        @param res_nodes:       The residue XML nodes.
++        @type res_nodes:        xml.dom.minicompat.NodeList instance
++        @keyword file_version:  The relax version used to create the XML 
+file.
++        @type file_version:     str
+         &quot;&quot;&quot;
+ 
+         # Test if empty.
+@@ -463,7 +525,7 @@
+             spin_nodes = res_node.getElementsByTagName('spin')
+ 
+             # Recreate the spin data structures for the current residue.
+-            self[-1].spin.from_xml(spin_nodes)
++            self[-1].spin.from_xml(spin_nodes, file_version=file_version)
+ 
+ 
+     def to_xml(self, doc, element):
+@@ -643,11 +705,13 @@
+         return False
+ 
+ 
+-    def from_xml(self, mol_nodes):
++    def from_xml(self, mol_nodes, file_version=None):
+         &quot;&quot;&quot;Recreate a molecule list data structure from the XML molecule 
+nodes.
+ 
+-        @param mol_nodes:   The molecule XML nodes.
+-        @type mol_nodes:    xml.dom.minicompat.NodeList instance
++        @param mol_nodes:       The molecule XML nodes.
++        @type mol_nodes:        xml.dom.minicompat.NodeList instance
++        @keyword file_version:  The relax version used to create the XML 
+file.
++        @type file_version:     str
+         &quot;&quot;&quot;
+ 
+         # Test if empty.
+@@ -669,7 +733,7 @@
+             res_nodes = mol_node.getElementsByTagName('res')
+ 
+             # Recreate the residue data structures for the current molecule.
+-            self[-1].res.from_xml(res_nodes)
++            self[-1].res.from_xml(res_nodes, file_version=file_version)
+ 
+ 
+     def to_xml(self, doc, element):
+
+Modified: branches/relax_data/data/pipe_container.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_data/data/pipe_container.py?rev=12706&amp;r1=12705&amp;r2=12706&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_data/data/pipe_container.py?rev=12706&amp;r1=12705&amp;r2=12706&amp;view=diff</a>
+==============================================================================
+--- branches/relax_data/data/pipe_container.py (original)
++++ branches/relax_data/data/pipe_container.py Wed Mar  2 13:47:13 2011
+@@ -218,7 +218,7 @@
+ 
+         # Recreate the molecule, residue, and spin data structure.
+         mol_nodes = pipe_node.getElementsByTagName('mol')
+-        self.mol.from_xml(mol_nodes)
++        self.mol.from_xml(mol_nodes, file_version=file_version)
+ 
+         # Get the structural object nodes and, if they exist, fill the 
+contents.
+         str_nodes = pipe_node.getElementsByTagName('structure')
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Mar 02 14:00:02 2011</div>  
+</body>
+</html>

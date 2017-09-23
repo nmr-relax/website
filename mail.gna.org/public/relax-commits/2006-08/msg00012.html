@@ -1,0 +1,350 @@
+<!-- MHonArc v2.6.10 -->
+<!--X-Subject: r2540 &#45; in /branches/warning: errors.py generic_fns/pdb.py relax -->
+<!--X-From-R13: p.n.znpenvyqNyrrqf.np.hx -->
+<!--X-Date: Thu, 17 Aug 2006 18:33:25 +0200 -->
+<!--X-Message-Id: E1GDknf&#45;00066r&#45;01@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r2540 - in /branches/warning: errors.py generic_fns/pdb.py relax -- August 17, 2006 - 18:33</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r2540 - in /branches/warning: errors.py generic_fns/pdb.py relax</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00012" class="tabs">Index by Date</a> | <a href="threads.html#00012" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00011.html">Date Prev</a>] [<a href="msg00013.html">Date Next</a>] [<a href="msg00011.html">Thread Prev</a>] [<a href="msg00013.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 17 Aug 2006 16:32:54 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00012.html">E1GDknf-00066r-01@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>c . a . macraild</strong> on August 17, 2006 - 18:33:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: macraild
+Date: Thu Aug 17 18:32:54 2006
+New Revision: 2540
+
+URL: <a  href="http://svn.gna.org/viewcvs/relax?rev=2540&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=2540&amp;view=rev</a>
+Log:
+A warning system for relax.
+
+This is based on the system started in r2532, and is discussed in 
+detail in the thread starting:
+<a  href="https://mail.gna.org/public/relax-devel/2006-08/msg00071.html">https://mail.gna.org/public/relax-devel/2006-08/msg00071.html</a>
+
+The system is based on the standard Python warnings system.
+Warnings are generated with the syntax:
+
+warn(RelaxWarning(args))
+
+where RelaxWarning can be any of the Warning classes defined in
+errors.py, and args is an arbitrary number of arguments of 
+arbitrary type which are used by the Warning class to generate a
+meaningful message string.
+
+The system also impliments a --pedantic command-line flag, which
+causes all warnings to be escalated to exceptions. All of the 
+relax warnings are subclasses of both BaseWarning and BaseError,
+so the escalated exceptions will be caught by except clauses
+based on these types.
+
+A further feature in the current implimentation is to include
+an exception-like traceback in the warning message when in
+debug mode.
+
+
+
+Modified:
+    branches/warning/errors.py
+    branches/warning/generic_fns/pdb.py
+    branches/warning/relax
+
+Modified: branches/warning/errors.py
+URL: 
+<a  href="http://svn.gna.org/viewcvs/relax/branches/warning/errors.py?rev=2540&amp;r1=2539&amp;r2=2540&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/warning/errors.py?rev=2540&amp;r1=2539&amp;r2=2540&amp;view=diff</a>
+==============================================================================
+--- branches/warning/errors.py (original)
++++ branches/warning/errors.py Thu Aug 17 18:32:54 2006
+@@ -597,4 +597,97 @@
+             self.text = &quot;The colour &quot; + `colour` + &quot; is invalid.&quot;
+             if Debug:
+                 self.save_state()
+-                                            
++
++
++# Warning objects.
++##################
++
++class RelaxWarnings:
++    def __init__(self):
++        &quot;&quot;&quot;Class for placing all the warnings below into __builtin__&quot;&quot;&quot;
++
++        # Loop over all objects in 'self'.
++        for name in dir(self):
++            # Get the object.
++            object = getattr(self, name)
++
++            # Skip over all non-warning class objects.
++            if type(object) != ClassType or not match('Relax', name):
++                continue
++
++            # Place the warnings into __builtin__
++            __builtin__.__setattr__(name, object)
++
++            # Tuple of all the warnings.
++            if hasattr(__builtin__, 'AllRelaxWarnings'):
++                __builtin__.AllRelaxWarnings = __builtin__.AllRelaxWarnings, 
+object
++            else:
++                __builtin__.AllRelaxWarnings = object,
++
++        # Format warning messages.
++        def format(message, category, filename, lineno):
++            if issubclass(category, self.BaseWarning):
++                message = &quot;RelaxWarning: %s\n\n&quot; % message
++
++            if Debug:
++                tb = &quot;&quot;
++                for frame in inspect.stack()[4:]:
++                    file = frame[1]
++                    lineNo = frame[2]
++                    func = frame[3]
++                    tb_frame = '  File &quot;%s&quot;, line %i, in %s\n' % (file, 
+lineNo, func)
++                    try:
++                        context = frame[4][frame[5]]
++                    except TypeError:
++                        pass
++                    else:
++                        tb_frame = '%s    %s\n' % (tb_frame, context.strip())
++                    tb = tb_frame + tb
++                tb = &quot;Traceback (most recent call last):\n%s&quot; % tb
++                message = tb + message
++
++            return message
++
++        warnings.formatwarning = format
++
++        # Set warning filters.
++        if Pedantic:
++            warnings.filterwarnings('error', category=self.BaseWarning)
++        else:
++            warnings.filterwarnings('always', category=self.BaseWarning)
++
++
++    # Base class for all warnings.
++    ############################
++
++    class BaseWarning(Warning, RelaxErrors.BaseError):
++        def __str__(self):
++            return self.text
++
++
++    # Standard warnings.
++    ####################
++
++    class RelaxWarning(BaseWarning):
++        def __init__(self, text):
++            self.text = text
++
++
++    # Zero length vector.
++    #####################
++
++    class RelaxZeroVectorWarning(BaseWarning):
++        def __init__(self, res):
++            self.text = &quot;The XH bond vector for residue &quot; + `res` + &quot; is of 
+zero length.&quot;
++
++    # PDB warnings.
++    ###############
++
++    class RelaxNoAtomWarning(BaseWarning):
++        def __init__(self, atom, res):
++            self.text = &quot;The atom %s could not be found for residue %i&quot; % 
+(atom, res)
++
++    class RelaxNoPDBFileWarning(BaseWarning):
++        def __init__(self, file):
++            self.text = &quot;The PDB file %s cannot be found, no structures will 
+be loaded.&quot; % file
++                                                                
+
+Modified: branches/warning/generic_fns/pdb.py
+URL: 
+<a  href="http://svn.gna.org/viewcvs/relax/branches/warning/generic_fns/pdb.py?rev=2540&amp;r1=2539&amp;r2=2540&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/warning/generic_fns/pdb.py?rev=2540&amp;r1=2539&amp;r2=2540&amp;view=diff</a>
+==============================================================================
+--- branches/warning/generic_fns/pdb.py (original)
++++ branches/warning/generic_fns/pdb.py Thu Aug 17 18:32:54 2006
+@@ -153,7 +153,7 @@
+                 raise RelaxFileError, ('PDB', self.file_path)
+             else:
+                 if self.print_flag:
+-                    print &quot;The PDB file &quot; + `self.file_path` + &quot; cannot be 
+found, no structures will be loaded.&quot;
++                    warn(RelaxNoPDBFileWarning(self.file_path))
+                 return
+ 
+ 
+@@ -239,13 +239,13 @@
+                 # Test if the proton atom exists for residue i.
+                 if not pdb_res.atoms.has_key(self.proton):
+                     if self.print_flag:
+-                        print &quot;The proton atom &quot; + `self.proton` + &quot; could 
+not be found for residue '&quot; + `self.relax.data.res[self.run][j].num` + &quot; &quot; + 
+self.relax.data.res[self.run][j].name + &quot;'.&quot;
++                        warn(RelaxNoAtomWarning(self.proton, 
+self.relax.data.res[self.run][j].num))
+                     self.relax.data.res[self.run][j].xh_vect.append(None)
+ 
+                 # Test if the heteronucleus atom exists for residue i.
+                 elif not pdb_res.atoms.has_key(self.heteronuc):
+                     if self.print_flag:
+-                        print &quot;The heteronucleus atom &quot; + `self.heteronuc` + 
+&quot; could not be found for residue '&quot; + `self.relax.data.res[self.run][j].num` 
++ &quot; &quot; + self.relax.data.res[self.run][j].name + &quot;'.&quot;
++                        warn(RelaxNoAtomWarning(self.heteronuc, 
+self.relax.data.res[self.run][j].num))
+                     self.relax.data.res[self.run][j].xh_vect.append(None)
+ 
+                 # Calculate the vector.
+
+Modified: branches/warning/relax
+URL: 
+<a  href="http://svn.gna.org/viewcvs/relax/branches/warning/relax?rev=2540&amp;r1=2539&amp;r2=2540&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/warning/relax?rev=2540&amp;r1=2539&amp;r2=2540&amp;view=diff</a>
+==============================================================================
+--- branches/warning/relax (original)
++++ branches/warning/relax Thu Aug 17 18:32:54 2006
+@@ -41,6 +41,7 @@
+ from re import match
+ from string import split, strip
+ import sys
++from warnings import warn
+ 
+ # Numeric.
+ try:
+@@ -66,7 +67,7 @@
+ # relax modules.
+ from colour import Colour
+ from data import Data
+-from errors import RelaxErrors
++from errors import RelaxErrors, RelaxWarnings
+ from io import IO
+ from generic_fns.main import Generic
+ from prompt.gpl import gpl
+@@ -92,11 +93,16 @@
+         # Get and store the PID of this process.
+         self.pid = getpid()
+ 
+-        # Set up the program internal errors.
+-        RelaxErrors(self)
++        # Set up the program internal errors and warnings.
++        #RelaxErrors()
++        #RelaxWarnings()
++        #__builtin__.warn = warn
+ 
+         # Debugging flag (default is off).
+         __builtin__.Debug = 0
++        
++        # Pedantic flag (default is off).
++        __builtin__.Pedantic = 0
+ 
+         # Set the program introduction string to nothing.
+         self.intro_string = None
+@@ -127,7 +133,12 @@
+ 
+         # Process the command line arguments and determine the relax mode.
+         mode, log_file, tee_file = self.arguments()
+-
++        
++        # Set up the program internal errors and warnings.
++        RelaxErrors()
++        RelaxWarnings()
++        __builtin__.warn = warn
++        
+         # Show the version number and exit.
+         if mode == 'version':
+             print 'relax ' + self.version
+@@ -199,6 +210,7 @@
+         parser.add_option('-l', '--log', action='store', type='string', 
+dest='log', help='log relax output to the file LOG_FILE', metavar='LOG_FILE')
+         parser.add_option('--licence', action='store_true', dest='licence', 
+default=0, help='display the licence')
+         parser.add_option('-t', '--tee', action='store', type='string', 
+dest='tee', help='tee relax output to sdtout and the file LOG_FILE', 
+metavar='LOG_FILE')
++        parser.add_option('-p', '--pedantic', action='store_true', 
+dest='pedantic', default=0, help='escalate all warnings to errors')
+         parser.add_option('--test', action='store_true', dest='test', 
+default=0, help='run relax in test mode')
+         parser.add_option('--test-suite', action='store_true', 
+dest='test_suite', default=0, help='execute the relax test suite')
+         parser.add_option('--thread', action='store_true', dest='thread', 
+default=0, help='run relax in threading mode (this mode should not be invoked 
+by a user)')
+@@ -210,6 +222,10 @@
+         # Debugging flag.
+         if options.debug:
+             __builtin__.Debug = 1
++        
++        # Pedantic flag.
++        if options.pedantic:
++            __builtin__.Pedantic = 1
+ 
+         # Logging.
+         if options.log:
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Aug 18 12:00:08 2006</div>  
+</body>
+</html>
