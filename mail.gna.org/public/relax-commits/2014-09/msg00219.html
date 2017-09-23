@@ -1,0 +1,244 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r25713 &#45; in /branches/frame_order_cleanup: specific_analyses/frame_order/uf.py user_functions/frame_order.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 09 Sep 2014 14:24:14 +0200 -->
+<!--X-Message-Id: E1XRKT0&#45;000575&#45;8M@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r25713 - in /branches/frame_order_cleanup: specific_analyses/frame_order/uf.py user_functions/frame_order.py -- September 09, 2014 - 14:24</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r25713 - in /branches/frame_order_cleanup: specific_analyses/frame_order/uf.py user_functions/frame_order.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00219" class="tabs">Index by Date</a> | <a href="threads.html#00219" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00218.html">Date Prev</a>] [<a href="msg00220.html">Date Next</a>] [<a href="msg00218.html">Thread Prev</a>] [<a href="msg00220.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 09 Sep 2014 12:24:14 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00219.html">E1XRKT0-000575-8M@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on September 09, 2014 - 14:24:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Sep  9 14:24:13 2014
+New Revision: 25713
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=25713&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=25713&amp;view=rev</a>
+Log:
+Implemented the frame_order.permute_axes user function.
+
+This is used to switch between local minima in the pseudo-elliptic frame 
+order models.
+
+
+Modified:
+    branches/frame_order_cleanup/specific_analyses/frame_order/uf.py
+    branches/frame_order_cleanup/user_functions/frame_order.py
+
+Modified: branches/frame_order_cleanup/specific_analyses/frame_order/uf.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/specific_analyses/frame_order/uf.py?rev=25713&amp;r1=25712&amp;r2=25713&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/specific_analyses/frame_order/uf.py?rev=25713&amp;r1=25712&amp;r2=25713&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/specific_analyses/frame_order/uf.py    
+(original)
++++ branches/frame_order_cleanup/specific_analyses/frame_order/uf.py    Tue 
+Sep  9 14:24:13 2014
+@@ -23,17 +23,19 @@
+ &quot;&quot;&quot;Module for all of the frame order specific user functions.&quot;&quot;&quot;
+ 
+ # Python module imports.
+-from numpy import array, float64
++from numpy import array, float64, transpose, zeros
+ from warnings import warn
+ 
+ # relax module imports.
+ from lib.arg_check import is_float_array
++from lib.check_types import is_float
+ from lib.errors import RelaxError
++from lib.geometry.rotations import euler_to_R_zyz, R_to_euler_zyz
+ from lib.warnings import RelaxWarning
+ from pipe_control import pipes
+ from specific_analyses.frame_order.geometric import create_ave_pos, 
+create_distribution, create_geometric_rep
+ from specific_analyses.frame_order.parameters import update_model
+-from specific_analyses.frame_order.variables import MODEL_LIST, MODEL_RIGID
++from specific_analyses.frame_order.variables import MODEL_LIST, 
+MODEL_PSEUDO_ELLIPSE, MODEL_PSEUDO_ELLIPSE_TORSIONLESS, MODEL_RIGID
+ 
+ 
+ def num_int_pts(num=200000):
+@@ -99,6 +101,42 @@
+         create_distribution(file=dist, dir=dir, compress_type=compress_type, 
+force=force)
+ 
+ 
++def permute_axes():
++    &quot;&quot;&quot;Permute the axes of the motional eigenframe to switch between local 
+minima.&quot;&quot;&quot;
++
++    # Check that the model is valid.
++    if cdp.model not in [MODEL_PSEUDO_ELLIPSE, 
+MODEL_PSEUDO_ELLIPSE_TORSIONLESS]:
++        raise RelaxError(&quot;The permutation of the motional eigenframe is only 
+valid for the '%s' and '%s' frame order models.&quot; % (MODEL_PSEUDO_ELLIPSE, 
+MODEL_PSEUDO_ELLIPSE_TORSIONLESS))
++
++    # Check that the model parameters are setup.
++    if not hasattr(cdp, 'cone_theta_y') or not is_float(cdp.cone_theta_y):
++        raise RelaxError(&quot;The parameter values are not set up.&quot;)
++
++    # The angles.  Note that cone_theta_x corresponds to a rotation about 
+the y-axis!
++    angles = array([cdp.cone_theta_y, cdp.cone_theta_x, cdp.cone_sigma_max], 
+float64)
++
++    # Generate the eigenframe of the motion.
++    frame = zeros((3, 3), float64)
++    euler_to_R_zyz(cdp.eigen_alpha, cdp.eigen_beta, cdp.eigen_gamma, frame)
++
++    # The permutation with the condition that cone_theta_x &lt;= cone_theta_y.
++    if angles[1] &lt;= angles[2]:
++        perm = [2, 0, 1]
++    else:
++        perm = [1, 2, 0]
++
++    # Permute the angles.
++    cdp.cone_theta_y = angles[perm[0]]
++    cdp.cone_theta_x = angles[perm[1]]
++    cdp.cone_sigma_max = angles[perm[2]]
++
++    # Permute the axes.
++    frame_new = transpose(array([frame[:, perm[0]], frame[:, perm[1]], 
+frame[:, perm[2]]], float64))
++
++    # Convert the permuted frame to Euler angles and store them.
++    cdp.eigen_alpha, cdp.eigen_beta, cdp.eigen_gamma = 
+R_to_euler_zyz(frame_new)
++
++
+ def pivot(pivot=None, order=1, fix=False):
+     &quot;&quot;&quot;Set the pivot point for the 2 body motion.
+ 
+
+Modified: branches/frame_order_cleanup/user_functions/frame_order.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/user_functions/frame_order.py?rev=25713&amp;r1=25712&amp;r2=25713&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/user_functions/frame_order.py?rev=25713&amp;r1=25712&amp;r2=25713&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/user_functions/frame_order.py  (original)
++++ branches/frame_order_cleanup/user_functions/frame_order.py  Tue Sep  9 
+14:24:13 2014
+@@ -24,7 +24,7 @@
+ 
+ # relax module imports.
+ from graphics import WIZARD_IMAGE_PATH
+-from specific_analyses.frame_order.uf import num_int_pts, pdb_model, pivot, 
+ref_domain, select_model
++from specific_analyses.frame_order.uf import num_int_pts, pdb_model, 
+permute_axes, pivot, ref_domain, select_model
+ from specific_analyses.frame_order.variables import MODEL_DOUBLE_ROTOR, 
+MODEL_FREE_ROTOR, MODEL_ISO_CONE, MODEL_ISO_CONE_FREE_ROTOR, 
+MODEL_ISO_CONE_TORSIONLESS, MODEL_PSEUDO_ELLIPSE, 
+MODEL_PSEUDO_ELLIPSE_FREE_ROTOR, MODEL_PSEUDO_ELLIPSE_TORSIONLESS, 
+MODEL_RIGID, MODEL_ROTOR
+ from user_functions.data import Uf_info; uf_info = Uf_info()
+ from user_functions.objects import Desc_container
+@@ -128,6 +128,26 @@
+ uf.gui_icon = &quot;oxygen.actions.document-save&quot;
+ uf.wizard_height_desc = 400
+ uf.wizard_size = (1000, 750)
++uf.wizard_image = WIZARD_IMAGE_PATH + 'frame_order.png'
++
++
++# The frame_order.permute_axes user function.
++uf = uf_info.add_uf('frame_order.permute_axes')
++uf.title = &quot;Permute the axes of the motional eigenframe to switch between 
+local minima.&quot;
++uf.title_short = &quot;Eigenframe axis permutation.&quot;
++# Description.
++uf.desc.append(Desc_container())
++uf.desc[-1].add_paragraph(&quot;The pseudo-elliptic frame order models consist of 
+multiple solutions as the optimisation space contains multiple local minima.  
+Because of the constraint cone_theta_x &lt;= cone_theta_y, there are exactly two 
+local minima.  These correspond to permutations of the motional system - the 
+eigenframe x, y and z-axes as well as the cone opening angles cone_theta_x, 
+cone_theta_y, and cone_sigma_max associated with these axes are 
+simultaneously permuted.  But as the mechanics of the cone angles is not 
+identical to that of the torsion angle, only one of the two local minima is 
+the global minimum.&quot;)
++uf.desc[-1].add_paragraph(&quot;When optimising the pseudo-elliptic models, 
+specifically the '%s' and '%s' model, either of the two local minima can be 
+found.  Convergence to the global minimum is not guaranteed.  Therefore this 
+user function can be used to permute the motional system to jump from one 
+local minimum to the other.  Optimisation will be required as the permuted 
+parameters will not be exactly at the minimum.&quot; % (MODEL_PSEUDO_ELLIPSE, 
+MODEL_PSEUDO_ELLIPSE_TORSIONLESS))
++uf.desc[-1].add_paragraph(&quot;The motional system consists of three 
+permutations but, because of the cone_theta_x &lt;= cone_theta_y condition, the 
+permutation which causes a violation of this constraint will be skipped.&quot;)
++# Prompt examples.
++uf.desc.append(Desc_container(&quot;Prompt examples&quot;))
++uf.desc[-1].add_paragraph(&quot;Simply type:&quot;)
++uf.desc[-1].add_prompt(&quot;relax&gt; frame_order.permute_axes()&quot;)
++uf.backend = permute_axes
++uf.menu_text = &quot;per&amp;mute_axes&quot;
++uf.wizard_height_desc = 500
++uf.wizard_size = (900, 600)
+ uf.wizard_image = WIZARD_IMAGE_PATH + 'frame_order.png'
+ 
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Sep 09 14:40:02 2014</div>  
+</body>
+</html>

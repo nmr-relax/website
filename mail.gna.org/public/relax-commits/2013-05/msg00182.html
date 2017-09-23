@@ -1,0 +1,275 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r19793 &#45; in /branches/relax_disp:	specific_analyses/relax_disp/sherekhan.py user_functions/relax_disp.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 30 May 2013 15:45:14 +0200 -->
+<!--X-Message-Id: E1Ui3AI&#45;00086M&#45;8g@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r19793 - in /branches/relax_disp:	specific_analyses/relax_disp/sherekhan.py user_functions/relax_disp.py -- May 30, 2013 - 15:45</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r19793 - in /branches/relax_disp:	specific_analyses/relax_disp/sherekhan.py user_functions/relax_disp.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00182" class="tabs">Index by Date</a> | <a href="threads.html#00182" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00181.html">Date Prev</a>] [<a href="msg00183.html">Date Next</a>] [<a href="msg00181.html">Thread Prev</a>] [<a href="msg00183.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 30 May 2013 13:45:14 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00182.html">E1Ui3AI-00086M-8g@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on May 30, 2013 - 15:45:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu May 30 15:45:13 2013
+New Revision: 19793
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=19793&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=19793&amp;view=rev</a>
+Log:
+Redesign of the relax_disp.sherekhan_input user function to handle spin 
+clustering.
+
+
+Modified:
+    branches/relax_disp/specific_analyses/relax_disp/sherekhan.py
+    branches/relax_disp/user_functions/relax_disp.py
+
+Modified: branches/relax_disp/specific_analyses/relax_disp/sherekhan.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp/sherekhan.py?rev=19793&amp;r1=19792&amp;r2=19793&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp/sherekhan.py?rev=19793&amp;r1=19792&amp;r2=19793&amp;view=diff</a>
+==============================================================================
+--- branches/relax_disp/specific_analyses/relax_disp/sherekhan.py (original)
++++ branches/relax_disp/specific_analyses/relax_disp/sherekhan.py Thu May 30 
+15:45:13 2013
+@@ -40,15 +40,13 @@
+ from lib.physical_constants import g1H, g15N
+ from pipe_control import pipes
+ from pipe_control.spectrometer import get_frequencies
+-from pipe_control.mol_res_spin import exists_mol_res_spin_data, spin_loop
+-from specific_analyses.relax_disp.disp_data import loop_frq, loop_point, 
+return_param_key_from_data
++from pipe_control.mol_res_spin import exists_mol_res_spin_data, 
+return_residue, spin_loop
++from specific_analyses.relax_disp.disp_data import loop_cluster, loop_frq, 
+loop_point, return_param_key_from_data
+ 
+ 
+-def sherekhan_input(dir=None, spin_id=None, force=False):
++def sherekhan_input(spin_id=None, force=False):
+     &quot;&quot;&quot;Create the ShereKhan input files.
+ 
+-    @keyword dir:               The optional directory to place the files 
+into.  If None, then the files will be placed into a directory named after 
+the dispersion model.
+-    @type dir:                  str or None
+     @keyword spin_id:           The spin ID string to restrict the file 
+creation to.
+     @type spin_id:              str
+     @keyword force:             A flag which if True will cause all 
+pre-existing files to be overwritten.
+@@ -74,49 +72,67 @@
+     if len(cdp.relax_time_list) != 1:
+             raise RelaxError(&quot;ShereKhan only supports the fixed time 
+relaxation dispersion experiments.&quot;)
+ 
+-    # Directory creation.
+-    if dir == None:
+-        dir = lower(cdp.model)
+-    mkdir_nofail(dir, verbosity=0)
++    # Loop over the spin blocks.
++    cluster_index = 0
++    for spins, spin_ids in loop_cluster():
++        # Loop over the magnetic fields.
++        frq_index = 0
++        for frq in loop_frq():
++            # The ShereKhan input file for the spin cluster.
++            file_name = 'sherekhan_frq%s.in' % (frq_index+1)
++            dir_name = 'cluster%s' % (cluster_index+1)
++            file = open_write_file(file_name=file_name, dir=dir_name, 
+force=force)
+ 
+-    # Loop over the magnetic fields.
+-    frq_index = 0
+-    for frq in loop_frq():
+-        # The ShereKhan input file.
+-        file = open_write_file('sherekhan_%s.py' % (frq_index+1), dir, force)
++            # The B0 field for the nuclei of interest in MHz (must be 
+positive to be accepted by the server).
++            file.write(&quot;%s\n&quot; % abs(frq / g1H * g15N / 1e6))
+ 
+-        # The B0 field for the nuclei of interest in MHz.
+-        file.write(&quot;%s\n&quot; % (frq / g1H * g15N / 1e6))
++            # The constant relaxation time for the CPMG experiment in 
+seconds.
++            file.write(&quot;%s\n&quot; % (cdp.relax_time_list[0]))
+ 
+-        # The constant relaxation time for the CPMG experiment in seconds.
+-        file.write(&quot;%s\n&quot; % (cdp.relax_time_list[0]))
++            # The comment line.
++            file.write(&quot;# %-18s %-20s %-20s\n&quot; % (&quot;nu_cpmg (Hz)&quot;, &quot;R2eff 
+(rad/s)&quot;, &quot;Error&quot;))
+ 
+-        # The comment line.#nu_cpmg(Hz) R2(1/s) Esd(R2))
+-        file.write(&quot;# %-18s %-20s %-20s\n&quot; % (&quot;nu_cpmg (Hz)&quot;, &quot;R2eff 
+(rad/s)&quot;, &quot;Error&quot;))
++            # Loop over the spins of the cluster.
++            for i in range(len(spins)):
++                # Get the residue container.
++                res = return_residue(spin_ids[i])
+ 
+-        # Generate the input files for each spin.
+-        for spin, mol_name, res_num, res_name, id in 
+spin_loop(full_info=True, selection=spin_id, return_id=True, skip_desel=True):
+-            # Name the residue if needed.
+-            if res_name == None:
+-                res_name = 'X'
++                # Name the residue if needed.
++                res_name = res.name
++                if res_name == None:
++                    res_name = 'X'
+ 
+-            # The residue ID line.
+-            file.write(&quot;# %s%s\n&quot; % (res_name, res_num))
++                # Initialise the lines to output (to be able to catch 
+missing data).
++                lines = []
+ 
+-            # Loop over the dispersion points.
+-            for point in loop_point(skip_ref=True):
+-                # The parameter key.
+-                param_key = return_param_key_from_data(frq=frq, point=point)
++                # The residue ID line.
++                lines.append(&quot;# %s%s\n&quot; % (res_name, res.num))
++
++                # Loop over the dispersion points.
++                for point in loop_point(skip_ref=True):
++                    # The parameter key.
++                    param_key = return_param_key_from_data(frq=frq, 
+point=point)
++
++                    # No data.
++                    if param_key not in spins[i].r2eff:
++                        continue
++
++                    # Store the data.
++                    lines.append(&quot;%20.15g %20.15g %20.15g\n&quot; % (point, 
+spins[i].r2eff[param_key], spins[i].r2eff_err[param_key]))
+ 
+                 # No data.
+-                if param_key not in spin.r2eff:
++                if len(lines) == 1:
+                     continue
+ 
+                 # Write out the data.
+-                file.write(&quot;%20.15g %20.15g %20.15g\n&quot; % (point, 
+spin.r2eff[param_key], spin.r2eff_err[param_key]))
++                for line in lines:
++                    file.write(line)
+ 
+-        # Close the file.
+-        file.close()
++            # Close the file.
++            file.close()
+ 
+-        # Increment the field index.
+-        frq_index += 1
++            # Increment the field index.
++            frq_index += 1
++
++        # Increment the cluster index.
++        cluster_index += 1
+
+Modified: branches/relax_disp/user_functions/relax_disp.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/user_functions/relax_disp.py?rev=19793&amp;r1=19792&amp;r2=19793&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_disp/user_functions/relax_disp.py?rev=19793&amp;r1=19792&amp;r2=19793&amp;view=diff</a>
+==============================================================================
+--- branches/relax_disp/user_functions/relax_disp.py (original)
++++ branches/relax_disp/user_functions/relax_disp.py Thu May 30 15:45:13 2013
+@@ -562,14 +562,6 @@
+ uf.title = &quot;Create the input files for Adam Mazur's ShereKhan program.&quot;
+ uf.title_short = &quot;ShereKhan input file creation.&quot;
+ uf.add_keyarg(
+-    name = &quot;dir&quot;,
+-    py_type = &quot;str&quot;,
+-    arg_type = &quot;dir sel&quot;,
+-    desc_short = &quot;directory name&quot;,
+-    desc = &quot;The directory to place the files.  If not given, this defaults 
+to the model name in lower case.&quot;,
+-    can_be_none = True
+-)
+-uf.add_keyarg(
+     name = &quot;force&quot;,
+     default = False,
+     py_type = &quot;bool&quot;,
+@@ -585,7 +577,7 @@
+ )
+ # Description.
+ uf.desc.append(Desc_container())
+-uf.desc[-1].add_paragraph(&quot;This creates the files required for the ShereKhan 
+server located at <a  rel="nofollow" href="http://sherekhan.bionmr.org/">http://sherekhan.bionmr.org/</a>.  One file per field strength 
+will be created.  These will be named 'dir/sherekhan_x.in', where x is a 
+number starting from 1 and dir is the specified directory which if not given 
+defaults to the model name in lower case.&quot;)
++uf.desc[-1].add_paragraph(&quot;This creates the files required for the ShereKhan 
+server located at <a  rel="nofollow" href="http://sherekhan.bionmr.org/">http://sherekhan.bionmr.org/</a>.  One file per spin cluster 
+per field strength will be created.  These will be placed in the directory 
+'clusterx' and named 'sherekhan_frqy.in', where x is the cluster index 
+starting from 1 and y is the magnetic field strength index starting from 1.&quot;)
+ uf.backend = sherekhan_input
+ uf.menu_text = &quot;&amp;sherekhan_input&quot;
+ uf.gui_icon = &quot;relax.sherekhan&quot;
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu May 30 16:00:02 2013</div>  
+</body>
+</html>

@@ -1,0 +1,366 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r26622 &#45; in /trunk: data_store/align_tensor.py test_suite/unit_tests/_data_store/test_align_tensor.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 19 Nov 2014 16:01:54 +0100 -->
+<!--X-Message-Id: E1Xr6lW&#45;0000N0&#45;93@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r26622 - in /trunk: data_store/align_tensor.py test_suite/unit_tests/_data_store/test_align_tensor.py -- November 19, 2014 - 16:01</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r26622 - in /trunk: data_store/align_tensor.py test_suite/unit_tests/_data_store/test_align_tensor.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00226" class="tabs">Index by Date</a> | <a href="threads.html#00226" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00225.html">Date Prev</a>] [<a href="msg00227.html">Date Next</a>] [<a href="msg00225.html">Thread Prev</a>] [<a href="msg00227.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 19 Nov 2014 15:01:54 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00226.html">E1Xr6lW-0000N0-93@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on November 19, 2014 - 16:01:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Nov 19 16:01:53 2014
+New Revision: 26622
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=26622&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=26622&amp;view=rev</a>
+Log:
+Added the irreducible tensor notation of {A-2, A-1, A0, A1, A2} to the 
+alignment tensor object.
+
+This follows from the definition of Sass et al, J. Am. Chem. Soc. 1999, 121, 
+2047-2055,
+<a  rel="nofollow" href="http://dx.doi.org/10.1021/ja983887w">http://dx.doi.org/10.1021/ja983887w</a>.
+
+The equations of (2) were converted using Gaussian elimination to obtain a 
+reduced row echelon form,
+so that the equations in terms of {A-2, A-1, A0, A1, A2} were derived.  These 
+have been coded into
+the alignment tensor object calc_Am2, calc_Am1, calc_A0, calc_A1 and calc_A2 
+methods respectively,
+and the values can be obtained by accessing the Am2, Am1, A0, A1, and A2 
+objects.
+
+To check that the implementation is correct, a unit test has been created to 
+compare the calculated
+values with those determined using Pales.
+
+
+Modified:
+    trunk/data_store/align_tensor.py
+    trunk/test_suite/unit_tests/_data_store/test_align_tensor.py
+
+Modified: trunk/data_store/align_tensor.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/data_store/align_tensor.py?rev=26622&amp;r1=26621&amp;r2=26622&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/data_store/align_tensor.py?rev=26622&amp;r1=26621&amp;r2=26622&amp;view=diff</a>
+==============================================================================
+--- trunk/data_store/align_tensor.py    (original)
++++ trunk/data_store/align_tensor.py    Wed Nov 19 16:01:53 2014
+@@ -23,9 +23,10 @@
+ &quot;&quot;&quot;The alignment tensor objects of the relax data store.&quot;&quot;&quot;
+ 
+ # Python module imports.
+-from re import search
++from math import pi, sqrt
+ from numpy import eye, float64, zeros
+ from numpy.linalg import det, eig, eigvals
++from re import search
+ 
+ # relax module imports.
+ from data_store.data_classes import Element
+@@ -33,6 +34,12 @@
+ from lib.geometry.rotations import R_to_euler_zyz
+ from lib.errors import RelaxError
+ from lib.xml import fill_object_contents, xml_to_object
++
++
++# Constants (once off calculations for speed).
++fact_A2 = sqrt(2.0*pi / 15.0)
++fact_A1 = sqrt(8.0*pi / 15.0)
++fact_A0 = sqrt(4.0*pi / 5.0)
+ 
+ 
+ def calc_A(Axx, Ayy, Azz, Axy, Axz, Ayz):
+@@ -396,6 +403,114 @@
+     return tensor_diag
+ 
+ 
++def calc_A0(Szz):
++    &quot;&quot;&quot;Function for calculating the A0 irreducible component of the Saupe 
+order matrix.
++
++    The equation for calculating the parameter is::
++
++             / 4pi \ 1/2 
++        A0 = | --- |     Szz .
++             \  5  /
++
++
++    @param Szz:     The Szz component of the Saupe order matrix.
++    @type Szz:      float
++    @return:        The A0 irreducible component of the Saupe order matrix.
++    @rtype:         float
++    &quot;&quot;&quot;
++
++    # Calculate and return the A0 value.
++    return fact_A0 * Szz
++
++
++def calc_A1(Sxz, Syz):
++    &quot;&quot;&quot;Function for calculating the A1 irreducible component of the Saupe 
+order matrix.
++
++    The equation for calculating the parameter is::
++
++             / 8pi \ 1/2 
++        A1 = | --- |     (Sxz + iSyz) .
++             \ 15  /
++
++
++    @param Sxz:     The Sxz component of the Saupe order matrix.
++    @type Sxz:      float
++    @param Syz:     The Syz component of the Saupe order matrix.
++    @type Syz:      float
++    @return:        The A1 irreducible component of the Saupe order matrix.
++    @rtype:         float
++    &quot;&quot;&quot;
++
++    # Calculate and return the A1 value.
++    return fact_A1 * (Sxz + 1.j*Syz)
++
++
++def calc_A2(Sxx, Syy, Sxy):
++    &quot;&quot;&quot;Function for calculating the A2 irreducible component of the Saupe 
+order matrix.
++
++    The equation for calculating the parameter is::
++
++             / 2pi \ 1/2 
++        A2 = | --- |     (Sxx - Syy + 2iSxy) .
++             \ 15  /
++
++
++    @param Sxx:     The Sxx component of the Saupe order matrix.
++    @type Sxx:      float
++    @param Syy:     The Syy component of the Saupe order matrix.
++    @type Syy:      float
++    @return:        The A2 irreducible component of the Saupe order matrix.
++    @rtype:         float
++    &quot;&quot;&quot;
++
++    # Calculate and return the A2 value.
++    return fact_A2 * (Sxx - Syy + 2.j*Sxy)
++
++
++def calc_Am1(Sxz, Syz):
++    &quot;&quot;&quot;Function for calculating the A-1 irreducible component of the Saupe 
+order matrix.
++
++    The equation for calculating the parameter is::
++
++                / 8pi \ 1/2 
++        A-1 = - | --- |     (Sxz - iSyz) .
++                \ 15  /
++
++
++    @param Sxz:     The Sxz component of the Saupe order matrix.
++    @type Sxz:      float
++    @param Syz:     The Syz component of the Saupe order matrix.
++    @type Syz:      float
++    @return:        The A-1 irreducible component of the Saupe order matrix.
++    @rtype:         float
++    &quot;&quot;&quot;
++
++    # Calculate and return the A-1 value.
++    return -fact_A1 * (Sxz - 1.j*Syz)
++
++
++def calc_Am2(Sxx, Syy, Sxy):
++    &quot;&quot;&quot;Function for calculating the A-2 irreducible component of the Saupe 
+order matrix.
++
++    The equation for calculating the parameter is::
++
++              / 2pi \ 1/2 
++        A-2 = | --- |     (Sxx - Syy - 2iSxy) ,
++              \ 15  /
++
++
++    @param Sxx:     The Sxx component of the Saupe order matrix.
++    @type Sxx:      float
++    @param Syy:     The Syy component of the Saupe order matrix.
++    @type Syy:      float
++    @return:        The A-2 irreducible component of the Saupe order matrix.
++    @rtype:         float
++    &quot;&quot;&quot;
++
++    # Calculate and return the A-2 value.
++    return fact_A2 * (Sxx - Syy - 2.j*Sxy)
++
++
+ def calc_Sxx(Axx):
+     &quot;&quot;&quot;Function for calculating the Axx value.
+ 
+@@ -905,6 +1020,12 @@
+     yield ('Sxxyy',         ['Axx', 'Ayy'],                                 
+['Sxx', 'Syy'])
+     yield ('Szz',           ['Axx', 'Ayy'],                                 
+['Sxx', 'Syy'])
+ 
++    yield ('Am2',           ['Axx', 'Ayy', 'Axy'],                          
+['Sxx', 'Syy', 'Sxy'])
++    yield ('Am1',           ['Axy', 'Ayz'],                                 
+['Sxz', 'Syz'])
++    yield ('A0',            ['Axx', 'Ayy'],                                 
+['Szz'])
++    yield ('A1',            ['Axy', 'Ayz'],                                 
+['Sxz', 'Syz'])
++    yield ('A2',            ['Axx', 'Ayy', 'Axy'],                          
+['Sxx', 'Syy', 'Sxy'])
++
+     # Tertiary objects (dependant on the secondary objects).
+     yield ('Aa',            ['Axx', 'Ayy', 'Axy', 'Axz', 'Ayz'],            
+['A_diag'])
+     yield ('Ar',            ['Axx', 'Ayy', 'Axy', 'Axz', 'Ayz'],            
+['A_diag'])
+
+Modified: trunk/test_suite/unit_tests/_data_store/test_align_tensor.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/test_suite/unit_tests/_data_store/test_align_tensor.py?rev=26622&amp;r1=26621&amp;r2=26622&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/test_suite/unit_tests/_data_store/test_align_tensor.py?rev=26622&amp;r1=26621&amp;r2=26622&amp;view=diff</a>
+==============================================================================
+--- trunk/test_suite/unit_tests/_data_store/test_align_tensor.py        
+(original)
++++ trunk/test_suite/unit_tests/_data_store/test_align_tensor.py        Wed 
+Nov 19 16:01:53 2014
+@@ -98,6 +98,60 @@
+ 
+         # Test the matrices.
+         self.assertEqual(self.align_data.A_sim[0].tostring(), 
+tensor.tostring())
++
++
++    def test_irreducible_params(self):
++        &quot;&quot;&quot;Test the irreducible parameters {A-2, A-1, A0, A1, A2}.
++
++        This is to test if the Pales results can be matched.  The example 
+is::
++
++            DATA SAUPE_MATRIX     S(zz)       S(xx-yy)      S(xy)      S(xz) 
+     S(yz)
++            DATA SAUPE        -1.2856e-04 -5.6870e-04 -3.1704e-04  
+3.5099e-04 -1.7937e-04
++            DATA IRREDUCIBLE_REP    A0          A1R          A1I         A2R 
+        A2I  
++            DATA IRREDUCIBLE    -2.0380e-04 -4.5433e-04 -2.3218e-04 
+-3.6807e-04  4.1038e-04
++            DATA IRREDUCIBLE GENERAL_MAGNITUDE   1.0816e-03
++        &quot;&quot;&quot;
++
++        # From Pales (S(zz)       S(xx-yy)      S(xy)      S(xz)      S(yz))
++        Azz = 2.0 / 3.0 * -1.2856e-04
++        Axxyy = 2.0 / 3.0 * -5.6870e-04
++        Axy = 2.0 / 3.0 * -3.1704e-04
++        Axz = 2.0 / 3.0 * 3.5099e-04
++        Ayz = 2.0 / 3.0 * -1.7937e-04
++
++        # Parameter conversion.
++        Axx = (Axxyy - Azz) / 2.0
++        Ayy = (-Axxyy - Azz) / 2.0
++
++        # Set the values.
++        self.align_data.set(param='Axx', value=Axx)
++        self.align_data.set(param='Ayy', value=Ayy)
++        self.align_data.set(param='Axy', value=Axy)
++        self.align_data.set(param='Axz', value=Axz)
++        self.align_data.set(param='Ayz', value=Ayz)
++
++        # Pales equivalent printout.
++        print(&quot;Pales output:\n&quot;)
++        print(&quot;DATA SAUPE_MATRIX     S(zz)       S(xx-yy)      S(xy)      
+S(xz)      S(yz)&quot;)
++        print(&quot;DATA SAUPE        -1.2856e-04 -5.6870e-04 -3.1704e-04  
+3.5099e-04 -1.7937e-04&quot;)
++        print(&quot;&quot;)
++        print(&quot;DATA IRREDUCIBLE_REP    A0          A1R          A1I         
+A2R         A2I  &quot;)
++        print(&quot;DATA IRREDUCIBLE    -2.0380e-04 -4.5433e-04 -2.3218e-04 
+-3.6807e-04  4.1038e-04&quot;)
++        print(&quot;DATA IRREDUCIBLE GENERAL_MAGNITUDE   1.0816e-03&quot;)
++        print(&quot;&quot;)
++        print(&quot;Calculated values:\n&quot;)
++        print(&quot;A0:    %15.4e&quot; % self.align_data.A0.real)
++        print(&quot;A1:    %15.4e %11.4ei&quot; % (self.align_data.A1.real, 
+self.align_data.A1.imag))
++        print(&quot;Am1:   %15.4e %11.4ei&quot; % (self.align_data.Am1.real, 
+self.align_data.Am1.imag))
++        print(&quot;A2:    %15.4e %11.4ei&quot; % (self.align_data.A2.real, 
+self.align_data.A2.imag))
++        print(&quot;Am2:   %15.4e %11.4ei&quot; % (self.align_data.Am2.real, 
+self.align_data.Am2.imag))
++
++        # Check that the values match Pales (guessing that Pales is using 
+the negative indices).
++        self.assertAlmostEqual(self.align_data.A0, -2.0380e-04)
++        self.assertAlmostEqual(self.align_data.Am1.real, -4.5433e-04)
++        self.assertAlmostEqual(self.align_data.Am1.imag, -2.3218e-04)
++        self.assertAlmostEqual(self.align_data.Am2.real, -3.6807e-04)
++        self.assertAlmostEqual(self.align_data.Am2.imag, 4.1038e-04)
+ 
+ 
+     def test_set_Szz(self):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Nov 19 16:20:03 2014</div>  
+</body>
+</html>

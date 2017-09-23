@@ -1,0 +1,385 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r22672 &#45; in /trunk: specific_analyses/frame_order/ test_suite/system_tests/scripts/frame_order/cam/ -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 10 Apr 2014 12:19:34 +0200 -->
+<!--X-Message-Id: E1WYC4z&#45;0008PA&#45;Tz@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r22672 - in /trunk: specific_analyses/frame_order/ test_suite/system_tests/scripts/frame_order/cam/ -- April 10, 2014 - 12:19</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r22672 - in /trunk: specific_analyses/frame_order/ test_suite/system_tests/scripts/frame_order/cam/</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00061" class="tabs">Index by Date</a> | <a href="threads.html#00061" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00060.html">Date Prev</a>] [<a href="msg00062.html">Date Next</a>] [<a href="msg00060.html">Thread Prev</a>] [<a href="msg00062.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 10 Apr 2014 10:19:33 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00061.html">E1WYC4z-0008PA-Tz@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on April 10, 2014 - 12:19:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Apr 10 12:19:32 2014
+New Revision: 22672
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=22672&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=22672&amp;view=rev</a>
+Log:
+The frame order pivot points are now stored differently in the current data 
+pipe.
+
+Instead of being stored as a list or array of numbers in cdp.pivot, the point 
+is now stored as
+cdp.pivot_x, cdp.pivot_y and cdp.pivot_z.  The second pivot cdp.pivot2 is now 
+stored as
+cdp.pivot_x_2, cdp.pivot_y_2 and cdp.pivot_z_2.
+
+This is to simplify the automated handling of optimisation parameters.  
+Rather than having to
+convert the pivot_x, pivot_y, and pivot_z parameters to and from a list, the 
+same mechanisms can now
+be used for all of the optimised frame order parameters.  This will be used 
+to hugely simplify many
+of the functions in the specific_analyses.frame_order.parameters module and 
+eliminate a large source
+of bugs.
+
+
+Modified:
+    trunk/specific_analyses/frame_order/api.py
+    trunk/specific_analyses/frame_order/optimisation.py
+    trunk/specific_analyses/frame_order/parameters.py
+    trunk/specific_analyses/frame_order/uf.py
+    trunk/test_suite/system_tests/scripts/frame_order/cam/base_script.py
+
+Modified: trunk/specific_analyses/frame_order/api.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/frame_order/api.py?rev=22672&amp;r1=22671&amp;r2=22672&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/frame_order/api.py?rev=22672&amp;r1=22671&amp;r2=22672&amp;view=diff</a>
+==============================================================================
+--- trunk/specific_analyses/frame_order/api.py  (original)
++++ trunk/specific_analyses/frame_order/api.py  Thu Apr 10 12:19:32 2014
+@@ -409,14 +409,14 @@
+ 
+             # The pivot point.
+             if cdp.params[i] == 'pivot_x':
+-                lower = cdp.pivot[0] - 10.0
+-                upper = cdp.pivot[0] + 10.0
++                lower = cdp.pivot_x - 10.0
++                upper = cdp.pivot_x + 10.0
+             elif cdp.params[i] == 'pivot_y':
+-                lower = cdp.pivot[1] - 10.0
+-                upper = cdp.pivot[1] + 10.0
++                lower = cdp.pivot_y - 10.0
++                upper = cdp.pivot_y + 10.0
+             elif cdp.params[i] == 'pivot_z':
+-                lower = cdp.pivot[2] - 10.0
+-                upper = cdp.pivot[2] + 10.0
++                lower = cdp.pivot_z - 10.0
++                upper = cdp.pivot_z + 10.0
+ 
+             # Average domain position translation (in a +/- 5 Angstrom box).
+             if cdp.params[i] in ['ave_pos_x', 'ave_pos_y', 'ave_pos_z']:
+@@ -493,13 +493,8 @@
+             for j in range(n):
+                 # Fixed parameter.
+                 if grid[j] == None:
+-                    # Get the current parameter value (pivot, assuming the 
+pivot point is always at the start of the parameter array).
+-                    if cdp.params[j] in ['pivot_x', 'pivot_y', 'pivot_z']:
+-                        pts[i, j] = cdp.pivot[j] / scaling_matrix[j, j]
+-
+-                    # Get the current parameter value (normal parameter).
+-                    else:
+-                        pts[i, j] = getattr(cdp, cdp.params[j]) / 
+scaling_matrix[j, j]
++                    # Get the current parameter value.
++                    pts[i, j] = getattr(cdp, cdp.params[j]) / 
+scaling_matrix[j, j]
+ 
+                 # Add the point coordinate.
+                 else:
+
+Modified: trunk/specific_analyses/frame_order/optimisation.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/frame_order/optimisation.py?rev=22672&amp;r1=22671&amp;r2=22672&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/frame_order/optimisation.py?rev=22672&amp;r1=22671&amp;r2=22672&amp;view=diff</a>
+==============================================================================
+--- trunk/specific_analyses/frame_order/optimisation.py (original)
++++ trunk/specific_analyses/frame_order/optimisation.py Thu Apr 10 12:19:32 
+2014
+@@ -667,13 +667,13 @@
+ 
+     # The fixed pivot point.
+     pivot = None
+-    if hasattr(cdp, 'pivot'):
+-        pivot = cdp.pivot
++    if hasattr(cdp, 'pivot_x'):
++        pivot = array([cdp.pivot_x, cdp.pivot_y, cdp.pivot_z])
+ 
+     # The second pivot.
+     pivot2 = None
+-    if hasattr(cdp, 'pivot2'):
+-        pivot2 = cdp.pivot2
++    if hasattr(cdp, 'pivot_x_2'):
++        pivot2 = array([cdp.pivot_x_2, cdp.pivot_y_2, cdp.pivot_z_2])
+ 
+     # Pivot optimisation.
+     pivot_opt = True
+@@ -764,7 +764,9 @@
+     # Pivot point.
+     if not pivot_fixed():
+         # Store the pivot.
+-        cdp.pivot = param_vector[:3]
++        cdp.pivot_x = param_vector[0]
++        cdp.pivot_y = param_vector[1]
++        cdp.pivot_z = param_vector[2]
+ 
+         # Then remove it from the params.
+         param_vector = param_vector[3:]
+
+Modified: trunk/specific_analyses/frame_order/parameters.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/frame_order/parameters.py?rev=22672&amp;r1=22671&amp;r2=22672&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/frame_order/parameters.py?rev=22672&amp;r1=22671&amp;r2=22672&amp;view=diff</a>
+==============================================================================
+--- trunk/specific_analyses/frame_order/parameters.py   (original)
++++ trunk/specific_analyses/frame_order/parameters.py   Thu Apr 10 12:19:32 
+2014
+@@ -59,8 +59,9 @@
+ 
+     # Pivot point.
+     if not pivot_fixed():
+-        for i in range(3):
+-            param_vect.append(cdp.pivot[i])
++        param_vect.append(cdp.pivot_x)
++        param_vect.append(cdp.pivot_y)
++        param_vect.append(cdp.pivot_z)
+ 
+     # Normal values.
+     if sim_index == None:
+
+Modified: trunk/specific_analyses/frame_order/uf.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/frame_order/uf.py?rev=22672&amp;r1=22671&amp;r2=22672&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/frame_order/uf.py?rev=22672&amp;r1=22671&amp;r2=22672&amp;view=diff</a>
+==============================================================================
+--- trunk/specific_analyses/frame_order/uf.py   (original)
++++ trunk/specific_analyses/frame_order/uf.py   Thu Apr 10 12:19:32 2014
+@@ -107,7 +107,7 @@
+     if cdp.ave_pos_pivot == 'com':
+         origin = pipe_centre_of_mass(atom_id=domain_moving(), verbosity=0)
+     else:
+-        origin = cdp.pivot
++        origin = array([cdp.pivot_x, cdp.pivot_y, cdp.pivot_z])
+     structure.rotate(R=R, origin=origin, atom_id=domain_moving())
+ 
+     # Then translate the moving domain.
+@@ -173,6 +173,9 @@
+     if neg_cone:
+         model_neg = structure.add_model(model=2)
+ 
++    # The pivot point.
++    pivot = array([cdp.pivot_x, cdp.pivot_y, cdp.pivot_z])
++
+     # The rotor object.
+     if cdp.model in ['rotor', 'free rotor', 'iso cone', 'iso cone, free 
+rotor', 'pseudo-ellipse']:
+         # The rotor angle.
+@@ -186,14 +189,14 @@
+ 
+         # Generate the rotor axis.
+         if cdp.model in ['rotor']:
+-            axis = create_rotor_axis_alpha(alpha=cdp.axis_alpha, 
+pivot=cdp.pivot, point=com)
++            axis = create_rotor_axis_alpha(alpha=cdp.axis_alpha, 
+pivot=pivot, point=com)
+         elif cdp.model in ['free rotor', 'iso cone', 'iso cone, free rotor']:
+             axis = create_rotor_axis_spherical(theta=cdp.axis_theta, 
+phi=cdp.axis_phi)
+         else:
+             axis = create_rotor_axis_euler(alpha=cdp.eigen_alpha, 
+beta=cdp.eigen_beta, gamma=cdp.eigen_gamma)
+ 
+         # Add the rotor object to the structure as a new molecule.
+-        rotor_pdb(structure=structure, rotor_angle=rotor_angle, axis=axis, 
+axis_pt=cdp.pivot, centre=com, span=2e-9, blade_length=5e-10, staggered=False)
++        rotor_pdb(structure=structure, rotor_angle=rotor_angle, axis=axis, 
+axis_pt=pivot, centre=com, span=2e-9, blade_length=5e-10, staggered=False)
+ 
+     # FIXME:  Temporary write out and exit.
+     print(&quot;\nGenerating the PDB file.&quot;)
+@@ -215,7 +218,7 @@
+     ##################
+ 
+     # Add the pivot point.
+-    structure.add_atom(mol_name=cdp.model, pdb_record='HETATM', atom_num=1, 
+atom_name='R', res_name='PIV', res_num=1, pos=cdp.pivot, element='C')
++    structure.add_atom(mol_name=cdp.model, pdb_record='HETATM', atom_num=1, 
+atom_name='R', res_name='PIV', res_num=1, pos=pivot, element='C')
+ 
+ 
+     # The axes.
+@@ -251,11 +254,11 @@
+ 
+         # Generate the axis vectors.
+         print(&quot;\nGenerating the axis vectors.&quot;)
+-        res_num = geometric.generate_vector_residues(mol=mol, 
+vector=axis_pos, atom_name='z-ax', res_name_vect='AXE', 
+sim_vectors=axis_sim_pos, res_num=2, origin=cdp.pivot, scale=size)
++        res_num = geometric.generate_vector_residues(mol=mol, 
+vector=axis_pos, atom_name='z-ax', res_name_vect='AXE', 
+sim_vectors=axis_sim_pos, res_num=2, origin=pivot, scale=size)
+ 
+         # The negative.
+         if neg_cone:
+-            res_num = geometric.generate_vector_residues(mol=mol_neg, 
+vector=axis_neg, atom_name='z-ax', res_name_vect='AXE', 
+sim_vectors=axis_sim_neg, res_num=2, origin=cdp.pivot, scale=size)
++            res_num = geometric.generate_vector_residues(mol=mol_neg, 
+vector=axis_neg, atom_name='z-ax', res_name_vect='AXE', 
+sim_vectors=axis_sim_neg, res_num=2, origin=pivot, scale=size)
+ 
+     # The full axis system.
+     else:
+@@ -300,9 +303,9 @@
+                 axis_sim_neg = axes_sim_neg[:,:, j]
+ 
+             # The vectors.
+-            res_num = geometric.generate_vector_residues(mol=mol, 
+vector=axes_pos[:, j], atom_name='%s-ax'%label[j], res_name_vect='AXE', 
+sim_vectors=axis_sim_pos, res_num=2, origin=cdp.pivot, scale=size)
++            res_num = geometric.generate_vector_residues(mol=mol, 
+vector=axes_pos[:, j], atom_name='%s-ax'%label[j], res_name_vect='AXE', 
+sim_vectors=axis_sim_pos, res_num=2, origin=pivot, scale=size)
+             if neg_cone:
+-                res_num = geometric.generate_vector_residues(mol=mol_neg, 
+vector=axes_neg[:, j], atom_name='%s-ax'%label[j], res_name_vect='AXE', 
+sim_vectors=axis_sim_neg, res_num=2, origin=cdp.pivot, scale=size)
++                res_num = geometric.generate_vector_residues(mol=mol_neg, 
+vector=axes_neg[:, j], atom_name='%s-ax'%label[j], res_name_vect='AXE', 
+sim_vectors=axis_sim_neg, res_num=2, origin=pivot, scale=size)
+ 
+ 
+     # The cone object.
+@@ -337,11 +340,11 @@
+             cone = Iso_cone(cone_theta)
+ 
+         # Create the positive and negative cones.
+-        geometric.create_cone_pdb(mol=mol, cone=cone, 
+start_res=mol.res_num[-1]+1, apex=cdp.pivot, R=R_pos, inc=inc, 
+distribution='regular', axis_flag=False)
++        geometric.create_cone_pdb(mol=mol, cone=cone, 
+start_res=mol.res_num[-1]+1, apex=pivot, R=R_pos, inc=inc, 
+distribution='regular', axis_flag=False)
+ 
+         # The negative.
+         if neg_cone:
+-            geometric.create_cone_pdb(mol=mol_neg, cone=cone, 
+start_res=mol_neg.res_num[-1]+1, apex=cdp.pivot, R=R_neg, inc=inc, 
+distribution='regular', axis_flag=False)
++            geometric.create_cone_pdb(mol=mol_neg, cone=cone, 
+start_res=mol_neg.res_num[-1]+1, apex=pivot, R=R_neg, inc=inc, 
+distribution='regular', axis_flag=False)
+ 
+ 
+     # Create the PDB file.
+@@ -421,15 +424,21 @@
+     # Check the pivot validity.
+     is_float_array(pivot, name='pivot point', size=3)
+ 
+-    # Store the pivot point. and fixed flag.
++    # Store the pivot point and fixed flag.
+     if order == 1:
+-        cdp.pivot = pivot
++        cdp.pivot_x = pivot[0]
++        cdp.pivot_y = pivot[1]
++        cdp.pivot_z = pivot[2]
+     else:
+-        # The variable name.
+-        name = 'pivot%i' % order
+-
+-        # Store the variable.
+-        setattr(cdp, name, pivot)
++        # The variable names.
++        name_x = 'pivot_x_%i' % order
++        name_y = 'pivot_y_%i' % order
++        name_z = 'pivot_z_%i' % order
++
++        # Store the variables.
++        setattr(cdp, name_x, pivot[0])
++        setattr(cdp, name_y, pivot[1])
++        setattr(cdp, name_z, pivot[2])
+ 
+ 
+ def quad_int(flag=False):
+
+Modified: trunk/test_suite/system_tests/scripts/frame_order/cam/base_script.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/test_suite/system_tests/scripts/frame_order/cam/base_script.py?rev=22672&amp;r1=22671&amp;r2=22672&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/test_suite/system_tests/scripts/frame_order/cam/base_script.py?rev=22672&amp;r1=22671&amp;r2=22672&amp;view=diff</a>
+==============================================================================
+--- trunk/test_suite/system_tests/scripts/frame_order/cam/base_script.py      
+  (original)
++++ trunk/test_suite/system_tests/scripts/frame_order/cam/base_script.py      
+  Thu Apr 10 12:19:32 2014
+@@ -351,7 +351,7 @@
+         print(&quot;Rotation matrix:\n%s\n&quot; % R)
+         R = transpose(R)
+         print(&quot;Inverted rotation:\n%s\n&quot; % R)
+-        pivot = cdp.pivot
++        pivot = array([cdp.pivot_x, cdp.pivot_y, cdp.pivot_z])
+ 
+         # Delete the data pipe (if a loaded state has been used).
+         if self.LOAD_STATE:
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Apr 10 13:00:02 2014</div>  
+</body>
+</html>

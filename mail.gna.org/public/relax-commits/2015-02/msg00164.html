@@ -1,0 +1,309 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r27599 &#45; in /trunk/pipe_control: grace.py plotting.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 06 Feb 2015 15:05:31 +0100 -->
+<!--X-Message-Id: E1YJjXH&#45;0005L2&#45;DH@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r27599 - in /trunk/pipe_control: grace.py plotting.py -- February 06, 2015 - 15:05</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r27599 - in /trunk/pipe_control: grace.py plotting.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00164" class="tabs">Index by Date</a> | <a href="threads.html#00164" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00163.html">Date Prev</a>] [<a href="msg00165.html">Date Next</a>] [<a href="msg00163.html">Thread Prev</a>] [<a href="msg00165.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 06 Feb 2015 14:05:31 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00164.html">E1YJjXH-0005L2-DH@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on February 06, 2015 - 15:05:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Feb  6 15:05:30 2015
+New Revision: 27599
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=27599&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=27599&amp;view=rev</a>
+Log:
+Fixes for the new pipe_control.plotting.write_xy() function.
+
+This includes missing imports which should have moved from 
+pipe_control.grace, as well as shifting
+the axis_setup() function from the pipe_control.grace module into the 
+pipe_control.plotting module.
+
+
+Modified:
+    trunk/pipe_control/grace.py
+    trunk/pipe_control/plotting.py
+
+Modified: trunk/pipe_control/grace.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/pipe_control/grace.py?rev=27599&amp;r1=27598&amp;r2=27599&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/pipe_control/grace.py?rev=27599&amp;r1=27598&amp;r2=27599&amp;view=diff</a>
+==============================================================================
+--- trunk/pipe_control/grace.py (original)
++++ trunk/pipe_control/grace.py Fri Feb  6 15:05:30 2015
+@@ -29,85 +29,12 @@
+ # relax module imports.
+ from lib.errors import RelaxError, RelaxNoSequenceError, RelaxNoSimError
+ from lib.io import get_file_path, open_write_file, test_binary
+-from lib.plotting.api import write_xy_data, write_xy_header
+ from lib.warnings import RelaxWarning
+ from pipe_control.mol_res_spin import count_molecules, count_residues, 
+count_spins, exists_mol_res_spin_data
+ from pipe_control import pipes
+-from pipe_control.pipes import check_pipe
+ from pipe_control.plotting import assemble_data
+ from specific_analyses.api import return_api
+ from status import Status; status = Status()
+-
+-
+-def axis_setup(data_type=None, norm=True):
+-    &quot;&quot;&quot;Determine the axis information for relax data store specific data.
+-
+-    @keyword data_type: The axis data category (in the [X, Y] list format).
+-    @type data_type:    list of str
+-    @keyword norm:      The normalisation flag which if set to True will 
+cause all graphs to be normalised to a starting value of 1.
+-    @type norm:         bool
+-    @return:            The axis information.  This includes the sequence 
+type, the list of lower bounds, the list of upper bounds, and the axis labels.
+-    @rtype:             list of str or None, list of int or None, list of 
+int or None, list of str or None
+-    &quot;&quot;&quot;
+-
+-    # Axis specific settings.
+-    axes = ['x', 'y']
+-    seq_type = [None, None]
+-    axis_labels = [None, None]
+-    for i in range(2):
+-        # Determine the sequence data type.
+-        if data_type[i] == 'res_num':
+-            seq_type[i] = 'res'
+-
+-        # Analysis specific methods for making labels.
+-        analysis_spec = False
+-        if pipes.cdp_name():
+-            # Flag for making labels.
+-            analysis_spec = True
+-
+-            # The specific analysis API object.
+-            api = return_api()
+-
+-        # Some axis default values for spin data.
+-        if data_type[i] == 'res_num':
+-            # Residue only data.
+-            if seq_type[i] == 'res':
+-                # X-axis label.
+-                if not axis_labels[i]:
+-                    axis_labels[i] = &quot;Residue number&quot;
+-
+-            # Spin only data.
+-            if seq_type[i] == 'spin':
+-                # X-axis label.
+-                if not axis_labels[i]:
+-                    axis_labels[i] = &quot;Spin number&quot;
+-
+-            # Mixed data.
+-            if seq_type[i] == 'mixed':
+-                # X-axis label.
+-                if not axis_labels[i]:
+-                    axis_labels[i] = &quot;Spin identification string&quot;
+-
+-        # Some axis default values for other data types.
+-        else:
+-            # Label.
+-            if analysis_spec and not axis_labels[i]:
+-                # Get the units.
+-                units = api.return_units(data_type[i])
+-
+-                # Set the label.
+-                axis_labels[i] = api.return_grace_string(data_type[i])
+-
+-                # Add units.
+-                if units:
+-                    axis_labels[i] = axis_labels[i] + &quot;\\N (&quot; + units + &quot;)&quot;
+-
+-                # Normalised data.
+-                if norm and axes[i] == 'y':
+-                    axis_labels[i] = axis_labels[i] + &quot; 
+\\N\\q(normalised)\\Q&quot;
+-
+-    # Return the data.
+-    return seq_type, axis_labels
+ 
+ 
+ def determine_seq_type(spin_id=None):
+
+Modified: trunk/pipe_control/plotting.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/pipe_control/plotting.py?rev=27599&amp;r1=27598&amp;r2=27599&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/pipe_control/plotting.py?rev=27599&amp;r1=27598&amp;r2=27599&amp;view=diff</a>
+==============================================================================
+--- trunk/pipe_control/plotting.py      (original)
++++ trunk/pipe_control/plotting.py      Fri Feb  6 15:05:30 2015
+@@ -28,7 +28,10 @@
+ 
+ # relax module imports.
+ from lib.errors import RelaxError
+-from pipe_control.mol_res_spin import spin_loop
++from lib.io import get_file_path, open_write_file
++from lib.plotting.api import write_xy_data, write_xy_header
++from pipe_control.mol_res_spin import check_mol_res_spin_data, spin_loop
++from pipe_control.pipes import cdp_name, check_pipe
+ from pipe_control.result_files import add_result_file
+ from specific_analyses.api import return_api
+ 
+@@ -466,6 +469,77 @@
+ 
+     # Return the data.
+     return data, set_labels, x_err_flag, y_err_flag
++
++
++def axis_setup(data_type=None, norm=True):
++    &quot;&quot;&quot;Determine the axis information for relax data store specific data.
++
++    @keyword data_type: The axis data category (in the [X, Y] list format).
++    @type data_type:    list of str
++    @keyword norm:      The normalisation flag which if set to True will 
+cause all graphs to be normalised to a starting value of 1.
++    @type norm:         bool
++    @return:            The axis information.  This includes the sequence 
+type, the list of lower bounds, the list of upper bounds, and the axis labels.
++    @rtype:             list of str or None, list of int or None, list of 
+int or None, list of str or None
++    &quot;&quot;&quot;
++
++    # Axis specific settings.
++    axes = ['x', 'y']
++    seq_type = [None, None]
++    axis_labels = [None, None]
++    for i in range(2):
++        # Determine the sequence data type.
++        if data_type[i] == 'res_num':
++            seq_type[i] = 'res'
++
++        # Analysis specific methods for making labels.
++        analysis_spec = False
++        if cdp_name():
++            # Flag for making labels.
++            analysis_spec = True
++
++            # The specific analysis API object.
++            api = return_api()
++
++        # Some axis default values for spin data.
++        if data_type[i] == 'res_num':
++            # Residue only data.
++            if seq_type[i] == 'res':
++                # X-axis label.
++                if not axis_labels[i]:
++                    axis_labels[i] = &quot;Residue number&quot;
++
++            # Spin only data.
++            if seq_type[i] == 'spin':
++                # X-axis label.
++                if not axis_labels[i]:
++                    axis_labels[i] = &quot;Spin number&quot;
++
++            # Mixed data.
++            if seq_type[i] == 'mixed':
++                # X-axis label.
++                if not axis_labels[i]:
++                    axis_labels[i] = &quot;Spin identification string&quot;
++
++        # Some axis default values for other data types.
++        else:
++            # Label.
++            if analysis_spec and not axis_labels[i]:
++                # Get the units.
++                units = api.return_units(data_type[i])
++
++                # Set the label.
++                axis_labels[i] = api.return_grace_string(data_type[i])
++
++                # Add units.
++                if units:
++                    axis_labels[i] = axis_labels[i] + &quot;\\N (&quot; + units + &quot;)&quot;
++
++                # Normalised data.
++                if norm and axes[i] == 'y':
++                    axis_labels[i] = axis_labels[i] + &quot; 
+\\N\\q(normalised)\\Q&quot;
++
++    # Return the data.
++    return seq_type, axis_labels
+ 
+ 
+ def classify_graph_2D(x_data_name=None, y_data_name=None, x_type=None, 
+y_type=None):
+@@ -663,12 +737,9 @@
+     @type norm:             bool
+     &quot;&quot;&quot;
+ 
+-    # Test if the current pipe exists.
++    # Checks.
+     check_pipe()
+-
+-    # Test if the sequence data is loaded.
+-    if not exists_mol_res_spin_data():
+-        raise RelaxNoSequenceError
++    check_mol_res_spin_data()
+ 
+     # Test if the plot_data argument is one of 'value', 'error', or 'sim'.
+     if plot_data not in ['value', 'error', 'sim']:
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Feb 06 15:20:03 2015</div>  
+</body>
+</html>

@@ -1,0 +1,176 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r25610 &#45; /trunk/lib/spectrum/nmrpipe.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 03 Sep 2014 22:50:48 +0200 -->
+<!--X-Message-Id: E1XPHVw&#45;00075n&#45;LX@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r25610 - /trunk/lib/spectrum/nmrpipe.py -- September 03, 2014 - 22:50</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r25610 - /trunk/lib/spectrum/nmrpipe.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00116" class="tabs">Index by Date</a> | <a href="threads.html#00116" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00115.html">Date Prev</a>] [<a href="msg00117.html">Date Next</a>] [<a href="msg00115.html">Thread Prev</a>] [<a href="msg00117.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 03 Sep 2014 20:50:48 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00116.html">E1XPHVw-00075n-LX@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on September 03, 2014 - 22:50:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Wed Sep  3 22:50:48 2014
+New Revision: 25610
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=25610&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=25610&amp;view=rev</a>
+Log:
+Added function to search a dir for NMRPipe fourier transformed files, call 
+showApod on them, extract RMSD and write to file.
+
+Modified:
+    trunk/lib/spectrum/nmrpipe.py
+
+Modified: trunk/lib/spectrum/nmrpipe.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/lib/spectrum/nmrpipe.py?rev=25610&amp;r1=25609&amp;r2=25610&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/lib/spectrum/nmrpipe.py?rev=25610&amp;r1=25609&amp;r2=25610&amp;view=diff</a>
+==============================================================================
+--- trunk/lib/spectrum/nmrpipe.py       (original)
++++ trunk/lib/spectrum/nmrpipe.py       Wed Sep  3 22:50:48 2014
+@@ -25,12 +25,15 @@
+ 
+ # Python module imports.
+ import re
++from glob import glob
++from os import sep
++from os.path import abspath
+ from warnings import warn
+ 
+ # relax module imports.
+ import dep_check
+ from lib.errors import RelaxError
+-from lib.io import file_root, get_file_path, open_write_file, write_data
++from lib.io import file_root, get_file_path, open_write_file, 
+sort_filenames, write_data
+ from lib.warnings import RelaxWarning
+ 
+ # Check subprocess is available.
+@@ -251,6 +254,7 @@
+             return rmsd
+ 
+     if not found:
++        print(show_apod_lines)
+         raise RelaxError(&quot;Could not find the line: 'REMARK Automated Noise 
+Std Dev in Processed Data:', from the output of showApod.&quot;)
+ 
+ 
+@@ -304,3 +308,43 @@
+     # Return path to file.
+     return wfile_path
+ 
++
++def show_apod_rmsd_dir_to_files(file_ext='.ft2', dir=None, 
+path_to_command='showApod', outdir=None, force=False):
++    &quot;&quot;&quot;Searches 'dir' for files with extension 'file_ext'.  Extract showApod 
+'Noise Std Dev' from showApod, and write to file with same filename and 
+ending '.rmsd'.
++
++    @keyword file_ext:          The extension for files which is NMRPipe 
+fourier transformed file.
++    @type file_ext:             str
++    @keyword dir:               The directory where the files is located.
++    @type dir:                  str
++    @keyword path_to_command:   If showApod not in PATH, then specify 
+absolute path as: /path/to/showApod
++    @type dir:                  str
++    @keyword outdir:            The directory where to write the files.  If 
+'None', then write in same directory.
++    @type outdir:               str
++    @param force:               Boolean argument which if True causes the 
+file to be overwritten if it already exists.
++    @type force:                bool
++    @return:                    Write the 'Noise Std Dev' from showApod to a 
+file with same file filename, with ending '.rmsd'.
++    @rtype:                     list of filepaths
++    &quot;&quot;&quot;
++
++    # First get correct dir, no matter if dir is specified with or without 
+system folder separator.
++    dir_files = abspath(dir)
++
++    # Define glop pattern.
++    glob_pat = '*%s' % file_ext
++
++    # Get a list of files which math the file extension.
++    file_list = glob(dir_files + sep + glob_pat)
++
++    # Now sort into Alphanumeric order.
++    file_list_sorted = sort_filenames(filenames=file_list, rev=False)
++
++    # Loop over the files.
++    rmsd_files = []
++    for ft_file in file_list_sorted:
++        # Write rmsd to file, and get file path to file.
++        rmsd_file = show_apod_rmsd_to_file(file_name=ft_file, 
+path_to_command=path_to_command, outdir=outdir, force=force)
++
++        # Collect file path.
++        rmsd_files.append(rmsd_file)
++
++    return rmsd_files
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Sep 03 23:00:02 2014</div>  
+</body>
+</html>

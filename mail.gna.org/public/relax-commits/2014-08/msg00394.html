@@ -1,0 +1,167 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r25260 &#45; in /trunk/target_functions: relax_fit.c relax_fit.h -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 26 Aug 2014 09:00:15 +0200 -->
+<!--X-Message-Id: E1XMAjn&#45;0002NI&#45;9J@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r25260 - in /trunk/target_functions: relax_fit.c relax_fit.h -- August 26, 2014 - 09:00</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r25260 - in /trunk/target_functions: relax_fit.c relax_fit.h</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00394" class="tabs">Index by Date</a> | <a href="threads.html#00394" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00393.html">Date Prev</a>] [<a href="msg00395.html">Date Next</a>] [<a href="msg00393.html">Thread Prev</a>] [<a href="msg00395.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 26 Aug 2014 07:00:15 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00394.html">E1XMAjn-0002NI-9J@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on August 26, 2014 - 09:00:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Aug 26 09:00:14 2014
+New Revision: 25260
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=25260&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=25260&amp;view=rev</a>
+Log:
+Implemented the target_functions.relax_fit.dfunc() gradient function.
+
+This is using the Python/C interface to provide a Python function for 
+calculating and returned the
+chi-squared gradient for the exponential curves.
+
+
+Modified:
+    trunk/target_functions/relax_fit.c
+    trunk/target_functions/relax_fit.h
+
+Modified: trunk/target_functions/relax_fit.c
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/target_functions/relax_fit.c?rev=25260&amp;r1=25259&amp;r2=25260&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/target_functions/relax_fit.c?rev=25260&amp;r1=25259&amp;r2=25260&amp;view=diff</a>
+==============================================================================
+--- trunk/target_functions/relax_fit.c  (original)
++++ trunk/target_functions/relax_fit.c  Tue Aug 26 09:00:14 2014
+@@ -123,19 +123,45 @@
+ 
+     /* Declarations */
+     PyObject *params_arg;
+-
+-    /* Temp Declarations */
+-    double aaa[MAXPARAMS] = {1.0, 2.0};
++    PyObject *element;
+     int i;
+-    double *params;
+ 
+     /* Parse the function arguments, the only argument should be the 
+parameter array */
+     if (!PyArg_ParseTuple(args, &quot;O&quot;, &amp;params_arg))
+         return NULL;
+ 
++    /* Place the parameter array elements into the C array */
++    for (i = 0; i &lt; num_params; i++) {
++        /* Get the element */
++        element = PySequence_GetItem(params_arg, i);
++
++        /* Convert to a C double, then free the memory. */
++        params[i] = PyFloat_AsDouble(element);
++        Py_CLEAR(element);
++
++        /* Scale the parameter */
++        params[i] = params[i] * scaling_matrix[i];
++    }
++
+     /* Back calculated the peak intensities */
+     exponential(params, relax_times, back_calc, num_times);
+ 
++    /* The partial derivates */
++    exponential_dR(params, relax_times, back_calc_grad, num_times);
++    exponential_dI(params, relax_times, back_calc_grad, num_times);
++
++    /* The chi-squared gradient */
++    dchi2(dchi2_vals, values, back_calc, back_calc_grad, sd, num_times, 
+num_params);
++
++    /* Convert to a Python list */
++    PyObject *list = PyList_New(0);
++    Py_INCREF(list);
++    for (i = 0; i &lt; num_params; i++) {
++        PyList_Append(list, PyFloat_FromDouble(dchi2_vals[i]));
++    }
++
++    /* Return the Jacobian */
++    return list;
+     return NULL;
+ }
+ 
+
+Modified: trunk/target_functions/relax_fit.h
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/target_functions/relax_fit.h?rev=25260&amp;r1=25259&amp;r2=25260&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/target_functions/relax_fit.h?rev=25260&amp;r1=25259&amp;r2=25260&amp;view=diff</a>
+==============================================================================
+--- trunk/target_functions/relax_fit.h  (original)
++++ trunk/target_functions/relax_fit.h  Tue Aug 26 09:00:14 2014
+@@ -40,6 +40,7 @@
+ /* Variables used for storage during the function calls of optimisation */
+ static double back_calc[MAXTIMES];
+ static double back_calc_grad[MAXPARAMS][MAXTIMES];
++static double dchi2_vals[MAXPARAMS];
+ static double params[MAXPARAMS];
+ static double values[MAXTIMES];
+ static double sd[MAXTIMES];
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Aug 26 09:20:03 2014</div>  
+</body>
+</html>

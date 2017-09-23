@@ -1,0 +1,529 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r27313 &#45; /trunk/lib/structure/internal/coordinates.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 26 Jan 2015 17:44:47 +0100 -->
+<!--X-Message-Id: E1YFmmM&#45;0003tC&#45;QO@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r27313 - /trunk/lib/structure/internal/coordinates.py -- January 26, 2015 - 17:44</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r27313 - /trunk/lib/structure/internal/coordinates.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00159" class="tabs">Index by Date</a> | <a href="threads.html#00159" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00158.html">Date Prev</a>] [<a href="msg00160.html">Date Next</a>] [<a href="msg00158.html">Thread Prev</a>] [<a href="msg00160.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 26 Jan 2015 16:44:46 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00159.html">E1YFmmM-0003tC-QO@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on January 26, 2015 - 17:44:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Mon Jan 26 17:44:46 2015
+New Revision: 27313
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=27313&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=27313&amp;view=rev</a>
+Log:
+The pairwise sequence alignment is now active in the structure.align user 
+function.
+
+This is implemented in the 
+lib.structure.internal.coordinates.assemble_coord_array() function for
+assembling atomic coordinates.  It will also automatically be used by many of 
+the structure user
+functions which operate on multiple structures.
+
+The atomic coordinate assembly logic has been completely changed.  Instead of 
+grouping atomic
+information by the molecule, it is now grouped per residue.  This allows the 
+residue based sequence
+alignments to find matching coordinate information.
+
+The assemble_coord_array() function will also handle the algorithm argument 
+set to None and assume
+that the residue sequences are identical between the structures, but this 
+should be avoided.
+
+A new function, common_residues() has been created as a work-around for not 
+having a multiple
+sequence alignment implementation.  It will take the pairwise sequence 
+alignment information and
+construct a special data structure specifying which residues are present in 
+all structures.
+
+The logic for skipping missing atoms remains in place, but it now operates on 
+the residue rather
+than molecule level and simply uses the atom name rather than atom ID to 
+identify common atoms.
+
+
+Modified:
+    trunk/lib/structure/internal/coordinates.py
+
+Modified: trunk/lib/structure/internal/coordinates.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/lib/structure/internal/coordinates.py?rev=27313&amp;r1=27312&amp;r2=27313&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/lib/structure/internal/coordinates.py?rev=27313&amp;r1=27312&amp;r2=27313&amp;view=diff</a>
+==============================================================================
+--- trunk/lib/structure/internal/coordinates.py (original)
++++ trunk/lib/structure/internal/coordinates.py Mon Jan 26 17:44:46 2015
+@@ -24,8 +24,10 @@
+ 
+ # Python module imports.
+ from numpy import array, float64
++import sys
+ 
+ # relax module imports.
++from lib.errors import RelaxFault
+ from lib.sequence_alignment.align_protein import align_pairwise
+ 
+ 
+@@ -42,8 +44,8 @@
+     @type molecules:                    None or list of lists of str
+     @keyword atom_id:                   The molecule, residue, and atom 
+identifier string of the coordinates of interest.  This matches the spin ID 
+string format.
+     @type atom_id:                      None or str
+-    @keyword algorithm:                 The pairwise sequence alignment 
+algorithm to use.
+-    @type algorithm:                    str
++    @keyword algorithm:                 The pairwise sequence alignment 
+algorithm to use.  If set to None, then no alignment will be performed.
++    @type algorithm:                    str or None
+     @keyword matrix:                    The substitution matrix to use.
+     @type matrix:                       str
+     @keyword gap_open_penalty:          The penalty for introducing gaps, as 
+a positive number.
+@@ -106,17 +108,18 @@
+ 
+             # Extend the lists.
+             if molecules == None:
++                atom_names.append([])
+                 atom_ids.append([])
+-                atom_pos.append({})
++                atom_pos.append([])
+                 if seq_info_flag:
+-                    mol_names.append({})
+-                    res_names.append({})
+-                    res_nums.append({})
+-                    atom_names.append({})
+-                    elements.append({})
++                    mol_names.append([])
++                    res_names.append([])
++                    res_nums.append([])
++                    elements.append([])
+ 
+             # Add all coordinates and elements.
+             current_mol = ''
++            current_res = None
+             for mol_name, res_num, res_name, atom_name, elem, pos in 
+objects[struct_index].atom_loop(selection=selection, model_num=model.num, 
+mol_name_flag=True, res_num_flag=True, res_name_flag=True, 
+atom_name_flag=True, pos_flag=True, element_flag=True):
+                 # No molecule match, so skip.
+                 if molecules != None and mol_name not in 
+molecules[struct_index]:
+@@ -127,22 +130,23 @@
+                     # Printout.
+                     print(&quot;            Molecule: %s&quot; % mol_name)
+ 
+-                    # Change the current molecule name.
++                    # Change the current molecule name and residue number.
+                     current_mol = mol_name
++                    current_res = None
+ 
+                     # Store the one letter codes for sequence alignment.
+                     
+one_letter_codes.append(objects[struct_index].one_letter_codes(mol_name=mol_name))
+ 
+                     # Extend the lists.
+                     if molecules != None:
++                        atom_names.append([])
+                         atom_ids.append([])
+-                        atom_pos.append({})
++                        atom_pos.append([])
+                         if seq_info_flag:
+-                            mol_names.append({})
+-                            res_names.append({})
+-                            res_nums.append({})
+-                            atom_names.append({})
+-                            elements.append({})
++                            mol_names.append([])
++                            res_names.append([])
++                            res_nums.append([])
++                            elements.append([])
+ 
+                     # Create a new structure ID.
+                     if molecules != None:
+@@ -155,6 +159,21 @@
+                         else:
+                             ids.append('%s' % mol_name)
+ 
++                # A new residue.
++                if res_num != current_res:
++                    # Change the current residue
++                    current_res = res_num
++
++                    # Extend the lists.
++                    atom_names[-1].append([])
++                    atom_ids[-1].append({})
++                    atom_pos[-1].append({})
++                    if seq_info_flag:
++                        mol_names[-1].append({})
++                        res_names[-1].append({})
++                        res_nums[-1].append({})
++                        elements[-1].append({})
++
+                 # A unique identifier.
+                 if molecules != None:
+                     id = &quot;:%s&amp;%s@%s&quot; % (res_num, res_name, atom_name)
+@@ -162,60 +181,100 @@
+                     id = &quot;#%s:%s&amp;%s@%s&quot; % (mol_name, res_num, res_name, 
+atom_name)
+ 
+                 # Store the per-structure ID and coordinate.
+-                atom_ids[-1].append(id)
+-                atom_pos[-1][id] = pos[0]
++                atom_names[-1][-1].append(atom_name)
++                atom_ids[-1][-1][atom_name] = id
++                atom_pos[-1][-1][atom_name] = pos[0]
+ 
+                 # Store the per-structure sequence information.
+                 if seq_info_flag:
+-                    mol_names[-1][id] = mol_name
+-                    res_names[-1][id] = res_name
+-                    res_nums[-1][id] = res_num
+-                    atom_names[-1][id] = atom_name
+-                    elements[-1][id] = elem
++                    mol_names[-1][-1][atom_name] = mol_name
++                    res_names[-1][-1][atom_name] = res_name
++                    res_nums[-1][-1][atom_name] = res_num
++                    elements[-1][-1][atom_name] = elem
++
++    # The total number of molecules.
++    num_mols = len(atom_ids)
+ 
+     # Sequence alignment.
+-    print(&quot;\nPairwise sequence alignment to the first molecule:\n&quot;)
+-    gap_matrices = []
+-    for i in range(1, len(one_letter_codes)):
+-        print(&quot;Molecules 1-%i&quot; % (i+1))
+-        align1, align2, gaps = align_pairwise(one_letter_codes[0], 
+one_letter_codes[i], matrix='BLOSUM62', gap_open_penalty=5.0, 
+gap_extend_penalty=1.0)
+-        gap_matrices.append(gaps)
+-
+-    # Set up the structures for the superimposition algorithm.
+-    num = len(atom_ids)
++    if algorithm == 'NW70':
++        print(&quot;\nPairwise sequence alignment to the first molecule:\n&quot;)
++        gap_matrices = []
++        for mol_index in range(1, num_mols):
++            print(&quot;Molecules 1-%i&quot; % (mol_index+1))
++            align1, align2, gaps = align_pairwise(one_letter_codes[0], 
+one_letter_codes[mol_index], algorithm=algorithm, matrix=matrix, 
+gap_open_penalty=gap_open_penalty, gap_extend_penalty=gap_extend_penalty, 
+end_gap_open_penalty=end_gap_open_penalty, 
+end_gap_extend_penalty=end_gap_extend_penalty)
++            gap_matrices.append(gaps)
++
++        # Determine the residues in common.
++        skip = common_residues(gap_matrices=gap_matrices, 
+one_letter_codes=one_letter_codes)
++
++    # No alignment, so create an empty residue skipping data structure.
++    else:
++        # Create
++        skip = []
++        for mol_index in range(num_mols):
++            skip.append([])
++            for res_index in range(len(one_letter_codes[mol_index])):
++                skip[mol_index].append(0)
++
++    # Set up the structures for common coordinates.
+     coord = []
+     mol_name_common = []
+     res_name_common = []
+     res_num_common = []
+     atom_name_common = []
+     element_common = []
+-    for i in range(num):
++    for mol_index in range(num_mols):
+         coord.append([])
+ 
+     # Find the common atoms and create the coordinate data structure.
+-    for id in atom_ids[0]:
+-        # Is the atom ID present in all other structures?
+-        present = True
+-        for i in range(num):
+-            if id not in atom_ids[i]:
+-                present = False
+-                break
+-
+-        # Not present, so skip the atom.
+-        if not present:
+-            continue
+-
+-        # Add the atomic position to the coordinate list and the element to 
+the element list.
+-        for i in range(num):
+-            coord[i].append(atom_pos[i][id])
+-
+-        # The common sequence information.
+-        if seq_info_flag:
+-            mol_name_common.append(mol_names[0][id])
+-            res_name_common.append(res_names[0][id])
+-            res_num_common.append(res_nums[0][id])
+-            atom_name_common.append(atom_names[0][id])
+-            element_common.append(elements[0][id])
++    res_indices = [-1]*num_mols
++    max_res = -1
++    for mol_index in range(num_mols):
++        if len(one_letter_codes[mol_index]) &gt; max_res:
++            max_res = len(one_letter_codes[mol_index])
++    while 1:
++        # Move to the next non-skipped residues in each molecule.
++        for mol_index in range(num_mols):
++            terminate = False
++            while 1:
++                res_indices[mol_index] += 1
++                if res_indices[mol_index] &gt;= len(skip[mol_index]):
++                    terminate = True
++                    break
++                if not skip[mol_index][res_indices[mol_index]]:
++                    break
++
++        # Termination.
++        for mol_index in range(num_mols):
++            if res_indices[mol_index] &gt; len(atom_names[0]):
++                terminate = True
++        if terminate:
++            break
++
++        # Loop over the residue atoms in the first molecule.
++        for atom_name in atom_names[0][res_indices[0]]:
++            # Is the atom ID present in all other structures?
++            present = True
++            for mol_index in range(1, num_mols):
++                if atom_name not in 
+atom_names[mol_index][res_indices[mol_index]]:
++                    present = False
++                    break
++
++            # Not present, so skip the atom.
++            if not present:
++                continue
++
++            # Add the atomic position to the coordinate list and the element 
+to the element list.
++            for mol_index in range(num_mols):
++                
+coord[mol_index].append(atom_pos[mol_index][res_indices[mol_index]][atom_name])
++
++            # The common sequence information.
++            if seq_info_flag:
++                
+mol_name_common.append(mol_names[0][res_indices[0]][atom_name])
++                
+res_name_common.append(res_names[0][res_indices[0]][atom_name])
++                res_num_common.append(res_nums[0][res_indices[0]][atom_name])
++                atom_name_common.append(atom_name)
++                element_common.append(elements[0][res_indices[0]][atom_name])
+ 
+     # Convert to a numpy array.
+     coord = array(coord, float64)
+@@ -225,6 +284,130 @@
+         return coord, ids, mol_name_common, res_name_common, res_num_common, 
+atom_name_common, element_common
+     else:
+         return coord, ids
++
++
++def common_residues(gap_matrices=None, one_letter_codes=None):
++    &quot;&quot;&quot;Determine the common residues between all the pairwise alignments.
++
++    @keyword gap_matrices:      The list of gap matrices from the pairwise 
+alignments.
++    @type gap_matrices:         list of numpy rank-2 arrays.
++    @keyword one_letter_codes:  The list of strings of one letter residue 
+codes for each molecule.
++    @type one_letter_codes:     list of str
++    @return:                    The residue skipping data structure.  The 
+first dimension corresponds to the molecule, the second to the residue.  A 
+one means the residue should be skipped, whereas zero means keep the residue.
++    @rtype:                     list of list of int
++    &quot;&quot;&quot;
++
++    # The number of molecules.
++    num_mols = len(gap_matrices) + 1
++
++    # Initialise the residue skipping structures.
++    skip = []
++    skip_counts = []
++    res_counts = []
++    for mol_index in range(num_mols):
++        res_counts.append(len(one_letter_codes[mol_index]))
++        skip_counts.append(0)
++        skip.append([])
++        for j in range(res_counts[mol_index]):
++            skip[mol_index].append(0)
++
++    # Update the residue skipping structures for the first molecule.
++    for mol_index in range(num_mols-1):
++        # Loop over the residues of alignment i.
++        seq_index = -1
++        for j in range(len(gap_matrices[mol_index][0])):
++            # Increment the sequence index.
++            if not gap_matrices[mol_index][0, j]:
++                seq_index += 1
++
++            # A gap in the second sequence, so skip the residue.
++            if gap_matrices[mol_index][1, j]:
++                skip[0][seq_index] = 1
++
++    # Printout.
++    sys.stdout.write(&quot;Shared residues:\n&quot;)
++    sys.stdout.write(&quot;Molecule %3i:  &quot; % 1)
++    for j in range(max(res_counts)):
++        # No more residues.
++        if j &gt;= res_counts[0]:
++            sys.stdout.write(&quot;-&quot;)
++            continue
++
++        # A skip.
++        if skip[0][j]:
++            sys.stdout.write(&quot;-&quot;)
++
++        # Keep the residue.
++        else:
++            sys.stdout.write(one_letter_codes[0][j])
++    sys.stdout.write(&quot;\n&quot;)
++
++    # Update the first molecule skip counts.
++    skip_counts[0] = sum(skip[0])
++
++    # Update the residue skipping structures for all other molecules.
++    for mol_index in range(1, num_mols):
++        # Printout.
++        sys.stdout.write(&quot;Molecule %3i:  &quot; % (mol_index+1))
++
++        # Loop over the residues of alignment mol_index.
++        seq1_index = -1
++        seq2_index = -1
++        for j in range(max(res_counts)):
++            # No more residues.
++            if j &gt;= len(gap_matrices[mol_index-1][1]):
++                sys.stdout.write(&quot;-&quot;)
++                continue
++
++            # Increment the sequence indices.
++            if not gap_matrices[mol_index-1][0, j]:
++                seq1_index += 1
++            if not gap_matrices[mol_index-1][1, j]:
++                seq2_index += 1
++
++            # End condition for the first molecule.
++            if seq1_index &gt;= res_counts[0]:
++                # Skip the rest of the second molecule.
++                for k in range(seq2_index, res_counts[mol_index]):
++                    skip[mol_index][k] = 1
++                    skip_counts[mol_index] += 1
++                    sys.stdout.write(&quot;-&quot;)
++
++                # Terminate the loop.
++                break
++
++            # A gap in the first sequence, so skip the residue.
++            if gap_matrices[mol_index-1][0, j]:
++                skip[mol_index][seq2_index] = 1
++                skip_counts[mol_index] += 1
++                sys.stdout.write(&quot;-&quot;)
++
++            # Already skipped in the first molecule.
++            elif skip[0][seq1_index] and not gap_matrices[mol_index-1][1, j]:
++                skip[mol_index][seq2_index] = 1
++                skip_counts[mol_index] += 1
++                sys.stdout.write(&quot;-&quot;)
++
++            # Skipped in the second molecule.
++            elif gap_matrices[mol_index-1][1, j]:
++                sys.stdout.write(&quot;-&quot;)
++
++            # Print out the one letter code.
++            else:
++                sys.stdout.write(one_letter_codes[mol_index][seq2_index])
++
++        # EOL.
++        sys.stdout.write(&quot;\n&quot;)
++
++    # Sanity checks.
++    total = res_counts[0] - skip_counts[0]
++    for mol_index in range(1, num_mols):
++        if total != res_counts[mol_index] - skip_counts[mol_index]:
++            print(&quot;\nThe total shared residue counts between molcule 1 and 
+%i of %i and %i respectively do not match.&quot; % ((mol_index+1), total, 
+res_counts[mol_index] - skip_counts[mol_index]))
++            raise RelaxFault
++
++    # Return the skipping data structure.
++    return skip
+ 
+ 
+ def loop_coord_structures(objects=None, molecules=None, models=None, 
+atom_id=None):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Jan 26 18:00:02 2015</div>  
+</body>
+</html>

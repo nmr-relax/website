@@ -1,0 +1,235 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r20900 &#45; /branches/relax_disp/specific_analyses/relax_disp/checks.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 06 Sep 2013 15:21:08 +0200 -->
+<!--X-Message-Id: E1VHvyG&#45;000715&#45;7P@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r20900 - /branches/relax_disp/specific_analyses/relax_disp/checks.py -- September 06, 2013 - 15:21</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r20900 - /branches/relax_disp/specific_analyses/relax_disp/checks.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00165" class="tabs">Index by Date</a> | <a href="threads.html#00165" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00164.html">Date Prev</a>] [<a href="msg00166.html">Date Next</a>] [<a href="msg00164.html">Thread Prev</a>] [<a href="msg00166.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 06 Sep 2013 13:21:08 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00165.html">E1VHvyG-000715-7P@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on September 06, 2013 - 15:21:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Sep  6 15:21:07 2013
+New Revision: 20900
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=20900&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=20900&amp;view=rev</a>
+Log:
+Created some more specific_analyses.relax_disp.checks.check_*() functions.
+
+This is for better checking of the dispersion data.  The 
+check_spectra_id_setup() is useful for
+checking that all of the spectrum information is set up.
+
+
+Modified:
+    branches/relax_disp/specific_analyses/relax_disp/checks.py
+
+Modified: branches/relax_disp/specific_analyses/relax_disp/checks.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp/checks.py?rev=20900&amp;r1=20899&amp;r2=20900&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp/checks.py?rev=20900&amp;r1=20899&amp;r2=20900&amp;view=diff</a>
+==============================================================================
+--- branches/relax_disp/specific_analyses/relax_disp/checks.py (original)
++++ branches/relax_disp/specific_analyses/relax_disp/checks.py Fri Sep  6 
+15:21:07 2013
+@@ -27,8 +27,9 @@
+ 
+ # relax module imports.
+ from dep_check import C_module_exp_fn
+-from lib.errors import RelaxError, RelaxFuncSetupError
++from lib.errors import RelaxError, RelaxFuncSetupError, RelaxNoFrqError, 
+RelaxNoPeakIntensityError
+ import specific_analyses
++from specific_analyses.relax_disp.variables import EXP_TYPE_CPMG, 
+EXP_TYPE_R1RHO
+ 
+ 
+ def check_c_modules():
+@@ -54,7 +55,19 @@
+ 
+     # Test if the curve count exists.
+     if not hasattr(cdp, 'dispersion_points'):
+-        raise RelaxError(&quot;The CPMG frequencies or spin-lock field strengths 
+have not been set up.&quot;)
++        raise RelaxError(&quot;The CPMG frequencies or spin-lock field strengths 
+have not been set for any spectra.&quot;)
++
++    # Check each spectrum ID.
++    for id in cdp.spectrum_ids:
++        # CPMG data.
++        if cdp.exp_type[id] == EXP_TYPE_CPMG:
++            if id not in cdp.cpmg_frqs:
++                raise RelaxError(&quot;The nu_CPMG frequency has not been set for 
+the '%s' spectrum.&quot; % id)
++
++        # R1rho data.
++        elif cdp.exp_type[id] == EXP_TYPE_R1RHO:
++            if id not in cdp.spin_lock_nu1:
++                raise RelaxError(&quot;The spin-lock field strength has not been 
+set for the '%s' spectrum.&quot; % id)
+ 
+ 
+ def check_exp_type():
+@@ -65,12 +78,12 @@
+ 
+     # Test if the experiment type is set.
+     if not hasattr(cdp, 'exp_type'):
+-        raise RelaxError(&quot;The relaxation dispersion experiment type has not 
+been set for any spectra.&quot;)
++        raise RelaxError(&quot;The relaxation dispersion experiment types have 
+not been set for any spectra.&quot;)
+ 
+     # Check each spectrum ID.
+     for id in cdp.spectrum_ids:
+         if id not in cdp.exp_type:
+-            raise RelaxError(&quot;The relaxation dispersion experiment type has 
+not been set for the %s spectrum.&quot; % id)
++            raise RelaxError(&quot;The relaxation dispersion experiment type has 
+not been set for the '%s' spectrum.&quot; % id)
+ 
+ 
+ def check_exp_type_fixed_time():
+@@ -138,6 +151,72 @@
+         raise 
+RelaxFuncSetupError(specific_analyses.setup.get_string(function_type))
+ 
+ 
++def check_relax_times():
++    &quot;&quot;&quot;Check if the spectrometer frequencies have been set up.
++
++    @raises RelaxError: If the spectrometer frequencies have not been set.
++    &quot;&quot;&quot;
++
++    # Test if the experiment type is set.
++    if not hasattr(cdp, 'relax_times'):
++        raise RelaxError(&quot;The relaxation times have not been set for any 
+spectra.&quot;)
++
++    # Check each spectrum ID.
++    for id in cdp.spectrum_ids:
++        if id not in cdp.relax_times:
++            raise RelaxError(&quot;The relaxation time has not been set for the 
+'%s' spectrum.&quot; % id)
++
++
++def check_spectra_id_setup():
++    &quot;&quot;&quot;Check that the data for each spectra ID is correctly set up.
++
++    This is an alias for the following checks:
++
++        - check_spectrum_ids()
++        - check_exp_type()
++        - check_spectrometer_frq()
++        - check_disp_points()
++        - check_relax_times()
++
++
++    @raises RelaxError: If data is missing.
++    &quot;&quot;&quot;
++
++    # Perform the checks.
++    check_spectrum_ids()
++    check_exp_type()
++    check_spectrometer_frq()
++    check_disp_points()
++    check_relax_times()
++
++
++def check_spectrometer_frq():
++    &quot;&quot;&quot;Check if the spectrometer frequencies have been set up.
++
++    @raises RelaxError: If the spectrometer frequencies have not been set.
++    &quot;&quot;&quot;
++
++    # Test if the experiment type is set.
++    if not hasattr(cdp, 'spectrometer_frq'):
++        raise RelaxError(&quot;The spectrometer frequencies have not been set for 
+any spectra.&quot;)
++
++    # Check each spectrum ID.
++    for id in cdp.spectrum_ids:
++        if id not in cdp.spectrometer_frq:
++            raise RelaxError(&quot;The spectrometer frequency has not been set 
+for the '%s' spectrum.&quot; % id)
++
++
++def check_spectrum_ids():
++    &quot;&quot;&quot;Check if spectrum IDs exist.
++
++    @raises RelaxNoPeakIntensityError:  If no spectrum IDs exist.
++    &quot;&quot;&quot;
++
++    # The spectrum IDs structure.
++    if not hasattr(cdp, 'spectrum_ids') or len(cdp.spectrum_ids) == 0:
++        raise RelaxNoPeakIntensityError
++
++
+ def get_times():
+     &quot;&quot;&quot;Create a per-experiment dictionary of relaxation times.
+     
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Sep 06 15:40:02 2013</div>  
+</body>
+</html>

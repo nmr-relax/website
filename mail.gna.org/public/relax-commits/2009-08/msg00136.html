@@ -1,0 +1,553 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r9412 &#45; in /1.3: maths_fns/frame_order_models.py	specific_fns/frame_order.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 28 Aug 2009 18:01:26 +0200 -->
+<!--X-Message-Id: E1Mh3tG&#45;0006GU&#45;Dk@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r9412 - in /1.3: maths_fns/frame_order_models.py	specific_fns/frame_order.py -- August 28, 2009 - 18:01</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r9412 - in /1.3: maths_fns/frame_order_models.py	specific_fns/frame_order.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00136" class="tabs">Index by Date</a> | <a href="threads.html#00136" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00135.html">Date Prev</a>] [<a href="msg00137.html">Date Next</a>] [<a href="msg00135.html">Thread Prev</a>] [<a href="msg00137.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 28 Aug 2009 16:01:26 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00136.html">E1Mh3tG-0006GU-Dk@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on August 28, 2009 - 18:01:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Aug 28 18:01:25 2009
+New Revision: 9412
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=9412&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=9412&amp;view=rev</a>
+Log:
+Created the 'rigid' frame order model.
+
+
+Modified:
+    1.3/maths_fns/frame_order_models.py
+    1.3/specific_fns/frame_order.py
+
+Modified: 1.3/maths_fns/frame_order_models.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/maths_fns/frame_order_models.py?rev=9412&amp;r1=9411&amp;r2=9412&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/maths_fns/frame_order_models.py?rev=9412&amp;r1=9411&amp;r2=9412&amp;view=diff</a>
+==============================================================================
+--- 1.3/maths_fns/frame_order_models.py (original)
++++ 1.3/maths_fns/frame_order_models.py Fri Aug 28 18:01:25 2009
+@@ -73,23 +73,24 @@
+         # Store the initial parameter (as a copy).
+         self.params = deepcopy(init_params)
+ 
++        # The rigid model.
++        if model == 'rigid':
++            # Tensor optimisation.
++            self.__init_tensors(full_tensors, red_tensors, red_errors, 
+full_in_ref_frame)
++
++            # Alias the target function.
++            self.func = self.func_rigid
++
++
+         # Isotropic cone model.
+         if model == 'iso cone':
+-            # Some checks.
+-            if red_tensors == None or not len(red_tensors):
+-                raise RelaxError(&quot;The red_tensors argument &quot; + 
+repr(red_tensors) + &quot; must be supplied.&quot;)
+-            if red_errors == None or not len(red_errors):
+-                raise RelaxError(&quot;The red_errors argument &quot; + 
+repr(red_errors) + &quot; must be supplied.&quot;)
+-            if full_in_ref_frame == None or not len(full_in_ref_frame):
+-                raise RelaxError(&quot;The full_in_ref_frame argument &quot; + 
+repr(full_in_ref_frame) + &quot; must be supplied.&quot;)
+-
+             # Mix up.
+             if full_tensors != None and frame_order_2nd != None:
+                 raise RelaxError(&quot;Tensors and Frame Order matrices cannot be 
+supplied together.&quot;)
+ 
+-            # Tensor optimisation.
+-            elif full_tensors != None:
+-                self.__init_iso_cone(full_tensors, red_tensors, red_errors, 
+full_in_ref_frame)
++            # Tensor setup.
++            if full_tensors != None:
++                self.__init_tensors(full_tensors, red_tensors, red_errors, 
+full_in_ref_frame)
+ 
+             # Optimisation to the 2nd degree Frame Order matrix components 
+directly.
+             elif frame_order_2nd != None:
+@@ -99,8 +100,15 @@
+             else:
+                 raise RelaxError(&quot;The arguments have been incorrectly 
+supplied, cannot determine the optimisation mode.&quot;)
+ 
+-
+-    def __init_iso_cone(self, full_tensors, red_tensors, red_errors, 
+full_in_ref_frame):
++            # The cone axis storage and molecular frame z-axis.
++            self.cone_axis = zeros(3, float64)
++            self.z_axis = array([0, 0, 1], float64)
++
++            # Alias the target function.
++            self.func = self.func_iso_cone
++
++
++    def __init_tensors(self, full_tensors, red_tensors, red_errors, 
+full_in_ref_frame):
+         &quot;&quot;&quot;Set up isotropic cone optimisation against the alignment tensor 
+data.
+ 
+         @keyword full_tensors:      An array of the {Sxx, Syy, Sxy, Sxz, 
+Syz} values for all full
+@@ -116,10 +124,6 @@
+         @type red_errors:           numpy nx5D, rank-1 float64 array
+         &quot;&quot;&quot;
+ 
+-        # Checks.
+-        if red_tensors == None:
+-            raise RelaxError(&quot;The reduced tensors have not been supplied.&quot;)
+-
+         # Some checks.
+         if full_tensors == None or not len(full_tensors):
+             raise RelaxError(&quot;The full_tensors argument &quot; + 
+repr(full_tensors) + &quot; must be supplied.&quot;)
+@@ -138,19 +142,12 @@
+         self.red_tensors_bc = zeros(self.num_tensors*5, float64)
+         self.full_in_ref_frame = full_in_ref_frame
+ 
+-        # The cone axis storage and molecular frame z-axis.
+-        self.cone_axis = zeros(3, float64)
+-        self.z_axis = array([0, 0, 1], float64)
+-
+         # The rotation to the Frame Order eigenframe.
+         self.rot = zeros((3, 3), float64)
+         self.tensor_3D = zeros((3, 3), float64)
+ 
+         # Initialise the Frame Order matrices.
+         self.frame_order_2nd = zeros((9, 9), float64)
+-
+-        # Alias the target function.
+-        self.func = self.func_iso_cone
+ 
+ 
+     def __init_iso_cone_elements(self, frame_order_2nd):
+@@ -182,11 +179,106 @@
+         self.func = self.func_iso_cone_elements
+ 
+ 
++    def func_rigid(self, params):
++        &quot;&quot;&quot;Target function for rigid model optimisation using the alignment 
+tensors.
++
++        This function optimises against alignment tensors.  The Euler angles 
+for the tensor rotation
++        are the 3 parameters optimised in this model.
++
++        @param params:  The vector of parameter values.  These are the 
+tensor rotation angles
++                        {alpha, beta, gamma}.
++        @type params:   list of float
++        @return:        The chi-squared or SSE value.
++        @rtype:         float
++        &quot;&quot;&quot;
++
++        # Unpack the parameters.
++        alpha, beta, gamma = params
++
++        # Alignment tensor rotation.
++        R_euler_zyz(self.rot, alpha, beta, gamma)
++
++        # Back calculate the rotated tensors.
++        for i in range(self.num_tensors):
++            # Tensor indices.
++            index1 = i*5
++            index2 = i*5+5
++
++            # Convert the original tensor to 3D, rank-2 form.
++            to_tensor(self.tensor_3D, self.full_tensors[index1:index2])
++
++            # Rotate the tensor (normal R.X.RT rotation).
++            if self.full_in_ref_frame[i]:
++                self.tensor_3D = dot(self.rot, dot(self.tensor_3D, 
+transpose(self.rot)))
++
++            # Rotate the tensor (inverse RT.X.R rotation).
++            else:
++                self.tensor_3D = dot(transpose(self.rot), 
+dot(self.tensor_3D, self.rot))
++
++            # Convert the tensor back to 5D, rank-1 form, as the 
+back-calculated reduced tensor.
++            to_5D(self.red_tensors_bc[index1:index2], self.tensor_3D)
++
++        # Return the chi-squared value.
++        return chi2(self.red_tensors, self.red_tensors_bc, self.red_errors)
++
++
+     def func_iso_cone(self, params):
+         &quot;&quot;&quot;Target function for isotropic cone model optimisation using the 
+alignment tensors.
+ 
+         This function optimises against alignment tensors.  The cone axis 
+spherical angles theta and
+         phi and the cone angle theta are the 3 parameters optimised in this 
+model.
++
++        @param params:  The vector of parameter values {alpha, beta, gamma, 
+theta, phi, theta_cone}
++                        where the first 3 are the tensor rotation Euler 
+angles, the next two are the
++                        polar and azimuthal angles of the cone axis 
+theta_cone is the isotropic cone
++                        angle.
++        @type params:   list of float
++        @return:        The chi-squared or SSE value.
++        @rtype:         float
++        &quot;&quot;&quot;
++
++        # Unpack the parameters.
++        alpha, beta, gamma, theta, phi, theta_cone = params
++
++        # Generate the 2nd degree Frame Order super matrix.
++        self.frame_order_2nd = 
+compile_2nd_matrix_iso_cone(self.frame_order_2nd, self.rot, self.z_axis, 
+self.cone_axis, theta, phi, theta_cone)
++
++        # Reduced alignment tensor rotation.
++        R_euler_zyz(self.rot, alpha, beta, gamma)
++
++        # Back calculate the reduced tensors.
++        for i in range(self.num_tensors):
++            # Tensor indices.
++            index1 = i*5
++            index2 = i*5+5
++
++            # Reduce the tensor.
++            reduce_alignment_tensor(self.frame_order_2nd, 
+self.full_tensors[index1:index2], self.red_tensors_bc[index1:index2])
++
++            # Convert the tensor to 3D, rank-2 form.
++            to_tensor(self.tensor_3D, self.red_tensors_bc[index1:index2])
++
++            # Rotate the tensor (normal R.X.RT rotation).
++            if self.full_in_ref_frame[i]:
++                self.tensor_3D = dot(self.rot, dot(self.tensor_3D, 
+transpose(self.rot)))
++
++            # Rotate the tensor (inverse RT.X.R rotation).
++            else:
++                self.tensor_3D = dot(transpose(self.rot), 
+dot(self.tensor_3D, self.rot))
++
++            # Convert the tensor back to 5D, rank-1 form.
++            to_5D(self.red_tensors_bc[index1:index2], self.tensor_3D)
++
++        # Return the chi-squared value.
++        return chi2(self.red_tensors, self.red_tensors_bc, self.red_errors)
++
++
++    def func_iso_cone_elements(self, params):
++        &quot;&quot;&quot;Target function for isotropic cone model optimisation using the 
+Frame Order matrix.
++
++        This function optimises by directly matching the elements of the 2nd 
+degree Frame Order
++        super matrix.  The cone axis spherical angles theta and phi and the 
+cone angle theta are the
++        3 parameters optimised in this model.
+ 
+         @param params:  The vector of parameter values {theta, phi, 
+theta_cone} where the first two
+                         are the polar and azimuthal angles of the cone axis 
+theta_cone is the
+@@ -197,57 +289,6 @@
+         &quot;&quot;&quot;
+ 
+         # Break up the parameters.
+-        alpha, beta, gamma, theta, phi, theta_cone = params
+-
+-        # Generate the 2nd degree Frame Order super matrix.
+-        self.frame_order_2nd = 
+compile_2nd_matrix_iso_cone(self.frame_order_2nd, self.rot, self.z_axis, 
+self.cone_axis, theta, phi, theta_cone)
+-
+-        # Reduced alignment tensor rotation into the eigenframe.
+-        R_euler_zyz(self.rot, alpha, beta, gamma)
+-
+-        # Back calculate the reduced tensors.
+-        for i in range(self.num_tensors):
+-            # Tensor indices.
+-            index1 = i*5
+-            index2 = i*5+5
+-
+-            # Reduce the tensor.
+-            reduce_alignment_tensor(self.frame_order_2nd, 
+self.full_tensors[index1:index2], self.red_tensors_bc[index1:index2])
+-
+-            # Convert the tensor to 3D, rank-2 form.
+-            to_tensor(self.tensor_3D, self.red_tensors_bc[index1:index2])
+-
+-            # Rotate the tensor (normal R.X.RT rotation).
+-            if self.full_in_ref_frame[i]:
+-                self.tensor_3D = dot(self.rot, dot(self.tensor_3D, 
+transpose(self.rot)))
+-
+-            # Rotate the tensor (inverse RT.X.R rotation).
+-            else:
+-                self.tensor_3D = dot(transpose(self.rot), 
+dot(self.tensor_3D, self.rot))
+-
+-            # Convert the tensor back to 5D, rank-1 form.
+-            to_5D(self.red_tensors_bc[index1:index2], self.tensor_3D)
+-
+-        # Return the chi-squared value.
+-        return chi2(self.red_tensors, self.red_tensors_bc, self.red_errors)
+-
+-
+-    def func_iso_cone_elements(self, params):
+-        &quot;&quot;&quot;Target function for isotropic cone model optimisation using the 
+Frame Order matrix.
+-
+-        This function optimises by directly matching the elements of the 2nd 
+degree Frame Order
+-        super matrix.  The cone axis spherical angles theta and phi and the 
+cone angle theta are the
+-        3 parameters optimised in this model.
+-
+-        @param params:  The vector of parameter values {theta, phi, 
+theta_cone} where the first two
+-                        are the polar and azimuthal angles of the cone axis 
+theta_cone is the
+-                        isotropic cone angle.
+-        @type params:   list of float
+-        @return:        The chi-squared or SSE value.
+-        @rtype:         float
+-        &quot;&quot;&quot;
+-
+-        # Break up the parameters.
+         theta, phi, theta_cone = params
+ 
+         # Generate the 2nd degree Frame Order super matrix.
+
+Modified: 1.3/specific_fns/frame_order.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/specific_fns/frame_order.py?rev=9412&amp;r1=9411&amp;r2=9412&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/specific_fns/frame_order.py?rev=9412&amp;r1=9411&amp;r2=9412&amp;view=diff</a>
+==============================================================================
+--- 1.3/specific_fns/frame_order.py (original)
++++ 1.3/specific_fns/frame_order.py Fri Aug 28 18:01:25 2009
+@@ -158,6 +158,23 @@
+         if not hasattr(cdp, 'params'):
+             cdp.params = []
+ 
++        # The rigid model.
++        if cdp.model == 'rigid':
++            # Set up the parameter arrays.
++            if not len(cdp.params):
++                cdp.params.append('alpha')
++                cdp.params.append('beta')
++                cdp.params.append('gamma')
++
++            # Initialise the tensor rotation angles.
++            if not hasattr(cdp, 'alpha'):
++                cdp.alpha = 0.0
++            if not hasattr(cdp, 'beta'):
++                cdp.beta = 0.0
++            if not hasattr(cdp, 'gamma'):
++                cdp.gamma = 0.0
++
++
+         # Isotropic cone model.
+         if cdp.model == 'iso cone':
+             # Set up the parameter arrays.
+@@ -208,6 +225,30 @@
+         if isNaN(func):
+             raise RelaxNaNError('chi-squared')
+ 
++        # The rigid model.
++        if cdp.model == 'rigid':
++            # Disassemble the parameter vector.
++            alpha, beta, gamma = param_vector
++
++            # Wrap the Euler angles.
++            alpha = wrap_angles(alpha, 0.0, 2.0*pi)
++            beta  = wrap_angles(beta, 0.0, 2.0*pi)
++            gamma = wrap_angles(gamma, 0.0, 2.0*pi)
++
++            # Monte Carlo simulation data structures.
++            if sim_index != None:
++                # Model parameters.
++                cdp.alpha_sim[sim_index] = alpha
++                cdp.beta_sim[sim_index] = beta
++                cdp.gamma_sim[sim_index] = gamma
++
++            # Normal data structures.
++            else:
++                # Model parameters.
++                cdp.alpha = alpha
++                cdp.beta = beta
++                cdp.gamma = gamma
++
+         # Isotropic cone model.
+         if cdp.model == 'iso cone':
+             # Disassemble the parameter vector.
+@@ -234,14 +275,6 @@
+                 cdp.phi_axis_sim[sim_index] = phi_axis
+                 cdp.theta_cone_sim[sim_index] = theta_cone
+ 
+-                # Optimisation info.
+-                cdp.chi2_sim[sim_index] = func
+-                cdp.iter_sim[sim_index] = iter_count
+-                cdp.f_count_sim[sim_index] = f_count
+-                cdp.g_count_sim[sim_index] = g_count
+-                cdp.h_count_sim[sim_index] = h_count
+-                cdp.warning_sim[sim_index] = warning
+-
+             # Normal data structures.
+             else:
+                 # Model parameters.
+@@ -252,13 +285,24 @@
+                 cdp.phi_axis = phi_axis
+                 cdp.theta_cone = theta_cone
+ 
+-                # Optimisation info.
+-                cdp.chi2 = func
+-                cdp.iter = iter_count
+-                cdp.f_count = f_count
+-                cdp.g_count = g_count
+-                cdp.h_count = h_count
+-                cdp.warning = warning
++        # Monte Carlo simulation optimisation data structures.
++        if sim_index != None:
++            cdp.chi2_sim[sim_index] = func
++            cdp.iter_sim[sim_index] = iter_count
++            cdp.f_count_sim[sim_index] = f_count
++            cdp.g_count_sim[sim_index] = g_count
++            cdp.h_count_sim[sim_index] = h_count
++            cdp.warning_sim[sim_index] = warning
++
++        # Normal optimisation data structures.
++        else:
++            cdp.chi2 = func
++            cdp.iter = iter_count
++            cdp.f_count = f_count
++            cdp.g_count = g_count
++            cdp.h_count = h_count
++            cdp.warning = warning
++
+ 
+ 
+     def back_calc(self):
+@@ -630,16 +674,21 @@
+         if constraints:
+             raise RelaxError(&quot;Constraints are as of yet not implemented.&quot;)
+ 
++        # The rigid model.
++        if cdp.model == 'rigid':
++            # The initial parameter vector (tensor rotation Euler angles).
++            param_vector = array([cdp.alpha, cdp.beta, cdp.gamma], float64)
++
+         # Isotropic cone model.
+         if cdp.model == 'iso cone':
+-            # The initial parameter vector (the cone axis angles and the 
+cone angle).
++            # The initial parameter vector (tensor rotation Euler angles, 
+the cone axis angles and the cone angle).
+             param_vector = array([cdp.alpha, cdp.beta, cdp.gamma, 
+cdp.theta_axis, cdp.phi_axis, cdp.theta_cone], float64)
+ 
+-            # Get the data structures for optimisation using the tensors as 
+base data sets.
+-            full_tensors, red_tensors, red_tensor_err, full_in_ref_frame = 
+self.__minimise_setup_tensors(sim_index)
+-
+-            # Set up the optimisation function.
+-            target = frame_order_models.Frame_order(model=cdp.model, 
+full_tensors=full_tensors, red_tensors=red_tensors, 
+red_errors=red_tensor_err, full_in_ref_frame=full_in_ref_frame)
++        # Get the data structures for optimisation using the tensors as base 
+data sets.
++        full_tensors, red_tensors, red_tensor_err, full_in_ref_frame = 
+self.__minimise_setup_tensors(sim_index)
++
++        # Set up the optimisation function.
++        target = frame_order_models.Frame_order(model=cdp.model, 
+full_tensors=full_tensors, red_tensors=red_tensors, 
+red_errors=red_tensor_err, full_in_ref_frame=full_in_ref_frame)
+ 
+         # Minimisation.
+         results = generic_minimise(func=target.func, args=(), 
+x0=param_vector, min_algor=min_algor, min_options=min_options, 
+func_tol=func_tol, grad_tol=grad_tol, maxiter=max_iterations, full_output=1, 
+print_flag=verbosity)
+@@ -751,7 +800,7 @@
+             raise RelaxModelError('Frame Order')
+ 
+         # Test if the model name exists.
+-        if not model in ['iso cone']:
++        if not model in ['rigid', 'iso cone']:
+             raise RelaxError(&quot;The model name &quot; + repr(model) + &quot; is 
+invalid.&quot;)
+ 
+         # Set the model
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Sep 02 21:20:10 2009</div>  
+</body>
+</html>

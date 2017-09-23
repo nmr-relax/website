@@ -1,0 +1,408 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: Deficiencies and errors in the storage of model&#45;free contents in 	NMR&#45;STAR. -->
+<!--X-From-R13: "Sqjneq q'Ohiretar" <rqjneqNaze&#45;erynk.pbz> -->
+<!--X-Date: Mon, 09 Mar 2009 11:28:59 +0100 -->
+<!--X-Message-Id: 7f080ed10903090328x151a6d13xa07e4e14c52a138f@mail.gmail.com -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>Deficiencies and errors in the storage of model-free contents in 	NMR-STAR. -- March 09, 2009 - 11:28</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />Deficiencies and errors in the storage of model-free contents in 	NMR-STAR.</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00002" class="tabs">Index by Date</a> | <a href="threads.html#00002" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00001.html">Date Prev</a>] [<a href="msg00003.html">Date Next</a>] [<a href="msg00001.html">Thread Prev</a>] [<a href="msg00004.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: Eldon Ulrich &lt;elu@xxxxxxxxxxxxx&gt;</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 9 Mar 2009 11:28:21 +0100</li>
+<li class="menuitem">
+<em>Cc</em>: relax-devel@xxxxxxx</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00002.html">7f080ed10903090328x151a6d13xa07e4e14c52a138f@mail.gmail.com</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>Edward d'Auvergne</strong> on March 09, 2009 - 11:28:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Dear Eldon,
+
+I am ready to dump the contents of a model-free analysis into the
+NMR-STAR file, but have noticed a few issues.  For an idea of all the
+spin specific data that can be archived, I've cut and paste an XML
+formatted relax spin container at the end.  I'll go through the issues
+one by one.
+
+
+1.  The current design is centred on Art Palmer's Modelfree output.
+
+1.1  Some are cosmetic, for example _Order_param.Tau_e_val and
+_Order_param.Tau_e_val_fit_err.  The last one might be better called
+_Order_param.Tau_e_err.  The errors are propagated from the relaxation
+data to the model-free parameters via Monte Carlo simulations (if done
+correctly by progam X).  This is most definately not a fit error.
+
+1.2  This one is important, _Order_param.Model_fit.  This is not well
+defined.  In relax and in my papers, I've defined the following
+strings to identify the model:
+
+        'm0' = {},
+        'm1' = {S2},
+        'm2' = {S2, te},
+        'm3' = {S2, Rex},
+        'm4' = {S2, te, Rex},
+        'm5' = {S2f, S2, ts},
+        'm6' = {S2f, tf, S2, ts},
+        'm7' = {S2f, S2, ts, Rex},
+        'm8' = {S2f, tf, S2, ts, Rex},
+        'm9' = {Rex}.
+
+In Modelfree4, Art has the following set:
+
+Model 1: S2s
+Model 2: S2s and te
+Model 3: S2s and Rex
+Model 4: S2s, te and Rex
+Model 5: Sf2, Ss2, and te
+
+But in the mfout file (Modelfree4's output), the model is the string
+'0000110', identifying the parameters used.  I think this field needs
+a well defined set of values for it to be useful between different
+programs.
+
+1.3  This is a badly/incorrectly defined entry:
+_Order_param.Model_free_sum_squared_errs.  It's origin is obviously
+Modelfree4 where it is incorrectly named.  What is minimised is the
+chi-squared value in Modelfree4, Dasha, relax, Tensor2, DYNAMICS, etc.
+ None of these programs minimise the SSE value.  The chi-squared value
+is where each SSE element { (Rx - Rx(theta))^2 } is divided by the
+relaxation data error squared.  I could dump the chi^2 value into this
+field, but it is misleading as it could be intepreted as relax not
+using the errors in optimisation, which in fact it does.
+
+
+2.  S2, S2f, and S2s.
+
+In Modelfree4, S2 is named S2s when S2f is not in the model.  But in
+Clore et al.'s extended model-free formula, there is no direct link
+between S2 and the extended parameters S2f and S2s.  In fact, when
+either tf or ts goes to zero, either order parameter collapses to S2.
+So how should this be handled?  I would guess:
+
+S2 -&gt; _Order_param.Order_param_val
+S2f -&gt; _Order_param.Sf2_val
+S2s -&gt; _Order_param.Ss2_val
+
+Would _Order_param.S2_val be better for the first, or is this
+something completely different from S2?  The same issue occurs in the
+te, tf, and ts parameters within Modelfree4, but this is not an issue
+in the NMR-STAR definition.
+
+
+3.  Rex.
+
+Assuming Rex is fast exchange, then the value scales quadratically
+with field strength.  Therefore to store the Rex value in
+_Order_param.Rex_val, you need to know the field strength the
+parameter is reported at, and the alpha parameter (from memory, i.e. I
+could be wrong, this ranges from 1 is slow exchange to 2 for fast
+exchange).  In relax, alpha is always assumed to be 2.
+
+
+I'll start to implement this, but I will have a few problems.
+
+Cheers,
+
+Edward
+
+
+P.S.  An example of a spin container in relax (here the output XML
+storage format).  Note that there are three major groupings of
+parameters here, the values, the errors, and the Monte Carlo
+simulation data.  This container holds absolutely everything related
+to a single spin, and obviously not all should be stored in the BMRB.
+Would you be able to go through and identify the data you would like
+archived in the database?  Cheers.
+
+            &lt;res desc=&quot;Residue container&quot; name=&quot;Gln&quot; num=&quot;9&quot;&gt;
+                &lt;spin desc=&quot;Spin container&quot; name=&quot;None&quot; num=&quot;None&quot;&gt;
+                    &lt;select desc=&quot;The spin selection flag&quot;&gt;
+                        True
+                    &lt;/select&gt;
+                    &lt;fixed desc=&quot;The fixed flag&quot;&gt;
+                        False
+                    &lt;/fixed&gt;
+                    &lt;proton_type desc=&quot;The proton spin type&quot;&gt;
+                        '1H'
+                    &lt;/proton_type&gt;
+                    &lt;heteronuc_type desc=&quot;The heteronucleus spin type&quot;&gt;
+                        '15N'
+                    &lt;/heteronuc_type&gt;
+                    &lt;attached_proton&gt;
+                        'H'
+                    &lt;/attached_proton&gt;
+                    &lt;nucleus&gt;
+                        None
+                    &lt;/nucleus&gt;
+                    &lt;model desc=&quot;The model&quot;&gt;
+                        'm5'
+                    &lt;/model&gt;
+                    &lt;equation desc=&quot;The model equation&quot;&gt;
+                        'mf_ext'
+                    &lt;/equation&gt;
+                    &lt;params desc=&quot;The model parameters&quot;&gt;
+                        ['S2f', 'S2', 'ts']
+                    &lt;/params&gt;
+                    &lt;xh_vect desc=&quot;XH bond vector&quot;&gt;
+                        array([-0.66346716, -0.54562747,  0.51195898])
+                    &lt;/xh_vect&gt;
+                    &lt;s2 desc=&quot;S2, the model-free generalised order
+parameter (S2 = S2f.S2s)&quot; ieee_754_byte_array=&quot;[79, 245, 59, 46, 197,
+71, 232, 63]&quot;&gt;
+                        0.75876101522559647
+                    &lt;/s2&gt;
+                    &lt;s2f desc=&quot;S2f, the faster motion model-free
+generalised order parameter&quot; ieee_754_byte_array=&quot;[85, 238, 71, 7,
+206, 199, 235, 63]&quot;&gt;
+                        0.86814023420397268
+                    &lt;/s2f&gt;
+                    &lt;s2s desc=&quot;S2s, the slower motion model-free
+generalised order parameter&quot; ieee_754_byte_array=&quot;[241, 110, 49, 110,
+222, 247, 235, 63]&quot;&gt;
+                        0.87400743028726258
+                    &lt;/s2s&gt;
+                    &lt;local_tm desc=&quot;The spin specific global
+correlation time (ns)&quot;&gt;
+                        None
+                    &lt;/local_tm&gt;
+                    &lt;te desc=&quot;Single motion effective internal
+correlation time (ps)&quot;&gt;
+                        None
+                    &lt;/te&gt;
+                    &lt;tf desc=&quot;Faster motion effective internal
+correlation time (ps)&quot;&gt;
+                        None
+                    &lt;/tf&gt;
+                    &lt;ts desc=&quot;Slower motion effective internal
+correlation time (ps)&quot; ieee_754_byte_array=&quot;[218, 245, 99, 46, 43,
+185, 255, 61]&quot;&gt;
+                        4.6163499272395248e-10
+                    &lt;/ts&gt;
+                    &lt;rex desc=&quot;Chemical exchange relaxation (600 MHz)&quot;&gt;
+                        None
+                    &lt;/rex&gt;
+                    &lt;r desc=&quot;Bond length (Angstrom)&quot;
+ieee_754_byte_array=&quot;[12, 45, 225, 165, 156, 9, 220, 61]&quot;&gt;
+                        1.0200000000000001e-10
+                    &lt;/r&gt;
+                    &lt;csa desc=&quot;Chemical shift anisotropy (ppm)&quot;
+ieee_754_byte_array=&quot;[240, 104, 227, 136, 181, 248, 36, 191]&quot;&gt;
+                        -0.00015999999999999999
+                    &lt;/csa&gt;
+                    &lt;chi2 desc=&quot;Chi-squared value&quot;&gt;
+                        None
+                    &lt;/chi2&gt;
+                    &lt;iter desc=&quot;Optimisation iterations&quot;&gt;
+                        None
+                    &lt;/iter&gt;
+                    &lt;f_count desc=&quot;Number of function calls&quot;&gt;
+                        None
+                    &lt;/f_count&gt;
+                    &lt;g_count desc=&quot;Number of gradient calls&quot;&gt;
+                        None
+                    &lt;/g_count&gt;
+                    &lt;h_count desc=&quot;Number of Hessian calls&quot;&gt;
+                        None
+                    &lt;/h_count&gt;
+                    &lt;warning desc=&quot;Optimisation warning&quot;&gt;
+                        None
+                    &lt;/warning&gt;
+                    &lt;num_frq desc=&quot;Number of spectrometer frequencies&quot;&gt;
+                        2
+                    &lt;/num_frq&gt;
+                    &lt;frq desc=&quot;Frequencies&quot;&gt;
+                        [600000000.0, 800000000.0]
+                    &lt;/frq&gt;
+                    &lt;frq_labels desc=&quot;Frequency labels&quot;&gt;
+                        ['600', '800']
+                    &lt;/frq_labels&gt;
+                    &lt;num_ri desc=&quot;Number of relaxation data sets&quot;&gt;
+                        6
+                    &lt;/num_ri&gt;
+                    &lt;ri_labels desc=&quot;Relaxation data set labels&quot;&gt;
+                        ['R1', 'R2', 'NOE', 'R1', 'R2', 'NOE']
+                    &lt;/ri_labels&gt;
+                    &lt;remap_table desc=&quot;Table mapping frequencies to
+relaxation data&quot;&gt;
+                        [0, 0, 0, 1, 1, 1]
+                    &lt;/remap_table&gt;
+                    &lt;noe_r1_table desc=&quot;Table mapping the NOE to the
+corresponding R1&quot;&gt;
+                        [None, None, 0, None, None, 3]
+                    &lt;/noe_r1_table&gt;
+                    &lt;relax_data desc=&quot;The relaxation data&quot;&gt;
+                        [1.3500000000000001, 9.8499999999999996,
+0.52300000000000002, 0.89000000000000001, 11.273, 0.59799999999999998]
+                    &lt;/relax_data&gt;
+                    &lt;relax_error desc=&quot;The relaxation data errors&quot;&gt;
+                        [0.049000000000000002, 0.64800000000000002,
+0.041000000000000002, 0.037999999999999999, 0.80400000000000005,
+0.044999999999999998]
+                    &lt;/relax_error&gt;
+                    &lt;s2_err ieee_754_byte_array=&quot;[87, 48, 121, 224,
+164, 254, 164, 63]&quot;&gt;
+                        0.04100527992395147
+                    &lt;/s2_err&gt;
+                    &lt;s2f_err ieee_754_byte_array=&quot;[161, 87, 243, 76,
+29, 198, 160, 63]&quot;&gt;
+                        0.032761493342760468
+                    &lt;/s2f_err&gt;
+                    &lt;s2s_err ieee_754_byte_array=&quot;[15, 24, 168, 63,
+237, 77, 149, 63]&quot;&gt;
+                        0.02080507946995885
+                    &lt;/s2s_err&gt;
+                    &lt;local_tm_err&gt;
+                        None
+                    &lt;/local_tm_err&gt;
+                    &lt;te_err&gt;
+                        None
+                    &lt;/te_err&gt;
+                    &lt;tf_err&gt;
+                        None
+                    &lt;/tf_err&gt;
+                    &lt;ts_err ieee_754_byte_array=&quot;[245, 234, 87, 107,
+14, 23, 232, 61]&quot;&gt;
+                        1.7527828292232752e-10
+                    &lt;/ts_err&gt;
+                    &lt;rex_err&gt;
+                        None
+                    &lt;/rex_err&gt;
+                    &lt;r_err ieee_754_byte_array=&quot;[113, 97, 204, 73,
+226, 50, 176, 58]&quot;&gt;
+                        5.2341033882074777e-26
+                    &lt;/r_err&gt;
+                    &lt;csa_err ieee_754_byte_array=&quot;[135, 170, 37, 1,
+12, 89, 12, 60]&quot;&gt;
+                        1.9209243180375657e-19
+                    &lt;/csa_err&gt;
+                    &lt;s2_sim&gt;
+                        [0.72126495270768964, 0.7307712098756376,
+0.76644743845801167]
+                    &lt;/s2_sim&gt;
+                    &lt;s2f_sim&gt;
+                        [0.81915405965996979, 0.87574326104926303,
+0.87203256421955588]
+                    &lt;/s2f_sim&gt;
+                    &lt;s2s_sim&gt;
+                        [0.8804997597241796, 0.83445827376401549,
+0.87892066180345008]
+                    &lt;/s2s_sim&gt;
+                    &lt;local_tm_sim&gt;
+                        [None, None, None]
+                    &lt;/local_tm_sim&gt;
+                    &lt;te_sim&gt;
+                        [None, None, None]
+                    &lt;/te_sim&gt;
+                    &lt;tf_sim&gt;
+                        [None, None, None]
+                    &lt;/tf_sim&gt;
+                    &lt;ts_sim&gt;
+                        [5.0162380542358768e-10,
+5.1905636720006613e-10, 4.9878987257130834e-10]
+                    &lt;/ts_sim&gt;
+                    &lt;rex_sim&gt;
+                        [None, None, None]
+                    &lt;/rex_sim&gt;
+                    &lt;r_sim&gt;
+                        [1.0200000000000001e-10,
+1.0200000000000001e-10, 1.0200000000000001e-10]
+                    &lt;/r_sim&gt;
+                    &lt;csa_sim&gt;
+                        [-0.00015999999999999999,
+-0.00015999999999999999, -0.00015999999999999999]
+                    &lt;/csa_sim&gt;
+                    &lt;relax_sim_data&gt;
+                        [[1.2259341365150942, 9.5384246795844483,
+0.53496232953857514, 0.86811125282694646, 11.216112862776725,
+0.64002633181568969], [1.3308243333245262, 10.066727729132351, 0.500
+                    &lt;/relax_sim_data&gt;
+                    &lt;chi2_sim&gt;
+                        [0.57322913112490592, 5.8309178978062732,
+4.4746991237114315]
+                    &lt;/chi2_sim&gt;
+                    &lt;f_count_sim&gt;
+                        [22, 50, 14]
+                    &lt;/f_count_sim&gt;
+                    &lt;g_count_sim&gt;
+                        [10, 14, 8]
+                    &lt;/g_count_sim&gt;
+                    &lt;h_count_sim&gt;
+                        [6, 10, 5]
+                    &lt;/h_count_sim&gt;
+                    &lt;iter_sim&gt;
+                        [6, 10, 5]
+                    &lt;/iter_sim&gt;
+                    &lt;select_sim&gt;
+                        [True, True, True]
+                    &lt;/select_sim&gt;
+                    &lt;warning_sim&gt;
+                        [None, None, None]
+                    &lt;/warning_sim&gt;
+                &lt;/spin&gt;
+            &lt;/res&gt;
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<ul><li><strong>Follow-Ups</strong>:
+<ul>
+<li><strong><a name="00004" href="msg00004.html">Re: Deficiencies and errors in the storage of model-free contents	in 	NMR-STAR.</a></strong>
+<ul><li><em>From:</em> Sébastien Morin</li></ul></li>
+</ul></li></ul>
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Mar 10 16:01:04 2009</div>  
+</body>
+</html>

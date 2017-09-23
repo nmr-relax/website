@@ -1,0 +1,280 @@
+<!-- MHonArc v2.6.10 -->
+<!--X-Subject: r2535 &#45; in /1.2: errors.py relax -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 11 Aug 2006 19:59:18 +0200 -->
+<!--X-Message-Id: E1GBbHU&#45;0002jl&#45;8N@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r2535 - in /1.2: errors.py relax -- August 11, 2006 - 19:59</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r2535 - in /1.2: errors.py relax</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00007" class="tabs">Index by Date</a> | <a href="threads.html#00007" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00006.html">Date Prev</a>] [<a href="msg00008.html">Date Next</a>] [<a href="msg00006.html">Thread Prev</a>] [<a href="msg00008.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 11 Aug 2006 17:58:48 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00007.html">E1GBbHU-0002jl-8N@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on August 11, 2006 - 19:59:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Aug 11 19:58:47 2006
+New Revision: 2535
+
+URL: <a  href="http://svn.gna.org/viewcvs/relax?rev=2535&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=2535&amp;view=rev</a>
+Log:
+Start of a new relax error/warning subsystem.
+
+The idea of this system was suggested in two threads which commence at:
+<a  href="https://mail.gna.org/public/relax-devel/2006-08/msg00052.html">https://mail.gna.org/public/relax-devel/2006-08/msg00052.html</a>
+<a  href="https://mail.gna.org/public/relax-devel/2006-08/msg00053.html">https://mail.gna.org/public/relax-devel/2006-08/msg00053.html</a>
+
+Essentially a rudimentary framework for replacing the entire Error and 
+Warning system has been set
+up.  Many essential elements are missing (for example the warning function, 
+tracebacks, etc)
+however it shouldn't take long to add these.  This new system significantly 
+simplifies the
+RelaxError/RelaxWarning system, allows easy implementation of the 
+--ignore-errors and --pedantic
+command line flags 
+(<a  href="https://mail.gna.org/public/relax-devel/2006-08/msg00052.html">https://mail.gna.org/public/relax-devel/2006-08/msg00052.html</a>), and allows 
+fine
+tuning of how RelaxErrors and RelaxWarnings are handled within the different 
+relax user interfaces
+(UIs).
+
+
+Modified:
+    1.2/errors.py
+    1.2/relax
+
+Modified: 1.2/errors.py
+URL: 
+<a  href="http://svn.gna.org/viewcvs/relax/1.2/errors.py?rev=2535&amp;r1=2534&amp;r2=2535&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.2/errors.py?rev=2535&amp;r1=2534&amp;r2=2535&amp;view=diff</a>
+==============================================================================
+--- 1.2/errors.py (original)
++++ 1.2/errors.py Fri Aug 11 19:58:47 2006
+@@ -21,28 +21,64 @@
+ 
+###############################################################################
+ 
+ import __builtin__
+-from re import match
++from re import match, search
+ from types import ClassType
+ import time
+-
+-
+-class RelaxErrors:
+-    def __init__(self, relax):
+-        &quot;&quot;&quot;Class for placing all the errors below into __builtin__&quot;&quot;&quot;
++import sys
++
++
++class RelaxErrorSystem:
++    def __init__(self, relax, UI_mode=None):
++        &quot;&quot;&quot;The relax error and warning system.&quot;&quot;&quot;
++
++        # Arguments.
++        self.relax = relax
++        self.UI_mode = UI_mode
++
++        # Instant exiting modes (i.e. no error system is necessary).
++        if UI_mode == 'version':
++            return
++
++        # Loop over the errors, set their error handling functions, and pack 
+them into __builtin__.
++        self.initialise_errors()
++
++
++    def error(self, message):
++        &quot;&quot;&quot;Default error function - traceback, error message, then 
+sys.exit().&quot;&quot;&quot;
++
++        # Write the traceback to stderr.
++
++        # Write the error message to stderr.
++        sys.stderr.write(&quot;RelaxError: &quot; + message + &quot;\n&quot;)
++
++        # Hard exit!
++        sys.exit()
++
++
++    def initialise_errors(self):
++        &quot;&quot;&quot;Set the error handling functions and place the errors into 
+__builtin__.&quot;&quot;&quot;
+ 
+         # Loop over all objects in 'self'.
+         for name in dir(self):
+             # Get the object.
+             object = getattr(self, name)
+ 
+-            # Skip over all non error class objects.
+-            if type(object) != ClassType or not match('Relax', name):
++            # Skip over all non error/warning class objects.
++            if type(object) != ClassType or not search('^Relax', name):
+                 continue
+ 
+-            # Add the top level relax class:
+-            setattr(object, '_relax', relax)
+-
+-            # Place the exceptions into __builtin__
++            # Add the top level relax class.
++            setattr(object, 'relax', self.relax)
++
++            # Set up the RelaxError handling functions.
++            if search('Error$', name):
++                object.exception = self.error
++
++            # Set up the RelaxWarning handling functions.
++            if search('Warning$', name):
++                object.exception = self.warning
++
++            # Place the errors into __builtin__
+             __builtin__.__setattr__(name, object)
+ 
+             # Tuple of all the errors.
+@@ -52,12 +88,56 @@
+                 __builtin__.AllRelaxErrors = object,
+ 
+ 
++
++    class RelaxBadError:
++        def __init__(self, text):
++            &quot;&quot;&quot;This error is really BAD!!!&quot;&quot;&quot;
++
++            # Format the message.
++            message = text + &quot; - This error is very, very bad.&quot;
++
++            # Save the program state.
++            if Debug:
++                self.save_state()
++
++            # Run the error handling code.
++            self.exception(message)
++
++
++
++class RelaxErrors:
++    def __init__(self, relax):
++        &quot;&quot;&quot;Class for placing all the errors below into __builtin__&quot;&quot;&quot;
++
++        # Loop over all objects in 'self'.
++        for name in dir(self):
++            # Get the object.
++            object = getattr(self, name)
++
++            # Skip over all non error class objects.
++            if type(object) != ClassType or not match('Relax', name):
++                continue
++
++            # Add the top level relax class:
++            setattr(object, '_relax', relax)
++
++            # Place the exceptions into __builtin__
++            __builtin__.__setattr__(name, object)
++
++            # Tuple of all the errors.
++            if hasattr(__builtin__, 'AllRelaxErrors'):
++                __builtin__.AllRelaxErrors = __builtin__.AllRelaxErrors, 
+object
++            else:
++                __builtin__.AllRelaxErrors = object,
++
++
+     # Base class for all errors.
+     ############################
+ 
+     class BaseError(Exception):
+         def __str__(self):
+             return (&quot;RelaxError: &quot; + self.text + &quot;\n&quot;)
++
+         def save_state(self):
+             now = time.localtime()
+             file_name = &quot;relax_state_%i%02i%02i_%02i%02i%02i&quot; % (now[0], 
+
+Modified: 1.2/relax
+URL: 
+<a  href="http://svn.gna.org/viewcvs/relax/1.2/relax?rev=2535&amp;r1=2534&amp;r2=2535&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.2/relax?rev=2535&amp;r1=2534&amp;r2=2535&amp;view=diff</a>
+==============================================================================
+--- 1.2/relax (original)
++++ 1.2/relax Fri Aug 11 19:58:47 2006
+@@ -66,7 +66,7 @@
+ # relax modules.
+ from colour import Colour
+ from data import Data
+-from errors import RelaxErrors
++from errors import RelaxErrorSystem, RelaxErrors
+ from io import IO
+ from generic_fns.main import Generic
+ from prompt.gpl import gpl
+@@ -128,6 +128,9 @@
+         # Process the command line arguments and determine the relax mode.
+         mode, log_file, tee_file = self.arguments()
+ 
++        # Set up the relax error system.
++        RelaxErrorSystem(self, UI_mode=mode)
++
+         # Show the version number and exit.
+         if mode == 'version':
+             print 'relax ' + self.version
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Sat Aug 12 08:00:07 2006</div>  
+</body>
+</html>

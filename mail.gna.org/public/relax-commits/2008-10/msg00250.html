@@ -1,0 +1,329 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r7721 &#45; in /branches/multi_processor_merge: multi/	specific_fns/model_free/ -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 15 Oct 2008 22:57:55 +0200 -->
+<!--X-Message-Id: E1KqDRL&#45;0004Fj&#45;Qz@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r7721 - in /branches/multi_processor_merge: multi/	specific_fns/model_free/ -- October 15, 2008 - 22:57</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r7721 - in /branches/multi_processor_merge: multi/	specific_fns/model_free/</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00250" class="tabs">Index by Date</a> | <a href="threads.html#00250" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00249.html">Date Prev</a>] [<a href="msg00251.html">Date Next</a>] [<a href="msg00249.html">Thread Prev</a>] [<a href="msg00251.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 15 Oct 2008 20:57:55 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00250.html">E1KqDRL-0004Fj-Qz@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on October 15, 2008 - 22:57:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Oct 15 22:57:55 2008
+New Revision: 7721
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=7721&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=7721&amp;view=rev</a>
+Log:
+Manually ported r3248 from the multi_processor branch.
+
+The 2 commands used were:
+svn merge -r3247:3248 
+svn+ssh://bugman@xxxxxxxxxxx/svn/relax/branches/multi_processor .
+svn merge -r3247:3248 
+svn+ssh://bugman@xxxxxxxxxxx/svn/relax/branches/multi_processor/specific_fns/model_free.py
+ specific_fns/model_free/mf_minimise.py
+
+.....
+  r3248 | varioustoxins | 2007-03-29 21:47:17 +0200 (Thu, 29 Mar 2007) | 4 
+lines
+  Changed paths:
+     A /branches/multi_processor/multi/commands.py
+     M /branches/multi_processor/multi/mpi4py_processor.py
+     M /branches/multi_processor/multi/processor.py
+     M /branches/multi_processor/specific_fns/model_free.py
+
+  more modifications to remove accidental dependances on mpi4py in 
+uni_processor
+  creation of command module
+.....
+
+
+Added:
+    branches/multi_processor_merge/multi/commands.py
+      - copied unchanged from r3248, 
+branches/multi_processor/multi/commands.py
+Modified:
+    branches/multi_processor_merge/multi/mpi4py_processor.py
+    branches/multi_processor_merge/multi/processor.py
+    branches/multi_processor_merge/specific_fns/model_free/mf_minimise.py
+
+Modified: branches/multi_processor_merge/multi/mpi4py_processor.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/multi_processor_merge/multi/mpi4py_processor.py?rev=7721&amp;r1=7720&amp;r2=7721&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/multi_processor_merge/multi/mpi4py_processor.py?rev=7721&amp;r1=7720&amp;r2=7721&amp;view=diff</a>
+==============================================================================
+--- branches/multi_processor_merge/multi/mpi4py_processor.py (original)
++++ branches/multi_processor_merge/multi/mpi4py_processor.py Wed Oct 15 
+22:57:55 2008
+@@ -7,16 +7,17 @@
+ import time,datetime
+ 
+ from multi.processor import Memo,Slave_command
+-from multi.processor import Result_command,Result_string
++from multi.processor import Result,Result_command,Result_string
++from multi.commands import Exit_command
+ 
+ #FIXME: me move top generic command module
+-from maths_fns.mf import Mf
+-from minimise.generic import generic_minimise
++
+ 
+ # load mpi
+ try:
+     from  mpi4py import MPI
+ except ImportError:
++    raise Exception('test')
+     sys.stderr.write(&quot;The dependency 'mpi4py' has not been installed.\n&quot;)
+     sys.exit()
+ 
+@@ -58,88 +59,6 @@
+ 
+ 
+ 
+-#not quit a momento so a memo
+-class MF_completion_memo(Memo):
+-    def __init__(self,model_free,index,sim_index,run,param_set,scaling):
+-        self.index = index
+-        self.sim_index=sim_index
+-        self.run=run
+-        self.param_set=param_set
+-        self.model_free=model_free
+-        self.scaling=scaling
+-
+-
+-class MF_completion_command(Result_command):
+-    def __init__(self,memo_id,param_vector, func, iter, fc, gc, hc, warning):
+-        super(MF_completion_command,self).__init__(True,memo_id=memo_id)
+-        self.memo_id=memo_id
+-        self.param_vector=param_vector
+-        self.func=func
+-        self.iter=iter
+-        self.fc=fc
+-        self.gc=gc
+-        self.hc=hc
+-        self.warning=warning
+-
+-    def run(self,relax,processor,memo):
+-        m_f=memo.model_free
+-        m_f.iter_count = 0
+-        m_f.f_count = 0
+-        m_f.g_count = 0
+-        m_f.h_count = 0
+-        
+m_f.disassemble_result(param_vector=self.param_vector,func=self.func,iter=self.iter,fc=self.fc,
+-                               gc=self.gc,hc=self.hc, warning=self.warning,
+-                               run=memo.run, 
+index=memo.index,sim_index=memo.sim_index,
+-                               param_set=memo.param_set,scaling=memo.scaling)
+-
+-
+-class MF_minimise_command(Slave_command):
+-    def __init__(self):
+-        super(MF_minimise_command,self).__init__()
+-
+-
+-        #!! 'a0':1.0,'mu':0.0001,'eta':0.1,
+-        self.minimise_map={'args':(), 'x0':None, 'min_algor':None, 
+'min_options':None, 'func_tol':1e-25, 'grad_tol':None,
+-                     'maxiter':1e6, 'A':None, 'b':'None', 'l':None, 
+'u':None, 'c':None, 'dc':None, 'd2c':None,
+-                     'dc':None, 'd2c':None, 'full_output':0, 'print_flag':0,
+-                     'print_prefix':&quot;&quot;}
+-
+-
+-
+-        self.mf_map={'init_params':None, 'param_set':None, 'diff_type':None, 
+'diff_params':None,
+-                      'scaling_matrix':None, 'num_res':None, 
+'equations':None, 'param_types':None,
+-                      'param_values':None, 'relax_data':None, 'errors':None, 
+'bond_length':None,
+-                      'csa':None, 'num_frq':0, 'frq':None, 'num_ri':None, 
+'remap_table':None, 'noe_r1_table':None,
+-                      'ri_labels':None, 'gx':0, 'gh':0, 'g_ratio':0, 
+'h_bar':0, 'mu0':0, 'num_params':None, 'vectors':None}
+-
+-
+-    #FIXME: bad names
+-    def set_mf(self, **kwargs):
+-        self.mf_map.update(**kwargs)
+-
+-
+-    def set_minimise(self,**kwargs):
+-        self.minimise_map.update(**kwargs)
+-
+-    def build_mf(self):
+-        return  Mf(**self.mf_map)
+-
+-    def do_minimise(self,memo):
+-        self.mf = self.build_mf()
+-        results = generic_minimise(func=self.mf.func, dfunc=self.mf.dfunc, 
+d2func=self.mf.d2func, **self.minimise_map)
+-
+-        m_f=memo.model_free
+-        param_vector, func, iter, fc, gc, hc, warning = results
+-        
+m_f.disassemble_result(param_vector=param_vector,func=func,iter=iter,fc=fc,
+-                               gc=gc,hc=hc, warning=warning,
+-                               run=memo.run, 
+index=memo.index,sim_index=memo.sim_index,
+-                               param_set=memo.param_set,scaling=memo.scaling)
+-    def run(self,processor):
+-        self.mf = self.build_mf()
+-        results = generic_minimise(func=self.mf.func, dfunc=self.mf.dfunc, 
+d2func=self.mf.d2func, **self.minimise_map)
+-        param_vector, func, iter, fc, gc, hc, warning = results
+-
+-        
+processor.return_object(MF_completion_command(self.memo_id,param_vector, 
+func, iter, fc, gc, hc, warning))
+ 
+ #FIXME do some inheritance
+ class Mpi4py_processor:
+
+Modified: branches/multi_processor_merge/multi/processor.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/multi_processor_merge/multi/processor.py?rev=7721&amp;r1=7720&amp;r2=7721&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/multi_processor_merge/multi/processor.py?rev=7721&amp;r1=7720&amp;r2=7721&amp;view=diff</a>
+==============================================================================
+--- branches/multi_processor_merge/multi/processor.py (original)
++++ branches/multi_processor_merge/multi/processor.py Wed Oct 15 22:57:55 2008
+@@ -1,19 +1,18 @@
+ class Result(object):
+-    def __init__(self):
+-        pass
++    def __init__(self,completed):
++        self.completed=completed
+ 
+ 
+ class Result_string(Result):
+     #FIXME move result up a level
+     def __init__(self,string,completed):
+-        super(Result_string,self).__init__()
++        super(Result_string,self).__init__(completed=completed)
+         self.string=string
+-        self.completed=completed
++
+ 
+ class Result_command(Result):
+     def __init__(self,completed,memo_id=None):
+-        super(Result_command,self).__init__()
+-        self.completed=completed
++        super(Result_command,self).__init__(completed=completed)
+         self.memo_id=memo_id
+ 
+     def run(self,relax,processor,memo):
+@@ -41,24 +40,6 @@
+ 
+ #FIXME do some inheritance
+ 
+-class Exit_command(Slave_command):
+-    def __init__(self):
+-        super(Exit_command,self).__init__()
+-
+-    def run(self,processor):
+-        processor.return_object(NULL_RESULT)
+-        processor.do_quit=True
+-
+-
+-
+-class Get_name_command(Slave_command):
+-    def __init__(self):
+-        super(Exit_command,self).__init__()
+-
+-    def run(self,processor):
+-        msg = processor.get_name()
+-        result = Result_string(msg,True)
+-        processor.return_object(result)
+ 
+ class Memo(object):
+     def memo_id(self):
+
+Modified: 
+branches/multi_processor_merge/specific_fns/model_free/mf_minimise.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/multi_processor_merge/specific_fns/model_free/mf_minimise.py?rev=7721&amp;r1=7720&amp;r2=7721&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/multi_processor_merge/specific_fns/model_free/mf_minimise.py?rev=7721&amp;r1=7720&amp;r2=7721&amp;view=diff</a>
+==============================================================================
+--- branches/multi_processor_merge/specific_fns/model_free/mf_minimise.py 
+(original)
++++ branches/multi_processor_merge/specific_fns/model_free/mf_minimise.py Wed 
+Oct 15 22:57:55 2008
+@@ -35,7 +35,7 @@
+ from generic_fns.mol_res_spin import count_spins, exists_mol_res_spin_data, 
+return_spin_from_index, spin_loop
+ from maths_fns.mf import Mf
+ from minfx.generic import generic_minimise
+-from multi.mpi4py_processor import  MF_minimise_command,MF_completion_memo
++from multi.commands import  MF_minimise_command,MF_completion_memo
+ from physical_constants import h_bar, mu0, return_gyromagnetic_ratio
+ from relax_errors import RelaxError, RelaxInfError, RelaxLenError, 
+RelaxNaNError, RelaxNoModelError, RelaxNoPdbError, RelaxNoResError, 
+RelaxNoSequenceError, RelaxNoTensorError, RelaxNoValueError, 
+RelaxNoVectorsError, RelaxNucleusError, RelaxProtonTypeError, 
+RelaxSpinTypeError
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Oct 15 23:20:03 2008</div>  
+</body>
+</html>

@@ -1,0 +1,174 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r25539 &#45; /branches/est_par_error/target_functions/chi2.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 02 Sep 2014 14:03:27 +0200 -->
+<!--X-Message-Id: E1XOmo3&#45;0000kB&#45;67@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r25539 - /branches/est_par_error/target_functions/chi2.py -- September 02, 2014 - 14:03</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r25539 - /branches/est_par_error/target_functions/chi2.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00045" class="tabs">Index by Date</a> | <a href="threads.html#00045" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00044.html">Date Prev</a>] [<a href="msg00046.html">Date Next</a>] [<a href="msg00044.html">Thread Prev</a>] [<a href="msg00046.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 02 Sep 2014 12:03:27 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00045.html">E1XOmo3-0000kB-67@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on September 02, 2014 - 14:03:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Tue Sep  2 14:03:26 2014
+New Revision: 25539
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=25539&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=25539&amp;view=rev</a>
+Log:
+Initial try to form the full chi-squared gradient for multiple numpy array 
+axis.
+
+task #7824(<a  rel="nofollow" href="https://gna.org/task/index.php?7824">https://gna.org/task/index.php?7824</a>): Model parameter ERROR 
+estimation from Jacobian and Co-variance matrix of dispersion models.
+
+Modified:
+    branches/est_par_error/target_functions/chi2.py
+
+Modified: branches/est_par_error/target_functions/chi2.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/est_par_error/target_functions/chi2.py?rev=25539&amp;r1=25538&amp;r2=25539&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/est_par_error/target_functions/chi2.py?rev=25539&amp;r1=25538&amp;r2=25539&amp;view=diff</a>
+==============================================================================
+--- branches/est_par_error/target_functions/chi2.py     (original)
++++ branches/est_par_error/target_functions/chi2.py     Tue Sep  2 14:03:26 
+2014
+@@ -22,7 +22,7 @@
+ &quot;&quot;&quot;Module containing functions for calculating the chi-squared value, 
+gradient, and Hessian.&quot;&quot;&quot;
+ 
+ # Python module imports.
+-from numpy import dot, sum, transpose
++from numpy import dot, einsum, sum, transpose
+ 
+ 
+ # Chi-squared value.
+@@ -149,12 +149,61 @@
+     &quot;&quot;&quot;
+ 
+     # Calculate the chi-squared gradient.
++
+     grad = -2.0 * dot(1.0 / (errors**2) * (data - back_calc_vals), 
+transpose(back_calc_grad))
+ 
+     # Pack the elements.
+     for i in range(M):
+         dchi2[i] = grad[i]
+ 
++
++def dchi2_rankN(data, back_calc_vals, back_calc_grad, errors):
++    &quot;&quot;&quot;Calculate the full chi-squared gradient for multiple numpy array axis.
++
++    The chi-squared gradient
++    ========================
++
++    The equation is::
++
++                             _n_
++        dchi^2(theta)        \   / yi - yi(theta)     dyi(theta) \ 
++        -------------  =  -2  &gt;  | --------------  .  ---------- |
++           dthetaj           /__ \   sigma_i**2        dthetaj   /
++                             i=1
++
++    where
++        - i is the index over data sets.
++        - j is the parameter index of the gradient.
++        - theta is the parameter vector.
++        - yi are the values of the measured data set.
++        - yi(theta) are the values of the back calculated data set.
++        - dyi(theta)/dthetaj are the values of the back calculated gradient 
+for parameter j.
++        - sigma_i are the values of the error set.
++
++
++    @param data:            The vector of yi values.
++    @type data:             numpy rank-1 size N array
++    @param back_calc_vals:  The vector of yi(theta) values.
++    @type back_calc_vals:   numpy rank-1 size N array
++    @param back_calc_grad:  The matrix of dyi(theta)/dtheta values.
++    @type back_calc_grad:   numpy rank-2 size MxN array
++    @param errors:          The vector of sigma_i values.
++    @type errors:           numpy rank-1 size N array
++    &quot;&quot;&quot;
++
++    # Get the shape of the data.
++    # NJ: Number of partial derivatives in the Jacobian.
++    # NE: Number of experiments.
++    # NS: Number of spins.
++    # NM: Number of spectrometer frequencies.
++    # NO: Maximum number of offsets.
++    # ND: Number of dispersion(data) points.
++    NJ, NE, NS, NM, NO, ND = back_calc_grad.shape
++
++    # Calculate the chi-squared gradient.
++    grad = -2.0 * einsum('...ij, ...jk', 1.0 / (errors**2) * (data - 
+back_calc_vals), back_calc_grad)
++
++    return grad
+ 
+ def dchi2_element(data, back_calc_vals, back_calc_grad_j, errors):
+     &quot;&quot;&quot;Calculate the chi-squared gradient element j.
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Sep 02 14:20:03 2014</div>  
+</body>
+</html>

@@ -1,0 +1,205 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r15610 &#45; /1.3/multi/test_implementation2.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 23 Mar 2012 12:19:33 +0100 -->
+<!--X-Message-Id: E1SB2Wr&#45;0004WM&#45;CR@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r15610 - /1.3/multi/test_implementation2.py -- March 23, 2012 - 12:19</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r15610 - /1.3/multi/test_implementation2.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00195" class="tabs">Index by Date</a> | <a href="threads.html#00195" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00194.html">Date Prev</a>] [<a href="msg00196.html">Date Next</a>] [<a href="msg00194.html">Thread Prev</a>] [<a href="msg00196.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 23 Mar 2012 11:19:33 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00195.html">E1SB2Wr-0004WM-CR@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on March 23, 2012 - 12:19:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Mar 23 12:19:33 2012
+New Revision: 15610
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=15610&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=15610&amp;view=rev</a>
+Log:
+The multi/test_implementation2.py script now properly uses pre-send data in 
+the slave calculations.
+
+The sending component is complete (though is still non-functional on the 
+uni-processor).  However
+the handling of data post-calculation still needs to be abstracted via the 
+API.
+
+
+Modified:
+    1.3/multi/test_implementation2.py
+
+Modified: 1.3/multi/test_implementation2.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/multi/test_implementation2.py?rev=15610&amp;r1=15609&amp;r2=15610&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/multi/test_implementation2.py?rev=15610&amp;r1=15609&amp;r2=15610&amp;view=diff</a>
+==============================================================================
+--- 1.3/multi/test_implementation2.py (original)
++++ 1.3/multi/test_implementation2.py Fri Mar 23 12:19:33 2012
+@@ -124,9 +124,9 @@
+         self.num = 0
+ 
+         # The invariant data to pass to the slaves once.
+-        real_length = 2.0
++        self.real_length = 2.0
+         self.vect = array([1, 2, 3], float64)
+-        self.vect = self.vect / norm(self.vect) * real_length
++        self.vect = self.vect / norm(self.vect) * self.real_length
+ 
+ 
+     def run(self):
+@@ -153,8 +153,13 @@
+         # Execute the calculations, waiting for completion.
+         processor_box.processor.run_queue()
+ 
++        # Calculate the average length.
++        ave_len = processor_box.processor.data_store.total_length / self.N
++
+         # Final program print out.
+         print(&quot;\n\nTotal number of calculations: %s&quot; % self.num)
++        print(&quot;Real length: %s&quot; % self.real_length)
++        print(&quot;Averaged vector length: %s&quot; % ave_len)
+ 
+ 
+     def sum_fn(self, num):
+@@ -192,7 +197,7 @@
+ class Test_result_command(Result_command):
+     &quot;&quot;&quot;The result command for processing the results from the slaves on the 
+master.&quot;&quot;&quot;
+ 
+-    def __init__(self, processor, memo_id=None, num=None, completed=True):
++    def __init__(self, processor, memo_id=None, num=None, length=None, 
+completed=True):
+         &quot;&quot;&quot;Store all the slave results for processing on the master.
+ 
+         @param processor:   The slave processor object.
+@@ -201,6 +206,8 @@
+         @type memo_id:      int
+         @keyword num:       The number of calculations performed by the 
+slave.  This is an example of data transfer from the slave to master 
+processor.
+         @type num:          int
++        @keyword length:    The sum of vector lengths.
++        @type length:       float
+         @keyword completed: A flag saying if the calculation on the slave 
+processor completed correctly.
+         @type completed:    bool
+         &quot;&quot;&quot;
+@@ -211,6 +218,7 @@
+         # Store the arguments.
+         self.memo_id = memo_id
+         self.num = num
++        self.length = length
+ 
+ 
+     def run(self, processor, memo):
+@@ -228,6 +236,13 @@
+         # Calling a method on the master.
+         memo.sum_fn(self.num)
+ 
++        # Initialise the total length variable if the other slaves have not 
+created it.
++        if not hasattr(processor.data_store, 'total_length'):
++            processor.data_store.total_length = 0.0
++
++        # Sum the lengths.
++        processor.data_store.total_length += self.length
++
+ 
+ 
+ class Test_slave_command(Slave_command):
+@@ -245,6 +260,9 @@
+ 
+         # Initialise the rotation matrix.
+         self.R = zeros((3, 3), float64)
++
++        # Initialise some variables for the calculation.
++        self.length = 0.0
+ 
+ 
+     def run(self, processor, completed=False):
+@@ -262,9 +280,8 @@
+             # Random rotation matrix.
+             R_random_hypersphere(self.R)
+ 
+-            continue
+             # Rotate the vector.
+-            new_vect = dot(self.R, self.vect)
++            new_vect = dot(self.R, processor.data_store.vect)
+ 
+             # The length sum.
+             self.length += norm(new_vect)
+@@ -273,7 +290,7 @@
+             num_calcs += 1
+ 
+         # Process the results on the master.
+-        processor.return_object(Test_result_command(processor, 
+memo_id=self.memo_id, num=num_calcs))
++        processor.return_object(Test_result_command(processor, 
+memo_id=self.memo_id, num=num_calcs, length=self.length))
+ 
+ 
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Mar 23 12:40:02 2012</div>  
+</body>
+</html>

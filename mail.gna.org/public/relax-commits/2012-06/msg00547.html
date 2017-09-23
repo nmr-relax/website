@@ -1,0 +1,193 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r17102 &#45; /branches/interatomic/generic_fns/structure/scientific.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 28 Jun 2012 17:23:50 +0200 -->
+<!--X-Message-Id: E1SkGZS&#45;0007wV&#45;0y@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r17102 - /branches/interatomic/generic_fns/structure/scientific.py -- June 28, 2012 - 17:23</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r17102 - /branches/interatomic/generic_fns/structure/scientific.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00547" class="tabs">Index by Date</a> | <a href="threads.html#00547" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00546.html">Date Prev</a>] [<a href="msg00548.html">Date Next</a>] [<a href="msg00546.html">Thread Prev</a>] [<a href="msg00548.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 28 Jun 2012 15:23:49 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00547.html">E1SkGZS-0007wV-0y@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on June 28, 2012 - 17:23:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Jun 28 17:23:49 2012
+New Revision: 17102
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=17102&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=17102&amp;view=rev</a>
+Log:
+Added the are_bonded() and get_molecule() methods for the Scientific Python 
+PDB reader.
+
+This is now needed for defining interatomic vectors in the interatomic data 
+design.
+
+
+Modified:
+    branches/interatomic/generic_fns/structure/scientific.py
+
+Modified: branches/interatomic/generic_fns/structure/scientific.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/interatomic/generic_fns/structure/scientific.py?rev=17102&amp;r1=17101&amp;r2=17102&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/interatomic/generic_fns/structure/scientific.py?rev=17102&amp;r1=17101&amp;r2=17102&amp;view=diff</a>
+==============================================================================
+--- branches/interatomic/generic_fns/structure/scientific.py (original)
++++ branches/interatomic/generic_fns/structure/scientific.py Thu Jun 28 
+17:23:49 2012
+@@ -28,7 +28,7 @@
+ 
+ # Python module imports.
+ from math import sqrt
+-from numpy import array, dot, float64, zeros
++from numpy import array, dot, float64, linalg, zeros
+ import os
+ from os import F_OK, access, sep
+ from extern.scientific_python.IO import PDB
+@@ -152,6 +152,31 @@
+ 
+                 # Yield the residue info.
+                 yield res, res.number, res.name, res_index
++
++
++    def are_bonded(self, atom_id1=None, atom_id2=None):
++        &quot;&quot;&quot;Determine if two atoms are directly bonded to each other.
++
++        @keyword atom_id1:  The molecule, residue, and atom identifier 
+string of the first atom.
++        @type atom_id1:     str
++        @keyword atom_id1:  The molecule, residue, and atom identifier 
+string of the second atom.
++        @type atom_id1:     str
++        @return:            True if the atoms are directly bonded.
++        @rtype:             bool
++        &quot;&quot;&quot;
++
++        # Loop over the atoms.
++        for pos1 in self.atom_loop(atom_id=atom_id1, pos_flag=True):
++            for pos2 in self.atom_loop(atom_id=atom_id2, pos_flag=True):
++                # The interatomic distance.
++                dist = linalg.norm(pos2[0]-pos1[0])
++
++                # The atom is within the radius of 1.2 Angstrom.
++                if dist &lt; 1.2:
++                    return True
++
++        # Not bonded.
++        return False
+ 
+ 
+     def atom_loop(self, atom_id=None, str_id=None, model_num=None, 
+model_num_flag=False, mol_name_flag=False, res_num_flag=False, 
+res_name_flag=False, atom_num_flag=False, atom_name_flag=False, 
+element_flag=False, pos_flag=False, ave=False):
+@@ -469,6 +494,42 @@
+         return data
+ 
+ 
++    def get_molecule(self, molecule, model=None):
++        &quot;&quot;&quot;Return the molecule.
++
++        Only one model can be specified.
++
++
++        @param molecule:    The molecule name.
++        @type molecule:     int or None
++        @keyword model:     The model number.
++        @type model:        int or None
++        @raises RelaxError: If the model is not specified and there is more 
+than one model loaded.
++        @return:            The MolContainer corresponding to the molecule 
+name and model number.
++        @rtype:             MolContainer instance or None
++        &quot;&quot;&quot;
++
++        # Check if the target is a single molecule.
++        if model == None and self.num_models() &gt; 1:
++            raise RelaxError(&quot;The target molecule cannot be determined as 
+there are %s models already present.&quot; % self.num_models())
++
++        # Check the model argument.
++        if not isinstance(model, int) and not model == None:
++            raise RelaxNoneIntError
++
++        # No models.
++        if not len(self.structural_data):
++            return
++
++        # Loop over the models.
++        for model_cont in self.model_loop(model):
++            # Loop over the molecules.
++            for mol in model_cont.mol:
++                # Return the matching molecule.
++                if mol.mol_name == molecule:
++                    return mol
++
++
+     def load_pdb(self, file_path, read_mol=None, set_mol_name=None, 
+read_model=None, set_model_num=None, verbosity=False):
+         &quot;&quot;&quot;Function for loading the structures from the PDB file.
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Jun 28 17:40:02 2012</div>  
+</body>
+</html>

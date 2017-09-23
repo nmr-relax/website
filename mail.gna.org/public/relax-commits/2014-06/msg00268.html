@@ -1,0 +1,428 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r23881 &#45; /trunk/test_suite/test_suite_runner.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 12 Jun 2014 14:47:31 +0200 -->
+<!--X-Message-Id: E1Wv4Pj&#45;0003Xq&#45;GZ@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r23881 - /trunk/test_suite/test_suite_runner.py -- June 12, 2014 - 14:47</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r23881 - /trunk/test_suite/test_suite_runner.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00268" class="tabs">Index by Date</a> | <a href="threads.html#00268" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00267.html">Date Prev</a>] [<a href="msg00269.html">Date Next</a>] [<a href="msg00267.html">Thread Prev</a>] [<a href="msg00269.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 12 Jun 2014 12:47:31 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00268.html">E1Wv4Pj-0003Xq-GZ@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on June 12, 2014 - 14:47:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Jun 12 14:47:31 2014
+New Revision: 23881
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=23881&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=23881&amp;view=rev</a>
+Log:
+Better handling of the control-C keyboard interrupt signal in the relax test 
+suite.
+
+This includes two changes.  The Python 2.7 and higher 
+unittest.installHandler() function is now
+called, when present, to terminate all tests using the unittest module 
+control-C handler.  The
+second change is that the keyboard interrupt signal is caught in a try-except 
+statement, a message
+printed out, and the tests terminated.  This should be an improvement for all 
+systems.
+
+
+Modified:
+    trunk/test_suite/test_suite_runner.py
+
+Modified: trunk/test_suite/test_suite_runner.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/test_suite/test_suite_runner.py?rev=23881&amp;r1=23880&amp;r2=23881&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/test_suite/test_suite_runner.py?rev=23881&amp;r1=23880&amp;r2=23881&amp;view=diff</a>
+==============================================================================
+--- trunk/test_suite/test_suite_runner.py       (original)
++++ trunk/test_suite/test_suite_runner.py       Thu Jun 12 14:47:31 2014
+@@ -27,6 +27,7 @@
+ import sys
+ if dep_check.wx_module:
+     import wx
++import unittest
+ 
+ # Formatting.
+ from test_suite.formatting import summary_line
+@@ -87,133 +88,192 @@
+         else:
+             self.runner = RelaxTestRunner(stream=sys.stdout, timing=timing)
+ 
++        # Let the tests handle the keyboard interrupt (for Python 2.7 and 
+higher).
++        if hasattr(unittest, 'installHandler'):
++            unittest.installHandler()
++
+ 
+     def run_all_tests(self):
+         &quot;&quot;&quot;Execute all of the test suite test types.&quot;&quot;&quot;
+ 
+         # Execute the system/functional tests.
+         if 'system' in self.categories:
+-            self.run_system_tests(summary=False)
++            status = self.run_system_tests(summary=False)
++            if not status:
++                return
+ 
+         # Execute the unit tests.
+         if 'unit' in self.categories:
+-            self.run_unit_tests(summary=False)
++            status = self.run_unit_tests(summary=False)
++            if not status:
++                return
+ 
+         # Execute the GUI tests.
+         if 'gui' in self.categories:
+-            self.run_gui_tests(summary=False)
++            status = self.run_gui_tests(summary=False)
++            if not status:
++                return
+ 
+         # Execute the GUI tests.
+         if 'verification' in self.categories:
+-            self.run_verification_tests(summary=False)
++            status = self.run_verification_tests(summary=False)
++            if not status:
++                return
+ 
+         # Print out a summary of the test suite.
+         self.summary()
+ 
+ 
++
+     def run_gui_tests(self, summary=True):
+         &quot;&quot;&quot;Execute the GUI tests.
++
++        @keyword summary:   A flag which if True will cause a summary to be 
+printed.
++        @type summary:      bool
++        @return:            True if the tests were run, False if a 
+KeyboardInterrupt occurred.
++        @rtype:             bool
++        &quot;&quot;&quot;
++
++        # Run the tests, catching the keyboard interrupt.
++        try:
++            # Print a header.
++            title(file=sys.stdout, text='GUI tests')
++
++            # Run the tests.
++            if dep_check.wx_module:
++                # Set up the GUI if needed (i.e. not in GUI mode already).
++                app = wx.GetApp()
++                if app == None:
++                    # Initialise.
++                    app = wx.App(redirect=False)
++
++                    # Build the GUI.
++                    app.gui = relax_gui.Main(parent=None, id=-1, title=&quot;&quot;)
++
++                # Execute the GUI tests.
++                gui_runner = GUI_test_runner()
++                self.runner.category = 'gui'
++                self.gui_result = gui_runner.run(self.tests, 
+runner=self.runner)
++
++                # Clean up for the GUI, if not in GUI mode.
++                if status.test_mode:
++                    # Terminate the interpreter thread to allow the tests to 
+cleanly exit.
++                    interpreter_thread = interpreter.Interpreter()
++                    interpreter_thread.exit()
++
++                    # Stop the GUI main loop.
++                    app.ExitMainLoop()
++
++            # No wx module installed.
++            else:
++                print(&quot;All GUI tests skipped due to the missing/broken wx 
+module.\n&quot;)
++                self.gui_result = 'skip'
++
++            # Print out a summary of the test suite.
++            if summary:
++                self.summary()
++
++        # Catch the keyboard interrupt.
++        except KeyboardInterrupt:
++            print(&quot;\nKeyboardInterrupt:  Terminating all tests.\n&quot;)
++            return False
++
++        # All tests were run successfully.
++        return True
++
++
++    def run_system_tests(self, summary=True):
++        &quot;&quot;&quot;Execute the system/functional tests.
++
++        @keyword summary:   A flag which if True will cause a summary to be 
+printed.
++        @type summary:      bool
++        @return:            True if the tests were run, False if a 
+KeyboardInterrupt occurred.
++        @rtype:             bool
++        &quot;&quot;&quot;
++
++        # Run the tests, catching the keyboard interrupt.
++        try:
++            # Print a header.
++            title(file=sys.stdout, text='System / functional tests')
++
++            # Run the tests.
++            system_runner = System_test_runner()
++            self.runner.category = 'system'
++            self.system_result = system_runner.run(self.tests, 
+runner=self.runner)
++
++            # Print out a summary of the test suite.
++            if summary:
++                self.summary()
++
++        # Catch the keyboard interrupt.
++        except KeyboardInterrupt:
++            print(&quot;\nKeyboardInterrupt:  Terminating all tests.\n&quot;)
++            return False
++
++        # All tests were run successfully.
++        return True
++
++
++    def run_unit_tests(self, summary=True):
++        &quot;&quot;&quot;Execute the unit tests.
++
++        @keyword summary:   A flag which if True will cause a summary to be 
+printed.
++        @type summary:      bool
++        @return:            True if the tests were run, False if a 
+KeyboardInterrupt occurred.
++        @rtype:             bool
++        &quot;&quot;&quot;
++
++        # Run the tests, catching the keyboard interrupt.
++        try:
++            # Print a header.
++            title(file=sys.stdout, text='Unit tests')
++
++            # Run the tests.
++            unit_runner = 
+Unit_test_runner(root_path=status.install_path+os.sep+'test_suite'+os.sep+'unit_tests')
++            self.runner.category = 'unit'
++            self.unit_result = unit_runner.run(runner=self.runner)
++
++            # Print out a summary of the test suite.
++            if summary:
++                self.summary()
++
++        # Catch the keyboard interrupt.
++        except KeyboardInterrupt:
++            print(&quot;\nKeyboardInterrupt:  Terminating all tests.\n&quot;)
++            return False
++
++        # All tests were run successfully.
++        return True
++
++
++    def run_verification_tests(self, summary=True):
++        &quot;&quot;&quot;Execute the software verification tests.
+ 
+         @keyword summary:   A flag which if True will cause a summary to be 
+printed.
+         @type summary:      bool
+         &quot;&quot;&quot;
+ 
+-        # Print a header.
+-        title(file=sys.stdout, text='GUI tests')
+-
+-        # Run the tests.
+-        if dep_check.wx_module:
+-            # Set up the GUI if needed (i.e. not in GUI mode already).
+-            app = wx.GetApp()
+-            if app == None:
+-                # Initialise.
+-                app = wx.App(redirect=False)
+-
+-                # Build the GUI.
+-                app.gui = relax_gui.Main(parent=None, id=-1, title=&quot;&quot;)
+-
+-            # Execute the GUI tests.
+-            gui_runner = GUI_test_runner()
+-            self.runner.category = 'gui'
+-            self.gui_result = gui_runner.run(self.tests, runner=self.runner)
+-
+-            # Clean up for the GUI, if not in GUI mode.
+-            if status.test_mode:
+-                # Terminate the interpreter thread to allow the tests to 
+cleanly exit.
+-                interpreter_thread = interpreter.Interpreter()
+-                interpreter_thread.exit()
+-
+-                # Stop the GUI main loop.
+-                app.ExitMainLoop()
+-
+-        # No wx module installed.
+-        else:
+-            print(&quot;All GUI tests skipped due to the missing/broken wx 
+module.\n&quot;)
+-            self.gui_result = 'skip'
+-
+-        # Print out a summary of the test suite.
+-        if summary:
+-            self.summary()
+-
+-
+-    def run_system_tests(self, summary=True):
+-        &quot;&quot;&quot;Execute the system/functional tests.
+-
+-        @keyword summary:   A flag which if True will cause a summary to be 
+printed.
+-        @type summary:      bool
+-        &quot;&quot;&quot;
+-
+-        # Print a header.
+-        title(file=sys.stdout, text='System / functional tests')
+-
+-        # Run the tests.
+-        system_runner = System_test_runner()
+-        self.runner.category = 'system'
+-        self.system_result = system_runner.run(self.tests, 
+runner=self.runner)
+-
+-        # Print out a summary of the test suite.
+-        if summary:
+-            self.summary()
+-
+-
+-    def run_unit_tests(self, summary=True):
+-        &quot;&quot;&quot;Execute the unit tests.
+-
+-        @keyword summary:   A flag which if True will cause a summary to be 
+printed.
+-        @type summary:      bool
+-        &quot;&quot;&quot;
+-
+-        # Print a header.
+-        title(file=sys.stdout, text='Unit tests')
+-
+-        # Run the tests.
+-        unit_runner = 
+Unit_test_runner(root_path=status.install_path+os.sep+'test_suite'+os.sep+'unit_tests')
+-        self.runner.category = 'unit'
+-        self.unit_result = unit_runner.run(runner=self.runner)
+-
+-        # Print out a summary of the test suite.
+-        if summary:
+-            self.summary()
+-
+-
+-    def run_verification_tests(self, summary=True):
+-        &quot;&quot;&quot;Execute the software verification tests.
+-
+-        @keyword summary:   A flag which if True will cause a summary to be 
+printed.
+-        @type summary:      bool
+-        &quot;&quot;&quot;
+-
+-        # Print a header.
+-        title(file=sys.stdout, text='Software verification tests')
+-
+-        # Run the tests.
+-        verification_runner = Verification_test_runner()
+-        self.runner.category = 'verification'
+-        self.verification_result = verification_runner.run(self.tests, 
+runner=self.runner)
+-
+-        # Print out a summary of the test suite.
+-        if summary:
+-            self.summary()
++        # Run the tests, catching the keyboard interrupt.
++        try:
++            # Print a header.
++            title(file=sys.stdout, text='Software verification tests')
++
++            # Run the tests.
++            verification_runner = Verification_test_runner()
++            self.runner.category = 'verification'
++            self.verification_result = verification_runner.run(self.tests, 
+runner=self.runner)
++
++            # Print out a summary of the test suite.
++            if summary:
++                self.summary()
++
++        # Catch the keyboard interrupt.
++        except KeyboardInterrupt:
++            print(&quot;\nKeyboardInterrupt:  Terminating all tests.\n&quot;)
++            return False
++
++        # All tests were run successfully.
++        return True
+ 
+ 
+     def summary(self):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Jun 12 15:40:02 2014</div>  
+</body>
+</html>

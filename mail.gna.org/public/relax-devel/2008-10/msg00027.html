@@ -1,0 +1,335 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: Re: r7592 &#45; in /1.3: generic_fns/ prompt/ specific_fns/	test_suite/system_tests/ -->
+<!--X-From-R13: "Sqjneq q'Ohiretar" <rqjneqNaze&#45;erynk.pbz> -->
+<!--X-Date: Sat, 11 Oct 2008 17:15:11 +0200 -->
+<!--X-Message-Id: 7f080ed10810110815v636df238q5f0b35157430b717@mail.gmail.com -->
+<!--X-Content-Type: text/plain -->
+<!--X-Reference: E1KnzRw&#45;0000jz&#45;KD@subversion.gna.org -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>Re: r7592 - in /1.3: generic_fns/ prompt/ specific_fns/	test_suite/system_tests/ -- October 11, 2008 - 17:15</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />Re: r7592 - in /1.3: generic_fns/ prompt/ specific_fns/	test_suite/system_tests/</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00027" class="tabs">Index by Date</a> | <a href="threads.html#00027" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00026.html">Date Prev</a>] [<a href="msg00028.html">Date Next</a>] [<a href="msg00026.html">Thread Prev</a>] [<a href="msg00028.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-devel@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Sat, 11 Oct 2008 17:15:06 +0200</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00027.html">7f080ed10810110815v636df238q5f0b35157430b717@mail.gmail.com</a>&gt;</li>
+<li class="menuitem">
+<em>References</em>: &lt;E1KnzRw-0000jz-KD@xxxxxxxxxxxxxxxxxx&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>Edward d'Auvergne</strong> on October 11, 2008 - 17:15:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Thanks for picking this up.  If you'd like to implement the NMRView
+peak list support, that would free up more time for me to get Gary's
+multi-processor code ported and the BMRB support implemented (as well
+as getting Modelfree4 and Dasha running again, and cleaning up and
+destroying all of the remaining 1.2 line code).
+
+Cheers,
+
+Edward
+
+
+On Thu, Oct 9, 2008 at 7:37 PM,  &lt;sebastien.morin.1@xxxxxxxxx&gt; wrote:
+</pre><blockquote class="blockquote"><pre style="margin: 0em;">Author: semor
+Date: Thu Oct  9 19:37:20 2008
+New Revision: 7592
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=7592&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=7592&amp;view=rev</a>
+Log:
+Continued the implementation for the reading of a Nmrview peak list.
+
+
+Modified:
+   1.3/generic_fns/intensity.py
+   1.3/prompt/noe.py
+   1.3/prompt/relax_fit.py
+   1.3/specific_fns/noe.py
+   1.3/specific_fns/relax_fit.py
+   1.3/test_suite/system_tests/nmrview.py
+
+Modified: 1.3/generic_fns/intensity.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/generic_fns/intensity.py?rev=7592&amp;r1=7591&amp;r2=7592&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/generic_fns/intensity.py?rev=7592&amp;r1=7591&amp;r2=7592&amp;view=diff</a>
+==============================================================================
+--- 1.3/generic_fns/intensity.py (original)
++++ 1.3/generic_fns/intensity.py Thu Oct  9 19:37:20 2008
+@@ -27,6 +27,7 @@
+ # Python module imports.
+ from re import split
+ from warnings import warn
++import sys
+
+ # relax module imports.
+ from generic_fns.mol_res_spin import exists_mol_res_spin_data, 
+generate_spin_id, return_spin
+@@ -158,13 +159,32 @@
+    return res_num, h_name, x_name, intensity
+
+
++def intensity_nmrview(line, int_col=None):
++    &quot;&quot;&quot;Function for returning relevant data from the Nmrview peak 
+intensity line.
++
++    The residue number, heteronucleus and proton names, and peak intensity 
+will be returned.
++
++
++    @param line:        The single line of information from the intensity 
+file.
++    @type line:         list of str
++    @keyword int_col:   The column containing the peak intensity data (for 
+a non-standard formatted
++                        file).
++    @type int_col:      int
++    @raises RelaxError: When the expected peak intensity is not a float.
++    &quot;&quot;&quot;
++
++    # Print some texte indicating the unavailability of this function...
++    print &quot;This function is still unavailable.\n&quot;
++    sys.exit()
++
++
+ def number_of_header_lines(file_data, format, int_col, intensity):
+    &quot;&quot;&quot;Function for determining how many header lines are in the intensity 
+file.
+
+    @param file_data:   The processed results file data.
+    @type file_data:    list of lists of str
+    @param format:      The type of file containing peak intensities.  This 
+can currently be one of
+-                        'sparky' or 'xeasy'.
++                        'sparky', 'xeasy' or 'nmrview'.
+    @type format:       str
+    @param int_col:     The column containing the peak intensity data (for 
+a non-standard
+                        formatted file).
+@@ -214,7 +234,7 @@
+    @keyword dir:           The directory where the file is located.
+    @type dir:              str
+    @keyword format:        The type of file containing peak intensities.  
+This can currently be
+-                            one of 'sparky' or 'xeasy'.
++                            one of 'sparky', 'xeasy' or 'nmrview'.
+    @type format:           str
+    @keyword heteronuc:     The name of the heteronucleus as specified in 
+the peak intensity
+                            file.
+@@ -231,7 +251,7 @@
+    &quot;&quot;&quot;
+
+    # Format argument.
+-    format_list = ['sparky', 'xeasy']
++    format_list = ['sparky', 'xeasy', 'nmrview']
+    if format not in format_list:
+        raise RelaxArgNotInListError, ('format', format, format_list)
+
+@@ -253,6 +273,14 @@
+
+        # Set the default proton dimension.
+        H_dim = 'w1'
++
++    # Nmrview.
++    elif format == 'nmrview':
++        # Print out.
++        print &quot;Nmrview formatted data file.\n&quot;
++
++        # Set the intensity reading function.
++        intensity_fn = intensity_nmrview
+
+    # Test if the current data pipe exists.
+    pipes.test()
+
+Modified: 1.3/prompt/noe.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/prompt/noe.py?rev=7592&amp;r1=7591&amp;r2=7592&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/prompt/noe.py?rev=7592&amp;r1=7591&amp;r2=7592&amp;view=diff</a>
+==============================================================================
+--- 1.3/prompt/noe.py (original)
++++ 1.3/prompt/noe.py Thu Oct  9 19:37:20 2008
+@@ -128,6 +128,7 @@
+        The 'format' argument can currently be set to:
+            'sparky'
+            'xeasy'
++            'nmrview'
+
+        If the 'format' argument is set to 'sparky', the file should be a 
+Sparky peak list saved
+        after typing the command 'lt'.  The default is to assume that 
+columns 0, 1, 2, and 3 (1st,
+@@ -142,6 +143,8 @@
+        the peak intensity column is hardwired to number 10 (the 11th 
+column) which contains either
+        the peak height or peak volume data.  Because the columns are 
+fixed, the 'int_col' argument
+        will be ignored.
++
++        If the format argument is set to 'nmrview', the file should be a 
+Nmrview peak list.
+
+
+        The 'heteronuc' and 'proton' arguments should be set respectively 
+to the name of the
+
+Modified: 1.3/prompt/relax_fit.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/prompt/relax_fit.py?rev=7592&amp;r1=7591&amp;r2=7592&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/prompt/relax_fit.py?rev=7592&amp;r1=7591&amp;r2=7592&amp;view=diff</a>
+==============================================================================
+--- 1.3/prompt/relax_fit.py (original)
++++ 1.3/prompt/relax_fit.py Thu Oct  9 19:37:20 2008
+@@ -126,6 +126,7 @@
+        The format argument can currently be set to:
+            'sparky'
+            'xeasy'
++            'nmrview'
+
+        If the format argument is set to 'sparky', the file should be a 
+Sparky peak list saved after
+        typing the command 'lt'.  The default is to assume that columns 0, 
+1, 2, and 3 (1st, 2nd,
+@@ -140,6 +141,8 @@
+        the peak intensity column is hardwired to number 10 (the 11th 
+column) which contains either
+        the peak height or peak volume data.  Because the columns are 
+fixed, the int_col argument
+        will be ignored.
++
++        If the format argument is set to 'nmrview', the file should be a 
+Nmrview peak list.
+
+
+        The heteronuc and proton arguments should be set respectively to 
+the name of the
+
+Modified: 1.3/specific_fns/noe.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/specific_fns/noe.py?rev=7592&amp;r1=7591&amp;r2=7592&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/specific_fns/noe.py?rev=7592&amp;r1=7591&amp;r2=7592&amp;view=diff</a>
+==============================================================================
+--- 1.3/specific_fns/noe.py (original)
++++ 1.3/specific_fns/noe.py Thu Oct  9 19:37:20 2008
+@@ -113,7 +113,7 @@
+        @keyword spectrum_type: The type of spectrum, one of 'ref' or 'sat'.
+        @type spectrum_type:    str
+        @keyword format:        The type of file containing peak 
+intensities.  This can currently be
+-                                one of 'sparky' or 'xeasy'.
++                                one of 'sparky', 'xeasy' or 'nmrview'.
+        @type format:           str
+        @keyword heteronuc:     The name of the heteronucleus as specified 
+in the peak intensity
+                                file.
+
+Modified: 1.3/specific_fns/relax_fit.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/specific_fns/relax_fit.py?rev=7592&amp;r1=7591&amp;r2=7592&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/specific_fns/relax_fit.py?rev=7592&amp;r1=7591&amp;r2=7592&amp;view=diff</a>
+==============================================================================
+--- 1.3/specific_fns/relax_fit.py (original)
++++ 1.3/specific_fns/relax_fit.py Thu Oct  9 19:37:20 2008
+@@ -986,7 +986,7 @@
+        @keyword relax_time:    The time, in seconds, of the relaxation 
+period.
+        @type relax_time:       float
+        @keyword format:        The type of file containing peak 
+intensities.  This can currently be
+-                                one of 'sparky' or 'xeasy'.
++                                one of 'sparky', 'xeasy' or 'nmrview'.
+        @type format:           str
+        @keyword heteronuc:     The name of the heteronucleus as specified 
+in the peak intensity
+                                file.
+
+Modified: 1.3/test_suite/system_tests/nmrview.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/test_suite/system_tests/nmrview.py?rev=7592&amp;r1=7591&amp;r2=7592&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/test_suite/system_tests/nmrview.py?rev=7592&amp;r1=7591&amp;r2=7592&amp;view=diff</a>
+==============================================================================
+--- 1.3/test_suite/system_tests/nmrview.py (original)
++++ 1.3/test_suite/system_tests/nmrview.py Thu Oct  9 19:37:20 2008
+@@ -57,7 +57,7 @@
+        self.relax.interpreter._Spin.name(name='N')
+
+        # Read the peak list.
+-        self.relax.interpreter._Relax_fit.read(file=&quot;cNTnC.xpk&quot;, 
+dir=sys.path[-1] + &quot;/test_suite/shared_data/peak_lists&quot;, relax_time=0.0176)
++        self.relax.interpreter._Relax_fit.read(file=&quot;cNTnC.xpk&quot;, 
+dir=sys.path[-1] + &quot;/test_suite/shared_data/peak_lists&quot;, relax_time=0.0176, 
+format='nmrview')
+
+        # Test the data.
+        self.assertEqual(cdp.mol[0].res[0].spin[0].intensities[0], 
+-6.88333129883)
+
+
+_______________________________________________
+relax (<a  rel="nofollow" href="http://nmr-relax.com">http://nmr-relax.com</a>)
+
+This is the relax-commits mailing list
+relax-commits@xxxxxxx
+
+To unsubscribe from this list, get a password
+reminder, or change your subscription options,
+visit the list information page at
+<a  rel="nofollow" href="https://mail.gna.org/listinfo/relax-commits">https://mail.gna.org/listinfo/relax-commits</a>
+
+</pre></blockquote><pre style="margin: 0em;">
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<ul><li><strong>Follow-Ups</strong>:
+<ul>
+<li><strong><a name="00028" href="msg00028.html">Re: r7592 - in /1.3: generic_fns/ prompt/ specific_fns/	test_suite/system_tests/</a></strong>
+<ul><li><em>From:</em> Sébastien Morin</li></ul></li>
+</ul></li></ul>
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Sun Oct 12 22:41:00 2008</div>  
+</body>
+</html>

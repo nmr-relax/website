@@ -1,0 +1,181 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r14091 &#45; /branches/gui_testing/gui/controller.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 03 Aug 2011 19:15:48 +0200 -->
+<!--X-Message-Id: E1Qof2q&#45;0007Va&#45;1P@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r14091 - /branches/gui_testing/gui/controller.py -- August 03, 2011 - 19:15</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r14091 - /branches/gui_testing/gui/controller.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00071" class="tabs">Index by Date</a> | <a href="threads.html#00071" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00070.html">Date Prev</a>] [<a href="msg00072.html">Date Next</a>] [<a href="msg00070.html">Thread Prev</a>] [<a href="msg00072.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 03 Aug 2011 17:15:48 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00071.html">E1Qof2q-0007Va-1P@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on August 03, 2011 - 19:15:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Aug  3 19:15:47 2011
+New Revision: 14091
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=14091&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=14091&amp;view=rev</a>
+Log:
+The STDOUT and STDERR streams are segregated in the LogCtrl and STDERR 
+messages coloured red.
+
+
+Modified:
+    branches/gui_testing/gui/controller.py
+
+Modified: branches/gui_testing/gui/controller.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/gui_testing/gui/controller.py?rev=14091&amp;r1=14090&amp;r2=14091&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/gui_testing/gui/controller.py?rev=14091&amp;r1=14090&amp;r2=14091&amp;view=diff</a>
+==============================================================================
+--- branches/gui_testing/gui/controller.py (original)
++++ branches/gui_testing/gui/controller.py Wed Aug  3 19:15:47 2011
+@@ -495,6 +495,9 @@
+         # Set the font info.
+         self.SetFont(font.modern_8)
+ 
++        # Create the STDERR style (with assignment 1).
++        self.StyleSetForeground(1, wx.NamedColour('red'))
++
+         # Bind events.
+         self.Bind(wx.EVT_KEY_DOWN, self.capture_keys)
+ 
+@@ -514,12 +517,13 @@
+     def get_text(self):
+         &quot;&quot;&quot;Concatenate all of the text from the log queue and return it as a 
+string.
+ 
+-        @return:    The text from the log queue.
+-        @rtype:     str
+-        &quot;&quot;&quot;
+-
+-        # Init the text.
+-        string = ''
++        @return:    A list of the text from the log queue and a list of the 
+streams these correspond to.
++        @rtype:     list of str, list of int
++        &quot;&quot;&quot;
++
++        # Initialise.
++        string_list = ['']
++        stream_list = [0]
+ 
+         # Loop until the queue is empty.
+         while 1:
+@@ -530,11 +534,16 @@
+             # Get the data.
+             msg, stream = self.log_queue.get()
+ 
++            # A different stream.
++            if stream_list[-1] != stream:
++                string_list.append('')
++                stream_list.append(stream)
++
+             # Add the text.
+-            string = string + msg
++            string_list[-1] = string_list[-1] + msg
+ 
+         # Return the concatenated text.
+-        return string
++        return string_list, stream_list
+ 
+ 
+     def limit_scrollback(self, prune=20):
+@@ -573,10 +582,10 @@
+         &quot;&quot;&quot;Write the text in the log queue to the log control.&quot;&quot;&quot;
+ 
+         # Get the text.
+-        string = self.get_text()
++        string_list, stream_list = self.get_text()
+ 
+         # Nothing to do.
+-        if string == '':
++        if len(string_list) == 1 and string_list[0] == '':
+             return
+ 
+         # At the end?
+@@ -585,7 +594,19 @@
+             at_end = True
+ 
+         # Add the text.
+-        self.AppendText(string)
++        for i in range(len(string_list)):
++            # Add the text.
++            self.AppendText(string_list[i])
++
++            # STDERR style.
++            if stream_list[i] == 1:
++                # Get the text extents.
++                len_string = len(string_list[i].encode('utf8'))
++                end = self.GetLength()
++
++                # Change the style.
++                self.StartStyling(end - len_string, 31)
++                self.SetStyling(len_string, 1)
+ 
+         # Limit the scroll back.
+         self.limit_scrollback()
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Aug 03 20:40:02 2011</div>  
+</body>
+</html>

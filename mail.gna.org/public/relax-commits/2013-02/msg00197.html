@@ -1,0 +1,454 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r18525 &#45; /trunk/generic_fns/structure/pdb_write.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 20 Feb 2013 14:37:40 +0100 -->
+<!--X-Message-Id: E1U89rg&#45;0004C7&#45;FX@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r18525 - /trunk/generic_fns/structure/pdb_write.py -- February 20, 2013 - 14:37</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r18525 - /trunk/generic_fns/structure/pdb_write.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00197" class="tabs">Index by Date</a> | <a href="threads.html#00197" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00196.html">Date Prev</a>] [<a href="msg00198.html">Date Next</a>] [<a href="msg00196.html">Thread Prev</a>] [<a href="msg00198.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 20 Feb 2013 13:37:40 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00197.html">E1U89rg-0004C7-FX@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on February 20, 2013 - 14:37:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Feb 20 14:37:40 2013
+New Revision: 18525
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=18525&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=18525&amp;view=rev</a>
+Log:
+Improved PDB writing capabilities.
+
+The functions of the generic_fns.structure.pdb_write module now all use the 
+_handle_none() function
+to avoid the text &quot;None&quot; from appearing in the PDB file and 
+_record_validate() to be sure the record
+has not been corrupted with bad input causing it to be either less or greater 
+than 80 characters.
+
+
+Modified:
+    trunk/generic_fns/structure/pdb_write.py
+
+Modified: trunk/generic_fns/structure/pdb_write.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/generic_fns/structure/pdb_write.py?rev=18525&amp;r1=18524&amp;r2=18525&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/generic_fns/structure/pdb_write.py?rev=18525&amp;r1=18524&amp;r2=18525&amp;view=diff</a>
+==============================================================================
+--- trunk/generic_fns/structure/pdb_write.py (original)
++++ trunk/generic_fns/structure/pdb_write.py Wed Feb 20 14:37:40 2013
+@@ -28,6 +28,9 @@
+ # Python module imports.
+ from textwrap import wrap
+ 
++# relax module imports.
++from relax_errors import RelaxError
++
+ 
+ def _handle_none(value):
+     &quot;&quot;&quot;Auxiliary function for handling values of None.
+@@ -44,6 +47,22 @@
+ 
+     # Normal value.
+     return value
++
++
++def _record_validate(record):
++    &quot;&quot;&quot;Check that the record is ok.
++
++    @param record:      The PDB record as text.
++    @type record:       str
++    @raises RelaxError: If the record is not exactly 80 characters long.
++    &quot;&quot;&quot;
++
++    # Check the length.
++    if len(record) != 80:
++        if len(record) &lt; 80:
++            raise RelaxError(&quot;The PDB record '%s' is too short.&quot; % record)
++        else:
++            raise RelaxError(&quot;The PDB record '%s' is too long.&quot; % record)
+ 
+ 
+ def atom(file, serial='', name='', alt_loc='', res_name='', chain_id='', 
+res_seq='', icode='', x='', y='', z='', occupancy='', temp_factor='', 
+element='', charge=''):
+@@ -205,8 +224,31 @@
+     @type charge:           int
+     &quot;&quot;&quot;
+ 
++    # The formatted record.
++    text = &quot;%-6s%5s %-4s%1s%3s %1s%4s%1s   %8.3f%8.3f%8.3f%6.2f%6.2f         
+ %2s%2s&quot; % (
++        'ATOM',
++        _handle_none(serial),
++        _handle_none(name),
++        _handle_none(alt_loc),
++        _handle_none(res_name),
++        _handle_none(chain_id),
++        _handle_none(res_seq),
++        _handle_none(icode),
++        _handle_none(x),
++        _handle_none(y),
++        _handle_none(z),
++        _handle_none(occupancy),
++        _handle_none(temp_factor),
++        _handle_none(element),
++        _handle_none(charge)
++    )
++
++    # Validate.
++    _record_validate(text)
++
+     # Write out the formatted record.
+-    file.write(&quot;%-6s%5s %-4s%1s%3s %1s%4s%1s   %8.3f%8.3f%8.3f%6.2f%6.2f     
+     %2s%2s\n&quot; % ('ATOM', serial, name, alt_loc, res_name, chain_id, res_seq, 
+icode, x, y, z, occupancy, temp_factor, element, charge))
++    file.write(text)
++    file.write('\n')
+ 
+ 
+ def conect(file, serial='', bonded1='', bonded2='', bonded3='', bonded4=''):
+@@ -299,8 +341,22 @@
+     @type bonded4:          int
+     &quot;&quot;&quot;
+ 
++    # The formatted record.
++    text = &quot;%-6s%5s%5s%5s%5s%5s                              \n&quot; % (
++        'CONECT',
++        _handle_none(serial),
++        _handle_none(bonded1),
++        _handle_none(bonded2),
++        _handle_none(bonded3),
++        _handle_none(bonded4)
++    )
++
++    # Validate.
++    _record_validate(text)
++
+     # Write out the formatted record.
+-    file.write(&quot;%-6s%5s%5s%5s%5s%5s                              \n&quot; % 
+('CONECT', serial, bonded1, bonded2, bonded3, bonded4))
++    file.write(text)
++    file.write('\n')
+ 
+ 
+ def end(file):
+@@ -356,8 +412,15 @@
+     @type file:             file object
+     &quot;&quot;&quot;
+ 
++    # The formatted record.
++    text = &quot;END&quot; + ' '*77
++
++    # Validate.
++    _record_validate(text)
++
+     # Write out the formatted record.
+-    file.write(&quot;END\n&quot;)
++    file.write(text)
++    file.write('\n')
+ 
+ 
+ def endmdl(file):
+@@ -432,8 +495,15 @@
+     @type file:             file object
+     &quot;&quot;&quot;
+ 
++    # The formatted record.
++    text = 'ENDMDL' + ' '*74
++
++    # Validate.
++    _record_validate(text)
++
+     # Write out the formatted record.
+-    file.write(&quot;%-6s\n&quot; % 'ENDMDL')
++    file.write(text)
++    file.write('\n')
+ 
+ 
+ def formul(file, comp_num='', het_id='', continuation='', asterisk='', 
+text=''):
+@@ -520,8 +590,22 @@
+     @type text:             str
+     &quot;&quot;&quot;
+ 
++    # The formatted record.
++    text = &quot;%-6s  %2s  %3s %2s%1s%-51s\n&quot; % (
++        'FORMUL',
++        _handle_none(comp_num),
++        _handle_none(het_id),
++        _handle_none(continuation),
++        _handle_none(asterisk),
++        _handle_none(text)
++    )
++
++    # Validate.
++    _record_validate(text)
++
+     # Write out the formatted record.
+-    file.write(&quot;%-6s  %2s  %3s %2s%1s%-51s\n&quot; % ('FORMUL', comp_num, het_id, 
+continuation, asterisk, text))
++    file.write(text)
++    file.write('\n')
+ 
+ 
+ def helix(file, ser_num='', helix_id='', init_res_name='', init_chain_id='', 
+init_seq_id='', init_icode='', end_res_name='', end_chain_id='', 
+end_seq_num='', end_icode='', helix_class='', comment='', length=''):
+@@ -655,6 +739,9 @@
+         _handle_none(length)
+     )
+ 
++    # Validate.
++    _record_validate(text)
++
+     # Write out the formatted record.
+     file.write(text)
+     file.write('\n')
+@@ -754,8 +841,23 @@
+     @type text:             str
+     &quot;&quot;&quot;
+ 
++    # The formatted record.
++    text = &quot;%-6s %3s  %1s%4s%1s  %5s     %-40s&quot; % (
++        'HET',
++        _handle_none(het_id),
++        _handle_none(chain_id),
++        _handle_none(seq_num),
++        _handle_none(icode),
++        _handle_none(num_het_atoms),
++        _handle_none(text)
++    )
++
++    # Validate.
++    _record_validate(text)
++
+     # Write out the formatted record.
+-    file.write(&quot;%-6s %3s  %1s%4s%1s  %5s     %-40s\n&quot; % ('HET', het_id, 
+chain_id, seq_num, icode, num_het_atoms, text))
++    file.write(text)
++    file.write('\n')
+ 
+ 
+ def hetatm(file, serial='', name='', alt_loc='', res_name='', chain_id='', 
+res_seq='', icode='', x='', y='', z='', occupancy='', temp_factor='', 
+element='', charge=''):
+@@ -867,8 +969,31 @@
+     @type charge:           int
+     &quot;&quot;&quot;
+ 
++    # The formatted record.
++    text = &quot;%-6s%5s %4s%1s%3s %1s%4s%1s   %8.3f%8.3f%8.3f%6.2f%6.2f          
+%2s%2s&quot; % (
++        'HETATM',
++        _handle_none(serial),
++        _handle_none(name),
++        _handle_none(alt_loc),
++        _handle_none(res_name),
++        _handle_none(chain_id),
++        _handle_none(res_seq),
++        _handle_none(icode),
++        _handle_none(x),
++        _handle_none(y),
++        _handle_none(z),
++        _handle_none(occupancy),
++        _handle_none(temp_factor),
++        _handle_none(element),
++        _handle_none(charge)
++    )
++
++    # Validate.
++    _record_validate(text)
++
+     # Write out the formatted record.
+-    file.write(&quot;%-6s%5s %4s%1s%3s %1s%4s%1s   %8.3f%8.3f%8.3f%6.2f%6.2f      
+    %2s%2s\n&quot; % ('HETATM', serial, name, alt_loc, res_name, chain_id, 
+res_seq, icode, x, y, z, occupancy, temp_factor, element, charge))
++    file.write(text)
++    file.write('\n')
+ 
+ 
+ def hetnam(file, continuation='', het_id='', text=''):
+@@ -951,8 +1076,20 @@
+     @type text:             str
+     &quot;&quot;&quot;
+ 
++    # The formatted record.
++    text = &quot;%-6s  %2s %3s %-55s\n&quot; % (
++        'HETNAM',
++        _handle_none(continuation),
++        _handle_none(het_id),
++        _handle_none(text)
++    )
++
++    # Validate.
++    _record_validate(text)
++
+     # Write out the formatted record.
+-    file.write(&quot;%-6s  %2s %3s %-55s\n&quot; % ('HETNAM', continuation, het_id, 
+text))
++    file.write(text)
++    file.write('\n')
+ 
+ 
+ def master(file, num_remark=0, num_het=0, num_helix=0, num_sheet=0, 
+num_turn=0, num_site=0, num_xform=0, num_coord=0, num_ter=0, num_conect=0, 
+num_seq=0):
+@@ -1044,8 +1181,29 @@
+     @type num_seq           int
+     &quot;&quot;&quot;
+ 
++    # The formatted record.
++    text = &quot;%-6s    %5s%5s%5s%5s%5s%5s%5s%5s%5s%5s%5s%5s&quot; % (
++        'MASTER',
++        _handle_none(num_remark),
++        0,
++        _handle_none(num_het),
++        _handle_none(num_helix),
++        _handle_none(num_sheet),
++        _handle_none(num_turn),
++        _handle_none(num_site),
++        _handle_none(num_xform),
++        _handle_none(num_coord),
++        _handle_none(num_ter),
++        _handle_none(num_conect),
++        _handle_none(num_seq)
++    )
++
++    # Validate.
++    _record_validate(text)
++
+     # Write out the formatted record.
+-    file.write(&quot;%-6s    %5s%5s%5s%5s%5s%5s%5s%5s%5s%5s%5s%5s\n&quot; % ('MASTER', 
+num_remark, 0, num_het, num_helix, num_sheet, num_turn, num_site, num_xform, 
+num_coord, num_ter, num_conect, num_seq))
++    file.write(text)
++    file.write('\n')
+ 
+ 
+ def model(file, serial=''):
+@@ -1153,8 +1311,19 @@
+     @type serial:           int
+     &quot;&quot;&quot;
+ 
++    # The formatted record.
++    text = &quot;%-6s    %4i%65s&quot; % (
++        'MODEL',
++        _handle_none(serial),
++        ''
++    )
++
++    # Validate.
++    _record_validate(text)
++
+     # Write out the formatted record.
+-    file.write(&quot;%-6s    %4i\n&quot; % ('MODEL', serial))
++    file.write(text)
++    file.write('\n')
+ 
+ 
+ def remark(file, num='', remark=''):
+@@ -1190,9 +1359,17 @@
+     @type remark:       str
+     &quot;&quot;&quot;
+ 
+-    # Write out the formatted record, splitting across lines if needed.
++    # The formatted record, splitting across lines if needed.
+     for line in wrap(remark, 68):
+-        file.write(&quot;%-6s %3s %-68s \n&quot; % (&quot;REMARK&quot;, num, line.upper()))
++        # The text.
++        text = &quot;%-6s %3s %-68s &quot; % (&quot;REMARK&quot;, num, line.upper())
++
++        # Validate.
++        _record_validate(text)
++
++        # Write out the formatted record.
++        file.write(text)
++        file.write('\n')
+ 
+ 
+ def ter(file, serial='', res_name='', chain_id='', res_seq='', icode=''):
+@@ -1287,4 +1464,18 @@
+     &quot;&quot;&quot;
+ 
+     # Write out the formatted record.
+-    file.write(&quot;%-6s%5s      %3s %1s%4s%1s\n&quot; % ('TER', serial, res_name, 
+chain_id, res_seq, icode))
++    text = &quot;%-6s%5s      %3s %1s%4s%1s&quot; % (
++        'TER',
++        _handle_none(serial),
++        _handle_none(res_name),
++        _handle_none(chain_id),
++        _handle_none(res_seq),
++        _handle_none(icode)
++    )
++
++    # Validate.
++    _record_validate(text)
++
++    # Write out the formatted record.
++    file.write(text)
++    file.write('\n')
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Feb 20 15:40:01 2013</div>  
+</body>
+</html>

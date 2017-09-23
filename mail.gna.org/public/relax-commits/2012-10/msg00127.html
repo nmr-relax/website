@@ -1,0 +1,316 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r17748 &#45; /branches/tensor_data/data/diff_tensor.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 08 Oct 2012 17:16:26 +0200 -->
+<!--X-Message-Id: E1TLF4E&#45;0006QS&#45;CN@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r17748 - /branches/tensor_data/data/diff_tensor.py -- October 08, 2012 - 17:16</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r17748 - /branches/tensor_data/data/diff_tensor.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00127" class="tabs">Index by Date</a> | <a href="threads.html#00127" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00126.html">Date Prev</a>] [<a href="msg00128.html">Date Next</a>] [<a href="msg00126.html">Thread Prev</a>] [<a href="msg00128.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 08 Oct 2012 15:16:26 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00127.html">E1TLF4E-0006QS-CN@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on October 08, 2012 - 17:16:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Mon Oct  8 17:16:25 2012
+New Revision: 17748
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=17748&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=17748&amp;view=rev</a>
+Log:
+Redesigned how diffusion tensor simulation structures are handled.
+
+The design is now much cleaner and works with all Python versions.
+
+
+Modified:
+    branches/tensor_data/data/diff_tensor.py
+
+Modified: branches/tensor_data/data/diff_tensor.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/tensor_data/data/diff_tensor.py?rev=17748&amp;r1=17747&amp;r2=17748&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/tensor_data/data/diff_tensor.py?rev=17748&amp;r1=17747&amp;r2=17748&amp;view=diff</a>
+==============================================================================
+--- branches/tensor_data/data/diff_tensor.py (original)
++++ branches/tensor_data/data/diff_tensor.py Mon Oct  8 17:16:25 2012
+@@ -636,6 +636,9 @@
+         # Initialise the spheroid type flag.
+         self.__dict__['_spheroid_type'] = False
+ 
++        # The number of simulations.
++        self.__dict__['_sim_num'] = None
++
+ 
+     def __setattr__(self, name, value):
+         &quot;&quot;&quot;Function for calculating the parameters, unit vectors, and 
+tensors on the fly.
+@@ -886,17 +889,14 @@
+ 
+             # Only create the MC simulation object if its dependencies exist.
+             if not missing_dep:
+-                # The number of simulations.
+-                num_sim = len(self.__dict__[update_if_set[0]+'_sim'])
+-
+                 # Initialise an empty array to store the MC simulation 
+object elements (if it doesn't already exist).
+                 if not target+'_sim' in self.__dict__:
+-                    self.__dict__[target+'_sim'] = DiffTensorSimList(target, 
+self, elements=num_sim)
++                    self.__dict__[target+'_sim'] = 
+DiffTensorSimList(elements=self._sim_num)
+ 
+                 # Repackage the deps structure.
+                 args = []
+                 skip = False
+-                for i in range(num_sim):
++                for i in range(self._sim_num):
+                     args.append(())
+ 
+                     # Loop over the dependent structures.
+@@ -915,7 +915,7 @@
+ 
+                 # Loop over the sims and set the values.
+                 if not skip:
+-                    for i in range(num_sim):
++                    for i in range(self._sim_num):
+                         # Calculate the value.
+                         value = fn(*args[i])
+ 
+@@ -980,11 +980,22 @@
+ 
+         # Set a simulation value.
+         else:
++            # Check that the simulation number has been set.
++            if self._sim_num == None:
++                raise RelaxError(&quot;The diffusion tensor simulation number has 
+not yet been specified, therefore a simulation value cannot be set.&quot;)
++
++            # The simulation parameter name.
++            sim_param = param+'_sim'
++
++            # No object, so create it.
++            if not hasattr(self, sim_param):
++                self.__dict__[sim_param] = 
+DiffTensorSimList(elements=self._sim_num)
++
+             # The object.
+-            obj = getattr(self, param+'_sim')
++            obj = getattr(self, sim_param)
+ 
+             # Set the value.
+-            obj[sim_index] = value
++            obj._set(value=value, sim_index=sim_index)
+ 
+         # Flag for the spheroid type.
+         if param == 'spheroid_type' and value:
+@@ -997,6 +1008,21 @@
+         # Update the data structures.
+         for target, update_if_set, depends in 
+dependency_generator(self.type):
+             self._update_object(param, target, update_if_set, depends, 
+category)
++
++
++    def set_sim_num(self, sim_number=None):
++        &quot;&quot;&quot;Set the number of Monte Carlo simulations for the construction of 
+the simulation structures.
++
++        @keyword sim_number:    The number of Monte Carlo simulations.
++        @type sim_number:       int
++        &quot;&quot;&quot;
++
++        # Check if not already set.
++        if self._sim_num != None:
++            raise RelaxError(&quot;The number of simulations has already been 
+set.&quot;)
++
++        # Store the value.
++        self.__dict__['_sim_num'] = sim_number
+ 
+ 
+     def set_type(self, value):
+@@ -1056,10 +1082,6 @@
+             if name in list(self.__class__.__dict__.keys()) or name in 
+dir(list):
+                 continue
+ 
+-            # Skip the diff_element object.
+-            if name == 'diff_element':
+-                continue
+-
+             # Get the object.
+             value = getattr(self, name)
+ 
+@@ -1070,66 +1092,60 @@
+         return new_obj
+ 
+ 
+-    def __init__(self, param_name, diff_element, elements=None):
++    def __init__(self, elements=None):
+         &quot;&quot;&quot;Initialise the Monte Carlo simulation parameter list.
+ 
+-        This function makes the parameter name and parent object accessible 
+to the functions of this
+-        list object.
+-
+-        @param param_name:      The name of the parameter.
+-        @type param_name:       str
+-        @param diff_element:    The parent class.
+-        @type diff_element:     DiffTensorData element
+         @keyword elements:      The optional number of elements to 
+initialise the length of the list
+                                 to.
+         @type elements:         None or int
+         &quot;&quot;&quot;
+ 
+-        # Initialise.
+-        self.param_name = param_name
+-        self.diff_element = diff_element
+-
+         # Initialise a length.
+         if elements:
+             for i in range(elements):
+-                self.append(None)
+-
+-
+-    def __setitem__(self, slice_obj, value):
++                self._append(None)
++
++        # Alias the __setitem__() method.
++        self.__setitem__ = self.__setitem_orig__
++
++
++    def __setitem_orig__(self, slice_obj, value):
+         &quot;&quot;&quot;This is a read-only object!&quot;&quot;&quot;
+ 
+         raise RelaxError(&quot;The diffusion tensor is a read-only object.  The 
+diffusion tensor set() method must be used instead.&quot;)
+ 
+-        # Set the value.
+-        list.__setitem__(self, slice_obj, value)
+-
+-        # Then update the other lists.
+-        self.diff_element._update_sim_set(self.param_name, slice_obj)
++
++    def _append(self, value):
++        &quot;&quot;&quot;The secret append method.
++
++        @param value:   The value to append to the list.
++        @type value:    anything
++        &quot;&quot;&quot;
++
++        # Execute the base class method.
++        super(DiffTensorSimList, self).append(value)
++
++
++    def _set(self, value=None, sim_index=None):
++        &quot;&quot;&quot;Replacement secret method for __setitem__().
++
++        @keyword value:     The value to set.
++        @type value:        anything
++        @keyword sim_index: The index of the simulation value to set.
++        @type sim_index:    int
++        &quot;&quot;&quot;
++
++        # Alias the base class method.
++        self.__setitem__ = list.__setitem__
++
++        # Execute the base class method.
++        self[sim_index] = value
++
++        # Unalias.
++        self.__setitem__ = self.__setitem_orig__
+ 
+ 
+     def append(self, value):
+-        &quot;&quot;&quot;Replacement function for the normal self.append() method.&quot;&quot;&quot;
+-
+-        # Append the value to the list.
+-        self[len(self):len(self)] = [value]
+-
+-        # Update the other MC lists.
+-        self.diff_element._update_sim_append(self.param_name, len(self)-1)
+-
+-
+-    def append_untouchable_item(self, value):
+-        &quot;&quot;&quot;Append the value for an untouchable MC data structure.&quot;&quot;&quot;
+-
+-        # Append the value to the list.
+-        self[len(self):len(self)] = [value]
+-
+-
+-    def set_untouchable_item(self, slice_obj, value):
+-        &quot;&quot;&quot;Set the value for an untouchable MC data structure.&quot;&quot;&quot;
+-
+-        # Python 3 fix - the value needs to now be a list?!
+-        if sys.version_info[0] &gt;= 3:
+-            value = [value]
+-
+-        # Set the value.
+-        list.__setitem__(self, slice_obj, value)
++        &quot;&quot;&quot;This is a read-only object!&quot;&quot;&quot;
++
++        raise RelaxError(&quot;The diffusion tensor is a read-only object.  The 
+diffusion tensor set() method must be used instead.&quot;)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Oct 08 17:20:01 2012</div>  
+</body>
+</html>

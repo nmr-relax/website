@@ -1,0 +1,178 @@
+<!-- MHonArc v2.6.19+ -->
+<!--X-Subject: r28223 &#45; in /trunk: lib/structure/statistics.py test_suite/system_tests/structure.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 02 Jun 2016 19:09:41 +0200 -->
+<!--X-Message-Id: E1b8W7p&#45;00077c&#45;Fa@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r28223 - in /trunk: lib/structure/statistics.py test_suite/system_tests/structure.py -- June 02, 2016 - 19:09</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r28223 - in /trunk: lib/structure/statistics.py test_suite/system_tests/structure.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00003" class="tabs">Index by Date</a> | <a href="threads.html#00003" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00002.html">Date Prev</a>] [<a href="msg00004.html">Date Next</a>] [<a href="msg00002.html">Thread Prev</a>] [<a href="msg00004.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 02 Jun 2016 17:09:41 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00003.html">E1b8W7p-00077c-Fa@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on June 02, 2016 - 19:09:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Jun  2 19:09:40 2016
+New Revision: 28223
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=28223&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=28223&amp;view=rev</a>
+Log:
+Fix for bug #24723 (<a  rel="nofollow" href="https://gna.org/bugs/?24723">https://gna.org/bugs/?24723</a>).
+
+This is the bug that the mean RMSD from the structure.rmsd user function is 
+incorrectly
+calculated - it should be a quadratic mean.
+
+The quadratic mean and quadratic standard deviation are now correctly 
+calculated, and the
+structure.test_rmsd, structure.test_rmsd_molecules, and 
+structure.test_rmsd_ubi system tests have
+been updated for the fix.
+
+Modified:
+    trunk/lib/structure/statistics.py
+    trunk/test_suite/system_tests/structure.py
+
+Modified: trunk/lib/structure/statistics.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/lib/structure/statistics.py?rev=28223&amp;r1=28222&amp;r2=28223&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/lib/structure/statistics.py?rev=28223&amp;r1=28222&amp;r2=28223&amp;view=diff</a>
+==============================================================================
+--- trunk/lib/structure/statistics.py   (original)
++++ trunk/lib/structure/statistics.py   Thu Jun  2 19:09:40 2016
+@@ -65,16 +65,16 @@
+         if verbosity:
+             print(&quot;Model %2s RMSD:  %s&quot; % (i, model_rmsd[i]))
+ 
+-    # Calculate the mean.
+-    rmsd_mean = mean(model_rmsd)
++    # Calculate the quadratic mean.
++    rmsd_mean = sqrt(mean(model_rmsd**2))
+ 
+-    # Calculate the normal non-biased standard deviation.
++    # Calculate the normal non-biased quadratic standard deviation.
+     try:
+-        rmsd_sd = std(model_rmsd, ddof=1)
++        rmsd_sd = sqrt(std(model_rmsd**2, ddof=1))
+ 
+     # Handle old numpy versions not having the ddof argument.
+     except TypeError:
+-        rmsd_sd = std(model_rmsd) * sqrt(M / (M - 1.0))
++        rmsd_sd = sqrt(std(model_rmsd**2) * sqrt(M / (M - 1.0)))
+ 
+     # Printout.
+     if verbosity:
+
+Modified: trunk/test_suite/system_tests/structure.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/test_suite/system_tests/structure.py?rev=28223&amp;r1=28222&amp;r2=28223&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/test_suite/system_tests/structure.py?rev=28223&amp;r1=28222&amp;r2=28223&amp;view=diff</a>
+==============================================================================
+--- trunk/test_suite/system_tests/structure.py  (original)
++++ trunk/test_suite/system_tests/structure.py  Thu Jun  2 19:09:40 2016
+@@ -21,7 +21,7 @@
+ 
+ # Python module imports.
+ from math import sqrt
+-from numpy import array, average, dot, float64, sign, std, zeros
++from numpy import array, average, dot, float64, mean, sign, std, zeros
+ from numpy.linalg import norm
+ from os import sep
+ from re import search
+@@ -5070,7 +5070,7 @@
+ 
+         # Checks.
+         self.assert_(hasattr(cdp.structure, 'rmsd'))
+-        self.assertAlmostEqual(cdp.structure.rmsd, 2./3*sqrt(2))
++        self.assertAlmostEqual(cdp.structure.rmsd, sqrt(4.0/3.0))
+ 
+ 
+     def test_rmsd_molecules(self):
+@@ -5095,7 +5095,7 @@
+ 
+         # Checks.
+         self.assert_(hasattr(cdp.structure, 'rmsd'))
+-        self.assertAlmostEqual(cdp.structure.rmsd, 2./3*sqrt(2))
++        self.assertAlmostEqual(cdp.structure.rmsd, sqrt(4.0/3.0))
+ 
+ 
+     def test_rmsd_spins(self):
+@@ -5149,9 +5149,13 @@
+         # Calculate the RMSD.
+         self.interpreter.structure.rmsd()
+ 
++        # The per-structure RMSDs, and their quadratic average.
++        all_rmsd = array([1.06994466835, 0.411387603119, 0.647768214719, 
+0.522216519591, 0.274450954939, 0.979817275482, 0.752817901842, 
+1.28956426491, 1.12979370978, 0.650514765397], float64)
++        rmsd = sqrt(mean(all_rmsd**2))
++
+         # Checks (the values match the VMD 1.9.1 RMSD numbers).
+         self.assert_(hasattr(cdp.structure, 'rmsd'))
+-        self.assertAlmostEqual(cdp.structure.rmsd, 0.77282758781333061)
++        self.assertAlmostEqual(cdp.structure.rmsd, rmsd)
+ 
+ 
+     def test_sequence_alignment_central_star_nw70_blosum62(self):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Jun 03 11:20:20 2016</div>  
+</body>
+</html>

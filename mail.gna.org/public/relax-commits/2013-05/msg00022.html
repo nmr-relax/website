@@ -1,0 +1,223 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r19633 &#45;	/branches/relax_disp/specific_analyses/relax_disp/disp_data.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 03 May 2013 14:54:03 +0200 -->
+<!--X-Message-Id: E1UYFUx&#45;00028a&#45;QU@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r19633 -	/branches/relax_disp/specific_analyses/relax_disp/disp_data.py -- May 03, 2013 - 14:54</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r19633 -	/branches/relax_disp/specific_analyses/relax_disp/disp_data.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00022" class="tabs">Index by Date</a> | <a href="threads.html#00022" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00021.html">Date Prev</a>] [<a href="msg00023.html">Date Next</a>] [<a href="msg00021.html">Thread Prev</a>] [<a href="msg00023.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 03 May 2013 12:54:03 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00022.html">E1UYFUx-00028a-QU@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on May 03, 2013 - 14:54:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri May  3 14:54:03 2013
+New Revision: 19633
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=19633&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=19633&amp;view=rev</a>
+Log:
+Improvements to the specific_analysis.relax_disp.disp_data module.
+
+The function loop_all_data() has been expanded to include the relaxation time 
+period into the loop.
+The functions return_intensity() and return_key() have been added to return 
+peak intensities and the
+key corresponding to the data returned by loop_all_data().
+
+
+Modified:
+    branches/relax_disp/specific_analyses/relax_disp/disp_data.py
+
+Modified: branches/relax_disp/specific_analyses/relax_disp/disp_data.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp/disp_data.py?rev=19633&amp;r1=19632&amp;r2=19633&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp/disp_data.py?rev=19633&amp;r1=19632&amp;r2=19633&amp;view=diff</a>
+==============================================================================
+--- branches/relax_disp/specific_analyses/relax_disp/disp_data.py (original)
++++ branches/relax_disp/specific_analyses/relax_disp/disp_data.py Fri May  3 
+14:54:03 2013
+@@ -26,7 +26,7 @@
+ # relax module imports.
+ from lib.errors import RelaxError, RelaxNoSpectraError
+ from lib.list import count_unique_elements, unique_elements
+-from specific_analyses.relax_disp.variables import CPMG_EXP, R1RHO_EXP
++from specific_analyses.relax_disp.variables import CPMG_EXP, FIXED_TIME_EXP, 
+R1RHO_EXP
+ 
+ 
+ 
+@@ -145,18 +145,20 @@
+ 
+ 
+ def loop_all_data():
+-    &quot;&quot;&quot;Generator method for looping over the spectrometer frequency and 
+dispersion points.
+-
+-    @return:    The spectrometer frequency and dispersion point data (either 
+the spin-lock field strength in Hz or the nu_CPMG frequency in Hz).
+-    @rtype:     float, float
++    &quot;&quot;&quot;Generator method for looping over the spectrometer frequency, 
+dispersion points, and relaxation times.
++
++    @return:    The spectrometer frequency, dispersion point data (either 
+the spin-lock field strength in Hz or the nu_CPMG frequency in Hz), and the 
+relaxation times.
++    @rtype:     float, float, float
+     &quot;&quot;&quot;
+ 
+     # First loop over the spectrometer frequencies.
+     for frq in loop_spectrometer():
+         # Then the dispersion points.
+         for point in loop_dispersion_point():
+-            # Return both.
+-            yield frq, point
++            # Finally the relaxation times.
++            for time in cdp.relax_time_list:
++                # Return all data.
++                yield frq, point, time
+ 
+ 
+ def loop_dispersion_point():
+@@ -253,6 +255,66 @@
+     print(&quot;Setting the '%s' spectrum relaxation time period to %s s.&quot; % 
+(spectrum_id, cdp.relax_times[spectrum_id]))
+ 
+ 
++def return_intensity(spin=None, frq=None, point=None, time=None, ref=False):
++    &quot;&quot;&quot;Return the peak intensity corresponding to the given field strength 
+and dispersion point.
++
++    The corresponding reference intensity can be returned if the ref flag is 
+set.  This assumes that the data is of the fixed relaxation time period type.
++
++
++    @keyword spin:  The spin container object.
++    @type spin:     SpinContainer instance
++    @keyword frq:   The spectrometer frequency.
++    @type frq:      float
++    @keyword point: The dispersion point data (either the spin-lock field 
+strength in Hz or the nu_CPMG frequency in Hz).
++    @type point:    float
++    @keyword time:  The relaxation time period.
++    @type time:     float
++    @keyword ref:   A flag which if True will cause the corresponding 
+reference intensity to be returned instead.
++    @type ref:      bool
++    &quot;&quot;&quot;
++
++    # Checks.
++    if ref and cdp.exp_type not in FIXED_TIME_EXP:
++        raise RelaxError(&quot;The reference peak intensity does not exist for 
+the variable relaxation time period experiment types.&quot;)
++
++    # The key.
++    if ref:
++        key = return_key(frq=frq, point=None, time=time)
++    else:
++        key = return_key(frq=frq, point=point, time=time)
++
++    # Return the intensity.
++    return spin.intensities[key]
++
++
++def return_key(frq=None, point=None, time=None):
++    &quot;&quot;&quot;Return the key corresponding to the spectrometer frequency, 
+dispersion point, and relaxation time.
++
++    @keyword frq:   The spectrometer frequency.
++    @type frq:      float
++    @keyword point: The dispersion point data (either the spin-lock field 
+strength in Hz or the nu_CPMG frequency in Hz).
++    @type point:    float
++    @keyword time:  The relaxation time period.
++    @type time:     float
++    @return:        The key corresponding to the spectrometer frequency, 
+dispersion point, and relaxation time.
++    @rtype:         str
++    &quot;&quot;&quot;
++
++    # The dispersion data.
++    if cdp.exp_type in CPMG_EXP:
++        disp_data = cdp.cpmg_frqs
++    else:
++        disp_data = cdp.spin_lock_nu1
++
++    # Loop over all spectrum IDs, returning the matching ID.
++    for id in cdp.spectrum_ids:
++        if cdp.frq[id] == frq and disp_data[id] == point and 
+cdp.relax_times[id] == time:
++            return id
++
++    # Should not be here.
++    raise RelaxError(&quot;No key could be found corresponding to the 
+spectrometer frequency %s, dispersion point %s and relaxation time %s.&quot; % 
+(frq, point, time))
++
++
+ def spin_lock_field(spectrum_id=None, field=None):
+     &quot;&quot;&quot;Set the spin-lock field strength (nu1) for the given spectrum.
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri May 03 15:00:02 2013</div>  
+</body>
+</html>

@@ -1,0 +1,301 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r18685 &#45; /trunk/lib/text/table.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 07 Mar 2013 22:05:06 +0100 -->
+<!--X-Message-Id: E1UDhzu&#45;00051c&#45;JE@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r18685 - /trunk/lib/text/table.py -- March 07, 2013 - 22:05</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r18685 - /trunk/lib/text/table.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00103" class="tabs">Index by Date</a> | <a href="threads.html#00103" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00102.html">Date Prev</a>] [<a href="msg00104.html">Date Next</a>] [<a href="msg00102.html">Thread Prev</a>] [<a href="msg00104.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 07 Mar 2013 21:05:06 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00103.html">E1UDhzu-00051c-JE@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on March 07, 2013 - 22:05:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Mar  7 22:05:06 2013
+New Revision: 18685
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=18685&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=18685&amp;view=rev</a>
+Log:
+Many improvements to the lib.text.table module.
+
+The format_table() function now accepts arguments for text to prefix and 
+postfix to each line,
+the text padding to the left and right inside the table, and the text used to 
+separate the columns.
+The _blank() and _rule() private functions have been added to create distinct 
+table elements.
+
+
+Modified:
+    trunk/lib/text/table.py
+
+Modified: trunk/lib/text/table.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/lib/text/table.py?rev=18685&amp;r1=18684&amp;r2=18685&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/lib/text/table.py?rev=18685&amp;r1=18684&amp;r2=18685&amp;view=diff</a>
+==============================================================================
+--- trunk/lib/text/table.py (original)
++++ trunk/lib/text/table.py Thu Mar  7 22:05:06 2013
+@@ -27,58 +27,82 @@
+ from textwrap import wrap
+ 
+ 
+-def _table_line(text=None, widths=None, bottom=False):
++def _blank(width=None, prefix=' ', postfix=' '):
++    &quot;&quot;&quot;Create a blank line for the table.
++
++    @keyword width:     The total width of the table.
++    @type width:        int
++    @keyword prefix:    The text to add to the start of the line.
++    @type prefix:       str
++    @keyword postfix:   The text to add to the end of the line.
++    @type postfix:      str
++    @return:            The rule.
++    @rtype:             str
++    &quot;&quot;&quot;
++
++    # Return the blank line.
++    return prefix + ' '*width + postfix + &quot;\n&quot;
++
++
++def _rule(width=None, prefix=' ', postfix=' '):
++    &quot;&quot;&quot;Create a horizontal rule for the table.
++
++    @keyword width:     The total width of the table.
++    @type width:        int
++    @keyword prefix:    The text to add to the start of the line.
++    @type prefix:       str
++    @keyword postfix:   The text to add to the end of the line.
++    @type postfix:      str
++    @return:            The rule.
++    @rtype:             str
++    &quot;&quot;&quot;
++
++    # Return the rule.
++    return prefix + '_'*width + postfix + &quot;\n&quot;
++
++
++def _table_line(text=None, widths=None, separator='   ', pad_left=' ', 
+pad_right=' ', prefix=' ', postfix=' '):
+     &quot;&quot;&quot;Format a line of a table.
+ 
+     @keyword text:      The list of table elements.  If not given, an empty 
+line will be be produced.
+     @type text:         list of str or None
+     @keyword widths:    The list of column widths for the table.
+     @type widths:       list of int
+-    @keyword botton:    A flag which if True will cause a table bottom line 
+to be produced.
+-    @type bottom:       bool
++    @keyword separator: The column separation string.
++    @type separator:    str
++    @keyword pad_left:  The string to pad the left side of the table with.
++    @type pad_left:     str
++    @keyword pad_right: The string to pad the right side of the table with.
++    @type pad_right:    str
++    @keyword prefix:    The text to add to the start of the line.
++    @type prefix:       str
++    @keyword postfix:   The text to add to the end of the line.
++    @type postfix:      str
+     @return:            The table line.
+     @rtype:             str
+     &quot;&quot;&quot;
+ 
+     # Initialise.
+-    if bottom:
+-        line = &quot; _&quot;
+-    else:
+-        line = &quot;  &quot;
++    line = prefix + pad_left
+ 
+     # Loop over the columns.
+     for i in range(len(widths)):
+         # The column separator.
+         if i &gt; 0:
+-            if bottom:
+-                line += &quot;___&quot;
+-            else:
+-                line += &quot;   &quot;
+-
+-        # A bottom line.
+-        if bottom:
+-            line += &quot;_&quot; * widths[i]
+-
+-        # Empty line.
+-        elif text == None:
+-            line += &quot; &quot; * widths[i]
++            line += separator
+ 
+         # The text.
+-        else:
+-            line += text[i]
+-            line += &quot; &quot; * (widths[i] - len(text[i]))
++        line += text[i]
++        line += &quot; &quot; * (widths[i] - len(text[i]))
+ 
+     # Close the line.
+-    if bottom:
+-        line += &quot;_ \n&quot;
+-    else:
+-        line += &quot;  \n&quot;
++    line += pad_right + postfix + &quot;\n&quot;
+ 
+     # Return the text.
+     return line
+ 
+ 
+-def format_table(headings=None, contents=None, max_width=None, 
+spacing=False, debug=False):
++def format_table(headings=None, contents=None, max_width=None, separator='   
+', pad_left=' ', pad_right=' ', prefix=' ', postfix=' ', spacing=False, 
+debug=False):
+     &quot;&quot;&quot;Format and return the table as text.
+ 
+     @keyword headings:  The table header.
+@@ -87,6 +111,16 @@
+     @type contents:     list of lists of str
+     @keyword max_width: The maximum width of the table.
+     @type max_width:    int
++    @keyword separator: The column separation string.
++    @type separator:    str
++    @keyword pad_left:  The string to pad the left side of the table with.
++    @type pad_left:     str
++    @keyword pad_right: The string to pad the right side of the table with.
++    @type pad_right:    str
++    @keyword prefix:    The text to add to the start of the line.
++    @type prefix:       str
++    @keyword postfix:   The text to add to the end of the line.
++    @type postfix:      str
+     @keyword spacing:   A flag which if True will add blank line between 
+each row.
+     @type spacing:      bool
+     @keyword debug:     A flag which if True will activate a number of 
+debugging printouts.
+@@ -114,11 +148,10 @@
+             if len(contents[i][j]) &gt; widths[j]:
+                 widths[j] = len(contents[i][j])
+ 
+-    # The free space for the text.
+-    used = 0
+-    used += 2    # Start of the table '  '.
+-    used += 2    # End of the table '  '.
+-    used += 3 * (num_cols - 1)   # Middle of the table '   '.
++    # The free space for the text (subtracting the space used for the 
+formatting).
++    used = len(pad_left)
++    used += len(pad_right)
++    used += len(separator) * (num_cols - 1)
+     if max_width:
+         free_space = max_width - used
+     else:
+@@ -195,11 +228,11 @@
+     total_width = sum(new_widths) + used
+ 
+     # The header.
+-    text += &quot; &quot; + &quot;_&quot; * (total_width - 2) + &quot;\n&quot;    # Top rule.
+-    text += _table_line(widths=new_widths)    # Blank line.
++    text += _rule(width=total_width)    # Top rule.
++    text += _blank(width=total_width)    # Blank line.
+     for i in range(num_head_rows):
+-        text += _table_line(text=headings[i], widths=new_widths)    # The 
+headings.
+-    text += _table_line(widths=new_widths, bottom=True)    # Middle rule.
++        text += _table_line(text=headings[i], widths=new_widths, 
+separator=separator, pad_left=pad_left, pad_right=pad_right, prefix=prefix, 
+postfix=postfix)
++    text += _rule(width=total_width)    # Middle rule.
+ 
+     # The table contents.
+     for i in range(num_rows):
+@@ -225,17 +258,16 @@
+ 
+         # Blank line (between rows when asked, and for the first row after 
+the header).
+         if spacing or i == 0:
+-            text += _table_line(widths=new_widths)
++            text += _blank(width=total_width)
+ 
+         # The contents.
+         for k in range(num_lines):
+-            text += _table_line(text=col_text[k], widths=new_widths)
+-
+-    # The bottom.
+-    text += _table_line(widths=new_widths, bottom=True)    # Bottom rule.
+-
+-    # Add a newline.
+-    text += '\n'
++            text += _table_line(text=col_text[k], widths=new_widths, 
+separator=separator, pad_left=pad_left, pad_right=pad_right, prefix=prefix, 
+postfix=postfix)
++
++    # The bottom rule, followed by a blank line.
++    text += _rule(width=total_width)
++    text += _blank(width=total_width)
+ 
+     # Return the table text.
++    print `text`
+     return text
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Mar 07 22:20:01 2013</div>  
+</body>
+</html>

@@ -1,0 +1,507 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r7722 &#45; in /branches/multi_processor_merge: multi/	specific_fns/model_free/ -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 15 Oct 2008 23:04:34 +0200 -->
+<!--X-Message-Id: E1KqDXm&#45;0006Fw&#45;HB@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r7722 - in /branches/multi_processor_merge: multi/	specific_fns/model_free/ -- October 15, 2008 - 23:04</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r7722 - in /branches/multi_processor_merge: multi/	specific_fns/model_free/</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00251" class="tabs">Index by Date</a> | <a href="threads.html#00251" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00250.html">Date Prev</a>] [<a href="msg00252.html">Date Next</a>] [<a href="msg00250.html">Thread Prev</a>] [<a href="msg00252.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 15 Oct 2008 21:04:34 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00251.html">E1KqDXm-0006Fw-HB@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on October 15, 2008 - 23:04:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Oct 15 23:04:33 2008
+New Revision: 7722
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=7722&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=7722&amp;view=rev</a>
+Log:
+Manually ported r3249 from the multi_processor branch.
+
+The 2 commands used were:
+svn merge -r3248:3249 
+svn+ssh://bugman@xxxxxxxxxxx/svn/relax/branches/multi_processor .
+svn merge -r3248:3249 
+svn+ssh://bugman@xxxxxxxxxxx/svn/relax/branches/multi_processor/specific_fns/model_free.py
+ specific_fns/model_free/mf_minimise.py
+
+.....
+  r3249 | varioustoxins | 2007-03-30 09:00:39 +0200 (Fri, 30 Mar 2007) | 4 
+lines
+  Changed paths:
+     M /branches/multi_processor/multi/commands.py
+     M /branches/multi_processor/multi/mpi4py_processor.py
+     M /branches/multi_processor/multi/uni_processor.py
+     M /branches/multi_processor/specific_fns/model_free.py
+
+  more work to remove specious calls to module mpi4py when starting
+  uniprocessor version feedback prints correctly
+.....
+
+
+Modified:
+    branches/multi_processor_merge/multi/commands.py
+    branches/multi_processor_merge/multi/mpi4py_processor.py
+    branches/multi_processor_merge/multi/uni_processor.py
+    branches/multi_processor_merge/specific_fns/model_free/mf_minimise.py
+
+Modified: branches/multi_processor_merge/multi/commands.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/multi_processor_merge/multi/commands.py?rev=7722&amp;r1=7721&amp;r2=7722&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/multi_processor_merge/multi/commands.py?rev=7722&amp;r1=7721&amp;r2=7722&amp;view=diff</a>
+==============================================================================
+--- branches/multi_processor_merge/multi/commands.py (original)
++++ branches/multi_processor_merge/multi/commands.py Wed Oct 15 23:04:33 2008
+@@ -1,6 +1,7 @@
+ 
+ from multi.processor import Memo,Slave_command
+ from multi.processor import Result_command,Result_string,NULL_RESULT
++from re import match
+ 
+ from maths_fns.mf import Mf
+ from minimise.generic import generic_minimise
+@@ -24,7 +25,7 @@
+         result = Result_string(msg,True)
+         processor.return_object(result)
+ 
+-#not quit a momento so a memo
++#not quite a momento so a memo
+ class MF_completion_memo(Memo):
+     def __init__(self,model_free,index,sim_index,run,param_set,scaling):
+         self.index = index
+@@ -78,19 +79,27 @@
+                       'csa':None, 'num_frq':0, 'frq':None, 'num_ri':None, 
+'remap_table':None, 'noe_r1_table':None,
+                       'ri_labels':None, 'gx':0, 'gh':0, 'g_ratio':0, 
+'h_bar':0, 'mu0':0, 'num_params':None, 'vectors':None}
+ 
+-
++        self.info_map={'res_id':None,'grid_size':1}
+     #FIXME: bad names
+     def set_mf(self, **kwargs):
+         self.mf_map.update(**kwargs)
+ 
+ 
+     def set_minimise(self,**kwargs):
++        print kwargs
++        if 'res_id' in kwargs:
++           self.info_map['res_id']= kwargs['res_id']
++           del kwargs['res_id']
++        if 'grid_size' in kwargs:
++           self.info_map['grid_size']= kwargs['grid_size']
++           del kwargs['grid_size']
+         self.minimise_map.update(**kwargs)
+ 
+     def build_mf(self):
+         return  Mf(**self.mf_map)
+ 
+     def do_minimise(self,memo):
++
+         self.mf = self.build_mf()
+         results = generic_minimise(func=self.mf.func, dfunc=self.mf.dfunc, 
+d2func=self.mf.d2func, **self.minimise_map)
+ 
+@@ -100,8 +109,29 @@
+                                gc=gc,hc=hc, warning=warning,
+                                run=memo.run, 
+index=memo.index,sim_index=memo.sim_index,
+                                param_set=memo.param_set,scaling=memo.scaling)
++
++    def do_feedback(self):
++        # Print out.
++        
+#print_flag,param_set,residue_num,residue_name,min_algor,grid_size=None
++        m_m=self.minimise_map
++        m_f=self.mf_map
++        i_m=self.info_map
++        if m_m['print_flag'] &gt;= 1:
++            # Individual residue stuff.
++            if m_f['param_set'] == 'mf' or m_f['param_set'] == 'local_tm':
++                if m_m['print_flag'] &gt;= 2:
++                    print &quot;\n\n&quot;
++                string = &quot;Fitting to residue: &quot; + i_m['res_id']
++                print &quot;\n\n&quot; + string
++                print len(string) * '~'
++            if match('^[Gg]rid', m_m['min_algor']):
++                print &quot;Unconstrained grid search size: &quot; + 
+`i_m['grid_size']` + &quot; (constraints may decrease this size).\n&quot;
++
+     def run(self,processor):
+         self.mf = self.build_mf()
++
++
++        self.do_feedback()
+         results = generic_minimise(func=self.mf.func, dfunc=self.mf.dfunc, 
+d2func=self.mf.d2func, **self.minimise_map)
+         param_vector, func, iter, fc, gc, hc, warning = results
+ 
+
+Modified: branches/multi_processor_merge/multi/mpi4py_processor.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/multi_processor_merge/multi/mpi4py_processor.py?rev=7722&amp;r1=7721&amp;r2=7722&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/multi_processor_merge/multi/mpi4py_processor.py?rev=7722&amp;r1=7721&amp;r2=7722&amp;view=diff</a>
+==============================================================================
+--- branches/multi_processor_merge/multi/mpi4py_processor.py (original)
++++ branches/multi_processor_merge/multi/mpi4py_processor.py Wed Oct 15 
+23:04:33 2008
+@@ -5,20 +5,31 @@
+ import os
+ import math
+ import time,datetime
++import textwrap
+ 
+ from multi.processor import Memo,Slave_command
+ from multi.processor import Result,Result_command,Result_string
+ from multi.commands import Exit_command
+ 
+-#FIXME: me move top generic command module
++
+ 
+ 
+ # load mpi
+ try:
+     from  mpi4py import MPI
+ except ImportError:
+-    raise Exception('test')
+-    sys.stderr.write(&quot;The dependency 'mpi4py' has not been installed.\n&quot;)
++    msg = '''The dependency 'mpi4py' has not been installed. You should 
+either
++
++                 1. run without multiprocessor support i.e. remove the
++                    --multi mpi4py flag  from the command line
++
++                 2. install mpi4py
++
++                 3. choose another multi processor method to give to the
++                    --multi command line flag\n'''
++    msg=textwrap.dedent(msg)
++    sys.stderr.write(msg)
++    sys.stderr.write('exiting...\n\n')
+     sys.exit()
+ 
+ # save original sys.exit to call after wrapper
+@@ -106,11 +117,6 @@
+         MPI.COMM_WORLD.Send(buf=result, dest=0)
+ 
+ 
+-#    def process_commands(self,commands):
+-#        self.assert_on_master()
+-#
+-#        for i in range(1,MPI.size):
+-#            MPI.COMM_WORLD.Send(buf=command,dest=i)
+ 
+     def run_command_globally(self,command):
+         queue = [command for i in range(1,MPI.size)]
+@@ -119,16 +125,6 @@
+     def run_command_queue(self,queue):
+         self.assert_on_master()
+ 
+-#        for i in range(1,MPI.size):
+-#                MPI.COMM_WORLD.Send(buf=command,dest=i)
+-#        for i in range(1,MPI.size):
+-#            elem = MPI.COMM_WORLD.Recv(source=i)
+-#            if type(elem) == 'object':
+-#                elem.run(relax_instance, relax_instance.processor)
+-#            else:
+-#                #FIXME can't cope with multiple lines
+-#                print i,elem
+-        #queue = [command for i in range(1,MPI.size*2)]
+         running_set=set()
+         idle_set=set([i for i in range(1,MPI.size)])
+ 
+@@ -172,27 +168,9 @@
+                         raise Exception(message)
+ 
+ 
+-#        for i in range(MPI.size):
+-#            buf=[]
+-#            if i !=0:
+-#                print 'try',i
+-#                MPI.COMM_WORLD.Recv(buf=buf, source=i)
+-#                for i,elem in enumerate(buf):
+-#                    if elem.type!='object':
+-#                        print i,elem
+-#                    else:
+-#                        elem.run()
+ 
+     def run(self):
+ 
+-#        if MPI.rank == 0:
+-#            self.relax_instance.multi_mode='multi_master'
+-#        else:
+-#            self.relax_instance.multi_mode='multi_slave'
+-#            self.relax_instance.mode='slave'
+-#            self.relax_instance.script_file=None
+-#            self.relax_instance.dummy_mode=True
+-#            #self.relax_instance.run()
+ 
+ 
+         if MPI.rank ==0:
+@@ -201,12 +179,12 @@
+             end_time = time.time()
+             time_diff= end_time - start_time
+             time_delta = datetime.timedelta(seconds=time_diff)
+-            sys.stderr.write('overall runtime: ' + time_delta.__str__() + 
+'\n')
+-            sys.stderr.flush()
+-            # note this a mdofied exit that kills all MPI processors
++            print 'overall runtime: ' + time_delta.__str__() + '\n'
++
++            # note this a modified exit that kills all MPI processors
+             sys.exit()
+         else:
+-            #self.relax_instance.run(deamon=True)
++
+             while not self.do_quit:
+                 command = MPI.COMM_WORLD.Recv(source=0)
+                 try:
+@@ -216,9 +194,7 @@
+ 
+ 
+ 
+-            #if data=='close':
+-            #    exit_mpi()
+-            #    return
++
+ 
+ 
+ 
+
+Modified: branches/multi_processor_merge/multi/uni_processor.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/multi_processor_merge/multi/uni_processor.py?rev=7722&amp;r1=7721&amp;r2=7722&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/multi_processor_merge/multi/uni_processor.py?rev=7722&amp;r1=7721&amp;r2=7722&amp;view=diff</a>
+==============================================================================
+--- branches/multi_processor_merge/multi/uni_processor.py (original)
++++ branches/multi_processor_merge/multi/uni_processor.py Wed Oct 15 23:04:33 
+2008
+@@ -44,8 +44,8 @@
+         end_time = time.clock()
+         time_diff= end_time - start_time
+         time_delta = datetime.timedelta(seconds=time_diff)
+-        sys.stderr.write('overall runtime: ' + time_delta.__str__() + '\n')
+-        sys.stderr.flush()
++        print 'overall runtime: ' + time_delta.__str__() + '\n'
++
+ 
+ 
+ 
+
+Modified: 
+branches/multi_processor_merge/specific_fns/model_free/mf_minimise.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/multi_processor_merge/specific_fns/model_free/mf_minimise.py?rev=7722&amp;r1=7721&amp;r2=7722&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/multi_processor_merge/specific_fns/model_free/mf_minimise.py?rev=7722&amp;r1=7721&amp;r2=7722&amp;view=diff</a>
+==============================================================================
+--- branches/multi_processor_merge/specific_fns/model_free/mf_minimise.py 
+(original)
++++ branches/multi_processor_merge/specific_fns/model_free/mf_minimise.py Wed 
+Oct 15 23:04:33 2008
+@@ -942,67 +942,6 @@
+             relax_data, relax_error, equations, param_types, param_values, 
+r, csa, num_frq, frq, num_ri, remap_table, noe_r1_table, ri_labels, gx, gh, 
+num_params, xh_unit_vectors, diff_type, diff_params = 
+self.minimise_data_setup(model_type, min_algor, num_data_sets, min_options, 
+spin=spin, sim_index=sim_index)
+ 
+ 
+-#            # Initialise the function to minimise.
+-#            ######################################
+-#            print 'initialise Mf'
+-#            print 'init_params',self.param_vector
+-#            print 'param_se',self.param_set
+-#            print 'diff_type',diff_type
+-#            print 'diff_params',diff_params
+-#            print 'scaling_matrix',self.scaling_matrix
+-#            print 'num_res',num_res
+-#            print 'equations',equations
+-#            print 'param_types',param_types
+-#            print 'param_values',param_values
+-#            print 'relax_data',relax_data
+-#            print 'errors',relax_error
+-#            print 'bond_length',r
+-#            print 'csa=',csa
+-#            print 'num_frq',num_frq
+-#            print 'frq',frq
+-#            print 'num_ri',num_ri
+-#            print 'remap_table',remap_table
+-#            print 'noe_r1_table',noe_r1_table
+-#            print 'ri_labels',ri_labels
+-#            print 'gx',self.relax.data.gx
+-#            print 'gh',self.relax.data.gh
+-#            print 'g_ratio',self.relax.data.g_ratio
+-#            print 'h_bar',self.relax.data.h_bar
+-#            print 'mu0',self.relax.data.mu0
+-#            print 'num_params',num_params
+-#            print 'vectors',xh_unit_vectors
+-#
+-#            data_list =  [ 'initialise Mf',
+-#             'init_params',self.param_vector,
+-#             'param_set',self.param_set,
+-#             'diff_type',diff_type,
+-#             'diff_params',diff_params,
+-#             'scaling_matrix',self.scaling_matrix,
+-#             'num_res',num_res,
+-#             'equations',equations,
+-#             'param_types',param_types,
+-#             'param_values',param_values,
+-#             'relax_data',relax_data,
+-#             'errors',relax_error,
+-#             'bond_length',r,
+-#             'csa=',csa,
+-#             'num_frq',num_frq,
+-#             'frq',frq,
+-#             'num_ri',num_ri,
+-#             'remap_table',remap_table,
+-#             'noe_r1_table',noe_r1_table,
+-#             'ri_labels',ri_labels,
+-#             'gx',self.relax.data.gx,
+-#             'gh',self.relax.data.gh,\
+-#             'g_ratio',self.relax.data.g_ratio,
+-#             'h_bar',self.relax.data.h_bar,
+-#             'mu0',self.relax.data.mu0,
+-#             'num_params',num_params,
+-#             'vectors',xh_unit_vectors]
+-#            for elem in data_list:
+-#                marshal.loads(marshal.dumps(elem))
+-#            self.mf = Mf(init_params=param_vector, model_type=model_type, 
+diff_type=diff_type, diff_params=diff_params, scaling_matrix=scaling_matrix, 
+num_spins=num_spins, equations=equations, param_types=param_types, 
+param_values=param_values, relax_data=relax_data, errors=relax_error, 
+bond_length=r, csa=csa, num_frq=num_frq, frq=frq, num_ri=num_ri, 
+remap_table=remap_table, noe_r1_table=noe_r1_table, ri_labels=ri_labels, 
+gx=gx, gh=gh, h_bar=h_bar, mu0=mu0, num_params=num_params, 
+vectors=xh_unit_vectors)
+-
+             command=MF_minimise_command()
+             command.set_mf(init_params=param_vector, model_type=model_type, 
+diff_type=diff_type, diff_params=diff_params, scaling_matrix=scaling_matrix, 
+num_spins=num_spins, equations=equations, param_types=param_types, 
+param_values=param_values, relax_data=relax_data, errors=relax_error, 
+bond_length=r, csa=csa, num_frq=num_frq, frq=frq, num_ri=num_ri, 
+remap_table=remap_table, noe_r1_table=noe_r1_table, ri_labels=ri_labels, 
+gx=gx, gh=gh, h_bar=h_bar, mu0=mu0, num_params=num_params, 
+vectors=xh_unit_vectors)
+             #test.assert_mf_equivalent(self.mf)
+@@ -1045,15 +984,7 @@
+ 
+             # Minimisation.
+             ###############
+-            #FIXME remove old version
+-#            if constraints:
+-#                results = generic_minimise(func=self.mf.func, 
+dfunc=self.mf.dfunc, d2func=self.mf.d2func, args=(), x0=self.param_vector, 
+min_algor=min_algor, min_options=min_options, func_tol=func_tol, 
+grad_tol=grad_tol, maxiter=max_iterations, A=A, b=b, full_output=1, 
+print_flag=print_flag)
+-#            else:
+-#                results = generic_minimise(func=self.mf.func, 
+dfunc=self.mf.dfunc, d2func=self.mf.d2func, args=(), x0=self.param_vector, 
+min_algor=min_algor, min_options=min_options, func_tol=func_tol, 
+grad_tol=grad_tol, maxiter=max_iterations, full_output=1, 
+print_flag=print_flag)
+-#            if results == None:
+-#                return
+             #FIXME??? strange contraints
+-            # Constrained optimisation.
+             if constraints:
+                 command.set_minimise(args=(), x0=param_vector, 
+min_algor=min_algor, min_options=min_options, func_tol=func_tol, 
+grad_tol=grad_tol, maxiter=max_iterations, A=A, b=b, full_output=1, 
+print_flag=verbosity)
+             else:
+@@ -1065,14 +996,7 @@
+             memo = 
+MF_completion_memo(model_free=self,index=index,sim_index=sim_index,run=self.run,param_set=self.param_set,scaling=scaling)
+ 
+             self.relax.processor.add_to_queue(command,memo)
+-            #self.relax.processor.add_to_queue()
+-
+-            #command.do_minimise(memo)
+-            #command.memo_id
+-
+-            #param_vector, func, iter, fc, gc, hc, warning = command.results
+-            
+#self.disassemble_result(param_vector=param_vector,func=func,iter=iter,fc=fc,gc=gc,hc=hc,warning=warning,
+-            #                        
+run=memo.run,index=memo.index,sim_index=memo.sim_index, 
+param_set=memo.param_set,scaling=memo.scaling)
++
+ 
+         self.relax.processor.run_queue()
+ 
+@@ -1082,12 +1006,7 @@
+             self.warning=warning
+             self.param_vector=param_vector
+ 
+-            #FIXME something is resetting the count between each calculation!
+-#            self.iter_count = iter
+-#            self.f_count = fc
+-#            self.g_count = gc
+-#            self.h_count = hc
+-
++            #FIXME this is a fix for old code
+             self.iter_count = self.iter_count + iter
+             self.f_count = self.f_count + fc
+             self.g_count = self.g_count + gc
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Oct 15 23:20:03 2008</div>  
+</body>
+</html>

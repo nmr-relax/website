@@ -1,0 +1,335 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r18745 &#45; /trunk/generic_fns/mol_res_spin.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Sun, 10 Mar 2013 17:01:34 +0100 -->
+<!--X-Message-Id: E1UEigo&#45;0007c6&#45;Fw@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r18745 - /trunk/generic_fns/mol_res_spin.py -- March 10, 2013 - 17:01</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r18745 - /trunk/generic_fns/mol_res_spin.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00163" class="tabs">Index by Date</a> | <a href="threads.html#00163" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00162.html">Date Prev</a>] [<a href="msg00164.html">Date Next</a>] [<a href="msg00162.html">Thread Prev</a>] [<a href="msg00164.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Sun, 10 Mar 2013 16:01:34 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00163.html">E1UEigo-0007c6-Fw@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on March 10, 2013 - 17:01:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Sun Mar 10 17:01:34 2013
+New Revision: 18745
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=18745&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=18745&amp;view=rev</a>
+Log:
+Improved the generic_fns.mol_res_spin.generate_spin_id_unique() function.
+
+This can now work with molecule, residue, and spin names and numbers 
+alternatively to the containers
+supplied as arguments.  For this to work, the return_molecule_by_name() 
+function has been improved
+and the functions return_residue_by_info() and return_spin_by_info() have 
+been added.
+
+
+Modified:
+    trunk/generic_fns/mol_res_spin.py
+
+Modified: trunk/generic_fns/mol_res_spin.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/generic_fns/mol_res_spin.py?rev=18745&amp;r1=18744&amp;r2=18745&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/generic_fns/mol_res_spin.py?rev=18745&amp;r1=18744&amp;r2=18745&amp;view=diff</a>
+==============================================================================
+--- trunk/generic_fns/mol_res_spin.py (original)
++++ trunk/generic_fns/mol_res_spin.py Sun Mar 10 17:01:34 2013
+@@ -1734,7 +1734,7 @@
+     return id
+ 
+ 
+-def generate_spin_id_unique(pipe_cont=None, pipe_name=None, mol=None, 
+res=None, spin=None):
++def generate_spin_id_unique(pipe_cont=None, pipe_name=None, mol=None, 
+res=None, spin=None, mol_name=None, res_num=None, res_name=None, 
+spin_num=None, spin_name=None):
+     &quot;&quot;&quot;Generate a list of spin ID variants for the given set of molecule, 
+residue and spin indices.
+ 
+     @keyword pipe_cont: The data pipe object.
+@@ -1747,6 +1747,16 @@
+     @type res:          ResidueContainer instance
+     @keyword spin:      The spin container.
+     @type spin:         SpinContainer instance
++    @keyword mol_name:  The molecule name (an alternative to the molecule 
+container).
++    @type mol_name:     str or None
++    @keyword res_num:   The residue number (an alternative to the residue 
+container).
++    @type res_num:      int or None
++    @keyword res_name:  The residue name (an alternative to the residue 
+container).
++    @type res_name:     str or None
++    @keyword spin_num:  The spin number (an alternative to the spin 
+container).
++    @type spin_num:     int or None
++    @keyword spin_name: The spin name (an alternative to the spin container).
++    @type spin_name:    str or None
+     @return:            The unique spin ID.
+     @rtype:             str
+     &quot;&quot;&quot;
+@@ -1755,29 +1765,47 @@
+     if pipe_cont == None:
+         pipe_cont = pipes.get_pipe(pipe_name)
+ 
++    # Get the containers if needed.
++    if mol == None:
++        mol = return_molecule_by_name(pipe_cont=pipe_cont, mol_name=mol_name)
++    if res == None and (res_name != None or res_num != None):
++        res = return_residue_by_info(mol=mol, res_name=res_name, 
+res_num=res_num)
++    if spin == None and (spin_name != None or spin_num != None):
++        spin = return_spin_by_info(res=res, spin_name=spin_name, 
+spin_num=spin_num)
++
++    # The info.
++    if mol:
++        mol_name = mol.name
++    if res:
++        res_name = res.name
++        res_num = res.num
++    if spin:
++        spin_name = spin.name
++        spin_num = spin.num
++
+     # Unique info.
+     unique_res_name = True
+-    if res.name != None and mol._res_name_count[res.name] &gt; 1:
++    if res and res.name != None and mol._res_name_count[res.name] &gt; 1:
+         unique_res_name = False
+     unique_res_num = True
+-    if res.num != None and mol._res_num_count[res.num] &gt; 1:
++    if res and res.num != None and mol._res_num_count[res.num] &gt; 1:
+         unique_res_num = False
+     unique_spin_name = True
+-    if spin.name != None and res._spin_name_count[spin.name] &gt; 1:
++    if spin and spin.name != None and res._spin_name_count[spin.name] &gt; 1:
+         unique_spin_name = False
+     unique_spin_num = True
+-    if spin.num != None and res._spin_num_count[spin.num] &gt; 1:
++    if spin and spin.num != None and res._spin_num_count[spin.num] &gt; 1:
+         unique_spin_num = False
+ 
+     # The unique ID.
+     if unique_res_num and unique_spin_name:
+-        return generate_spin_id(pipe_cont=pipe_cont, mol_name=mol.name, 
+res_num=res.num, spin_name=spin.name)
++        return generate_spin_id(pipe_cont=pipe_cont, mol_name=mol_name, 
+res_num=res_num, spin_name=spin_name)
+     if unique_res_num and unique_spin_num:
+-        return generate_spin_id(pipe_cont=pipe_cont, mol_name=mol.name, 
+res_num=res.num, spin_num=spin.num)
++        return generate_spin_id(pipe_cont=pipe_cont, mol_name=mol_name, 
+res_num=res_num, spin_num=spin_num)
+     if unique_res_name and unique_spin_num:
+-        return generate_spin_id(pipe_cont=pipe_cont, mol_name=mol.name, 
+res_name=res.name, spin_num=spin.num)
++        return generate_spin_id(pipe_cont=pipe_cont, mol_name=mol_name, 
+res_name=res_name, spin_num=spin_num)
+     if unique_res_name and unique_spin_name:
+-        return generate_spin_id(pipe_cont=pipe_cont, mol_name=mol.name, 
+res_name=res.name, spin_name=spin.name)
++        return generate_spin_id(pipe_cont=pipe_cont, mol_name=mol_name, 
+res_name=res_name, spin_name=spin_name)
+ 
+ 
+ def get_molecule_ids(selection=None):
+@@ -2742,15 +2770,15 @@
+     return mol_container
+ 
+ 
+-def return_molecule_by_name(name=None, pipe_cont=None, pipe_name=None):
++def return_molecule_by_name(pipe_cont=None, pipe_name=None, mol_name=None):
+     &quot;&quot;&quot;Return the molecule container matching the given name.
+ 
+-    @keyword name:      The molecule name.  If not supplied and only a 
+single molecule container exists, then that container will be returned.
+-    @type name:         str
+     @keyword pipe_cont: The data pipe object.
+     @type pipe_cont:    PipeContainer instance
+     @keyword pipe_name: The data pipe name.
+     @type pipe_name:    str
++    @keyword mol_name:  The molecule name.  If not supplied and only a 
+single molecule container exists, then that container will be returned.
++    @type mol_name:     str
+     @return:            The molecule container object.
+     @rtype:             MoleculeContainer instance
+     &quot;&quot;&quot;
+@@ -2760,7 +2788,7 @@
+         pipe_cont = pipes.get_pipe(pipe)
+ 
+     # No molecule name specified, so assume a single molecule.
+-    if name == None:
++    if mol_name == None:
+         # More than one molecule.
+         if len(pipe_cont.mol) &gt; 1:
+             raise RelaxError(&quot;Cannot return the molecule with no name as 
+more than one molecule exists.&quot;)
+@@ -2771,7 +2799,7 @@
+     # Loop over the molecules.
+     for mol in pipe_cont.mol:
+         # Return the matching molecule.
+-        if mol.name == name:
++        if mol.name == mol_name:
+             return mol
+ 
+ 
+@@ -2833,6 +2861,42 @@
+         return res_container, mol_index, res_index
+     else:
+         return res_container
++
++
++def return_residue_by_info(mol=None, res_name=None, res_num=None):
++    &quot;&quot;&quot;Return the residue container matching the given name.
++
++    @keyword mol:       The molecule container.
++    @type mol:          MoleculeContainer instance
++    @keyword res_name:  The residue name.  If not supplied and only a single 
+residue container exists, then that container will be returned.
++    @type res_name:     str
++    @keyword res_num:   The residue number.  If not supplied and only a 
+single residue container exists, then that container will be returned.
++    @type res_num:      str
++    @return:            The residue container object.
++    @rtype:             ResidueContainer instance
++    &quot;&quot;&quot;
++
++    # No residue name or number specified, so assume a single residue.
++    if res_name == None and res_num == None:
++        # More than one residue.
++        if len(mol.res) &gt; 1:
++            raise RelaxError(&quot;Cannot return the residue with no name or 
+number as more than one residue exists.&quot;)
++
++        # Return the residue.
++        return mol.res[0]
++
++    # Loop over the residues.
++    for res in mol.res:
++        # Return the matching residue.
++        if res_name != None and res_num != None:
++            if res.name == res_name and res.num == res_num:
++               return res
++        elif res_name != None:
++            if res.name == res_name:
++                return res
++        elif res_num != None:
++            if res.num == res_num:
++                return res
+ 
+ 
+ def return_spin(spin_id=None, pipe=None, full_info=False, multi=False):
+@@ -2874,6 +2938,42 @@
+         return [dp.mol[mol_index].res[res_index].spin[spin_index]]
+     else:
+         return dp.mol[mol_index].res[res_index].spin[spin_index]
++
++
++def return_spin_by_info(res=None, spin_name=None, spin_num=None):
++    &quot;&quot;&quot;Return the spin container matching the given name.
++
++    @keyword res:       The residue container.
++    @type res:          ResidueContainer instance
++    @keyword spin_name: The spin name.  If not supplied and only a single 
+spin container exists, then that container will be returned.
++    @type spin_name:    str
++    @keyword spin_num:  The spin number.  If not supplied and only a single 
+spin container exists, then that container will be returned.
++    @type spin_num:     str
++    @return:            The spin container object.
++    @rtype:             SpinContainer instance
++    &quot;&quot;&quot;
++
++    # No spin name or number specified, so assume a single spin.
++    if spin_name == None and spin_num == None:
++        # More than one spin.
++        if len(res.spin) &gt; 1:
++            raise RelaxError(&quot;Cannot return the spin with no name or number 
+as more than one spin exists.&quot;)
++
++        # Return the spin.
++        return res.spin[0]
++
++    # Loop over the spins.
++    for spin in res.spin:
++        # Return the matching spin.
++        if spin_name != None and spin_num != None:
++            if spin.name == spin_name and spin.num == spin_num:
++               return spin
++        elif spin_name != None:
++            if spin.name == spin_name:
++                return spin
++        elif spin_num != None:
++            if spin.num == spin_num:
++                return spin
+ 
+ 
+ def return_spin_from_selection(selection=None, pipe=None, full_info=False, 
+multi=False):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Sun Mar 10 21:40:03 2013</div>  
+</body>
+</html>

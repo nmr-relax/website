@@ -1,0 +1,233 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r23783 &#45; /branches/frame_order_cleanup/pipe_control/pymol_control.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 10 Jun 2014 10:21:28 +0200 -->
+<!--X-Message-Id: E1WuHJA&#45;0007WK&#45;L3@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r23783 - /branches/frame_order_cleanup/pipe_control/pymol_control.py -- June 10, 2014 - 10:21</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r23783 - /branches/frame_order_cleanup/pipe_control/pymol_control.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00170" class="tabs">Index by Date</a> | <a href="threads.html#00170" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00169.html">Date Prev</a>] [<a href="msg00171.html">Date Next</a>] [<a href="msg00169.html">Thread Prev</a>] [<a href="msg00171.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 10 Jun 2014 08:21:28 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00170.html">E1WuHJA-0007WK-L3@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on June 10, 2014 - 10:21:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Jun 10 10:21:27 2014
+New Revision: 23783
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=23783&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=23783&amp;view=rev</a>
+Log:
+Modified the pymol.cone_pdb and pymol.frame_order user functions to use PyMOL 
+IDs.
+
+The PyMOL IDs are used to select individual objects in PyMOL rather than all 
+objects so that the
+subsequent PyMOL commands will only be applied to that object.  This allows 
+for multiple objects to
+be handled simultaneously.
+
+
+Modified:
+    branches/frame_order_cleanup/pipe_control/pymol_control.py
+
+Modified: branches/frame_order_cleanup/pipe_control/pymol_control.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/pipe_control/pymol_control.py?rev=23783&amp;r1=23782&amp;r2=23783&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/pipe_control/pymol_control.py?rev=23783&amp;r1=23782&amp;r2=23783&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/pipe_control/pymol_control.py  (original)
++++ branches/frame_order_cleanup/pipe_control/pymol_control.py  Tue Jun 10 
+10:21:27 2014
+@@ -281,11 +281,14 @@
+     # Read in the cone PDB file.
+     pymol_obj.exec_cmd(&quot;load &quot; + file)
+ 
++    # The object ID.
++    id = file_root(file)
++
+     # The cone axes.
+-    represent_cone_axis()
++    represent_cone_axis(id=id)
+ 
+     # The cone object.
+-    represent_cone_object()
++    represent_cone_object(id=id)
+ 
+ 
+ def create_macro(data_type=None, style=&quot;classic&quot;, colour_start=None, 
+colour_end=None, colour_list=None):
+@@ -379,13 +382,13 @@
+     id = file_root(file)
+ 
+     # Set up the rotor objects.
+-    represent_rotor_object()
++    represent_rotor_object(id=id)
+ 
+     # Set up the cone axis.
+-    represent_cone_axis()
++    represent_cone_axis(id=id)
+ 
+     # Set up the cone object.
+-    represent_cone_object()
++    represent_cone_object(id=id)
+ 
+ 
+ def macro_apply(data_type=None, style=&quot;classic&quot;, colour_start_name=None, 
+colour_start_rgb=None, colour_end_name=None, colour_end_rgb=None, 
+colour_list=None):
+@@ -549,11 +552,19 @@
+     add_result_file(type='pymol', label='PyMOL', file=file_path)
+ 
+ 
+-def represent_cone_axis():
+-    &quot;&quot;&quot;Set up the PyMOL cone axis representation.&quot;&quot;&quot;
++def represent_cone_axis(id=None):
++    &quot;&quot;&quot;Set up the PyMOL cone axis representation.
++
++    @keyword id:    The PyMOL object ID.
++    @type id:       str
++    &quot;&quot;&quot;
++
++    # Sanity check.
++    if id == None:
++        raise RelaxError(&quot;The PyMOL object ID must be supplied.&quot;)
+ 
+     # Select the AVE, AXE, and SIM residues.
+-    pymol_obj.exec_cmd(&quot;select (resn AVE,AXE,SIM)&quot;)
++    pymol_obj.exec_cmd(&quot;select (%s &amp; resn AVE,AXE,SIM)&quot; % id)
+ 
+     # Show the vector as a stick.
+     pymol_obj.exec_cmd(&quot;show stick, 'sele'&quot;)
+@@ -562,7 +573,7 @@
+     pymol_obj.exec_cmd(&quot;color cyan, 'sele'&quot;)
+ 
+     # Select the atom used for labelling.
+-    pymol_obj.exec_cmd(&quot;select (resn AVE,AXE,SIM and symbol N)&quot;)
++    pymol_obj.exec_cmd(&quot;select (%s &amp; resn AVE,AXE,SIM and symbol N)&quot; % id)
+ 
+     # Hide the atom.
+     pymol_obj.exec_cmd(&quot;hide ('sele')&quot;)
+@@ -574,11 +585,19 @@
+     pymol_obj.exec_cmd(&quot;cmd.delete('sele')&quot;)
+ 
+ 
+-def represent_cone_object():
+-    &quot;&quot;&quot;Set up the PyMOL cone object representation.&quot;&quot;&quot;
++def represent_cone_object(id=None):
++    &quot;&quot;&quot;Set up the PyMOL cone object representation.
++
++    @keyword id:    The PyMOL object ID.
++    @type id:       str
++    &quot;&quot;&quot;
++
++    # Sanity check.
++    if id == None:
++        raise RelaxError(&quot;The PyMOL object ID must be supplied.&quot;)
+ 
+     # Select the CON and EDG residues.
+-    pymol_obj.exec_cmd(&quot;select (resn CON,EDG)&quot;)
++    pymol_obj.exec_cmd(&quot;select (%s &amp; resn CON,EDG)&quot; % id)
+ 
+     # Hide everything.
+     pymol_obj.exec_cmd(&quot;hide ('sele')&quot;)
+@@ -599,24 +618,32 @@
+     pymol_obj.exec_cmd(&quot;cmd.delete('sele')&quot;)
+ 
+ 
+-def represent_rotor_object():
+-    &quot;&quot;&quot;Set up the PyMOL rotor object representation.&quot;&quot;&quot;
++def represent_rotor_object(id=None):
++    &quot;&quot;&quot;Set up the PyMOL rotor object representation.
++
++    @keyword id:    The PyMOL object ID.
++    @type id:       str
++    &quot;&quot;&quot;
++
++    # Sanity check.
++    if id == None:
++        raise RelaxError(&quot;The PyMOL object ID must be supplied.&quot;)
+ 
+     # Rotor objects:  Set up the rotor axis (the residues AX and PRC).
+-    pymol_obj.exec_cmd(&quot;select (resn AX,PRC)&quot;)
++    pymol_obj.exec_cmd(&quot;select (%s &amp; resn AX,PRC)&quot; % id)
+     pymol_obj.exec_cmd(&quot;show stick, 'sele'&quot;)
+     pymol_obj.exec_cmd(&quot;color red, 'sele'&quot;)
+     pymol_obj.exec_cmd(&quot;cmd.delete('sele')&quot;)
+ 
+     # Rotor objects:  Display the central point.
+-    pymol_obj.exec_cmd(&quot;select (name CTR)&quot;)
++    pymol_obj.exec_cmd(&quot;select (%s &amp; name CTR)&quot; % id)
+     pymol_obj.exec_cmd(&quot;show spheres, 'sele'&quot;)
+     pymol_obj.exec_cmd(&quot;color red, 'sele'&quot;)
+     pymol_obj.exec_cmd(&quot;set sphere_scale, 0.3, 'sele'&quot;)
+     pymol_obj.exec_cmd(&quot;cmd.delete('sele')&quot;)
+ 
+     # Rotor objects:  Set up the propellers.
+-    pymol_obj.exec_cmd(&quot;select (resn PRB)&quot;)
++    pymol_obj.exec_cmd(&quot;select (%s &amp; resn PRB)&quot; % id)
+     pymol_obj.exec_cmd(&quot;show stick, 'sele'&quot;)
+     pymol_obj.exec_cmd(&quot;set stick_radius, 0.15, 'sele'&quot;)
+     pymol_obj.exec_cmd(&quot;cmd.delete('sele')&quot;)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Jun 10 12:00:02 2014</div>  
+</body>
+</html>

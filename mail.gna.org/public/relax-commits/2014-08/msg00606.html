@@ -1,0 +1,222 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r25472 &#45; /trunk/specific_analyses/relax_disp/estimate_r2eff.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Sat, 30 Aug 2014 18:06:01 +0200 -->
+<!--X-Message-Id: E1XNlA8&#45;0003Pt&#45;Qw@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r25472 - /trunk/specific_analyses/relax_disp/estimate_r2eff.py -- August 30, 2014 - 18:06</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r25472 - /trunk/specific_analyses/relax_disp/estimate_r2eff.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00606" class="tabs">Index by Date</a> | <a href="threads.html#00606" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00605.html">Date Prev</a>] [<a href="msg00607.html">Date Next</a>] [<a href="msg00605.html">Thread Prev</a>] [<a href="msg00607.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Sat, 30 Aug 2014 16:06:00 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00606.html">E1XNlA8-0003Pt-Qw@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on August 30, 2014 - 18:06:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Sat Aug 30 18:06:00 2014
+New Revision: 25472
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=25472&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=25472&amp;view=rev</a>
+Log:
+Initial try write comments how to generalize the scaling of the co-variance 
+according to the reduced chi2 distribution.
+
+task #7822(<a  rel="nofollow" href="https://gna.org/task/index.php?7822">https://gna.org/task/index.php?7822</a>): Implement user function to 
+estimate R2eff and associated errors for exponential curve fitting.
+
+Modified:
+    trunk/specific_analyses/relax_disp/estimate_r2eff.py
+
+Modified: trunk/specific_analyses/relax_disp/estimate_r2eff.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/relax_disp/estimate_r2eff.py?rev=25472&amp;r1=25471&amp;r2=25472&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/relax_disp/estimate_r2eff.py?rev=25472&amp;r1=25471&amp;r2=25472&amp;view=diff</a>
+==============================================================================
+--- trunk/specific_analyses/relax_disp/estimate_r2eff.py        (original)
++++ trunk/specific_analyses/relax_disp/estimate_r2eff.py        Sat Aug 30 
+18:06:00 2014
+@@ -57,7 +57,7 @@
+     from scipy.optimize import leastsq
+ 
+ 
+-def estimate_r2eff_err(spin_id=None, epsrel=0.0, verbosity=1, 
+chi2_jacobian=False):
++def estimate_r2eff_err(spin_id=None, epsrel=0.0, verbosity=1, scale=False, 
+chi2_jacobian=False):
+     &quot;&quot;&quot;This will estimate the R2eff and i0 errors from the covariance matrix 
+Qxx.  Qxx is calculated from the Jacobian matrix and the optimised parameters.
+ 
+     @keyword spin_id:       The spin identification string.
+@@ -66,6 +66,8 @@
+     @type epsrel:           float
+     @keyword verbosity:     The amount of information to print.  The higher 
+the value, the greater the verbosity.
+     @type verbosity:        int
++    @keyword scale:         If the co-variance should be scaled according to 
+the reduced chi squared.  This is simply the division of the co-variance with 
+number of degrees of freedom n.  n = N - p, where N is number of observations 
+and p is number of fitted parameters.
++    @type scale:            bool
+     @keyword chi2_jacobian: If the Jacobian derived from the chi2 function, 
+should be used instead of the Jacobian from the exponential function.
+     @type chi2_jacobian:    bool
+     &quot;&quot;&quot;
+@@ -144,6 +146,32 @@
+ 
+             # Get the co-variance
+             pcov = multifit_covar(J=jacobian_matrix_exp, weights=weights)
++
++            # Scale.
++            if scale:
++                # The covariance matrix above gives the 'statistical error' 
+on the best-fit parameters resulting from the Gaussian errors 'sigma_i' on 
+the underlying data 'y_i'.
++                # Ref: 
+<a  rel="nofollow" href="http://www.gnu.org/software/gsl/manual/gsl-ref_38.html#SEC528">http://www.gnu.org/software/gsl/manual/gsl-ref_38.html#SEC528</a>
++                # We denote the 'statistical error' with the 'e_i'.  'X_i' 
+is the observation i, and 'u' is the mean of the observations.
++                # i, is index observation out of N observation.
++                # e_i = X_i - u
++
++                # Translated to R2eff this gives:
++                # pcov = R2eff_i - R2eff_fit
++                # We know 'pcov' and the fitted 'R2eff_fit', but we have no 
+'R2eff_i'.
++
++                # Translated to i0 this gives:
++                # pcov = i0_i - i0_fit
++                # We know 'pcov' and the fitted 'i0_fit', but we have no 
+'i0_i'.
++
++                # But luckily, the sum of squares of the statistical errors, 
+divided by sd^2, has a chi-squared distribution with n degrees of freedom.
++                # Ref: 
+<a  rel="nofollow" href="http://en.wikipedia.org/wiki/Errors_and_residuals_in_statistics">http://en.wikipedia.org/wiki/Errors_and_residuals_in_statistics</a>
++                # number of degrees of freedom is: n = N - p, or with 
+Bessels_correction: n = N - p -1, where N is number of observations and p is 
+number of parameters.
++                # Sum_{1-&gt;N} (X_i - u)^2 / sd^2 = Sum_{1-&gt;N} e_i^2 / sd^2 
+\approx chi2_n.
++
++                # The question is here, what is the standard deviation sd?
++                # Let us set it to 1, for no better idea.
++                pass
++
+ 
+             # To compute one standard deviation errors on the parameters, 
+take the square root of the diagonal covariance.
+             param_vector_error = sqrt(diag(pcov))
+@@ -753,13 +781,14 @@
+ 
+     # N is number of observations.
+     N = len(E.values)
+-    # n is number of fitted parameters.
+-    n = len(x0)
+-    #  number of degrees of freedom
+-    v = N - n - 1
++    # p is number of fitted parameters.
++    p = len(x0)
++    # n is number of degrees of freedom
++    #n = N - p - 1
++    n = N - p
+ 
+     # The reduced chi square.
+-    chi2_red = chi2 / v
++    chi2_red = chi2 / n
+ 
+     # chi2_red &gt;&gt; 1 : indicates a poor model fit.
+     # chi2_red &gt;  1 : indicates that the fit has not fully captured the data 
+(or that the error variance has been underestimated)
+@@ -771,7 +800,7 @@
+         pcov = zeros((len(popt), len(popt)), dtype=float)
+         pcov.fill(inf)
+     elif not absolute_sigma:
+-        if N &gt; n:
++        if N &gt; p:
+             pcov = pcov * chi2_red
+         else:
+             pcov.fill(inf)
+@@ -883,14 +912,14 @@
+ 
+         # N is number of observations.
+         N = len(E.values)
+-        # n is number of fitted parameters.
+-        n = len(x0)
++        # p is number of fitted parameters.
++        p = len(x0)
+         # number of degrees of freedom
+-        v = N - n
++        n = N - p
+ 
+         # The covariance matrix, Qxx, contains the variance of each unknown 
+and the covariance of each pair of unknowns. 
+         # The quantities in Qxx need to be scaled by a reference variance. 
+This reference variance, S_0**2, is related to the weighting matrix and the 
+residuals.
+-        S02 = dot( dot(transpose(K), W), K) / v
++        S02 = dot( dot(transpose(K), W), K) / n
+ 
+         # Scale co-variance.
+         pcov = pcov * S02
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Sat Aug 30 18:20:03 2014</div>  
+</body>
+</html>

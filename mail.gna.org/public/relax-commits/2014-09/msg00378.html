@@ -1,0 +1,162 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r25872 &#45; /branches/frame_order_cleanup/target_functions/frame_order.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 17 Sep 2014 17:11:29 +0200 -->
+<!--X-Message-Id: E1XUGtE&#45;0004xb&#45;VV@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r25872 - /branches/frame_order_cleanup/target_functions/frame_order.py -- September 17, 2014 - 17:11</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r25872 - /branches/frame_order_cleanup/target_functions/frame_order.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00378" class="tabs">Index by Date</a> | <a href="threads.html#00378" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00377.html">Date Prev</a>] [<a href="msg00379.html">Date Next</a>] [<a href="msg00377.html">Thread Prev</a>] [<a href="msg00379.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 17 Sep 2014 15:11:28 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00378.html">E1XUGtE-0004xb-VV@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on September 17, 2014 - 17:11:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Sep 17 17:11:28 2014
+New Revision: 25872
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=25872&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=25872&amp;view=rev</a>
+Log:
+Changed the creation of the Sobol' points in the frame order target function.
+
+For increased accuracy of the numerical PCS integration, the first 1000 
+points of the Sobol'
+sequence are now skipped to avoid any bias.  For speed, the axis order of the 
+Sobol' torsion-tilt
+angles has been swapped so that the numpy.swapaxes() function call is no 
+longer required in the
+lib.frame_order.*.pcs_numeric_int_*() functions.
+
+Modified:
+    branches/frame_order_cleanup/target_functions/frame_order.py
+
+Modified: branches/frame_order_cleanup/target_functions/frame_order.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/target_functions/frame_order.py?rev=25872&amp;r1=25871&amp;r2=25872&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/target_functions/frame_order.py?rev=25872&amp;r1=25871&amp;r2=25872&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/target_functions/frame_order.py        
+(original)
++++ branches/frame_order_cleanup/target_functions/frame_order.py        Wed 
+Sep 17 17:11:28 2014
+@@ -25,7 +25,7 @@
+ # Python module imports.
+ from copy import deepcopy
+ from math import acos, cos, pi, sin, sqrt
+-from numpy import add, array, dot, float64, ones, outer, subtract, 
+transpose, uint8, zeros
++from numpy import add, array, dot, float64, ones, outer, subtract, swapaxes, 
+transpose, uint8, zeros
+ 
+ # relax module imports.
+ from extern.sobol.sobol_lib import i4_sobol_generate
+@@ -1208,12 +1208,12 @@
+         total_num = int(self.sobol_max_points * self.sobol_oversample * 
+10**m)
+ 
+         # Initialise.
+-        self.sobol_angles = zeros((total_num, m), float64)
++        self.sobol_angles = zeros((m, total_num), float64)
+         self.Ri_prime = zeros((total_num, 3, 3), float64)
+         self.Ri2_prime = zeros((total_num, 3, 3), float64)
+ 
+         # The Sobol' points.
+-        points = i4_sobol_generate(m, total_num, 0)
++        points = i4_sobol_generate(m, total_num, 1000)
+ 
+         # Loop over the points.
+         for i in range(total_num):
+@@ -1225,22 +1225,22 @@
+                 # The tilt angle - the angle of rotation about the x-y plane 
+rotation axis.
+                 if dims[j] in ['theta']:
+                     theta = acos(2.0*points[j, i] - 1.0)
+-                    self.sobol_angles[i, j] = theta
++                    self.sobol_angles[j, i] = theta
+ 
+                 # The angle defining the x-y plane rotation axis.
+                 if dims[j] in ['phi']:
+                     phi = 2.0 * pi * points[j, i]
+-                    self.sobol_angles[i, j] = phi
++                    self.sobol_angles[j, i] = phi
+ 
+                 # The 1st torsion angle - the angle of rotation about the z' 
+axis (or y' for the double motion models).
+                 if dims[j] in ['sigma']:
+                     sigma = 2.0 * pi * (points[j, i] - 0.5)
+-                    self.sobol_angles[i, j] = sigma
++                    self.sobol_angles[j, i] = sigma
+ 
+                 # The 2nd torsion angle - the angle of rotation about the x' 
+axis.
+                 if dims[j] in ['sigma2']:
+                     sigma2 = 2.0 * pi * (points[j, i] - 0.5)
+-                    self.sobol_angles[i, j] = sigma2
++                    self.sobol_angles[j, i] = sigma2
+ 
+             # Pre-calculate the rotation matrices for the double motion 
+models.
+             if 'sigma2' in dims:
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Sep 17 17:20:03 2014</div>  
+</body>
+</html>

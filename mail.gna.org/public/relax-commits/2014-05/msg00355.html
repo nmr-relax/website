@@ -1,0 +1,204 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r23252 &#45; /branches/frame_order_cleanup/test_suite/shared_data/frame_order/cam/generate_base.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 20 May 2014 11:48:12 +0200 -->
+<!--X-Message-Id: E1WmgeZ&#45;0006yE&#45;Qj@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r23252 - /branches/frame_order_cleanup/test_suite/shared_data/frame_order/cam/generate_base.py -- May 20, 2014 - 11:48</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r23252 - /branches/frame_order_cleanup/test_suite/shared_data/frame_order/cam/generate_base.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00355" class="tabs">Index by Date</a> | <a href="threads.html#00355" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00354.html">Date Prev</a>] [<a href="msg00356.html">Date Next</a>] [<a href="msg00354.html">Thread Prev</a>] [<a href="msg00356.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 20 May 2014 09:48:11 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00355.html">E1WmgeZ-0006yE-Qj@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on May 20, 2014 - 11:48:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue May 20 11:48:11 2014
+New Revision: 23252
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=23252&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=23252&amp;view=rev</a>
+Log:
+Large increase in accuracy of the RDC and PCS averaging.
+
+This is for the CaM frame order test data generation base script.  By storing 
+the RDCs and PCSs in
+numpy.float128 arrays, a 64-bit system is required, and then using 
+numpy.average(), the average
+value can be calculated with a much higher accuracy.  As N becomes larger, 
+the averaging introduces
+greater and greater amounts of truncation artifacts.  So this change 
+alleviates this.  However a lot
+more RAM is now required.
+
+Modified:
+    
+branches/frame_order_cleanup/test_suite/shared_data/frame_order/cam/generate_base.py
+
+Modified: 
+branches/frame_order_cleanup/test_suite/shared_data/frame_order/cam/generate_base.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/test_suite/shared_data/frame_order/cam/generate_base.py?rev=23252&amp;r1=23251&amp;r2=23252&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/test_suite/shared_data/frame_order/cam/generate_base.py?rev=23252&amp;r1=23251&amp;r2=23252&amp;view=diff</a>
+==============================================================================
+--- 
+branches/frame_order_cleanup/test_suite/shared_data/frame_order/cam/generate_base.py
+        (original)
++++ 
+branches/frame_order_cleanup/test_suite/shared_data/frame_order/cam/generate_base.py
+        Tue May 20 11:48:11 2014
+@@ -24,13 +24,13 @@
+ 
+ # Python module imports.
+ from math import pi
+-from numpy import array, cross, dot, eye, float32, float64, inner, 
+tensordot, transpose, zeros
++from numpy import array, average, cross, dot, eye, float32, float64, inner, 
+tensordot, transpose, zeros
+ from numpy.linalg import norm
+ from os import getcwd, sep
+ import sys
+ 
+ # relax module imports.
+-from lib.check_types import is_float
++from lib.check_types import float128, is_float
+ from lib.frame_order.format import print_frame_order_2nd_degree
+ from lib.geometry.angles import wrap_angles
+ from lib.geometry.coord_transform import cartesian_to_spherical
+@@ -134,8 +134,9 @@
+ 
+             # Initialise the PCS structure.
+             spin.pcs = {}
++            spin.pcs_array = {}
+             for tag in self._tensors:
+-                spin.pcs[tag] = 0.0
++                spin.pcs_array[tag] = zeros(self.N, float128)
+ 
+             # Pack the spin containers and positions.
+             spins.append(spin)
+@@ -191,7 +192,7 @@
+ 
+                 # Store the values.
+                 for j in range(len(spins)):
+-                    spins[j].pcs[self._tensors[i]] += pcss[j, j]
++                    spins[j].pcs_array[self._tensors[i]][global_index] = 
+pcss[j, j]
+ 
+         # Print out.
+         sys.stdout.write('\n\n')
+@@ -203,10 +204,14 @@
+         for tag in self._tensors:
+             # Average.
+             for spin in spin_loop():
+-                spin.pcs[tag] = spin.pcs[tag] / self.N
++                spin.pcs[tag] = average(spin.pcs_array[tag])
+ 
+             # Save.
+             self.interpreter.pcs.write(align_id=tag, file='pcs_%s.txt'%tag, 
+dir=self.save_path, force=True)
++
++        # Delete the large data structures to save RAM.
++        for spin in spin_loop():
++            del spin.pcs_array
+ 
+ 
+     def _calculate_rdc(self):
+@@ -233,8 +238,9 @@
+ 
+             # Initialise the RDC structure.
+             interatom.rdc = {}
++            interatom.rdc_array = {}
+             for tag in self._tensors:
+-                interatom.rdc[tag] = 0.0
++                interatom.rdc_array[tag] = zeros(self.N, float128)
+ 
+             # Pack the interatomic containers and vectors.
+             interatoms.append(interatom)
+@@ -295,7 +301,7 @@
+ 
+                 # Store the values.
+                 for j in range(len(interatoms)):
+-                    interatoms[j].rdc[self._tensors[i]] += rdcs[j, j]
++                    interatoms[j].rdc_array[self._tensors[i]][global_index] 
+= rdcs[j, j]
+ 
+             # The frame order matrix component.
+             self.daeg += kron_prod(total_R, total_R)
+@@ -317,10 +323,14 @@
+         for tag in self._tensors:
+             # Average.
+             for interatom in interatomic_loop():
+-                interatom.rdc[tag] = interatom.rdc[tag] / self.N
++                interatom.rdc[tag] = average(interatom.rdc_array[tag])
+ 
+             # Save.
+             self.interpreter.rdc.write(align_id=tag, file='rdc_%s.txt'%tag, 
+dir=self.save_path, force=True)
++
++        # Delete the large data structures to save RAM.
++        for interatom in interatomic_loop():
++            del interatom.rdc_array
+ 
+ 
+     def _create_distribution(self):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue May 20 12:00:03 2014</div>  
+</body>
+</html>

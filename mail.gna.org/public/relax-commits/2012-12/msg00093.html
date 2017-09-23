@@ -1,0 +1,346 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r18159 &#45; in /branches/frame_order_testing: generic_fns/selection.py	user_functions/select.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 18 Dec 2012 10:50:14 +0100 -->
+<!--X-Message-Id: E1TktoU&#45;0004py&#45;Jh@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r18159 - in /branches/frame_order_testing: generic_fns/selection.py	user_functions/select.py -- December 18, 2012 - 10:50</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r18159 - in /branches/frame_order_testing: generic_fns/selection.py	user_functions/select.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00093" class="tabs">Index by Date</a> | <a href="threads.html#00093" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00092.html">Date Prev</a>] [<a href="msg00094.html">Date Next</a>] [<a href="msg00092.html">Thread Prev</a>] [<a href="msg00094.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 18 Dec 2012 09:50:14 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00093.html">E1TktoU-0004py-Jh@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on December 18, 2012 - 10:50:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Dec 18 10:50:14 2012
+New Revision: 18159
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=18159&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=18159&amp;view=rev</a>
+Log:
+Created the select.domain user function front and backend.
+
+
+Modified:
+    branches/frame_order_testing/generic_fns/selection.py
+    branches/frame_order_testing/user_functions/select.py
+
+Modified: branches/frame_order_testing/generic_fns/selection.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_testing/generic_fns/selection.py?rev=18159&amp;r1=18158&amp;r2=18159&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_testing/generic_fns/selection.py?rev=18159&amp;r1=18158&amp;r2=18159&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_testing/generic_fns/selection.py (original)
++++ branches/frame_order_testing/generic_fns/selection.py Tue Dec 18 10:50:14 
+2012
+@@ -27,9 +27,9 @@
+ 
+ # relax module imports.
+ from generic_fns.interatomic import interatomic_loop
+-from generic_fns.mol_res_spin import exists_mol_res_spin_data, 
+generate_spin_id, return_spin, spin_loop
++from generic_fns.mol_res_spin import Selection, exists_mol_res_spin_data, 
+generate_spin_id, return_spin, spin_loop
+ from generic_fns import pipes
+-from relax_errors import RelaxError, RelaxNoSequenceError
++from relax_errors import RelaxError, RelaxNoDomainError, RelaxNoSequenceError
+ from relax_io import read_spin_data
+ from relax_warnings import RelaxNoSpinWarning
+ from user_functions.data import Uf_tables; uf_tables = Uf_tables()
+@@ -361,6 +361,77 @@
+         spin.select = True
+ 
+ 
++def sel_domain(domain_id=None, boolean='OR', change_all=False):
++    &quot;&quot;&quot;Select all spins and interatomic data containers of the given domain.
++
++    @keyword domain_id:     The domain ID string.
++    @type domain_id:        str or None
++    @param boolean:         The boolean operator used to select the spin 
+systems with.  It can be one of 'OR', 'NOR', 'AND', 'NAND', 'XOR', or 'XNOR'. 
+This will be ignored if the change_all flag is set.
++    @type boolean:          str
++    @keyword change_all:    A flag which if True will cause all spins and 
+interatomic data containers outside of the domain to be deselected.
++    @type change_all:       bool
++    &quot;&quot;&quot;
++
++    # Test if the current data pipe exists.
++    pipes.test()
++
++    # Test if the domain is defined.
++    if not hasattr(cdp, 'domain') or domain_id not in cdp.domain:
++        raise RelaxNoDomainError(domain_id)
++
++    # The domain selection object.
++    domain = Selection(cdp.domain[domain_id])
++
++    # Loop over the spins and select as required.
++    for spin, spin_id in spin_loop(return_id=True):
++        # Deselect spins outside of the domain.
++        if spin_id not in domain and change_all:
++            print &quot;out: %s&quot; % spin_id
++            spin.select = False
++
++        # Inside the domain.
++        if spin_id in domain:
++            if boolean == 'OR':
++                print &quot;OR: %s&quot; % spin_id
++                spin.select = spin.select or True
++            elif boolean == 'NOR':
++                spin.select = not (spin.select or True)
++            elif boolean == 'AND':
++                spin.select = spin.select and True
++            elif boolean == 'NAND':
++                spin.select = not (spin.select and True)
++            elif boolean == 'XOR':
++                spin.select = not (spin.select and True) and (spin.select or 
+True)
++            elif boolean == 'XNOR':
++                spin.select = (spin.select and True) or not (spin.select or 
+True)
++            else:
++                raise RelaxError(&quot;Unknown boolean operator &quot; + repr(boolean))
++
++    # Interatomic data loop.
++    for interatom in interatomic_loop():
++        # Deselect containers outside of the domain.
++        if (interatom.spin_id1 not in domain and interatom.spin_id2 not in 
+domain) and change_all:
++            interatom.select = False
++
++        # Inside the domain.
++        if interatom.spin_id1 in domain or interatom.spin_id2 in domain:
++            if boolean == 'OR':
++                interatom.select = interatom.select or True
++            elif boolean == 'NOR':
++                interatom.select = not (interatom.select or True)
++            elif boolean == 'AND':
++                interatom.select = interatom.select and True
++            elif boolean == 'NAND':
++                interatom.select = not (interatom.select and True)
++            elif boolean == 'XOR':
++                interatom.select = not (interatom.select and True) and 
+(interatom.select or True)
++            elif boolean == 'XNOR':
++                interatom.select = (interatom.select and True) or not 
+(interatom.select or True)
++            else:
++                raise RelaxError(&quot;Unknown boolean operator &quot; + repr(boolean))
++
++
++
+ def sel_interatom(spin_id1=None, spin_id2=None, boolean='OR', 
+change_all=False):
+     &quot;&quot;&quot;Select specific interatomic data containers.
+ 
+
+Modified: branches/frame_order_testing/user_functions/select.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_testing/user_functions/select.py?rev=18159&amp;r1=18158&amp;r2=18159&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_testing/user_functions/select.py?rev=18159&amp;r1=18158&amp;r2=18159&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_testing/user_functions/select.py (original)
++++ branches/frame_order_testing/user_functions/select.py Tue Dec 18 10:50:14 
+2012
+@@ -30,7 +30,7 @@
+     FD_OPEN = -1
+ 
+ # relax module imports.
+-from generic_fns import selection
++from generic_fns import domain, selection
+ from graphics import WIZARD_IMAGE_PATH
+ from user_functions.data import Uf_info; uf_info = Uf_info()
+ from user_functions.objects import Desc_container
+@@ -62,30 +62,24 @@
+ uf.wizard_image = WIZARD_IMAGE_PATH + 'select.png'
+ 
+ 
+-# The select.interatom user function.
+-uf = uf_info.add_uf(&quot;select.interatom&quot;)
+-uf.title = &quot;Select specific interatomic data containers.&quot;
+-uf.title_short = &quot;Interatomic data container selection.&quot;
+-uf.display = True
+-uf.add_keyarg(
+-    name = &quot;spin_id1&quot;,
+-    py_type = &quot;str&quot;,
+-    arg_type = &quot;spin ID&quot;,
+-    desc_short = &quot;first spin ID string&quot;,
+-    desc = &quot;The spin ID string of the first spin of the interatomic data 
+container.&quot;,
+-    can_be_none = True
+-)
+-uf.add_keyarg(
+-    name = &quot;spin_id2&quot;,
+-    py_type = &quot;str&quot;,
+-    arg_type = &quot;spin ID&quot;,
+-    desc_short = &quot;second spin ID string&quot;,
+-    desc = &quot;The spin ID string of the second spin of the interatomic data 
+container.&quot;,
+-    can_be_none = True
++# The select.domain user function.
++uf = uf_info.add_uf(&quot;select.domain&quot;)
++uf.title = &quot;Select all spins and interatomic data containers of a domain.&quot;
++uf.title_short = &quot;Selection of whole domains.&quot;
++uf.display = True
++uf.add_keyarg(
++    name = &quot;domain_id&quot;,
++    py_type = &quot;str&quot;,
++    arg_type = &quot;domain ID&quot;,
++    desc_short = &quot;domain ID string&quot;,
++    desc = &quot;The domain ID string of the domain to select.&quot;,
++    wiz_element_type = 'combo',
++    wiz_combo_iter = domain.get_domain_ids,
++    can_be_none = False
+ )
+ uf.add_keyarg(
+     name = &quot;boolean&quot;,
+-    default = &quot;OR&quot;,
++    default = &quot;AND&quot;,
+     py_type = &quot;str&quot;,
+     desc_short = &quot;boolean operator&quot;,
+     desc = &quot;The boolean operator specifying how interatomic data containers 
+should be selected.&quot;,
+@@ -102,6 +96,71 @@
+ )
+ uf.add_keyarg(
+     name = &quot;change_all&quot;,
++    default = True,
++    py_type = &quot;bool&quot;,
++    desc_short = &quot;change all flag&quot;,
++    desc = &quot;A flag specifying if all non-matching spin and interatomic data 
+containers should be deselected.&quot;
++)
++# Description.
++uf.desc.append(Desc_container())
++uf.desc[-1].add_paragraph(&quot;This will select all spins and interatomic data 
+containers of a given domain.  This is defined by the domain ID string as 
+specified by the previously executed domain-related user functions.&quot;)
++uf.desc.append(selection.boolean_doc)
++# Prompt examples.
++uf.desc.append(Desc_container(&quot;Prompt examples&quot;))
++uf.desc[-1].add_paragraph(&quot;To select all spins of the domain 'N-dom', simply 
+type one of:&quot;)
++uf.desc[-1].add_prompt(&quot;relax&gt; select.domain('N-dom', change_all=True)&quot;)
++uf.desc[-1].add_prompt(&quot;relax&gt; select.domain(domain_id='N-dom', 
+change_all=True)&quot;)
++uf.desc[-1].add_paragraph(&quot;To select all spins of the domain 'N-dom', 
+preserving the current selections, simply type one of:&quot;)
++uf.desc[-1].add_prompt(&quot;relax&gt; select.domain('N-dom', 'AND', True)&quot;)
++uf.desc[-1].add_prompt(&quot;relax&gt; select.domain(domain_id='N-dom', 
+boolean='AND', change_all=True)&quot;)
++uf.backend = selection.sel_domain
++uf.menu_text = &quot;&amp;domain&quot;
++uf.wizard_height_desc = 500
++uf.wizard_size = (1000, 750)
++uf.wizard_apply_button = True
++uf.wizard_image = WIZARD_IMAGE_PATH + 'select.png'
++
++
++# The select.interatom user function.
++uf = uf_info.add_uf(&quot;select.interatom&quot;)
++uf.title = &quot;Select specific interatomic data containers.&quot;
++uf.title_short = &quot;Interatomic data container selection.&quot;
++uf.display = True
++uf.add_keyarg(
++    name = &quot;spin_id1&quot;,
++    py_type = &quot;str&quot;,
++    arg_type = &quot;spin ID&quot;,
++    desc_short = &quot;first spin ID string&quot;,
++    desc = &quot;The spin ID string of the first spin of the interatomic data 
+container.&quot;,
++    can_be_none = True
++)
++uf.add_keyarg(
++    name = &quot;spin_id2&quot;,
++    py_type = &quot;str&quot;,
++    arg_type = &quot;spin ID&quot;,
++    desc_short = &quot;second spin ID string&quot;,
++    desc = &quot;The spin ID string of the second spin of the interatomic data 
+container.&quot;,
++    can_be_none = True
++)
++uf.add_keyarg(
++    name = &quot;boolean&quot;,
++    default = &quot;OR&quot;,
++    py_type = &quot;str&quot;,
++    desc_short = &quot;boolean operator&quot;,
++    desc = &quot;The boolean operator specifying how interatomic data containers 
+should be selected.&quot;,
++    wiz_element_type = &quot;combo&quot;,
++    wiz_combo_choices = [
++        &quot;OR&quot;,
++        &quot;NOR&quot;,
++        &quot;AND&quot;,
++        &quot;NAND&quot;,
++        &quot;XOR&quot;,
++        &quot;XNOR&quot;
++    ],
++    wiz_read_only = True
++)
++uf.add_keyarg(
++    name = &quot;change_all&quot;,
+     default = False,
+     py_type = &quot;bool&quot;,
+     desc_short = &quot;change all&quot;,
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Dec 18 11:40:02 2012</div>  
+</body>
+</html>

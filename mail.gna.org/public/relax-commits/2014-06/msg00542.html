@@ -1,0 +1,152 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r24155 &#45; /branches/disp_spin_speed/lib/dispersion/ns_cpmg_2site_3d.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 19 Jun 2014 17:41:55 +0200 -->
+<!--X-Message-Id: E1WxeTL&#45;0007ne&#45;O5@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r24155 - /branches/disp_spin_speed/lib/dispersion/ns_cpmg_2site_3d.py -- June 19, 2014 - 17:41</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r24155 - /branches/disp_spin_speed/lib/dispersion/ns_cpmg_2site_3d.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00542" class="tabs">Index by Date</a> | <a href="threads.html#00542" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00541.html">Date Prev</a>] [<a href="msg00543.html">Date Next</a>] [<a href="msg00541.html">Thread Prev</a>] [<a href="msg00543.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 19 Jun 2014 15:41:55 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00542.html">E1WxeTL-0007ne-O5@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on June 19, 2014 - 17:41:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Thu Jun 19 17:41:55 2014
+New Revision: 24155
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=24155&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=24155&amp;view=rev</a>
+Log:
+Added another intermediate step.
+
+Task #7807 (<a  rel="nofollow" href="https://gna.org/task/index.php?7807">https://gna.org/task/index.php?7807</a>): Speed-up of dispersion 
+models for Clustered analysis.
+
+Modified:
+    branches/disp_spin_speed/lib/dispersion/ns_cpmg_2site_3d.py
+
+Modified: branches/disp_spin_speed/lib/dispersion/ns_cpmg_2site_3d.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/disp_spin_speed/lib/dispersion/ns_cpmg_2site_3d.py?rev=24155&amp;r1=24154&amp;r2=24155&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/disp_spin_speed/lib/dispersion/ns_cpmg_2site_3d.py?rev=24155&amp;r1=24154&amp;r2=24155&amp;view=diff</a>
+==============================================================================
+--- branches/disp_spin_speed/lib/dispersion/ns_cpmg_2site_3d.py (original)
++++ branches/disp_spin_speed/lib/dispersion/ns_cpmg_2site_3d.py Thu Jun 19 
+17:41:55 2014
+@@ -55,7 +55,7 @@
+ &quot;&quot;&quot;
+ 
+ # Python module imports.
+-from numpy import asarray, dot, fabs, isfinite, log, min, sum
++from numpy import asarray, dot, fabs, isfinite, log, min, sum, tile
+ from numpy.ma import fix_invalid, masked_where
+ 
+ 
+@@ -150,6 +150,13 @@
+                 Rexpo = matrix_exponential(R_mat_i)
+                 Rexpo_mat[0, si, mi, 0, di] = Rexpo
+ 
++    # Initial magnetisation.
++    Mint_mat =  tile(M0[None, None, None, None, None, :, None], (NE, NS, NM, 
+NO, ND, 1, 1) )
++    r180x_mat = tile(r180x[None, None, None, None, None, :, :], (NE, NS, NM, 
+NO, ND, 1, 1) )
++    #print Mint.shape
++    #print r180x_mat.shape
++    #print Rexpo_mat.shape
++
+     # Loop over the spins
+     for si in range(NS):
+         # Loop over the spectrometer frequencies.
+@@ -166,14 +173,15 @@
+                 r20a_si_mi_di = r20a[0, si, mi, 0, di]
+ 
+                 # Initial magnetisation.
+-                Mint = M0
++                Mint = Mint_mat[0, si, mi, 0, di]
+ 
+                 # This matrix is a propagator that will evolve the 
+magnetization with the matrix R for a delay tcp.
+                 Rexpo = Rexpo_mat[0, si, mi, 0, di]
++                r180x_i = r180x_mat[0, si, mi, 0, di]
+ 
+                 # The essential evolution matrix.
+                 # This is the first round.
+-                evolution_matrix = dot(Rexpo, r180x)
++                evolution_matrix = dot(Rexpo, r180x_i)
+                 evolution_matrix = dot(evolution_matrix, Rexpo)
+                 # The second round.
+                 evolution_matrix = dot(evolution_matrix, evolution_matrix )
+@@ -183,7 +191,7 @@
+                     Mint = dot(evolution_matrix, Mint)
+ 
+                 # The next lines calculate the R2eff using a two-point 
+approximation, i.e. assuming that the decay is mono-exponential.
+-                Mx = Mint[1] / pA
++                Mx = Mint[1][0] / pA
+                 if Mx &lt;= 0.0 or isNaN(Mx):
+                     back_calc[0, si, mi, 0, di] = r20a_si_mi_di
+                 else:
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Jun 19 18:00:03 2014</div>  
+</body>
+</html>

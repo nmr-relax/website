@@ -1,0 +1,376 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r15076 &#45; /branches/frame_order_testing/specific_fns/frame_order.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 12 Dec 2011 11:45:37 +0100 -->
+<!--X-Message-Id: E1Ra3O5&#45;0005eg&#45;E8@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r15076 - /branches/frame_order_testing/specific_fns/frame_order.py -- December 12, 2011 - 11:45</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r15076 - /branches/frame_order_testing/specific_fns/frame_order.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00063" class="tabs">Index by Date</a> | <a href="threads.html#00063" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00062.html">Date Prev</a>] [<a href="msg00064.html">Date Next</a>] [<a href="msg00062.html">Thread Prev</a>] [<a href="msg00064.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 12 Dec 2011 10:45:37 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00063.html">E1Ra3O5-0005eg-E8@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on December 12, 2011 - 11:45:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Mon Dec 12 11:45:36 2011
+New Revision: 15076
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=15076&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=15076&amp;view=rev</a>
+Log:
+Added the ability for setting up MC simulations with the new frame order 
+input data.
+
+This includes randomised RDCs and PCSs as well as randomised full alignment 
+tensor components.  The
+tensor components adds an additional error which contributes to the real 
+fitting error.
+
+
+Modified:
+    branches/frame_order_testing/specific_fns/frame_order.py
+
+Modified: branches/frame_order_testing/specific_fns/frame_order.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_testing/specific_fns/frame_order.py?rev=15076&amp;r1=15075&amp;r2=15076&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_testing/specific_fns/frame_order.py?rev=15076&amp;r1=15075&amp;r2=15076&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_testing/specific_fns/frame_order.py (original)
++++ branches/frame_order_testing/specific_fns/frame_order.py Mon Dec 12 
+11:45:36 2011
+@@ -40,7 +40,7 @@
+ from float import isNaN, isInf
+ from generic_fns import align_tensor, pipes
+ from generic_fns.angles import wrap_angles
+-from generic_fns.mol_res_spin import spin_loop
++from generic_fns.mol_res_spin import return_spin, spin_loop
+ from generic_fns.structure.cones import Iso_cone, Pseudo_elliptic
+ from generic_fns.structure.geometric import create_cone_pdb, 
+generate_vector_dist, generate_vector_residues
+ from generic_fns.structure.internal import Internal
+@@ -1379,15 +1379,49 @@
+ 
+ 
+     def base_data_loop(self):
+-        &quot;&quot;&quot;Generator method for looping nothing.
+-
+-        The loop essentially consists of a single element.
+-
+-        @return:    Nothing.
+-        @rtype:     None
+-        &quot;&quot;&quot;
+-
+-        yield None
++        &quot;&quot;&quot;Generator method for looping over the base data - alignment 
+tensors, RDCs, PCSs.
++
++        This loop first yields the string 'A' representing the alignment 
+tensors, and then iterates for each data point (RDC, PCS) for each spin, 
+returning the identification information.
++
++        @return:    The alignment tensor or a list of the spin ID string, 
+the data type ('rdc', 'pcs') and the alignment ID.
++        @rtype:     string or list of str
++        &quot;&quot;&quot;
++
++        # First the tensors.
++        yield 'A'
++
++        # Then the spin IDs.
++        for spin, spin_id in spin_loop(return_id=True):
++            # Re-initialise the data structure.
++            base_ids = [spin_id, None, None]
++
++            # Skip deselected spins.
++            if not spin.select:
++                continue
++
++            # RDC data.
++            if hasattr(spin, 'rdc'):
++                base_ids[1] = 'rdc'
++
++                # Loop over the alignment IDs.
++                for id in cdp.rdc_ids:
++                    # Add the ID.
++                    base_ids[2] = id
++
++                    # Yield the set.
++                    yield base_ids
++
++            # PCS data.
++            if hasattr(spin, 'pcs'):
++                base_ids[1] = 'pcs'
++
++                # Loop over the alignment IDs.
++                for id in cdp.pcs_ids:
++                    # Add the ID.
++                    base_ids[2] = id
++
++                    # Yield the set.
++                    yield base_ids
+ 
+ 
+     def calculate(self, spin_id=None, verbosity=1, sim_index=None):
+@@ -1423,11 +1457,55 @@
+         @rtype:             list of floats
+         &quot;&quot;&quot;
+ 
+-        # Back calculate the tensors.
+-        red_tensors_bc = self._back_calc()
++        # Initialise the MC data structure.
++        mc_data = []
++
++        # Alignment tensor data.
++        if data_id == 'A':
++            # Back calculate the tensors.
++            red_tensors_bc = self._back_calc()
++
++            # Append the data.
++            for i in range(len(red_tensors_bc)):
++                mc_data.append(red_tensors_bc[i])
++
++        # The spin specific data.
++        else:
++            # Get the spin container.
++            spin = return_spin(data_id[0])
++
++            # RDC data.
++            if data_id[1] == 'rdc' and hasattr(spin, 'rdc'):
++                # Does back-calculated data exist?
++                if not hasattr(spin, 'rdc_bc'):
++                    self.calculate()
++
++                # The data.
++                if not hasattr(spin, 'rdc_bc') or not 
+spin.rdc_bc.has_key(data_id[2]):
++                    data = None
++                else:
++                    data = spin.rdc_bc[data_id[2]]
++
++                # Append the data.
++                mc_data.append(data)
++
++            # PCS data.
++            elif data_id[1] == 'pcs' and hasattr(spin, 'pcs'):
++                # Does back-calculated data exist?
++                if not hasattr(spin, 'pcs_bc'):
++                    self.calculate()
++
++                # The data.
++                if not hasattr(spin, 'pcs_bc') or not 
+spin.pcs_bc.has_key(data_id[2]):
++                    data = None
++                else:
++                    data = spin.pcs_bc[data_id[2]]
++
++                # Append the data.
++                mc_data.append(data)
+ 
+         # Return the data.
+-        return red_tensors_bc
++        return mc_data
+ 
+ 
+     def data_names(self, set='all', error_names=False, sim_names=False):
+@@ -1870,11 +1948,43 @@
+         @rtype:         list of float
+         &quot;&quot;&quot;
+ 
+-        # Get the tensor data structures.
+-        full_tensors, red_tensors, red_tensor_err, full_in_ref_frame = 
+self._minimise_setup_tensors()
++        # Initialise the MC data structure.
++        mc_errors = []
++
++        # Alignment tensor data.
++        if data_id == 'A':
++            # Get the tensor data structures.
++            full_tensors, red_tensors, red_tensor_err, full_in_ref_frame = 
+self._minimise_setup_tensors()
++
++            # Return the errors.
++            for i in range(len(red_tensor_err)):
++                mc_errors.append(red_tensor_err[i])
++
++        # The spin specific data.
++        else:
++            # Get the spin container.
++            spin = return_spin(data_id[0])
++
++            # RDC data.
++            if data_id[1] == 'rdc' and hasattr(spin, 'rdc'):
++                # Do errors exist?
++                if not hasattr(spin, 'rdc_err'):
++                    raise RelaxError(&quot;The RDC errors are missing for spin 
+'%s'.&quot; % data_id[0])
++
++                # Append the data.
++                mc_errors.append(spin.rdc_err[data_id[2]])
++
++            # PCS data.
++            elif data_id[1] == 'pcs' and hasattr(spin, 'pcs'):
++                # Do errors exist?
++                if not hasattr(spin, 'pcs_err'):
++                    raise RelaxError(&quot;The PCS errors are missing for spin 
+'%s'.&quot; % data_id[0])
++
++                # Append the data.
++                mc_errors.append(spin.pcs_err[data_id[2]])
+ 
+         # Return the errors.
+-        return red_tensor_err
++        return mc_errors
+ 
+ 
+     def return_units(self, param, spin=None, spin_id=None):
+@@ -2011,30 +2121,65 @@
+     def sim_pack_data(self, data_id, sim_data):
+         &quot;&quot;&quot;Pack the Monte Carlo simulation data.
+ 
+-        @param data_id:     The spin identification string, as yielded by 
+the base_data_loop() generator method.
+-        @type data_id:      None
++        @param data_id:     The identification data as yielded by the 
+base_data_loop() generator method.
++        @type data_id:      string or list of str
+         @param sim_data:    The Monte Carlo simulation data.
+         @type sim_data:     list of float
+         &quot;&quot;&quot;
+ 
+-        # Transpose the data.
+-        sim_data = transpose(sim_data)
+-
+-        # Loop over the reduced tensors.
+-        for i, tensor in self._tensor_loop(red=True):
+-            # Set the reduced tensor simulation data.
+-            tensor.Axx_sim = sim_data[5*i + 0]
+-            tensor.Ayy_sim = sim_data[5*i + 1]
+-            tensor.Axy_sim = sim_data[5*i + 2]
+-            tensor.Axz_sim = sim_data[5*i + 3]
+-            tensor.Ayz_sim = sim_data[5*i + 4]
+-
+-
+-    def sim_return_param(self, model_info, index):
++        # Alignment tensor data.
++        if data_id == 'A':
++            # Loop over the full tensors.
++            for j, tensor in self._tensor_loop(red=False):
++                # Initialise the data if needed.
++                if not hasattr(tensor, 'Axx_sim'):
++                    tensor.Axx_sim = []
++                    tensor.Ayy_sim = []
++                    tensor.Axy_sim = []
++                    tensor.Axz_sim = []
++                    tensor.Ayz_sim = []
++
++                # Set the full tensor simulation data.
++                for i in range(cdp.sim_number):
++                    tensor.Axx_sim.append(sim_data[i][5*j + 0])
++                    tensor.Ayy_sim.append(sim_data[i][5*j + 1])
++                    tensor.Axy_sim.append(sim_data[i][5*j + 2])
++                    tensor.Axz_sim.append(sim_data[i][5*j + 3])
++                    tensor.Ayz_sim.append(sim_data[i][5*j + 4])
++
++        # The spin specific data.
++        else:
++            # Get the spin container.
++            spin = return_spin(data_id[0])
++
++            # RDC data.
++            if data_id[1] == 'rdc' and hasattr(spin, 'rdc'):
++                # Initialise.
++                if not hasattr(spin, 'rdc_sim'):
++                    spin.rdc_sim = {}
++                    
++                # Store the data structure.
++                spin.rdc_sim[data_id[2]] = []
++                for i in range(cdp.sim_number):
++                    spin.rdc_sim[data_id[2]].append(sim_data[i][0])
++
++            # PCS data.
++            if data_id[1] == 'pcs' and hasattr(spin, 'pcs'):
++                # Initialise.
++                if not hasattr(spin, 'pcs_sim'):
++                    spin.pcs_sim = {}
++                    
++                # Store the data structure.
++                spin.pcs_sim[data_id[2]] = []
++                for i in range(cdp.sim_number):
++                    spin.pcs_sim[data_id[2]].append(sim_data[i][0])
++
++
++    def sim_return_param(self, data_id, index):
+         &quot;&quot;&quot;Return the array of simulation parameter values.
+ 
+-        @param model_info:  The model information originating from 
+model_loop() (unused).
+-        @type model_info:   None
++        @param data_id:     The identification data as yielded by the 
+base_data_loop() generator method.
++        @type data_id:      string or list of str
+         @param index:       The index of the parameter to return the array 
+of values for.
+         @type index:        int
+         &quot;&quot;&quot;
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Dec 12 12:00:02 2011</div>  
+</body>
+</html>

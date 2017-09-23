@@ -1,0 +1,175 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r26305 &#45; in /trunk/gui/analyses: __init__.py wizard.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 17 Oct 2014 14:58:53 +0200 -->
+<!--X-Message-Id: E1Xf77M&#45;0006Yu&#45;QH@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r26305 - in /trunk/gui/analyses: __init__.py wizard.py -- October 17, 2014 - 14:58</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r26305 - in /trunk/gui/analyses: __init__.py wizard.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00201" class="tabs">Index by Date</a> | <a href="threads.html#00201" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00200.html">Date Prev</a>] [<a href="msg00202.html">Date Next</a>] [<a href="msg00200.html">Thread Prev</a>] [<a href="msg00202.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 17 Oct 2014 12:58:52 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00201.html">E1Xf77M-0006Yu-QH@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on October 17, 2014 - 14:58:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Oct 17 14:58:52 2014
+New Revision: 26305
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=26305&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=26305&amp;view=rev</a>
+Log:
+Changed the logic for how the new analysis wizard in the GUI is destroyed.
+
+This relates to bug #22818 (<a  rel="nofollow" href="https://gna.org/bugs/?22818">https://gna.org/bugs/?22818</a>), the GUI test suite 
+failures in MS Windows
+- PyAssertionError: C++ assertion &quot;Assert failure&quot;.
+
+The Destroy() method has been added to the Analysis_wizard class to properly 
+close all elements of
+the wizard.  This is now called from the menu_new() method of the 
+Analysis_controller class, which
+is the target of the menu item and toolbar button.
+
+To allow the test suite to use this, the menu_new() method now accepts the 
+destroy boolean argument.
+The test suite can set this to False and then access the GUI elements after 
+calling the method
+(however the Destroy() method must be called by the test suite).
+
+
+Modified:
+    trunk/gui/analyses/__init__.py
+    trunk/gui/analyses/wizard.py
+
+Modified: trunk/gui/analyses/__init__.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/gui/analyses/__init__.py?rev=26305&amp;r1=26304&amp;r2=26305&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/gui/analyses/__init__.py?rev=26305&amp;r1=26304&amp;r2=26305&amp;view=diff</a>
+==============================================================================
+--- trunk/gui/analyses/__init__.py      (original)
++++ trunk/gui/analyses/__init__.py      Fri Oct 17 14:58:52 2014
+@@ -418,11 +418,13 @@
+         reset()
+ 
+ 
+-    def menu_new(self, event):
++    def menu_new(self, event, destroy=True):
+         &quot;&quot;&quot;Launch a wizard to select the new analysis.
+ 
+-        @param event:   The wx event.
+-        @type event:    wx event
++        @param event:       The wx event.
++        @type event:        wx event
++        @keyword destroy:   A flag which if True will cause the analysis 
+wizard to be destroyed.  This is used for the test suite.
++        @type destroy:      bool
+         &quot;&quot;&quot;
+ 
+         # Execution lock.
+@@ -433,6 +435,10 @@
+         self.new_wizard = Analysis_wizard()
+         data = self.new_wizard.run()
+ 
++        # Delete the wizard GUI element.
++        if destroy:
++            self.new_wizard.Destroy()
++
+         # Failure, so do nothing.
+         if data == None:
+             return
+@@ -442,9 +448,6 @@
+ 
+         # Initialise the new analysis.
+         self.new_analysis(analysis_type, analysis_name, pipe_name, 
+pipe_bundle, uf_exec)
+-
+-        # Delete the wizard data.
+-        del self.new_wizard
+ 
+ 
+     def new_analysis(self, analysis_type=None, analysis_name=None, 
+pipe_name=None, pipe_bundle=None, uf_exec=[], index=None):
+
+Modified: trunk/gui/analyses/wizard.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/gui/analyses/wizard.py?rev=26305&amp;r1=26304&amp;r2=26305&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/gui/analyses/wizard.py?rev=26305&amp;r1=26304&amp;r2=26305&amp;view=diff</a>
+==============================================================================
+--- trunk/gui/analyses/wizard.py        (original)
++++ trunk/gui/analyses/wizard.py        Fri Oct 17 14:58:52 2014
+@@ -41,6 +41,14 @@
+ class Analysis_wizard:
+     &quot;&quot;&quot;The analysis selection wizard.&quot;&quot;&quot;
+ 
++    def Destroy(self):
++        &quot;&quot;&quot;Properly delete the wizard and all its elements.&quot;&quot;&quot;
++
++        self.new_page.Destroy()
++        self.pipe_page.Destroy()
++        self.wizard.Destroy()
++
++
+     def run(self):
+         &quot;&quot;&quot;Run through the analysis selection wizard, returning the results.
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Oct 17 15:20:02 2014</div>  
+</body>
+</html>

@@ -1,0 +1,236 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r27059 &#45; in /trunk: pipe_control/structure/main.py user_functions/structure.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 10 Dec 2014 17:03:25 +0100 -->
+<!--X-Message-Id: E1XyjjZ&#45;00069z&#45;5M@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r27059 - in /trunk: pipe_control/structure/main.py user_functions/structure.py -- December 10, 2014 - 17:03</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r27059 - in /trunk: pipe_control/structure/main.py user_functions/structure.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00182" class="tabs">Index by Date</a> | <a href="threads.html#00182" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00181.html">Date Prev</a>] [<a href="msg00183.html">Date Next</a>] [<a href="msg00181.html">Thread Prev</a>] [<a href="msg00183.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 10 Dec 2014 16:03:25 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00182.html">E1XyjjZ-00069z-5M@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on December 10, 2014 - 17:03:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Dec 10 17:03:24 2014
+New Revision: 27059
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=27059&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=27059&amp;view=rev</a>
+Log:
+Implemented the new molecules argument for the structure.rmsd user function.
+
+This allows the RMSD between different molecules rather than different models 
+to be calculated,
+extending the functionality of this user function.
+
+
+Modified:
+    trunk/pipe_control/structure/main.py
+    trunk/user_functions/structure.py
+
+Modified: trunk/pipe_control/structure/main.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/pipe_control/structure/main.py?rev=27059&amp;r1=27058&amp;r2=27059&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/pipe_control/structure/main.py?rev=27059&amp;r1=27058&amp;r2=27059&amp;view=diff</a>
+==============================================================================
+--- trunk/pipe_control/structure/main.py        (original)
++++ trunk/pipe_control/structure/main.py        Wed Dec 10 17:03:24 2014
+@@ -1108,13 +1108,15 @@
+     cdp.structure.load_xyz(file_path, read_mol=read_mol, 
+set_mol_name=set_mol_name, read_model=read_model, 
+set_model_num=set_model_num, verbosity=verbosity)
+ 
+ 
+-def rmsd(atom_id=None, models=None):
++def rmsd(atom_id=None, models=None, molecules=None):
+     &quot;&quot;&quot;Calculate the RMSD between the loaded models.
+ 
+     @keyword atom_id:   The molecule, residue, and atom identifier string.  
+Only atoms matching this selection will be used.
+     @type atom_id:      str or None
+-    @keyword models:    The list of models to calculate the RMDS of.  If set 
+to None, then all models will be used.
++    @keyword models:    The list of models to calculate the RMSD of.  If set 
+to None, then all models will be used.
+     @type models:       list of int or None
++    @keyword molecules: The list of molecules to calculate the RMSD between. 
+ This overrides the models.
++    @type molecules:    None or list of str
+     @return:            The RMSD value.
+     @rtype:             float
+     &quot;&quot;&quot;
+@@ -1122,22 +1124,53 @@
+     # Test if the current data pipe exists.
+     check_pipe()
+ 
+-    # Create a list of all models.
+-    if models == None:
+-        models = []
+-        for model in cdp.structure.model_loop():
+-            models.append(model.num)
+-
+     # The selection object.
+     selection = cdp.structure.selection(atom_id=atom_id)
+ 
+-    # Assemble the atomic coordinates of all models.
+-    coord = []
+-    for model in models:
+-        coord.append([])
+-        for pos in cdp.structure.atom_loop(selection=selection, 
+model_num=model, pos_flag=True):
++    # RMSD between models.
++    if molecules == None:
++        # Create a list of all models.
++        if models == None:
++            models = []
++            for model in cdp.structure.model_loop():
++                models.append(model.num)
++
++        # Assemble the atomic coordinates of all models.
++        coord = []
++        for model in models:
++            coord.append([])
++            for pos in cdp.structure.atom_loop(selection=selection, 
+model_num=model, pos_flag=True):
++                coord[-1].append(pos[0])
++            coord[-1] = array(coord[-1])
++
++    # RMSD between structures.
++    else:
++        # No models allowed.
++        if cdp.structure.num_models() &gt; 1:
++            raise RelaxError(&quot;When calculating the RMSD between different 
+molecules, no models are allowed to be present.&quot;)
++
++        # Assemble the atomic coordinates of all molecules.
++        coord = []
++        current_mol = ''
++        for mol_name, pos in cdp.structure.atom_loop(selection=selection, 
+mol_name_flag=True, pos_flag=True):
++            # No molecule match, so skip.
++            if mol_name not in molecules:
++                continue
++
++            # A new molecule.
++            if mol_name != current_mol:
++                # Change the current molecule name.
++                current_mol = mol_name
++
++                # Extend the coordinates.
++                coord.append([])
++
++            # Append the coordinate.
+             coord[-1].append(pos[0])
+-        coord[-1] = array(coord[-1])
++
++        # Numpy conversion.
++        for i in range(len(coord)):
++            coord[i] = array(coord[i])
+ 
+     # Calculate the RMSD.
+     cdp.structure.rmsd = atomic_rmsd(coord, verbosity=1)
+
+Modified: trunk/user_functions/structure.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/user_functions/structure.py?rev=27059&amp;r1=27058&amp;r2=27059&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/user_functions/structure.py?rev=27059&amp;r1=27058&amp;r2=27059&amp;view=diff</a>
+==============================================================================
+--- trunk/user_functions/structure.py   (original)
++++ trunk/user_functions/structure.py   Wed Dec 10 17:03:24 2014
+@@ -1041,17 +1041,25 @@
+     desc = &quot;The atom identification string.&quot;,
+     can_be_none = True
+ )
++uf.add_keyarg(
++    name = &quot;molecules&quot;,
++    py_type = &quot;str_list&quot;,
++    desc_short = &quot;molecule list&quot;,
++    desc = &quot;The optional molecule list to perform the RMSD calculation on 
+rather than the models.  The RMSD will only be calculated for atoms with 
+identical residue name and number and atom name.&quot;,
++    can_be_none = True
++)
+ # Description.
+ uf.desc.append(Desc_container())
+ uf.desc[-1].add_paragraph(&quot;This allows the root mean squared deviation 
+(RMSD) between all models to be calculated.&quot;)
+ uf.desc[-1].add_paragraph(&quot;The atom ID, which uses the same notation as the 
+spin ID strings, can be used to restrict the RMSD calculation to certain 
+molecules, residues, or atoms.&quot;)
++uf.desc[-1].add_paragraph(&quot;If the optional molecules list is supplied, then 
+the RMSD calculation will be between the molecules in the list rather than 
+the models.  Therefore no models are allowed to be present in the current 
+data pipe.&quot;)
+ # Prompt examples.
+ uf.desc.append(Desc_container(&quot;Prompt examples&quot;))
+ uf.desc[-1].add_paragraph(&quot;To determine the RMSD, simply type:&quot;)
+ uf.desc[-1].add_prompt(&quot;relax&gt; structure.rmsd()&quot;)
+ uf.backend = pipe_control.structure.main.rmsd
+ uf.menu_text = &quot;&amp;rmsd&quot;
+-uf.wizard_size = (700, 500)
++uf.wizard_size = (800, 600)
+ uf.wizard_image = WIZARD_IMAGE_PATH + 'structure' + sep + '2JK4.png'
+ 
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Dec 10 17:20:02 2014</div>  
+</body>
+</html>

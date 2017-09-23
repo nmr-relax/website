@@ -1,0 +1,182 @@
+<!-- MHonArc v2.6.10 -->
+<!--X-Subject: Re: Redesign of the relax data model: 2. A new run concept -->
+<!--X-From-R13: Quevf [npDnvyq <p.n.znpenvyqNyrrqf.np.hx> -->
+<!--X-Date: Mon, 15 Jan 2007 16:07:01 +0100 -->
+<!--X-Message-Id: 1168873580.7569.449.camel@mrspell -->
+<!--X-Content-Type: text/plain -->
+<!--X-Reference: f001463a0701071314i61276e67hde685fe3afb8fe42@mail.gmail.com -->
+<!--X-Reference: 7f080ed10701142244ne7d107bl84582ce604d1888e@mail.gmail.com -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>Re: Redesign of the relax data model: 2. A new run concept -- January 15, 2007 - 16:07</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />Re: Redesign of the relax data model: 2. A new run concept</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00035" class="tabs">Index by Date</a> | <a href="threads.html#00035" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00034.html">Date Prev</a>] [<a href="msg00036.html">Date Next</a>] [<a href="msg00029.html">Thread Prev</a>] [<a href="msg00037.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: Edward d'Auvergne &lt;edward.dauvergne@xxxxxxxxx&gt;</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 15 Jan 2007 15:06:20 +0000</li>
+<li class="menuitem">
+<em>Cc</em>: relax-devel@xxxxxxx</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00035.html">1168873580.7569.449.camel@mrspell</a>&gt;</li>
+<li class="menuitem">
+<em>References</em>: &lt;<a href="msg00013.html">f001463a0701071314i61276e67hde685fe3afb8fe42@mail.gmail.com</a>&gt;	&lt;<a href="msg00029.html">7f080ed10701142244ne7d107bl84582ce604d1888e@mail.gmail.com</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>Chris MacRaild</strong> on January 15, 2007 - 16:07:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">On Mon, 2007-01-15 at 17:44 +1100, Edward d'Auvergne wrote:
+
+[snip]
+
+</pre><blockquote class="blockquote"><blockquote class="blockquote"><pre style="margin: 0em;">Some asides
+
+A.  I believe the runs that are passed around in relax are strings
+which are then used to lookup data in a map. Why not just have
+(runs/pipes) as objects... Then for example the call
+
+self.relax.data[self.relax.run]
+
+above becomes
+
+self.relax.run.data a much more object orientated and encapsulated
+</pre></blockquote><pre style="margin: 0em;">structure
+
+You still need a list (array) or dictionary (hash) type structure to
+store multiple run objects.  'self.relax.data' would be a dictionary
+type object with key-value pairs, the key being the run name and the
+value being a standard class instance object containing all the data
+associated with the run as objects.  The dictionary would be more
+logical than an array in this case.
+
+</pre></blockquote><pre style="margin: 0em;">
+
+The issue here is whether the user and/or developer should be dealing
+with a run name (a string) or the run object itself. Currently the user
+creates a new run with:
+
+run.create(run_name, run_type)
+
+and then uses the string, run_name, to address the object. In this
+idiom, a dictionary of runs is clearly an appropriate structure.
+
+Alternatively, we could have the user create a run with:
+
+my_run = run.create(run_type)
+
+Then the user has the run as an object, which they can make current or
+pass to relax commands as required. In this idiom, a dictionary of runs
+is an unnecessary abstraction.
+
+Currently, the relax interface is entirely script orientated, not object
+orientated, so the alternative above is a fairly fundamental change in
+interface design. 
+
+I don't favour an object orientated user interface, because oo tends to
+be fairly intimdating to non-programmers. On the other hand, the relax
+code-base could benefit from being more object orientated. So I propose
+the following arrangement:
+
+all runs are stored in a dictionary, keyed by run name, but only the
+run-selection machinery should access this dictionary. The current run
+should be the object self.relax.data.run (or something simiar), and all
+relax functions should operate on that object.
+
+Thus we would have user functions:
+
+run.create(run_name, run_type):
+    self.relax._runs[run_name] = new_run(run_type)
+
+run.make_current(run_name):
+    self.relax.data.run = self.relax._runs[run_name]
+
+run.current():
+    return self.relax.data.run.name
+
+run.run_names():
+    return self.relax._runs.keys()
+
+run.delete(run_name):
+    if run.current() == run_name:
+        self.relax.data.run = None
+    del self.relax._runs[run_name]
+
+run.delete_all():
+    self.relax.data.run = None
+    self.relax._runs = {}
+
+
+
+This way the abstraction of the dictionary of runs is cleanly hidden
+from the developer who chooses to work with objects, but the scripting
+style of the user interface is maintained.
+
+Chris
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<ul><li><strong>Follow-Ups</strong>:
+<ul>
+<li><strong><a name="00037" href="msg00037.html">Re: Redesign of the relax data model: 2. A new run concept</a></strong>
+<ul><li><em>From:</em> Edward d'Auvergne</li></ul></li>
+</ul></li></ul>
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<ul><li><strong>References</strong>:
+<ul>
+<li><strong><a name="00013" href="msg00013.html">re: Redesign of the relax data model: 2. A new run concept</a></strong>
+<ul><li><em>From:</em> gary thompson</li></ul></li>
+<li><strong><a name="00029" href="msg00029.html">Re: Redesign of the relax data model: 2. A new run concept</a></strong>
+<ul><li><em>From:</em> Edward d'Auvergne</li></ul></li>
+</ul></li></ul>
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Jan 16 16:00:22 2007</div>  
+</body>
+</html>

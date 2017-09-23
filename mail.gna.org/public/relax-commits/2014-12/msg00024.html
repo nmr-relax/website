@@ -1,0 +1,239 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r26901 &#45; /trunk/test_suite/system_tests/state.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 02 Dec 2014 21:39:11 +0100 -->
+<!--X-Message-Id: E1XvuE3&#45;0005Pu&#45;1r@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r26901 - /trunk/test_suite/system_tests/state.py -- December 02, 2014 - 21:39</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r26901 - /trunk/test_suite/system_tests/state.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00024" class="tabs">Index by Date</a> | <a href="threads.html#00024" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00023.html">Date Prev</a>] [<a href="msg00025.html">Date Next</a>] [<a href="msg00023.html">Thread Prev</a>] [<a href="msg00025.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 02 Dec 2014 20:39:11 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00024.html">E1XvuE3-0005Pu-1r@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on December 02, 2014 - 21:39:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Dec  2 21:39:10 2014
+New Revision: 26901
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=26901&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=26901&amp;view=rev</a>
+Log:
+Created the State.test_bug_23017_ieee_754_multidim_numpy_arrays system test.
+
+This is to catch bug #23017 (<a  rel="nofollow" href="https://gna.org/bugs/?23017">https://gna.org/bugs/?23017</a>), the 
+multidimensional numpy arrays are not
+being stored as IEEE 754 arrays in the XML state and results files.
+
+This test checks a rank-2 float64 numpy array stored in the current data pipe 
+against what the IEEE
+754 int list should be for it.
+
+
+Modified:
+    trunk/test_suite/system_tests/state.py
+
+Modified: trunk/test_suite/system_tests/state.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/test_suite/system_tests/state.py?rev=26901&amp;r1=26900&amp;r2=26901&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/test_suite/system_tests/state.py?rev=26901&amp;r1=26900&amp;r2=26901&amp;view=diff</a>
+==============================================================================
+--- trunk/test_suite/system_tests/state.py      (original)
++++ trunk/test_suite/system_tests/state.py      Tue Dec  2 21:39:10 2014
+@@ -21,7 +21,9 @@
+ 
+ # Python module imports.
+ from copy import deepcopy
++from numpy import array, float64
+ from os import sep
++from re import search
+ from tempfile import mktemp
+ 
+ # relax module imports.
+@@ -51,6 +53,86 @@
+         if not dep_check.C_module_exp_fn and methodName in 
+['test_write_read_pipes']:
+             # Store in the status object. 
+             status.skipped_tests.append([methodName, 'Relax curve-fitting C 
+module', self._skip_type])
++
++
++    def get_ieee_754(self, lines=None):
++        &quot;&quot;&quot;Find and convert the IEEE 754 int list from the list of text 
+lines.
++
++        @keyword lines: The lines of XML text to extract the IEEE 754 array 
+from.
++        @type lines:    list of str
++        @return:        The IEEE 754 array, if it exists.
++        @rtype:         list of int
++        &quot;&quot;&quot;
++
++        # Loop over the lines, finding the IEEE 754 lines.
++        ieee_754 = &quot;&quot;
++        in_tag = False
++        for line in lines:
++            # The tag start line, so switch the flag.
++            if search(&quot;&lt;ieee_754&quot;, line):
++                in_tag = True
++
++            # The tag  end line, so store the line and switch the flag.
++            if search(&quot;&lt;/ieee_754&quot;, line):
++                ieee_754 += line
++                in_tag = False
++
++            # Store the line.
++            if in_tag:
++                ieee_754 += line
++
++        # Strip the tags and newlines.
++        ieee_754 = ieee_754.replace('&lt;ieee_754_byte_array&gt;', '')
++        ieee_754 = ieee_754.replace('&lt;/ieee_754_byte_array&gt;', '')
++        ieee_754 = ieee_754.replace('\n', '')
++
++        # Nothing left.
++        if ieee_754 == '':
++            return None
++
++        # Convert the remaining text to an int list.
++        ieee_754 = eval(ieee_754)
++
++        # Return the array.
++        return ieee_754
++
++
++
++    def get_xml_tag(self, file=None, name=None):
++        &quot;&quot;&quot;Extract the text lines for the given XML tag.
++
++        @keyword file:  The file name top open.
++        @type file:     str
++        @keyword name:  The XML tag name to isolate.
++        @type name:     str
++        @return:        The list of lines corresponding to the XML tag.
++        @rtype:         list of str
++        &quot;&quot;&quot;
++
++        # Read the contents of the file.
++        file = open(file)
++        lines = file.readlines()
++        file.close()
++
++        # Loop over the lines, finding all corresponding tags.
++        tag_lines = []
++        in_tag = False
++        for line in lines:
++            # The tag start line, so switch the flag.
++            if search(&quot;&lt;%s &quot;%name, line):
++                in_tag = True
++
++            # The tag  end line, so store the line and switch the flag.
++            if search(&quot;&lt;/%s&gt;&quot;%name, line):
++                tag_lines.append(line)
++                in_tag = False
++
++            # Store the line.
++            if in_tag:
++                tag_lines.append(line)
++
++        # Return the lines.
++        return tag_lines
+ 
+ 
+     def setUp(self):
+@@ -118,6 +200,28 @@
+         self.interpreter.state.save(self.tmpfile, force=True)
+ 
+ 
++    def test_bug_23017_ieee_754_multidim_numpy_arrays(self):
++        &quot;&quot;&quot;Test catching U{bug #23017&lt;<a  rel="nofollow" href="https://gna.org/bugs/?23017">https://gna.org/bugs/?23017</a>&gt;}, the 
+multidimensional numpy arrays are not being stored as IEEE 754 arrays in the 
+XML state and results files.&quot;&quot;&quot;
++
++        # Create a data pipe.
++        self.interpreter.pipe.create('test', 'mf')
++
++        # The numpy structure.
++        cdp.test = array([[1, 2, 3], [4, 5, 6]], float64)
++
++        # Save the state.
++        self.interpreter.state.save(self.tmpfile, compress_type=0, 
+force=True)
++
++        # Get the tag lines.
++        lines = self.get_xml_tag(file=self.tmpfile, name='test')
++
++        # Extract the IEEE 754 array as an int list.
++        ieee_754 = self.get_ieee_754(lines=lines)
++
++        # Check.
++        self.assertEqual(ieee_754, [[[0, 0, 0, 0, 0, 0, 240, 63], [0, 0, 0, 
+0, 0, 0, 0, 64], [0, 0, 0, 0, 0, 0, 8, 64]], [[0, 0, 0, 0, 0, 0, 16, 64], [0, 
+0, 0, 0, 0, 0, 20, 64], [0, 0, 0, 0, 0, 0, 24, 64]]])
++
++
+     def test_state_xml(self):
+         &quot;&quot;&quot;Test the saving, loading, and second saving and loading of the 
+program state in XML format.&quot;&quot;&quot;
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Dec 02 22:00:02 2014</div>  
+</body>
+</html>

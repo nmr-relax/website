@@ -1,0 +1,208 @@
+<!-- MHonArc v2.6.10 -->
+<!--X-Subject: Re: [Fwd: Re: [bug #6503] Uncaught nan in xh_vect] -->
+<!--X-From-R13: "Sqjneq q'Ohiretar" <rqjneq.qnhiretarNtznvy.pbz> -->
+<!--X-Date: Wed, 09 Aug 2006 06:53:44 +0200 -->
+<!--X-Message-Id: 7f080ed10608082153x233e158ci8a8dfe7383065241@mail.gmail.com -->
+<!--X-Content-Type: text/plain -->
+<!--X-Reference: 44D8A876.2020506@bmb.leeds.ac.uk -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>Re: [Fwd: Re: [bug #6503] Uncaught nan in xh_vect] -- August 09, 2006 - 06:53</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />Re: [Fwd: Re: [bug #6503] Uncaught nan in xh_vect]</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00028" class="tabs">Index by Date</a> | <a href="threads.html#00028" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00027.html">Date Prev</a>] [<a href="msg00029.html">Date Next</a>] [<a href="msg00025.html">Thread Prev</a>] [<a href="msg00042.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: &quot;Gary S. Thompson&quot; &lt;garyt@xxxxxxxxxxxxxxx&gt;</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 9 Aug 2006 14:53:02 +1000</li>
+<li class="menuitem">
+<em>Cc</em>: relax-devel@xxxxxxx</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00028.html">7f080ed10608082153x233e158ci8a8dfe7383065241@mail.gmail.com</a>&gt;</li>
+<li class="menuitem">
+<em>References</em>: &lt;<a href="msg00025.html">44D8A876.2020506@bmb.leeds.ac.uk</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>Edward d'Auvergne</strong> on August 09, 2006 - 06:53:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<blockquote class="blockquote"><pre style="margin: 0em;">&gt; For 1) I would prefer the NaN catching to be outside of the
+&gt; 'minimise/' directory.  It should be safe to assume that that code
+&gt; will soon not be part of relax.  As for handling NaNs within the
+&gt; minimisation code I know of no other minimisation package that does
+&gt; this - if the user sends garbage to it then returning garbage should
+&gt; be expected.  The sender and receiver code should do the cleanup.  I
+&gt; do however think that testing for NaN during optimisation (in the
+&gt; 'maths_fns' code) is too computationally expensive.  If optimisation
+&gt; terminates in a reasonable time then I don't think we should test for
+&gt; NaNs during the number crunching phase.
+&gt;
+We should check what the overhead is before we say too expensive
+</pre></blockquote><pre style="margin: 0em;"><br>The number of times the family of functions 'self.func()' within the
+file 'maths_fns/mf.py' is called to generate the chi-squared value
+during optimisation is huge.  When running relax, this function is the
+most called function in the entire code base.  Putting the test for
+NaN within this function, or in the 'minimise/' code straight after
+this function is called, will be the most computationally expensive
+solution possible.  A much more efficient design would be to catch the
+NaN just after optimisation has terminated as the test will only need
+to be done once per optimisation rather than thousands of times per
+optimisation.</pre><br>
+<br>
+<blockquote class="blockquote"><pre style="margin: 0em;">&gt; For 2) and 3) the NaN value comes from the chi2 variable which is just
+&gt; a standard Python floating point number rather than a Numeric
+&gt; construct.  Will the shift to Numpy actually change the behaviour of
+&gt; the default Python floats?  Or will it just change the behaviour of
+&gt; vectors, matrices, and other linear algebra?  Or is there a function
+&gt; similar to the fpconst.py function isNaN() which can be used to catch
+&gt; it?  Anyway, the 1.3 line is probably the best place to test the shift
+&gt; from Numeric to Numpy - although in a private branch first.
+&gt;
+my undertanding is that in general numpy propogates nans generally and
+that pure fp maths also propgtates nans. The only place there used to be
+problems is in ufuncs which used not to propogate nans but raise
+exceptions in numeric. There is a function similar to isNaN called
+originally isnan (and isinf) in scipy...Ingenerale we could have a grep
+for the use of isnan and isinf in the numpy/scipy codebase to see if
+they are caught much or just propgated. A quick look in scipy/numpy
+shows only a very few uses of isnan in numpy or scipy
+</pre></blockquote><pre style="margin: 0em;"><br>I just had a look at scipy and the isnan function is defined in
+'Lib/special/cephes/isnan.c'.  They catch it based on the bit pattern,
+as you suggested previously, but dependent on whether it is an
+'IBMPC', 'DEC', or 'MIEEE'.  It should be pretty easy to implement a
+similar solution in relax using Python with not too many lines.</pre><br>
+<br>
+<blockquote class="blockquote"><pre style="margin: 0em;">&gt; As for the test suite, the optimisation code is completely untested.
+&gt; It's where the major breakages occur, although the code in
+&gt; 'maths_fns/' is problematic as well.  A shift to Numpy will require
+&gt; changes to both 'maths_fns/' and 'minimise/'.  To catch problems the
+&gt; four optimisation classes will need to be tested - standard single
+&gt; residue, diffusion tensor, all parameters (model-free + diffusion
+&gt; params), and the residue specific local tm models.  It shouldn't be
+&gt; too hard to code a number of tests for this as they can all use the
+&gt; same data.  Then all the optimisation algorithms in ALL combinations
+&gt; need to be tested - that is quite a few.  However as these minimisers
+&gt; will be separated from relax, this won't be so easy.
+&gt;
+I don't quite follow why this won't be easy. The combinatorial feature
+is of course a problem but I guess the likley combinations are the first
+target.
+</pre></blockquote><pre style="margin: 0em;"><br>It would be easy.  I can use the data of Schurr et al., (1994), which
+I have reanalysed for a paper which is in preparation, for the
+test-suite.  Then the tests should be as simple as writing a number of
+relax user scripts - although within the test-suite.  However the
+tests for the optimisation algorithms probably shouldn't go into the
+relax test-suite - that code will eventually be removed from relax.
+Still for our purposes it might be good to have a second set of tests
+within the test-suite to test simultaneously both the model-free code
+and minimisation code.</pre><br>
+<br>
+<blockquote class="blockquote"><pre style="margin: 0em;">&gt; I believe though that throwing a RelaxError when NaNs occur is the
+&gt; best option.  That is because NaN should NEVER occur.  Even though it
+&gt; may cause a week long calculation to die at the very end, hence the
+&gt; optimisation was for nothing, an error should still be thrown (it's
+&gt; much more likely that a week long optimisation will die at the very
+&gt; start).  The reason for throwing a RelaxError and killing the
+&gt; calculation is simple.  Despite the calculation running until the end
+&gt; - it will need to be rerun.  If the NaN only occurs for a single
+&gt; residue the entire protein (the diffusion tensor) is nevertheless
+&gt; affected.</pre><br>
+<tt><br>surely not if you skip data with nan values?
+</tt></blockquote><pre style="margin: 0em;"><br>Do you really want to do this?  The NaN value is a sign that something
+is fatally wrong.</pre><br>
+<br>
+<blockquote class="blockquote"><pre style="margin: 0em;">I have to say at the end of the week long calculation I would like to
+see the result. Thus for example (this came from chris) if a grid
+search failed I would personally like the residue to be deselected ( and
+maybe a warning generated on the console) and then the calculation
+should go on.. In general i feel exceptions are a blunt tool for these
+sort of problems as you lose the program state and don't get results on
+where the calculation was going to for everything other that the faulty
+data.
+</pre></blockquote><pre style="margin: 0em;"><br>Sorry, my example of the week long calculation failing at the very end
+was a hypothetical which is probably impossible.  The NaN value within
+model-free analysis is guaranteed to be caused by garbage input data,
+hence the RelaxError will be thrown before calculations really get
+under way.  The example of the week long calculation was assuming that
+the new model-free optimisation protocol implemented in the sample
+script 'full_analysis.py' is run.  That includes ~15 rounds of the
+iterative full optimisation of the system, 15 times for each of the
+spherical diffusion tensor, prolate spheroid, oblate spheroid, and
+ellipsoid.  For each of these iterations many results files are
+generated.  So even if the NaN and subsequent RelaxError occurs at the
+very end of the analysis - the results up to that point will be easily
+accessible.  Optimisation can even continue from a point just before
+the error occurred.  The amount of program state and computation time
+that is lost is relatively small.</pre><br>
+<br>
+<blockquote class="blockquote"><pre style="margin: 0em;">Also for example if one MC caculation produced a nan and killed it all
+that would be annoying in the extreme
+</pre></blockquote><pre style="margin: 0em;"><br>By construction of Monte Carlo simulations I can't see this as being
+possible.  If the NaN occurs in the MC simulation, it must have
+previously occurred in the original optimisation.</pre><br>
+<br>
+<blockquote class="blockquote"><pre style="margin: 0em;">I can think of counter examples so for example an nan while calculating
+a tensor should bring things to a close, but it would be nice to have a
+default error handler that saved state to some meaningful place.
+</pre></blockquote><pre style="margin: 0em;"><br>That would be useful - just difficult to code.  If code is written
+which will dump the saved state in the current directory just prior to
+throwing the relax error (hint in the RelaxError base class BaseError
+in 'errors.py') it will certainly be accepted into relax.</pre><br>
+<pre style="margin: 0em;">Edward</pre><br>
+<br>
+
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<ul><li><strong>References</strong>:
+<ul>
+<li><strong><a name="00025" href="msg00025.html">[Fwd: Re: [bug #6503] Uncaught nan in xh_vect]</a></strong>
+<ul><li><em>From:</em> Gary S. Thompson</li></ul></li>
+</ul></li></ul>
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Aug 09 18:00:36 2006</div>  
+</body>
+</html>

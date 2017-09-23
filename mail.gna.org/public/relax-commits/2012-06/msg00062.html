@@ -1,0 +1,185 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r16617 &#45; in /branches/uf_redesign: generic_fns/state.py	gui/analyses/__init__.py status.py user_functions/state.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 04 Jun 2012 09:57:30 +0200 -->
+<!--X-Message-Id: E1SbSAM&#45;0006Hx&#45;CI@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r16617 - in /branches/uf_redesign: generic_fns/state.py	gui/analyses/__init__.py status.py user_functions/state.py -- June 04, 2012 - 09:57</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r16617 - in /branches/uf_redesign: generic_fns/state.py	gui/analyses/__init__.py status.py user_functions/state.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00062" class="tabs">Index by Date</a> | <a href="threads.html#00062" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00061.html">Date Prev</a>] [<a href="msg00063.html">Date Next</a>] [<a href="msg00061.html">Thread Prev</a>] [<a href="msg00063.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 04 Jun 2012 07:57:30 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00062.html">E1SbSAM-0006Hx-CI@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on June 04, 2012 - 09:57:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Mon Jun  4 09:57:29 2012
+New Revision: 16617
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=16617&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=16617&amp;view=rev</a>
+Log:
+The state.load user function will now recreate the GUI tabs.
+
+For this, the new state_load observer object has been created.  The GUI 
+analysis load_from_store()
+is registered with this object.  And to prevent fatal racing in the GUI, the 
+state.load user
+function operation is now synchronous.  The state.load and state.save file 
+arg defaults are now also
+set to 'state.bz2'.
+
+
+Modified:
+    branches/uf_redesign/generic_fns/state.py
+    branches/uf_redesign/gui/analyses/__init__.py
+    branches/uf_redesign/status.py
+    branches/uf_redesign/user_functions/state.py
+
+Modified: branches/uf_redesign/generic_fns/state.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/uf_redesign/generic_fns/state.py?rev=16617&amp;r1=16616&amp;r2=16617&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/uf_redesign/generic_fns/state.py?rev=16617&amp;r1=16616&amp;r2=16617&amp;view=diff</a>
+==============================================================================
+--- branches/uf_redesign/generic_fns/state.py (original)
++++ branches/uf_redesign/generic_fns/state.py Mon Jun  4 09:57:29 2012
+@@ -142,6 +142,9 @@
+     # Signal a change in the current data pipe.
+     status.observers.pipe_alteration.notify()
+ 
++    # Signal the state loading
++    status.observers.state_load.notify()
++
+ 
+ def save_state(state=None, dir=None, compress_type=1, verbosity=1, 
+force=False, pickle=False):
+     &quot;&quot;&quot;Function for saving the program state.
+
+Modified: branches/uf_redesign/gui/analyses/__init__.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/uf_redesign/gui/analyses/__init__.py?rev=16617&amp;r1=16616&amp;r2=16617&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/uf_redesign/gui/analyses/__init__.py?rev=16617&amp;r1=16616&amp;r2=16617&amp;view=diff</a>
+==============================================================================
+--- branches/uf_redesign/gui/analyses/__init__.py (original)
++++ branches/uf_redesign/gui/analyses/__init__.py Mon Jun  4 09:57:29 2012
+@@ -92,6 +92,9 @@
+         # Register the deletion of all analyses for the reset status 
+observer.
+         status.observers.reset.register('gui analyses', self.post_reset)
+ 
++        # Register state loading.
++        status.observers.state_load.register('gui analyses', 
+self.load_from_store)
++
+ 
+     def analysis_data_loop(self):
+         &quot;&quot;&quot;Loop over the analyses, yielding the data objects.
+
+Modified: branches/uf_redesign/status.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/uf_redesign/status.py?rev=16617&amp;r1=16616&amp;r2=16617&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/uf_redesign/status.py?rev=16617&amp;r1=16616&amp;r2=16617&amp;view=diff</a>
+==============================================================================
+--- branches/uf_redesign/status.py (original)
++++ branches/uf_redesign/status.py Mon Jun  4 09:57:29 2012
+@@ -161,6 +161,9 @@
+         # The observer object for the creation of results files.
+         self.observers.result_file = Observer('result_file')
+ 
++        # The observer object for state loading.
++        self.observers.state_load = Observer('state_load')
++
+ 
+     def init_auto_analysis(self, name, type):
+         &quot;&quot;&quot;Initialise a status container for an auto-analysis.
+
+Modified: branches/uf_redesign/user_functions/state.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/uf_redesign/user_functions/state.py?rev=16617&amp;r1=16616&amp;r2=16617&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/uf_redesign/user_functions/state.py?rev=16617&amp;r1=16616&amp;r2=16617&amp;view=diff</a>
+==============================================================================
+--- branches/uf_redesign/user_functions/state.py (original)
++++ branches/uf_redesign/user_functions/state.py Mon Jun  4 09:57:29 2012
+@@ -46,6 +46,7 @@
+ uf.title_short = &quot;Saved state loading.&quot;
+ uf.add_keyarg(
+     name = &quot;state&quot;,
++    default = &quot;state.bz2&quot;,
+     py_type = &quot;str_or_inst&quot;,
+     arg_type = &quot;file sel&quot;,
+     desc_short = &quot;file name&quot;,
+@@ -86,6 +87,7 @@
+ uf.menu_text = &quot;&amp;load&quot;
+ uf.gui_icon = &quot;oxygen.actions.document-open&quot;
+ uf.wizard_size = (800, 600)
++uf.gui_sync = True    # Force synchronous operation to avoid races in the 
+GUI.
+ 
+ 
+ # The state.save user function.
+@@ -94,6 +96,7 @@
+ uf.title_short = &quot;Saving state.&quot;
+ uf.add_keyarg(
+     name = &quot;state&quot;,
++    default = &quot;state.bz2&quot;,
+     py_type = &quot;str_or_inst&quot;,
+     arg_type = &quot;file sel&quot;,
+     desc_short = &quot;file name&quot;,
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Jun 04 10:40:02 2012</div>  
+</body>
+</html>

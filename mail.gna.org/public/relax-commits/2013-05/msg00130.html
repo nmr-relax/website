@@ -1,0 +1,176 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r19741 &#45; in /branches/relax_disp:	specific_analyses/relax_disp/cpmgfit.py user_functions/relax_disp.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 24 May 2013 19:06:08 +0200 -->
+<!--X-Message-Id: E1UfvRQ&#45;0007uE&#45;L4@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r19741 - in /branches/relax_disp:	specific_analyses/relax_disp/cpmgfit.py user_functions/relax_disp.py -- May 24, 2013 - 19:06</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r19741 - in /branches/relax_disp:	specific_analyses/relax_disp/cpmgfit.py user_functions/relax_disp.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00130" class="tabs">Index by Date</a> | <a href="threads.html#00130" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00129.html">Date Prev</a>] [<a href="msg00131.html">Date Next</a>] [<a href="msg00129.html">Thread Prev</a>] [<a href="msg00131.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 24 May 2013 17:06:08 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00130.html">E1UfvRQ-0007uE-L4@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on May 24, 2013 - 19:06:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri May 24 19:06:08 2013
+New Revision: 19741
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=19741&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=19741&amp;view=rev</a>
+Log:
+The relax_disp.cpmgfit_execute user function now correctly calls CPMGFit.
+
+The -grid command line option has been added and the output for each spin is 
+sent to a special
+output file.
+
+
+Modified:
+    branches/relax_disp/specific_analyses/relax_disp/cpmgfit.py
+    branches/relax_disp/user_functions/relax_disp.py
+
+Modified: branches/relax_disp/specific_analyses/relax_disp/cpmgfit.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp/cpmgfit.py?rev=19741&amp;r1=19740&amp;r2=19741&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp/cpmgfit.py?rev=19741&amp;r1=19740&amp;r2=19741&amp;view=diff</a>
+==============================================================================
+--- branches/relax_disp/specific_analyses/relax_disp/cpmgfit.py (original)
++++ branches/relax_disp/specific_analyses/relax_disp/cpmgfit.py Fri May 24 
+19:06:08 2013
+@@ -82,15 +82,19 @@
+     # Loop over each spin.
+     for spin, spin_id in spin_loop(return_id=True, skip_desel=True):
+         # The spin input file name.
+-        file_name = dir + sep + spin_file_name(spin_id=spin_id)
+-        if not access(file_name, F_OK):
+-            raise RelaxFileError(&quot;spin input&quot;, file_name)
++        file_in = dir + sep + spin_file_name(spin_id=spin_id)
++        if not access(file_in, F_OK):
++            raise RelaxFileError(&quot;spin input&quot;, file_in)
++
++        # The spin output file name.
++        file_out = dir + sep + spin_file_name(spin_id=spin_id, output=True)
+ 
+         # Test the binary file string corresponds to a valid executable.
+         test_binary(binary)
+ 
+         # Execute CPMGFit.
+-        cmd = &quot;%s -xmgr -f %s\n&quot; % (binary, file_name)
++        cmd = &quot;%s -grid -xmgr -f %s | tee %s\n&quot; % (binary, file_in, file_out)
++        print(&quot;\n\n%s&quot; % cmd)
+         pipe = Popen(cmd, shell=True, stdin=PIPE, stdout=PIPE, stderr=PIPE, 
+close_fds=False)
+ 
+         # Close the pipe.
+@@ -239,16 +243,25 @@
+     return file_name
+ 
+ 
+-def spin_file_name(spin_id=None):
++def spin_file_name(spin_id=None, output=False):
+     &quot;&quot;&quot;Generate the unique file name for the given spin ID.
+ 
+     @keyword spin_id:   The spin ID string.
+     @type spin_id:      str
++    @keyword output:    A flag which if True will cause the CPMGFit output 
+rather than input name to be returned.
+     @return:            The file name.
+     @rtype:             str
+     &quot;&quot;&quot;
+ 
+-    return &quot;spin_%s.in&quot; % spin_id
++    # Construct the name.
++    name = &quot;spin_%s.&quot; % spin_id
++    if output:
++        name += &quot;out&quot;
++    else:
++        name += &quot;in&quot;
++
++    # Return the file name.
++    return name
+ 
+ 
+ def translate_model():
+
+Modified: branches/relax_disp/user_functions/relax_disp.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/user_functions/relax_disp.py?rev=19741&amp;r1=19740&amp;r2=19741&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_disp/user_functions/relax_disp.py?rev=19741&amp;r1=19740&amp;r2=19741&amp;view=diff</a>
+==============================================================================
+--- branches/relax_disp/user_functions/relax_disp.py (original)
++++ branches/relax_disp/user_functions/relax_disp.py Fri May 24 19:06:08 2013
+@@ -157,7 +157,7 @@
+ # Description.
+ uf.desc.append(Desc_container())
+ uf.desc[-1].add_paragraph(&quot;CPMGFit will be executed once per spin as:&quot;)
+-uf.desc[-1].add_prompt(&quot;$ cpmgfit -xmgr -f dir/spin_x.in&quot;)
++uf.desc[-1].add_prompt(&quot;$ cpmgfit -grid -xmgr -f dir/spin_x.in | tee 
+dir/spin_x.out&quot;)
+ uf.desc[-1].add_paragraph(&quot;where x is replaced by each spin ID string.  If 
+you would like to use a different CPMGFit executable file, change the binary 
+name to the appropriate file name.  If the file is not located within the 
+environment's path, be sure to include the full path in front of the binary 
+file name so it can be found.&quot;)
+ uf.backend = cpmgfit_execute
+ uf.menu_text = &quot;&amp;cpmgfit_execute&quot;
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon May 27 13:20:02 2013</div>  
+</body>
+</html>

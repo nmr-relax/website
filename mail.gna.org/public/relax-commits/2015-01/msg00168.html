@@ -1,0 +1,266 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r27322 &#45; /trunk/lib/structure/internal/object.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 27 Jan 2015 10:50:59 +0100 -->
+<!--X-Message-Id: E1YG2nT&#45;0004sL&#45;I2@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r27322 - /trunk/lib/structure/internal/object.py -- January 27, 2015 - 10:50</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r27322 - /trunk/lib/structure/internal/object.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00168" class="tabs">Index by Date</a> | <a href="threads.html#00168" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00167.html">Date Prev</a>] [<a href="msg00169.html">Date Next</a>] [<a href="msg00167.html">Thread Prev</a>] [<a href="msg00169.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 27 Jan 2015 09:50:59 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00168.html">E1YG2nT-0004sL-I2@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on January 27, 2015 - 10:50:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Jan 27 10:50:56 2015
+New Revision: 27322
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=27322&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=27322&amp;view=rev</a>
+Log:
+Bug fix for the PDB secondary sheet handling when combining multiple PDB 
+structures.
+
+The helix and sheet metadata now converts the original chain IDs into 
+molecule indices, shifted to
+new values based on the currently loaded data, when the structure.read_pdb 
+user function is
+executed.  When the structure.write_pdb user function is executed, the 
+molecule indices are
+converted into new chain IDs.  This allows the chain IDs in the HELIX and 
+SHEET records to match
+those of the ATOM and HETATOM records.
+
+
+Modified:
+    trunk/lib/structure/internal/object.py
+
+Modified: trunk/lib/structure/internal/object.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/lib/structure/internal/object.py?rev=27322&amp;r1=27321&amp;r2=27322&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/lib/structure/internal/object.py?rev=27322&amp;r1=27321&amp;r2=27322&amp;view=diff</a>
+==============================================================================
+--- trunk/lib/structure/internal/object.py      (original)
++++ trunk/lib/structure/internal/object.py      Tue Jan 27 10:50:56 2015
+@@ -487,6 +487,12 @@
+             'TURN  '
+         ]
+ 
++        # The number of pre-existing molecules.
++        if not len(self.structural_data):
++            mol_num = 0
++        else:
++            mol_num = len(self.structural_data[0].mol)
++
+         # Loop over the lines.
+         for i in range(len(lines)):
+             # No match, therefore assume to be out of the secondary 
+structure section.
+@@ -498,34 +504,56 @@
+                 # Parse the record.
+                 record_type, ser_num, helix_id, init_res_name, 
+init_chain_id, init_seq_num, init_icode, end_res_name, end_chain_id, 
+end_seq_num, end_icode, helix_class, comment, length = 
+pdb_read.helix(lines[i])
+ 
++                # The molecule indices.
++                mol_init_index = 
+self._pdb_chain_id_to_mol_index(init_chain_id)
++                mol_end_index = self._pdb_chain_id_to_mol_index(end_chain_id)
++
+                 # Only load the desired molecule.
+                 if read_mol != None:
+-                    if self._pdb_chain_id_to_mol_index(init_chain_id)+1 not 
+in read_mol:
++                    if mol_init_index + 1 not in read_mol:
+                         continue
+-                    if self._pdb_chain_id_to_mol_index(end_chain_id)+1 not 
+in read_mol:
++                    if mol_end_index + 1 not in read_mol:
+                         continue
++
++                # New molecule indices based on currently loaded data.
++                mol_init_index += mol_num
++                mol_end_index += mol_num
+ 
+                 # Store the data.
+                 if not hasattr(self, 'helices'):
+                     self.helices = []
+-                self.helices.append([helix_id, init_chain_id, init_res_name, 
+init_seq_num, end_chain_id, end_res_name, end_seq_num, helix_class, length])
++                self.helices.append([helix_id, mol_init_index, 
+init_res_name, init_seq_num, mol_end_index, end_res_name, end_seq_num, 
+helix_class, length])
+ 
+             # A sheet.
+             if lines[i][:5] == 'SHEET':
+                 # Parse the record.
+                 record_type, strand, sheet_id, num_strands, init_res_name, 
+init_chain_id, init_seq_num, init_icode, end_res_name, end_chain_id, 
+end_seq_num, end_icode, sense, cur_atom, cur_res_name, cur_chain_id, 
+cur_res_seq, cur_icode, prev_atom, prev_res_name, prev_chain_id, 
+prev_res_seq, prev_icode = pdb_read.sheet(lines[i])
+ 
++                # The molecule indices.
++                mol_init_index = 
+self._pdb_chain_id_to_mol_index(init_chain_id)
++                mol_end_index = self._pdb_chain_id_to_mol_index(end_chain_id)
++
+                 # Only load the desired molecule.
+                 if read_mol != None:
+-                    if self._pdb_chain_id_to_mol_index(init_chain_id)+1 not 
+in read_mol:
++                    if mol_init_index + 1 not in read_mol:
+                         continue
+-                    if self._pdb_chain_id_to_mol_index(end_chain_id)+1 not 
+in read_mol:
++                    if mol_end_index + 1 not in read_mol:
+                         continue
++
++                # New molecule indices based on currently loaded data.
++                mol_init_index += mol_num
++                mol_end_index += mol_num
++                mol_cur_index = None
++                if cur_chain_id:
++                    mol_cur_index = 
+self._pdb_chain_id_to_mol_index(cur_chain_id) + mol_num
++                mol_prev_index = None
++                if prev_chain_id:
++                    mol_prev_index = 
+self._pdb_chain_id_to_mol_index(prev_chain_id) + mol_num
+ 
+                 # Store the data.
+                 if not hasattr(self, 'sheets'):
+                     self.sheets = []
+-                self.sheets.append([strand, sheet_id, num_strands, 
+init_res_name, init_chain_id, init_seq_num, init_icode, end_res_name, 
+end_chain_id, end_seq_num, end_icode, sense, cur_atom, cur_res_name, 
+cur_chain_id, cur_res_seq, cur_icode, prev_atom, prev_res_name, 
+prev_chain_id, prev_res_seq, prev_icode])
++                self.sheets.append([strand, sheet_id, num_strands, 
+init_res_name, mol_init_index, init_seq_num, init_icode, end_res_name, 
+mol_end_index, end_seq_num, end_icode, sense, cur_atom, cur_res_name, 
+mol_cur_index, cur_res_seq, cur_icode, prev_atom, prev_res_name, 
+mol_prev_index, prev_res_seq, prev_icode])
+ 
+         # Return the remaining lines.
+         return lines[i:]
+@@ -2865,8 +2893,8 @@
+ 
+             # Loop over and unpack the helix data.
+             index = 1
+-            for helix_id, init_chain_id, init_res_name, init_seq_num, 
+end_chain_id, end_res_name, end_seq_num, helix_class, length in self.helices:
+-                pdb_write.helix(file, ser_num=index, helix_id=helix_id, 
+init_chain_id=init_chain_id, init_res_name=init_res_name, 
+init_seq_num=init_seq_num, end_chain_id=end_chain_id, 
+end_res_name=end_res_name, end_seq_num=end_seq_num, helix_class=helix_class, 
+length=length)
++            for helix_id, mol_init_index, init_res_name, init_seq_num, 
+mol_end_index, end_res_name, end_seq_num, helix_class, length in self.helices:
++                pdb_write.helix(file, ser_num=index, helix_id=helix_id, 
+init_chain_id=CHAIN_ID_LIST[mol_init_index], init_res_name=init_res_name, 
+init_seq_num=init_seq_num, end_chain_id=CHAIN_ID_LIST[mol_end_index], 
+end_res_name=end_res_name, end_seq_num=end_seq_num, helix_class=helix_class, 
+length=length)
+                 index += 1
+ 
+         # The SHEET records.
+@@ -2878,7 +2906,18 @@
+ 
+             # Loop over and unpack the helix data.
+             index = 1
+-            for strand, sheet_id, num_strands, init_res_name, init_chain_id, 
+init_seq_num, init_icode, end_res_name, end_chain_id, end_seq_num, end_icode, 
+sense, cur_atom, cur_res_name, cur_chain_id, cur_res_seq, cur_icode, 
+prev_atom, prev_res_name, prev_chain_id, prev_res_seq, prev_icode in 
+self.sheets:
++            for strand, sheet_id, num_strands, init_res_name, 
+mol_init_index, init_seq_num, init_icode, end_res_name, mol_end_index, 
+end_seq_num, end_icode, sense, cur_atom, cur_res_name, mol_cur_index, 
+cur_res_seq, cur_icode, prev_atom, prev_res_name, mol_prev_index, 
+prev_res_seq, prev_icode in self.sheets:
++                # Translate molecule indices to chain IDs.
++                init_chain_id = CHAIN_ID_LIST[mol_init_index]
++                end_chain_id = CHAIN_ID_LIST[mol_end_index]
++                cur_chain_id = None
++                if mol_cur_index != None:
++                    cur_chain_id = CHAIN_ID_LIST[mol_cur_index]
++                prev_chain_id = None
++                if mol_prev_index != None:
++                    prev_chain_id = CHAIN_ID_LIST[mol_prev_index]
++
++                # Write out.
+                 pdb_write.sheet(file, strand=strand, sheet_id=sheet_id, 
+num_strands=num_strands, init_res_name=init_res_name, 
+init_chain_id=init_chain_id, init_seq_num=init_seq_num, 
+init_icode=init_icode, end_res_name=end_res_name, end_chain_id=end_chain_id, 
+end_seq_num=end_seq_num, end_icode=end_icode, sense=sense, cur_atom=cur_atom, 
+cur_res_name=cur_res_name, cur_chain_id=cur_chain_id, 
+cur_res_seq=cur_res_seq, cur_icode=cur_icode, prev_atom=prev_atom, 
+prev_res_name=prev_res_name, prev_chain_id=prev_chain_id, 
+prev_res_seq=prev_res_seq, prev_icode=prev_icode)
+                 index += 1
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Jan 27 11:00:04 2015</div>  
+</body>
+</html>

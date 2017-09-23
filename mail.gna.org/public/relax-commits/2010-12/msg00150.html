@@ -1,0 +1,187 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r11850 &#45; /branches/peak_list_handling/specific_fns/api_common.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 17 Dec 2010 10:48:26 +0100 -->
+<!--X-Message-Id: E1PTWvK&#45;00005v&#45;4e@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r11850 - /branches/peak_list_handling/specific_fns/api_common.py -- December 17, 2010 - 10:48</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r11850 - /branches/peak_list_handling/specific_fns/api_common.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00150" class="tabs">Index by Date</a> | <a href="threads.html#00150" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00149.html">Date Prev</a>] [<a href="msg00151.html">Date Next</a>] [<a href="msg00149.html">Thread Prev</a>] [<a href="msg00151.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 17 Dec 2010 09:48:26 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00150.html">E1PTWvK-00005v-4e@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on December 17, 2010 - 10:48:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Dec 17 10:48:25 2010
+New Revision: 11850
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=11850&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=11850&amp;view=rev</a>
+Log:
+Redesigned the specific API common method _return_value_general() to handle 
+dictionaries.
+
+
+Modified:
+    branches/peak_list_handling/specific_fns/api_common.py
+
+Modified: branches/peak_list_handling/specific_fns/api_common.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/peak_list_handling/specific_fns/api_common.py?rev=11850&amp;r1=11849&amp;r2=11850&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/peak_list_handling/specific_fns/api_common.py?rev=11850&amp;r1=11849&amp;r2=11850&amp;view=diff</a>
+==============================================================================
+--- branches/peak_list_handling/specific_fns/api_common.py (original)
++++ branches/peak_list_handling/specific_fns/api_common.py Fri Dec 17 
+10:48:25 2010
+@@ -273,15 +273,16 @@
+         if object_name:
+             object_error = object_name + '_err'
+             object_sim = object_name + '_sim'
++            key = None
+ 
+         # The data type does not exist.
+         else:
+             # Is it a spectrum id?
+             if param in cdp.spectrum_ids:
+-                index = cdp.spectrum_ids.index(param)
+                 object_name = 'intensities'
+                 object_error = 'intensity_err'
+                 object_sim = 'intensity_sim'
++                key = param
+ 
+             # Unknown data type.
+             else:
+@@ -291,44 +292,35 @@
+         value = None
+         error = None
+ 
+-        # Value and error.
++        # Value or sim value?
++        if sim != None:
++            object_name = object_sim
++
++        # The spin value.
++        if hasattr(spin, object_name):
++            value = getattr(spin, object_name)
++            error = getattr(spin, object_error)
++
++        # The global value.
++        elif hasattr(cdp, object_name):
++            value = getattr(cdp, object_name)
++            error = getattr(cdp, object_error)
++
++        # List object.
++        if index != None:
++            value = value[index]
++            error = error[index]
++
++        # Dictionary object.
++        if key:
++            value = value[key]
++            error = error[key]
++
++        # Return the data.
+         if sim == None:
+-            # Get the value.
+-            if hasattr(spin, object_name):
+-                value = getattr(spin, object_name)
+-                if index != None:
+-                    value = value[index]
+-            elif hasattr(cdp, object_name):
+-                value = getattr(cdp, object_name)
+-                if index != None:
+-                    value = value[index]
+-
+-            # Get the error.
+-            if hasattr(spin, object_error):
+-                error = getattr(spin, object_error)
+-                if index != None:
+-                    error = error[index]
+-            elif hasattr(cdp, object_error):
+-                error = getattr(cdp, object_error)
+-                if index != None:
+-                    error = error[index]
+-
+-        # Simulation value.
++            return value, error
+         else:
+-            # Get the value.
+-            if hasattr(spin, object_sim):
+-                object = getattr(spin, object_sim)
+-                if index != None:
+-                    object = object[index]
+-                value = object[sim]
+-            elif hasattr(cdp, object_sim):
+-                object = getattr(cdp, object_sim)
+-                if index != None:
+-                    object = object[index]
+-                value = object[sim]
+-
+-        # Return the data.
+-        return value, error
++            return value[sim], error
+ 
+ 
+     def _set_error_spin(self, model_info, index, error):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Dec 17 11:20:02 2010</div>  
+</body>
+</html>

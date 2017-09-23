@@ -1,0 +1,168 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r25098 &#45; /trunk/auto_analyses/relax_disp.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 20 Aug 2014 16:01:43 +0200 -->
+<!--X-Message-Id: E1XK6SN&#45;0002Hp&#45;NF@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r25098 - /trunk/auto_analyses/relax_disp.py -- August 20, 2014 - 16:01</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r25098 - /trunk/auto_analyses/relax_disp.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00232" class="tabs">Index by Date</a> | <a href="threads.html#00232" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00231.html">Date Prev</a>] [<a href="msg00233.html">Date Next</a>] [<a href="msg00231.html">Thread Prev</a>] [<a href="msg00233.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 20 Aug 2014 14:01:43 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00232.html">E1XK6SN-0002Hp-NF@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on August 20, 2014 - 16:01:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Wed Aug 20 16:01:43 2014
+New Revision: 25098
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=25098&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=25098&amp;view=rev</a>
+Log:
+Inserted into relax_disp auto_analyses, to convert the input models.
+
+This will convert/insert the correct 'No Rex' to the corresponding 'No Rex' 
+model for R1rho off-resonance models.
+It will also translate to the corresponding 'R1 fit' model, if no 'R1 data' 
+has been loaded with relax_data.read() function.
+
+Modified:
+    trunk/auto_analyses/relax_disp.py
+
+Modified: trunk/auto_analyses/relax_disp.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/auto_analyses/relax_disp.py?rev=25098&amp;r1=25097&amp;r2=25098&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/auto_analyses/relax_disp.py?rev=25098&amp;r1=25097&amp;r2=25098&amp;view=diff</a>
+==============================================================================
+--- trunk/auto_analyses/relax_disp.py   (original)
++++ trunk/auto_analyses/relax_disp.py   Wed Aug 20 16:01:43 2014
+@@ -39,7 +39,7 @@
+ from prompt.interpreter import Interpreter
+ from specific_analyses.relax_disp.data import has_exponential_exp_type, 
+has_cpmg_exp_type, has_fixed_time_exp_type, has_r1rho_exp_type, loop_frq
+ from specific_analyses.relax_disp.data import INTERPOLATE_DISP, 
+INTERPOLATE_OFFSET, X_AXIS_DISP, X_AXIS_W_EFF, X_AXIS_THETA, Y_AXIS_R2_R1RHO, 
+Y_AXIS_R2_EFF
+-from specific_analyses.relax_disp.model import nesting_model, nesting_param
++from specific_analyses.relax_disp.model import convert_no_rex_fit_r1, 
+nesting_model, nesting_param
+ from specific_analyses.relax_disp.variables import EQ_ANALYTIC, EQ_NUMERIC, 
+EQ_SILICO, MODEL_LIST_ANALYTIC, MODEL_LIST_NEST, MODEL_LIST_NUMERIC, 
+MODEL_LIST_R1RHO_FIT_R1, MODEL_LIST_R1RHO_W_R1, MODEL_LIST_R1RHO_FULL, 
+MODEL_NOREX, MODEL_NOREX_R1RHO, MODEL_NOREX_R1RHO_FIT_R1, MODEL_PARAMS, 
+MODEL_R2EFF, PARAMS_R20
+ from status import Status; status = Status()
+ 
+@@ -100,7 +100,6 @@
+         self.pipe_name = pipe_name
+         self.pipe_bundle = pipe_bundle
+         self.results_dir = results_dir
+-        self.models = models
+         self.grid_inc = grid_inc
+         self.mc_sim_num = mc_sim_num
+         self.exp_mc_sim_num = exp_mc_sim_num
+@@ -112,6 +111,35 @@
+         self.numeric_only = numeric_only
+         self.mc_sim_all_models = mc_sim_all_models
+         self.eliminate = eliminate
++
++        # Possible convert the models for analyses.
++        # Determine if any model in the list of all models should be 
+replaced or inserted as the correct 'No Rex' model.
++        # Also translate the R1rho off-resonance model to the corresponding 
+'R1 fit' models, if R1 is not loaded.
++        converted_models, no_rex_translated, no_rex_inserted, 
+r1ho_translated = convert_no_rex_fit_r1(self_models=deepcopy(models))
++
++        if converted_models != models:
++            # Printout.
++            section(file=sys.stdout, text=&quot;Converting models.&quot;, prespace=2)
++
++            # If 'No Rex' model was translated.
++            if no_rex_translated:
++                no_rex_index = models.index(MODEL_NOREX)
++                print(&quot;\nThe 'No Rex' model for R1rho off-resonance models 
+has been translated to the model: '%s'.&quot;%(converted_models[no_rex_index]))
++            if no_rex_inserted:
++                no_rex_index = models.index(MODEL_NOREX) + 1
++                print(&quot;\nThe 'No Rex' model for R1rho off-resonance models 
+has been inserted as model: '%s'.&quot;%(converted_models[no_rex_index]))
++            if r1ho_translated:
++                print(&quot;\nIMPORTANT: R1 data is missing for this data-pipe.&quot;)
++                print(&quot;Therefore all of the R1rho off-resonance model has 
+been translated into the corresponding models where R1 is fitted.&quot;)
++                print(&quot;If the R1 parameter should not fitted, consult the 
+help pages: help(relax_data.read), to read how to load 'R1 data' before 
+analysis.&quot;)
++
++            print(&quot;\nPrevious list of models: %s&quot; % (models))
++            print(&quot;\nNew list of models: %s&quot; % (converted_models))
++
++            # Store the new order of models.
++            self.models = converted_models
++        else:
++            self.models = models
+ 
+         # No results directory, so default to the current directory.
+         if not self.results_dir:
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Aug 20 16:20:02 2014</div>  
+</body>
+</html>

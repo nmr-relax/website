@@ -1,0 +1,424 @@
+<!-- MHonArc v2.6.19+ -->
+<!--X-Subject: r28116 &#45; in /trunk: lib/structure/pca.py pipe_control/structure/main.py user_functions/structure.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 25 Nov 2015 18:38:33 +0100 -->
+<!--X-Message-Id: E1a1e1Z&#45;0008No&#45;8j@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r28116 - in /trunk: lib/structure/pca.py pipe_control/structure/main.py user_functions/structure.py -- November 25, 2015 - 18:38</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r28116 - in /trunk: lib/structure/pca.py pipe_control/structure/main.py user_functions/structure.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00046" class="tabs">Index by Date</a> | <a href="threads.html#00046" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00045.html">Date Prev</a>] [<a href="msg00047.html">Date Next</a>] [<a href="msg00045.html">Thread Prev</a>] [<a href="msg00047.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 25 Nov 2015 17:38:33 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00046.html">E1a1e1Z-0008No-8j@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on November 25, 2015 - 18:38:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Nov 25 18:38:32 2015
+New Revision: 28116
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=28116&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=28116&amp;view=rev</a>
+Log:
+Added support for 'observer' structures in the structure.pca user function.
+
+This allows a subset of the structures used in the PC analysis to have zero 
+weight so that these
+structures can be used for comparison purposes.  The obs_pipes, obs_models, 
+and obs_molecules
+arguments have been added to the user function front end.  The backend uses 
+this to create an array
+of weights for each structure.  And the lib.structure.pca functions use the 
+zero weights to remove
+the observer structures from the PC mode calculations.
+
+Modified:
+    trunk/lib/structure/pca.py
+    trunk/pipe_control/structure/main.py
+    trunk/user_functions/structure.py
+
+Modified: trunk/lib/structure/pca.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/lib/structure/pca.py?rev=28116&amp;r1=28115&amp;r2=28116&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/lib/structure/pca.py?rev=28116&amp;r1=28115&amp;r2=28116&amp;view=diff</a>
+==============================================================================
+--- trunk/lib/structure/pca.py  (original)
++++ trunk/lib/structure/pca.py  Wed Nov 25 18:38:32 2015
+@@ -23,7 +23,7 @@
+ &quot;&quot;&quot;Module for performing a principle component analysis (PCA).&quot;&quot;&quot;
+ 
+ # Python module imports.
+-from numpy import dot, float64, outer, sqrt, zeros
++from numpy import array, dot, float64, outer, sqrt, zeros
+ from numpy.linalg import eigh, svd
+ 
+ # relax library module imports.
+@@ -31,11 +31,13 @@
+ from lib.structure.statistics import calc_mean_structure
+ 
+ 
+-def calc_covariance_matrix(coord=None):
++def calc_covariance_matrix(coord=None, weights=None):
+     &quot;&quot;&quot;Calculate the covariance matrix for the structures.
+ 
+     @keyword coord:         The list of coordinates of all models to 
+superimpose.  The first index is the models, the second is the atomic 
+positions, and the third is the xyz coordinates.
+     @type coord:            list of numpy rank-2, Nx3 arrays
++    @keyword weights:       The weights for each structure.
++    @type weights:          list of float
+     @return:                The covariance matrix and the deviation matrix.
+     @rtype:                 numpy rank-2 3Nx3N array, numpy rank-2 MxNx3 
+array
+     &quot;&quot;&quot;
+@@ -43,12 +45,16 @@
+     # Init.
+     M = len(coord)
+     N = len(coord[0])
++    if weights == None:
++        weights = ones(M, float64)
++    else:
++        weights = array(weights, float64)
+     covariance_matrix = zeros((N*3, N*3), float64)
+     deviations = zeros((M, N, 3), float64)
+     mean_struct = zeros((N, 3), float64)
+ 
+     # Calculate the mean structure.
+-    calc_mean_structure(coord, mean_struct)
++    calc_mean_structure(coord, mean_struct, weights=weights)
+ 
+     # Loop over the models.
+     for i in range(M):
+@@ -56,10 +62,10 @@
+         deviations[i] = coord[i] - mean_struct
+ 
+         # Sum the covariance element.
+-        covariance_matrix += outer(deviations[i], deviations[i])
++        covariance_matrix += weights[i] * (outer(deviations[i], 
+deviations[i]))
+ 
+     # Average.
+-    covariance_matrix /= M
++    covariance_matrix /= weights.sum()
+ 
+     # Return the matrix.
+     return covariance_matrix, deviations
+@@ -73,11 +79,13 @@
+     &quot;&quot;&quot;
+ 
+ 
+-def pca_analysis(coord=None, algorithm='eigen', num_modes=4):
++def pca_analysis(coord=None, weights=None, algorithm='eigen', num_modes=4):
+     &quot;&quot;&quot;Perform the PCA analysis.
+ 
+     @keyword coord:         The list of coordinates of all models to 
+superimpose.  The first index is the models, the second is the atomic 
+positions, and the third is the xyz coordinates.
+     @type coord:            list of numpy rank-2, Nx3 arrays
++    @keyword weights:       The weights for each structure.
++    @type weights:          list of float
+     @keyword algorithm:     The PCA algorithm to use (either 'eigen' or 
+'svd').
+     @type algorithm:        str
+     @keyword num_modes:     The number of PCA modes to calculate.
+@@ -91,7 +99,7 @@
+     N = len(coord[0])
+ 
+     # Calculate the covariance matrix for the structures.
+-    covariance_matrix, deviations = calc_covariance_matrix(coord)
++    covariance_matrix, deviations = calc_covariance_matrix(coord, 
+weights=weights)
+ 
+     # Perform an eigenvalue decomposition of the covariance matrix.
+     if algorithm == 'eigen':
+
+Modified: trunk/pipe_control/structure/main.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/pipe_control/structure/main.py?rev=28116&amp;r1=28115&amp;r2=28116&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/pipe_control/structure/main.py?rev=28116&amp;r1=28115&amp;r2=28116&amp;view=diff</a>
+==============================================================================
+--- trunk/pipe_control/structure/main.py        (original)
++++ trunk/pipe_control/structure/main.py        Wed Nov 25 18:38:32 2015
+@@ -21,7 +21,7 @@
+ 
+ # Python module imports.
+ from minfx.generic import generic_minimise
+-from numpy import array, average, dot, float64, mean, std, zeros
++from numpy import array, average, dot, float64, mean, ones, std, zeros
+ from numpy.linalg import norm
+ from os import F_OK, access, getcwd
+ from re import search
+@@ -1009,25 +1009,31 @@
+     cdp.N = len(from_mols)
+ 
+ 
+-def pca(pipes=None, models=None, molecules=None, atom_id=None, 
+algorithm=None, num_modes=4, format='grace', dir=None):
+-    &quot;&quot;&quot;PCA analysis of the motions between all the loaded models.
+-
+-    @keyword pipes:     The data pipes to determine the RMSD for.
+-    @type pipes:        None or list of str
+-    @keyword models:    The list of models to determine the RMSD for.  The 
+number of elements must match the pipes argument.  If set to None, then all 
+models will be used.
+-    @type models:       None or list of lists of int
+-    @keyword molecules: The list of molecules to determine the RMSD for.  
+The number of elements must match the pipes argument.
+-    @type molecules:    None or list of lists of str
+-    @keyword atom_id:   The atom identification string of the coordinates of 
+interest.  This matches the spin ID string format.
+-    @type atom_id:      str or None
+-    @keyword algorithm: The PCA algorithm to use (either 'eigen' or 'svd').
+-    @type algorithm:    str
+-    @keyword num_modes: The number of PCA modes to calculate.
+-    @type num_modes:    int
+-    @keyword format:    The graph format to use.
+-    @type format:       str
+-    @keyword dir:       The optional directory to place the graphs into.
+-    @type dir:          str
++def pca(pipes=None, models=None, molecules=None, obs_pipes=None, 
+obs_models=None, obs_molecules=None, atom_id=None, algorithm=None, 
+num_modes=4, format='grace', dir=None):
++    &quot;&quot;&quot;PC analysis of the motions between all the loaded models.
++
++    @keyword pipes:         The data pipes to perform the PC analysis on.
++    @type pipes:            None or list of str
++    @keyword models:        The list of models to perform the PC analysis 
+on.  The number of elements must match the pipes argument.  If set to None, 
+then all models will be used.
++    @type models:           None or list of lists of int
++    @keyword molecules:     The list of molecules to perform the PC analysis 
+on.  The number of elements must match the pipes argument.
++    @type molecules:        None or list of lists of str
++    @keyword obs_pipes:     The data pipes in the PC analysis which will 
+have zero weight.  These structures are for comparison.
++    @type obs_pipes:        None or list of str
++    @keyword obs_models:    The list of models in the PC analysis which will 
+have zero weight.  These structures are for comparison.  The number of 
+elements must match the pipes argument.  If set to None, then all models will 
+be used.
++    @type obs_models:       None or list of lists of int
++    @keyword obs_molecules: The list of molecules in the PC analysis which 
+will have zero weight.  These structures are for comparison.  The number of 
+elements must match the pipes argument.
++    @type obs_molecules:    None or list of lists of str
++    @keyword atom_id:       The atom identification string of the 
+coordinates of interest.  This matches the spin ID string format.
++    @type atom_id:          str or None
++    @keyword algorithm:     The PCA algorithm to use (either 'eigen' or 
+'svd').
++    @type algorithm:        str
++    @keyword num_modes:     The number of PCA modes to calculate.
++    @type num_modes:        int
++    @keyword format:        The graph format to use.
++    @type format:           str
++    @keyword dir:           The optional directory to place the graphs into.
++    @type dir:              str
+     &quot;&quot;&quot;
+ 
+     # Checks.
+@@ -1036,8 +1042,24 @@
+     # Assemble the structural coordinates.
+     coord, ids, object_id_list, model_list, molecule_list, mol_names, 
+res_names, res_nums, atom_names, elements = 
+assemble_structural_coordinates(pipes=pipes, models=models, 
+molecules=molecules, atom_id=atom_id, lists=True)
+ 
+-    # Perform the PCA analysis.
+-    values, vectors, proj = pca_analysis(coord=coord, algorithm=algorithm, 
+num_modes=num_modes)
++    # Determine the structure weights.
++    M = len(coord)
++    if obs_pipes == None:
++        obs_pipes = []
++    weights = ones(M, float64)
++    for struct in range(M):
++        # Is the structure in the 'observing' lists?
++        for i in range(len(obs_pipes)):
++            # Matching data pipe.
++            if object_id_list[struct] == obs_pipes[i]:
++                # Matching molecules.
++                if obs_molecules == None or molecule_list[struct] == 
+obs_molecules[i]:
++                    # Matching models.
++                    if obs_models == None or model_list[struct] == 
+obs_models[i]:
++                        weights[struct] = 0.0
++
++    # Perform the PC analysis.
++    values, vectors, proj = pca_analysis(coord=coord, weights=weights, 
+algorithm=algorithm, num_modes=num_modes)
+ 
+     # Store the values.
+     cdp.structure.pca_values = values
+@@ -1045,7 +1067,6 @@
+     cdp.structure.pca_proj = proj
+ 
+     # Generate the graphs.
+-    M = len(coord)
+     for mode in range(num_modes - 1):
+         # Assemble the data.
+         data = [[[]]]
+
+Modified: trunk/user_functions/structure.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/user_functions/structure.py?rev=28116&amp;r1=28115&amp;r2=28116&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/user_functions/structure.py?rev=28116&amp;r1=28115&amp;r2=28116&amp;view=diff</a>
+==============================================================================
+--- trunk/user_functions/structure.py   (original)
++++ trunk/user_functions/structure.py   Wed Nov 25 18:38:32 2015
+@@ -869,12 +869,12 @@
+ # The structure.pca user function.
+ uf = uf_info.add_uf('structure.pca')
+ uf.title = &quot;Principle component analysis (PCA) of the motions in an ensemble 
+of structures.&quot;
+-uf.title_short = &quot;PCA analysis of structures.&quot;
++uf.title_short = &quot;Structural PCA.&quot;
+ uf.add_keyarg(
+     name = &quot;pipes&quot;,
+     py_type = &quot;str_list&quot;,
+     desc_short = &quot;data pipes&quot;,
+-    desc = &quot;The data pipes to determine the RMSD for.&quot;,
++    desc = &quot;The data pipes to perform the PC analysis on.&quot;,
+     wiz_combo_iter = pipe_names,
+     wiz_read_only = False,
+     can_be_none = True
+@@ -883,14 +883,37 @@
+     name = &quot;models&quot;,
+     py_type = &quot;int_list_of_lists&quot;,
+     desc_short = &quot;model list for each data pipe&quot;,
+-    desc = &quot;The list of models for each data pipe to determine the RMSD for. 
+ The number of elements must match the pipes argument.  If no models are 
+given, then all will be used.&quot;,
++    desc = &quot;The list of models for each data pipe to perform the PC analysis 
+on.  The number of elements must match the pipes argument.  If no models are 
+given, then all will be used.&quot;,
+     can_be_none = True
+ )
+ uf.add_keyarg(
+     name = &quot;molecules&quot;,
+     py_type = &quot;str_list_of_lists&quot;,
+     desc_short = &quot;molecule list for each data pipe&quot;,
+-    desc = &quot;The list of molecules for each data pipe to determine the RMSD 
+for.  The RMSD will only be calculated for atoms with identical residue name 
+and number and atom name.  The number of elements must match the pipes 
+argument.  If no molecules are given, then all will be used.&quot;,
++    desc = &quot;The list of molecules for each data pipe to perform the PC 
+analysis on.  The PCA will only be calculated for atoms with identical 
+residue name and number and atom name.  The number of elements must match the 
+pipes argument.  If no molecules are given, then all will be used.&quot;,
++    can_be_none = True
++)
++uf.add_keyarg(
++    name = &quot;obs_pipes&quot;,
++    py_type = &quot;str_list&quot;,
++    desc_short = &quot;observing data pipes&quot;,
++    desc = &quot;The data pipes in the PC analysis which will have zero weight.  
+These structures are for comparison.&quot;,
++    wiz_combo_iter = pipe_names,
++    wiz_read_only = False,
++    can_be_none = True
++)
++uf.add_keyarg(
++    name = &quot;obs_models&quot;,
++    py_type = &quot;int_list_of_lists&quot;,
++    desc_short = &quot;observing model list for each data pipe&quot;,
++    desc = &quot;The list of models for each data pipe in the PC analysis which 
+will have zero weight.  These structures are for comparison.  The number of 
+elements must match the pipes argument.  If no models are given, then all 
+will be used.&quot;,
++    can_be_none = True
++)
++uf.add_keyarg(
++    name = &quot;obs_molecules&quot;,
++    py_type = &quot;str_list_of_lists&quot;,
++    desc_short = &quot;observing molecule list for each data pipe&quot;,
++    desc = &quot;The list of molecules for each data pipe in the PC analysis 
+which will have zero weight.  These structures are for comparison.  The PCA 
+will only be calculated for atoms with identical residue name and number and 
+atom name.  The number of elements must match the pipes argument.  If no 
+molecules are given, then all will be used.&quot;,
+     can_be_none = True
+ )
+ uf.add_keyarg(
+@@ -942,6 +965,7 @@
+ uf.desc.append(Desc_container())
+ uf.desc[-1].add_paragraph(&quot;Perform a principle component analysis (PCA) for 
+all the chosen structures.  2D graphs of the PC projections will be generated 
+and placed in the specified directory.&quot;)
+ uf.desc[-1].add_paragraph(paragraph_multi_struct)
++uf.desc[-1].add_paragraph(&quot;A subset of the structures can be set as 
+'observing'.  This means that they will have a weight of zero when 
+constructing the covariance matrix and determining its eigenvectors.  
+Therefore the structures will not contribute to the principle components, but 
+will be present and compared to structures used in the analysis.&quot;)
+ uf.desc[-1].add_paragraph(paragraph_atom_id)
+ # Prompt examples.
+ uf.desc.append(Desc_container(&quot;Prompt examples&quot;))
+@@ -949,7 +973,7 @@
+ uf.desc[-1].add_prompt(&quot;relax&gt; structure.pca()&quot;)
+ uf.backend = pipe_control.structure.main.pca
+ uf.menu_text = &quot;&amp;pca&quot;
+-uf.wizard_height_desc = 400
++uf.wizard_height_desc = 300
+ uf.wizard_size = (1000, 750)
+ uf.wizard_image = WIZARD_IMAGE_PATH + 'structure' + sep + '2JK4.png'
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Nov 25 18:40:03 2015</div>  
+</body>
+</html>

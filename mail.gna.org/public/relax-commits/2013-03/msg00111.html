@@ -1,0 +1,234 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r18693 &#45; /trunk/lib/text/table.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 08 Mar 2013 12:05:12 +0100 -->
+<!--X-Message-Id: E1UDv6u&#45;0001Fp&#45;Ma@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r18693 - /trunk/lib/text/table.py -- March 08, 2013 - 12:05</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r18693 - /trunk/lib/text/table.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00111" class="tabs">Index by Date</a> | <a href="threads.html#00111" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00110.html">Date Prev</a>] [<a href="msg00112.html">Date Next</a>] [<a href="msg00110.html">Thread Prev</a>] [<a href="msg00112.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 08 Mar 2013 11:05:12 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00111.html">E1UDv6u-0001Fp-Ma@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on March 08, 2013 - 12:05:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Mar  8 12:05:12 2013
+New Revision: 18693
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=18693&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=18693&amp;view=rev</a>
+Log:
+Implemented multi-column support in lib.text.table.format_table().
+
+
+Modified:
+    trunk/lib/text/table.py
+
+Modified: trunk/lib/text/table.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/lib/text/table.py?rev=18693&amp;r1=18692&amp;r2=18693&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/lib/text/table.py?rev=18693&amp;r1=18692&amp;r2=18693&amp;view=diff</a>
+==============================================================================
+--- trunk/lib/text/table.py (original)
++++ trunk/lib/text/table.py Fri Mar  8 12:05:12 2013
+@@ -88,16 +88,34 @@
+ 
+     # Initialise.
+     line = prefix + pad_left
++    num_col = len(widths)
+ 
+     # Loop over the columns.
+-    for i in range(len(widths)):
++    for i in range(num_col):
++        # Multicolumn (middle/end).
++        if text[i] == MULTI_COL:
++            continue
++
+         # The column separator.
+         if i &gt; 0:
+             line += separator
+ 
+-        # The text.
+-        line += text[i]
+-        line += &quot; &quot; * (widths[i] - len(text[i]))
++        # Multicolumn (start).
++        if i &lt; num_col-1 and text[i+1] == MULTI_COL:
++            # Find the full multicell width.
++            width = widths[i]
++            for j in range(i+1, num_col):
++                if text[j] == MULTI_COL:
++                    width += len(separator) + widths[j]
++
++            # Add the padded text.
++            line += text[i]
++            line += &quot; &quot; * (width - len(text[i]))
++
++        # Normal cell.
++        else:
++            line += text[i]
++            line += &quot; &quot; * (widths[i] - len(text[i]))
+ 
+     # Close the line.
+     line += pad_right + postfix + &quot;\n&quot;
+@@ -108,6 +126,9 @@
+ 
+ def format_table(headings=None, contents=None, max_width=None, separator='   
+', pad_left=' ', pad_right=' ', prefix=' ', postfix=' ', spacing=False, 
+debug=False):
+     &quot;&quot;&quot;Format and return the table as text.
++
++    If the heading or contents contains the value of the MULTI_COL constant 
+defined in this module, then that cell will be merged with the previous cell 
+to allow elements to span multiple columns.
++
+ 
+     @keyword headings:  The table header.
+     @type headings:     list of lists of str
+@@ -139,18 +160,30 @@
+     num_cols = len(contents[0])
+     num_head_rows = len(headings)
+ 
+-    # The column widths.
+-    widths = [0] * num_cols
++    # Initialise the pre-wrapping column widths.
++    prewrap_widths = [0] * num_cols
++
++    # Determine the maximum column widths from the headers.
+     for i in range(num_head_rows):
+         for j in range(num_cols):
++            # Skip multicolumn entries.
++            if j &lt; num_cols-1 and headings[i][j+1] == MULTI_COL:
++                continue
++
+             # The element is larger than the previous.
+-            if len(headings[i][j]) &gt; widths[j]:
+-                widths[j] = len(headings[i][j])
++            if len(headings[i][j]) &gt; prewrap_widths[j]:
++                prewrap_widths[j] = len(headings[i][j])
++
++    # Determine the maximum column widths from the content.
+     for i in range(num_rows):
+         for j in range(num_cols):
++            # Skip multicolumn entries.
++            if j &lt; num_cols-1 and contents[i][j+1] == MULTI_COL:
++                continue
++
+             # The element is larger than the previous.
+-            if len(contents[i][j]) &gt; widths[j]:
+-                widths[j] = len(contents[i][j])
++            if len(contents[i][j]) &gt; prewrap_widths[j]:
++                prewrap_widths[j] = len(contents[i][j])
+ 
+     # The free space for the text (subtracting the space used for the 
+formatting).
+     used = len(pad_left)
+@@ -162,7 +195,7 @@
+         free_space = 1000
+ 
+     # The maximal width for all cells.
+-    free_width = sum(widths)
++    free_width = sum(prewrap_widths)
+ 
+     # Column wrapping.
+     if free_width &gt; free_space:
+@@ -174,7 +207,7 @@
+             print(&quot;%-20s %s&quot; % (&quot;free space:&quot;, free_space))
+ 
+         # New structures.
+-        new_widths = deepcopy(widths)
++        new_widths = deepcopy(prewrap_widths)
+         num_cols_wrap = num_cols
+         free_space_wrap = free_space
+         col_wrap = [True] * num_cols
+@@ -215,7 +248,7 @@
+ 
+         # Debugging printouts.
+         if debug:
+-            print(&quot;    %-20s %s&quot; % (&quot;widths:&quot;, widths))
++            print(&quot;    %-20s %s&quot; % (&quot;prewrap_widths:&quot;, prewrap_widths))
+             print(&quot;    %-20s %s&quot; % (&quot;new_widths:&quot;, new_widths))
+             print(&quot;    %-20s %s&quot; % (&quot;num_cols:&quot;, num_cols))
+             print(&quot;    %-20s %s&quot; % (&quot;num_cols_wrap:&quot;, num_cols_wrap))
+@@ -225,7 +258,7 @@
+ 
+     # No column wrapping.
+     else:
+-        new_widths = widths
++        new_widths = prewrap_widths
+         col_wrap = [False] * num_cols
+ 
+     # The total table width.
+@@ -235,7 +268,7 @@
+     text += _rule(width=total_width)    # Top rule.
+     text += _blank(width=total_width)    # Blank line.
+     for i in range(num_head_rows):
+-        text += _table_line(text=headings[i], widths=new_widths, 
+separator=separator, pad_left=pad_left, pad_right=pad_right, prefix=prefix, 
+postfix=postfix)
++        text += _table_line(text=headings[i], widths=new_widths, separator=' 
+  ', pad_left=pad_left, pad_right=pad_right, prefix=prefix, postfix=postfix)
+     text += _rule(width=total_width)    # Middle rule.
+ 
+     # The table contents.
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Mar 08 12:40:02 2013</div>  
+</body>
+</html>

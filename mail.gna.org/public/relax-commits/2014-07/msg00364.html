@@ -1,0 +1,225 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r24730 &#45; in /branches/frame_order_cleanup: ./ pipe_control/minimise.py user_functions/minimisation.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 24 Jul 2014 18:49:59 +0200 -->
+<!--X-Message-Id: E1XAMDP&#45;0005V5&#45;8B@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r24730 - in /branches/frame_order_cleanup: ./ pipe_control/minimise.py user_functions/minimisation.py -- July 24, 2014 - 18:49</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r24730 - in /branches/frame_order_cleanup: ./ pipe_control/minimise.py user_functions/minimisation.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00364" class="tabs">Index by Date</a> | <a href="threads.html#00364" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00363.html">Date Prev</a>] [<a href="msg00365.html">Date Next</a>] [<a href="msg00363.html">Thread Prev</a>] [<a href="msg00365.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 24 Jul 2014 16:49:59 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00364.html">E1XAMDP-0005V5-8B@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on July 24, 2014 - 18:49:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Jul 24 18:49:58 2014
+New Revision: 24730
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=24730&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=24730&amp;view=rev</a>
+Log:
+Merged revisions 24729 via svnmerge from 
+svn+ssh://bugman@xxxxxxxxxxx/svn/relax/trunk
+
+........
+  r24729 | bugman | 2014-07-24 18:38:04 +0200 (Thu, 24 Jul 2014) | 5 lines
+  
+  Improved the logic for skipping parameters in the grid search.
+  
+  The logic is also fully explained in the user function documentation.
+........
+
+Modified:
+    branches/frame_order_cleanup/   (props changed)
+    branches/frame_order_cleanup/pipe_control/minimise.py
+    branches/frame_order_cleanup/user_functions/minimisation.py
+
+Propchange: branches/frame_order_cleanup/
+------------------------------------------------------------------------------
+--- svnmerge-integrated (original)
++++ svnmerge-integrated Thu Jul 24 18:49:58 2014
+@@ -1 +1 @@
+-/trunk:1-24727
++/trunk:1-24729
+
+Modified: branches/frame_order_cleanup/pipe_control/minimise.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/pipe_control/minimise.py?rev=24730&amp;r1=24729&amp;r2=24730&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/pipe_control/minimise.py?rev=24730&amp;r1=24729&amp;r2=24730&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/pipe_control/minimise.py       (original)
++++ branches/frame_order_cleanup/pipe_control/minimise.py       Thu Jul 24 
+18:49:58 2014
+@@ -303,6 +303,10 @@
+             # Alias the number of increments for this parameter.
+             incs = model_inc[-1][i]
+ 
++            # Error checking for increment values of None.
++            if incs == None and values[i] in [None, {}, []]:
++                raise RelaxError(&quot;The parameter '%s' has no preset value, 
+therefore a grid increment of None is not valid.&quot; % names[i])
++
+             # The lower bound for this parameter.
+             if lower != None:
+                 lower_i = lower[i]
+@@ -315,15 +319,38 @@
+             else:
+                 upper_i = param_object.grid_upper(names[i], incs=incs, 
+model_info=model_info)
+ 
++            # The skipping logic.
++            skip = False
++            if skip_preset:
++                # Override the flag if the zoom is on.
++                if zoom:
++                    skip = False
++
++                # No preset value.
++                elif values[i] in [None, {}, []]:
++                    skip = False
++
++                # The preset value is a NaN value due to numpy conversions 
+of None.
++                elif isNaN(values[i]):
++                    skip = False
++
++                # Ok, now the parameter can be skipped.
++                else:
++                    skip = True
++
++            # Override the skip flag if the incs value is None.
++            if incs == None:
++                skip = True
++
+             # Skip preset values.
+-            if not zoom and skip_preset and not values[i] in [None, {}, []] 
+and not isNaN(values[i]):
++            if skip:
+                 lower_i = values[i]
+                 upper_i = values[i]
+                 model_inc[-1][i] = incs = 1
+                 comment = 'Preset value'
+ 
+             # Zooming grid.
+-            if zoom:
++            elif zoom:
+                 # The full size and scaled size.
+                 size = upper_i - lower_i
+                 zoom_size = size * zoom_factor
+
+Modified: branches/frame_order_cleanup/user_functions/minimisation.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/user_functions/minimisation.py?rev=24730&amp;r1=24729&amp;r2=24730&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/user_functions/minimisation.py?rev=24730&amp;r1=24729&amp;r2=24730&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/user_functions/minimisation.py (original)
++++ branches/frame_order_cleanup/user_functions/minimisation.py Thu Jul 24 
+18:49:58 2014
+@@ -366,13 +366,14 @@
+     default = True,
+     py_type = &quot;bool&quot;,
+     desc_short = &quot;skip preset parameter flag&quot;,
+-    desc = &quot;This argument, when True, allows any parameter which already has 
+a value set to be skipped in the grid search.&quot;
++    desc = &quot;This argument, when True, allows any parameter which already has 
+a value set to be skipped in the grid search.  This value will be overridden 
+and turned off when a zooming grid search is active.&quot;
+ )
+ # Description.
+ uf.desc.append(Desc_container())
+ uf.desc[-1].add_paragraph(&quot;The optimisation of a mathematical model normally 
+consists of two parts - a coarse grid search across the parameter space to 
+find an initial set of parameter values followed by the use of a high 
+precision optimisation algorithm to exactly find the local or global 
+solution.  The grid search is an essential tool as it allows a non-biased 
+initial optimisation position to be found.  It avoids the statistical bias 
+and preconditioning introduced by using a self chosen initial parameter set.  
+The high computational cost of the grid search is almost always favourable to 
+the statistical bias of a user defined starting position.&quot;)
+ uf.desc[-1].add_paragraph(&quot;The region of the parameter space that the grid 
+search covers is defined by the lower and upper grid bounds.  These will 
+generally default to the entire parameter space except for when the parameter 
+is non-bounded, for example a 3D position in the PDB space.  This user 
+function will print out the grid bounds used and, if the default bounds are 
+deemed to be insufficient, then the lower, upper or both bounds can supplied. 
+ This only works if all active models have the same parameters.  The 
+coarseness or fineness of the grid is defined by the number of increments to 
+search across between the bounds.  For an alternative to using large numbers 
+of increments, see the zooming grid search.&quot;)
+ uf.desc[-1].add_paragraph(&quot;It is possible to decrease the dimensionality of 
+the grid search, and hence drop the computational cost by orders of 
+magnitude, if certain parameter values are know a priori.  For example if the 
+values are determined via a different experiment.  Such parameters can be set 
+with the value setting user function.  Then, when the skip preset flag is 
+set, these parameters will be skipped in the grid search.  This feature 
+should not be abused and statistical bias should be avoided at all cost.&quot;)
++uf.desc[-1].add_paragraph(&quot;The parameter skipping logic is as follows.  
+Firstly setting the increments argument to a list with None elements causes 
+the corresponding parameters to be skipped in the grid search, or an error to 
+be raised if no preset parameter is present.  This overrides all other 
+settings.  Secondly the preset skipping flag only allows parameters to be 
+skipped if the zooming grid search is non-active and a value is preset.&quot;)
+ uf.backend = minimise.grid_search
+ uf.menu_text = &quot;&amp;grid_search&quot;
+ uf.gui_icon = &quot;relax.grid_search&quot;
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Jul 24 19:00:02 2014</div>  
+</body>
+</html>

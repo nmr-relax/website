@@ -1,0 +1,218 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r20425 &#45; in /branches/relax_disp: lib/dispersion/lm63_3site.py	target_functions/relax_disp.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 19 Jul 2013 20:25:05 +0200 -->
+<!--X-Message-Id: E1V0FMX&#45;0001Rr&#45;JY@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r20425 - in /branches/relax_disp: lib/dispersion/lm63_3site.py	target_functions/relax_disp.py -- July 19, 2013 - 20:25</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r20425 - in /branches/relax_disp: lib/dispersion/lm63_3site.py	target_functions/relax_disp.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00167" class="tabs">Index by Date</a> | <a href="threads.html#00167" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00166.html">Date Prev</a>] [<a href="msg00168.html">Date Next</a>] [<a href="msg00166.html">Thread Prev</a>] [<a href="msg00168.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 19 Jul 2013 18:25:05 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00167.html">E1V0FMX-0001Rr-JY@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on July 19, 2013 - 20:25:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Jul 19 20:25:03 2013
+New Revision: 20425
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=20425&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=20425&amp;view=rev</a>
+Log:
+Speed ups for the 'LM63 3-site' target function.
+
+Some mathematical operations have been shifted from the library code into the 
+target function so
+that is only calculates once per function call.
+
+
+Modified:
+    branches/relax_disp/lib/dispersion/lm63_3site.py
+    branches/relax_disp/target_functions/relax_disp.py
+
+Modified: branches/relax_disp/lib/dispersion/lm63_3site.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/lib/dispersion/lm63_3site.py?rev=20425&amp;r1=20424&amp;r2=20425&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_disp/lib/dispersion/lm63_3site.py?rev=20425&amp;r1=20424&amp;r2=20425&amp;view=diff</a>
+==============================================================================
+--- branches/relax_disp/lib/dispersion/lm63_3site.py (original)
++++ branches/relax_disp/lib/dispersion/lm63_3site.py Fri Jul 19 20:25:03 2013
+@@ -48,7 +48,7 @@
+ from math import tanh
+ 
+ 
+-def r2eff_LM63_3site(r20=None, phi_ex_B=None, phi_ex_C=None, kB=None, 
+kC=None, cpmg_frqs=None, back_calc=None, num_points=None):
++def r2eff_LM63_3site(r20=None, rex_B=None, rex_C=None, quart_kB=None, 
+quart_kC=None, cpmg_frqs=None, back_calc=None, num_points=None):
+     &quot;&quot;&quot;Calculate the R2eff values for the LM63 3-site model.
+ 
+     See the module docstring for details.
+@@ -56,14 +56,14 @@
+ 
+     @keyword r20:           The R20 parameter value (R2 with no exchange).
+     @type r20:              float
+-    @keyword phi_ex_B:      The phi_ex_B parameter value.
+-    @type phi_ex_B:         float
+-    @keyword phi_ex_C:      The phi_ex_C parameter value.
+-    @type phi_ex_C:         float
+-    @keyword kB:            Approximate chemical exchange rate constant 
+between sites A and B (the exchange rate in rad/s).
+-    @type kB:               float
+-    @keyword kC:            Approximate chemical exchange rate constant 
+between sites A and C (the exchange rate in rad/s).
+-    @type kC:               float
++    @keyword rex_B:         The phi_ex_B / kB parameter value.
++    @type rex_B:            float
++    @keyword rex_C:         The phi_ex_C / kC parameter value.
++    @type rex_C:            float
++    @keyword quart_kB:      Approximate chemical exchange rate constant 
+between sites A and B (the exchange rate in rad/s) divided by 4.
++    @type quart_kB:         float
++    @keyword quart_kC:      Approximate chemical exchange rate constant 
+between sites A and C (the exchange rate in rad/s) divided by 4.
++    @type quart_kC:         float
+     @keyword cpmg_frqs:     The CPMG nu1 frequencies.
+     @type cpmg_frqs:        numpy rank-1 float array
+     @keyword back_calc:     The array for holding the back calculated R2eff 
+values.  Each element corresponds to one of the CPMG nu1 frequencies.
+@@ -72,24 +72,18 @@
+     @type num_points:       int
+     &quot;&quot;&quot;
+ 
+-    # Repetitive calculations (to speed up calculations).
+-    rex_B = phi_ex_B / kB
+-    rex_C = phi_ex_C / kC
+-    kB_4 = 4.0 / kB
+-    kC_4 = 4.0 / kC
+-
+     # Loop over the time points, back calculating the R2eff values.
+     for i in range(num_points):
+         # Catch zeros.
+-        if phi_ex_B == 0.0 and phi_ex_C == 0.0:
++        if rex_B == 0.0 and rex_C == 0.0:
+             back_calc[i] = r20
+ 
+         # Avoid divide by zero.
+-        elif kB == 0.0 or kC == 0.0:
++        elif quart_kB == 0.0 or quart_kC == 0.0:
+             back_calc[i] = 1e100
+ 
+         # The full formula.
+         else:
+             back_calc[i] = r20
+-            back_calc[i] += rex_B * (1.0 - kB_4 * cpmg_frqs[i] * tanh(kB / 
+(4.0 * cpmg_frqs[i])))
+-            back_calc[i] += rex_C * (1.0 - kC_4 * cpmg_frqs[i] * tanh(kC / 
+(4.0 * cpmg_frqs[i])))
++            back_calc[i] += rex_B * (1.0 - cpmg_frqs[i] * tanh(quart_kB * 
+cpmg_frqs[i]) / quart_kB)
++            back_calc[i] += rex_C * (1.0 - cpmg_frqs[i] * tanh(quart_kC * 
+cpmg_frqs[i]) / quart_kC)
+
+Modified: branches/relax_disp/target_functions/relax_disp.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/target_functions/relax_disp.py?rev=20425&amp;r1=20424&amp;r2=20425&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_disp/target_functions/relax_disp.py?rev=20425&amp;r1=20424&amp;r2=20425&amp;view=diff</a>
+==============================================================================
+--- branches/relax_disp/target_functions/relax_disp.py (original)
++++ branches/relax_disp/target_functions/relax_disp.py Fri Jul 19 20:25:03 
+2013
+@@ -538,6 +538,12 @@
+         kB = params[self.end_index[2]]
+         kC = params[self.end_index[2]+1]
+ 
++        # Once off parameter conversions.
++        rex_B = phi_ex_B / kB
++        rex_C = phi_ex_C / kC
++        quart_kB = kB / 4.0
++        quart_kC = kC / 4.0
++
+         # Initialise.
+         chi2_sum = 0.0
+ 
+@@ -548,13 +554,13 @@
+                 # The R20 index.
+                 r20_index = frq_index + spin_index*self.num_frq
+ 
+-                # Convert phi_ex from ppm^2 to (rad/s)^2.
++                # Convert phi_ex (or rex) from ppm^2 to (rad/s)^2.
+                 frq2 = self.frqs[spin_index, frq_index]**2
+-                phi_ex_B_scaled = phi_ex_B[spin_index] * frq2
+-                phi_ex_C_scaled = phi_ex_C[spin_index] * frq2
++                rex_B_scaled = rex_B[spin_index] * frq2
++                rex_C_scaled = rex_C[spin_index] * frq2
+ 
+                 # Back calculate the R2eff values.
+-                r2eff_LM63_3site(r20=R20[r20_index], 
+phi_ex_B=phi_ex_B_scaled, phi_ex_C=phi_ex_C_scaled, kB=kB, kC=kC, 
+cpmg_frqs=self.cpmg_frqs, back_calc=self.back_calc[spin_index, frq_index], 
+num_points=self.num_disp_points)
++                r2eff_LM63_3site(r20=R20[r20_index], rex_B=rex_B_scaled, 
+rex_C=rex_C_scaled, quart_kB=quart_kB, quart_kC=quart_kC, 
+cpmg_frqs=self.cpmg_frqs, back_calc=self.back_calc[spin_index, frq_index], 
+num_points=self.num_disp_points)
+ 
+                 # For all missing data points, set the back-calculated value 
+to the measured values so that it has no effect on the chi-squared value.
+                 for point_index in range(self.num_disp_points):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Sat Jul 20 13:40:02 2013</div>  
+</body>
+</html>

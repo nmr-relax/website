@@ -1,0 +1,263 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r11833 &#45; /branches/peak_list_handling/specific_fns/relax_fit.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 15 Dec 2010 18:33:22 +0100 -->
+<!--X-Message-Id: E1PSvEA&#45;00045o&#45;U5@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r11833 - /branches/peak_list_handling/specific_fns/relax_fit.py -- December 15, 2010 - 18:33</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r11833 - /branches/peak_list_handling/specific_fns/relax_fit.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00133" class="tabs">Index by Date</a> | <a href="threads.html#00133" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00132.html">Date Prev</a>] [<a href="msg00134.html">Date Next</a>] [<a href="msg00132.html">Thread Prev</a>] [<a href="msg00134.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 15 Dec 2010 17:33:22 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00133.html">E1PSvEA-00045o-U5@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on December 15, 2010 - 18:33:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Dec 15 18:33:22 2010
+New Revision: 11833
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=11833&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=11833&amp;view=rev</a>
+Log:
+Converted the specific relaxation curve fitting code to use the dictionary 
+data structures.
+
+
+Modified:
+    branches/peak_list_handling/specific_fns/relax_fit.py
+
+Modified: branches/peak_list_handling/specific_fns/relax_fit.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/peak_list_handling/specific_fns/relax_fit.py?rev=11833&amp;r1=11832&amp;r2=11833&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/peak_list_handling/specific_fns/relax_fit.py?rev=11833&amp;r1=11832&amp;r2=11833&amp;view=diff</a>
+==============================================================================
+--- branches/peak_list_handling/specific_fns/relax_fit.py (original)
++++ branches/peak_list_handling/specific_fns/relax_fit.py Wed Dec 15 18:33:22 
+2010
+@@ -151,13 +151,13 @@
+         return scaling_matrix
+ 
+ 
+-    def _back_calc(self, spin=None, relax_time_index=None):
++    def _back_calc(self, spin=None, relax_time_id=None):
+         &quot;&quot;&quot;Back-calculation of peak intensity for the given relaxation time.
+ 
+         @keyword spin:              The spin container.
+         @type spin:                 SpinContainer instance
+-        @keyword relax_time_index:  The index for the desired relaxation 
+time.
+-        @type relax_time_index:     int
++        @keyword relax_time_id:     The ID string for the desired relaxation 
+time.
++        @type relax_time_id:        str
+         @return:                    The peak intensity for the desired 
+relaxation time.
+         @rtype:                     float
+         &quot;&quot;&quot;
+@@ -168,8 +168,20 @@
+         # Create a scaling matrix.
+         scaling_matrix = self._assemble_scaling_matrix(spin=spin, 
+scaling=False)
+ 
++        # The keys.
++        keys = spin.intensities.keys()
++
++        # The peak intensities and times.
++        values = []
++        errors = []
++        times = []
++        for key in keys:
++            values.append(spin.intensities[key])
++            errors.append(spin.intensity_err[key])
++            times.append(cdp.relax_times[key])
++
+         # Initialise the relaxation fit functions.
+-        setup(num_params=len(spin.params), num_times=len(cdp.relax_times), 
+values=spin.intensities, sd=spin.intensity_err, relax_times=cdp.relax_times, 
+scaling_matrix=scaling_matrix)
++        setup(num_params=len(spin.params), num_times=len(cdp.relax_times), 
+values=values, sd=errors, relax_times=times, scaling_matrix=scaling_matrix)
+ 
+         # Make a single function call.  This will cause back calculation and 
+the data will be stored in the C module.
+         func(param_vector)
+@@ -178,7 +190,7 @@
+         results = back_calc_I()
+ 
+         # Return the correct peak height.
+-        return results[relax_time_index]
++        return results[keys.index(relax_time_id)]
+ 
+ 
+     def _disassemble_param_vector(self, param_vector=None, spin=None, 
+sim_index=None):
+@@ -282,12 +294,16 @@
+ 
+                 # Intensity
+                 elif search('^I', spin.params[i]):
+-                    # Find the position of the first time point.
+-                    pos = cdp.relax_times.index(min(cdp.relax_times))
++                    # Find the ID of the first time point.
++                    min_time = min(cdp.relax_times.values())
++                    for key in cdp.relax_times.keys():
++                        if cdp.relax_times[key] == min_time:
++                            id = key
++                            break
+ 
+                     # Defaults.
+                     lower.append(0.0)
+-                    upper.append(average(spin.intensities[pos]))
++                    upper.append(average(spin.intensities[id]))
+ 
+         # Parameter scaling.
+         for i in range(n):
+@@ -407,22 +423,12 @@
+         if spectrum_id not in cdp.spectrum_ids:
+             raise RelaxError(&quot;The peak heights corresponding to spectrum id 
+'%s' have not been loaded.&quot; % spectrum_id)
+ 
+-        # The index.
+-        index = cdp.spectrum_ids.index(spectrum_id)
+-
+         # Initialise the global relaxation time data structure if needed.
+         if not hasattr(cdp, 'relax_times'):
+-            cdp.relax_times = [None] * len(cdp.spectrum_ids)
+-
+-        # Index not present in the global relaxation time data structure.
+-        while True:
+-            if index &gt; len(cdp.relax_times) - 1:
+-                cdp.relax_times.append(None)
+-            else:
+-                break
++            cdp.relax_times = {}
+ 
+         # Add the time at the correct position.
+-        cdp.relax_times[index] = time
++        cdp.relax_times[spectrum_id] = time
+ 
+ 
+     def _select_model(self, model='exp'):
+@@ -472,7 +478,7 @@
+         &quot;&quot;&quot;
+ 
+         # Initialise the MC data data structure.
+-        mc_data = []
++        mc_data = {}
+ 
+         # Get the spin container.
+         spin = return_spin(data_id)
+@@ -490,12 +496,12 @@
+             raise RelaxNoModelError
+ 
+         # Loop over the spectral time points.
+-        for j in xrange(len(cdp.relax_times)):
++        for id in cdp.relax_times.keys():
+             # Back calculate the value.
+-            value = self._back_calc(spin=spin, relax_time_index=j)
++            value = self._back_calc(spin=spin, relax_time_id=id)
+ 
+             # Append the value.
+-            mc_data.append(value)
++            mc_data[id] = value
+ 
+         # Return the MC data.
+         return mc_data
+@@ -736,12 +742,27 @@
+             # Initialise the function to minimise.
+             ######################################
+ 
+-            if sim_index == None:
+-                values = spin.intensities
+-            else:
+-                values = spin.sim_intensities[sim_index]
+-
+-            setup(num_params=len(spin.params), 
+num_times=len(cdp.relax_times), values=values, sd=spin.intensity_err, 
+relax_times=cdp.relax_times, scaling_matrix=scaling_matrix)
++            # The keys.
++            keys = spin.intensities.keys()
++
++            # The peak intensities and times.
++            values = []
++            errors = []
++            times = []
++            for key in keys:
++                # The values.
++                if sim_index == None:
++                    values.append(spin.intensities[key])
++                else:
++                    values.append(spin.sim_intensities[sim_index][key])
++
++                # The errors.
++                errors.append(spin.intensity_err[key])
++
++                # The relaxation times.
++                times.append(cdp.relax_times[key])
++
++            setup(num_params=len(spin.params), 
+num_times=len(cdp.relax_times), values=values, sd=errors, relax_times=times, 
+scaling_matrix=scaling_matrix)
+ 
+ 
+             # Setup the minimisation algorithm when constraints are present.
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Dec 15 18:40:02 2010</div>  
+</body>
+</html>

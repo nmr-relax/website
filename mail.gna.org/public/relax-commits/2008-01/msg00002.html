@@ -1,0 +1,303 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r4243 &#45; in /1.3/generic_fns: minimise.py value.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 02 Jan 2008 12:23:00 +0100 -->
+<!--X-Message-Id: E1JA1ga&#45;0003dJ&#45;5w@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r4243 - in /1.3/generic_fns: minimise.py value.py -- January 02, 2008 - 12:23</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r4243 - in /1.3/generic_fns: minimise.py value.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00002" class="tabs">Index by Date</a> | <a href="threads.html#00002" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00001.html">Date Prev</a>] [<a href="msg00003.html">Date Next</a>] [<a href="msg00001.html">Thread Prev</a>] [<a href="msg00003.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 02 Jan 2008 11:23:00 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00002.html">E1JA1ga-0003dJ-5w@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on January 02, 2008 - 12:23:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Jan  2 12:22:57 2008
+New Revision: 4243
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=4243&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=4243&amp;view=rev</a>
+Log:
+Implemented the generic_fns.minimise.reset_min_stats() function using the new 
+relax design.
+
+This was copied from the old reset_min_stats() class method but has had a few 
+significant changes
+made to it.  Now both the sequence specific and global min stats are reset 
+all together by one call
+to the function.
+
+
+Modified:
+    1.3/generic_fns/minimise.py
+    1.3/generic_fns/value.py
+
+Modified: 1.3/generic_fns/minimise.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/generic_fns/minimise.py?rev=4243&amp;r1=4242&amp;r2=4243&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/generic_fns/minimise.py?rev=4243&amp;r1=4242&amp;r2=4243&amp;view=diff</a>
+==============================================================================
+--- 1.3/generic_fns/minimise.py (original)
++++ 1.3/generic_fns/minimise.py Wed Jan  2 12:22:57 2008
+@@ -1,6 +1,6 @@
+ 
+###############################################################################
+ #                                                                            
+ #
+-# Copyright (C) 2003-2005, 2007 Edward d'Auvergne                            
+ #
++# Copyright (C) 2003-2005, 2007-2008 Edward d'Auvergne                       
+ #
+ #                                                                            
+ #
+ # This file is part of the program relax.                                    
+ #
+ #                                                                            
+ #
+@@ -25,12 +25,80 @@
+ from re import search
+ 
+ # relax module imports.
+-from data import Data as elax_data_store
++from data import Data as relax_data_store
++from selection import spin_loop
+ #from processes import RelaxPopen3
+ from relax_errors import RelaxError, RelaxNoPipeError
+ from thread_classes import RelaxParentThread, RelaxThread
+ 
+ 
++def reset_min_stats(data_pipe=None, index=None):
++    &quot;&quot;&quot;Function for resetting the minimisation statistics.&quot;&quot;&quot;
++
++    # The data pipe.
++    if data_pipe == None:
++        data_pipe = relax_data_store.current_pipe
++
++    # Alias the current data pipe.
++    cdp = relax_data_store[data_pipe]
++
++
++    # Global minimisation statistics.
++    #################################
++
++    # Chi-squared.
++    if hasattr(cdp, 'chi2'):
++        cdp.chi2 = None
++
++    # Iteration count.
++    if hasattr(cdp, 'iter'):
++        cdp.iter = None
++
++    # Function count.
++    if hasattr(cdp, 'f_count'):
++        cdp.f_count = None
++
++    # Gradient count.
++    if hasattr(cdp, 'g_count'):
++        cdp.g_count = None
++
++    # Hessian count.
++    if hasattr(cdp, 'h_count'):
++        cdp.h_count = None
++
++    # Warning.
++    if hasattr(cdp, 'warning'):
++        cdp.warning = None
++
++
++    # Sequence specific minimisation statistics.
++    ############################################
++
++    # Loop over all spins.
++    for spin in spin_loop():
++        # Chi-squared.
++        if hasattr(spin, 'chi2'):
++            spin.chi2 = None
++
++        # Iteration count.
++        if hasattr(spin, 'iter'):
++            spin.iter = None
++
++        # Function count.
++        if hasattr(spin, 'f_count'):
++            spin.f_count = None
++
++        # Gradient count.
++        if hasattr(spin, 'g_count'):
++            spin.g_count = None
++
++        # Hessian count.
++        if hasattr(spin, 'h_count'):
++            spin.h_count = None
++
++        # Warning.
++        if hasattr(spin, 'warning'):
++            spin.warning = None
+ 
+ 
+ 
+@@ -143,65 +211,6 @@
+         # Standard minimisation.
+         else:
+             minimise(run=run, min_algor=min_algor, min_options=min_options, 
+func_tol=func_tol, grad_tol=grad_tol, max_iterations=max_iterations, 
+constraints=constraints, scaling=scaling, print_flag=print_flag)
+-
+-
+-    def reset_min_stats(self, run, index=None):
+-        &quot;&quot;&quot;Function for resetting the minimisation statistics.&quot;&quot;&quot;
+-
+-        # Arguments.
+-        self.run = run
+-
+-        # Global minimisation statistics.
+-        if index == None:
+-            # Chi-squared.
+-            if hasattr(relax_data_store, 'chi2') and 
+relax_data_store.chi2.has_key(self.run):
+-                relax_data_store.chi2[self.run] = None
+-
+-            # Iteration count.
+-            if hasattr(relax_data_store, 'iter') and 
+relax_data_store.iter.has_key(self.run):
+-                relax_data_store.iter[self.run] = None
+-
+-            # Function count.
+-            if hasattr(relax_data_store, 'f_count') and 
+relax_data_store.f_count.has_key(self.run):
+-                relax_data_store.f_count[self.run] = None
+-
+-            # Gradient count.
+-            if hasattr(relax_data_store, 'g_count') and 
+relax_data_store.g_count.has_key(self.run):
+-                relax_data_store.g_count[self.run] = None
+-
+-            # Hessian count.
+-            if hasattr(relax_data_store, 'h_count') and 
+relax_data_store.h_count.has_key(self.run):
+-                relax_data_store.h_count[self.run] = None
+-
+-            # Warning.
+-            if hasattr(relax_data_store, 'warning') and 
+relax_data_store.warning.has_key(self.run):
+-                relax_data_store.warning[self.run] = None
+-
+-        # Sequence specific minimisation statistics.
+-        else:
+-            # Chi-squared.
+-            if hasattr(relax_data_store.res[self.run][index], 'chi2'):
+-                relax_data_store.res[self.run][index].chi2 = None
+-
+-            # Iteration count.
+-            if hasattr(relax_data_store.res[self.run][index], 'iter'):
+-                relax_data_store.res[self.run][index].iter = None
+-
+-            # Function count.
+-            if hasattr(relax_data_store.res[self.run][index], 'f_count'):
+-                relax_data_store.res[self.run][index].f_count = None
+-
+-            # Gradient count.
+-            if hasattr(relax_data_store.res[self.run][index], 'g_count'):
+-                relax_data_store.res[self.run][index].g_count = None
+-
+-            # Hessian count.
+-            if hasattr(relax_data_store.res[self.run][index], 'h_count'):
+-                relax_data_store.res[self.run][index].h_count = None
+-
+-            # Warning.
+-            if hasattr(relax_data_store.res[self.run][index], 'warning'):
+-                relax_data_store.res[self.run][index].warning = None
+ 
+ 
+     def return_conversion_factor(self, stat_type):
+
+Modified: 1.3/generic_fns/value.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/generic_fns/value.py?rev=4243&amp;r1=4242&amp;r2=4243&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/generic_fns/value.py?rev=4243&amp;r1=4242&amp;r2=4243&amp;view=diff</a>
+==============================================================================
+--- 1.3/generic_fns/value.py (original)
++++ 1.3/generic_fns/value.py Wed Jan  2 12:22:57 2008
+@@ -288,18 +288,8 @@
+                 set(run=run, value=spin_values[j], error=None, 
+param=spin_params[j], index=i)
+ 
+ 
+-    # Reset the minimisation statistics.
+-    ####################################
+-
+-    # Reset the global minimisation statistics.
+-    reset_min_stats(run)
+-
+-    # Reset the sequence specific minimisation statistics.
+-    if relax_data_store.res.has_key(run):
+-        for i in xrange(len(relax_data_store.res[run])):
+-            reset_min_stats(run, i)
+-
+-
++    # Reset all minimisation statistics.
++    reset_min_stats()
+ 
+ 
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Jan 02 12:40:10 2008</div>  
+</body>
+</html>

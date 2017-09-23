@@ -1,0 +1,587 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r13255 &#45; /branches/gui_testing/gui/analyses/auto_noe.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 28 Jun 2011 12:28:07 +0200 -->
+<!--X-Message-Id: E1QbVWY&#45;0007IE&#45;UC@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r13255 - /branches/gui_testing/gui/analyses/auto_noe.py -- June 28, 2011 - 12:28</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r13255 - /branches/gui_testing/gui/analyses/auto_noe.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00422" class="tabs">Index by Date</a> | <a href="threads.html#00422" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00421.html">Date Prev</a>] [<a href="msg00423.html">Date Next</a>] [<a href="msg00421.html">Thread Prev</a>] [<a href="msg00423.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 28 Jun 2011 10:28:06 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00422.html">E1QbVWY-0007IE-UC@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on June 28, 2011 - 12:28:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Jun 28 12:28:06 2011
+New Revision: 13255
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=13255&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=13255&amp;view=rev</a>
+Log:
+The higher level threading.Thread class is being used rather than 
+thread.start_new_thread().
+
+This will allow for better thread control.
+
+
+Modified:
+    branches/gui_testing/gui/analyses/auto_noe.py
+
+Modified: branches/gui_testing/gui/analyses/auto_noe.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/gui_testing/gui/analyses/auto_noe.py?rev=13255&amp;r1=13254&amp;r2=13255&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/gui_testing/gui/analyses/auto_noe.py?rev=13255&amp;r1=13254&amp;r2=13255&amp;view=diff</a>
+==============================================================================
+--- branches/gui_testing/gui/analyses/auto_noe.py (original)
++++ branches/gui_testing/gui/analyses/auto_noe.py Tue Jun 28 12:28:06 2011
+@@ -29,7 +29,7 @@
+ from os.path import dirname
+ from string import replace
+ import sys
+-import thread
++from threading import Thread
+ import time
+ import wx
+ 
+@@ -302,20 +302,209 @@
+ 
+         # Start the thread (if not debugging).
+         if status.debug:
+-            self.execute_thread(data)
++            self.thread = Execute(self.gui, data)
+         else:
+-            id = thread.start_new_thread(self.execute_thread, (data,))
++            self.thread = Execute_thread(self.gui, data)
++            self.thread.start()
+ 
+         # Terminate the event.
+         event.Skip()
+ 
+ 
+-    def execute_thread(self, data):
+-        &quot;&quot;&quot;Execute the calculation in a thread.
+-
++    def load_sequence(self, event):
++        &quot;&quot;&quot;The sequence loading GUI element.
++
++        @param event:   The wx event.
++        @type event:    wx event
++        &quot;&quot;&quot;
++
++        # Select the file.
++        file = load_sequence()
++
++        # Nothing selected.
++        if file == None:
++            return
++
++        # Store the file.
++        self.field_sequence.SetValue(str_to_gui(file))
++
++        # Terminate the event.
++        event.Skip()
++
++
++    def ref_file(self, event):
++        &quot;&quot;&quot;The results directory selection.
++
++        @param event:   The wx event.
++        @type event:    wx event
++        &quot;&quot;&quot;
++
++        # Store the original directory.
++        backup = gui_to_str(self.field_ref_noe.GetValue())
++
++        # The directory.
++        directory = None
++        if backup != None:
++            directory = dirname(backup)
++
++        # Select the file.
++        self.data.ref_file = openfile('Select reference NOE peak list', 
+directory=directory, default = 'all files (*.*)|*')
++
++        # Restore the backup file if no file was chosen.
++        if not self.data.ref_file:
++            self.data.ref_file = backup
++
++        # Place the path in the text box.
++        self.field_ref_noe.SetValue(self.data.ref_file)
++
++        # Terminate the event.
++        event.Skip()
++
++
++    def results_directory(self, event):
++        &quot;&quot;&quot;The results directory selection.
++
++        @param event:   The wx event.
++        @type event:    wx event
++        &quot;&quot;&quot;
++
++        # Store the original directory.
++        backup = self.field_results_dir.GetValue()
++
++        # Select the file.
++        self.data.save_dir = opendir('Select results directory', 
+default=self.field_results_dir.GetValue())
++
++        # Restore the backup file if no file was chosen.
++        if not self.data.save_dir:
++            self.data.save_dir = backup
++
++        # Place the path in the text box.
++        self.field_results_dir.SetValue(self.data.save_dir)
++
++        # Terminate the event.
++        event.Skip()
++
++
++    def sat_file(self, event):
++        &quot;&quot;&quot;The results directory selection.
++
++        @param event:   The wx event.
++        @type event:    wx event
++        &quot;&quot;&quot;
++
++        # Store the original directory.
++        backup = gui_to_str(self.field_sat_noe.GetValue())
++
++        # The directory.
++        directory = None
++        if backup != None:
++            directory = dirname(backup)
++
++        # Select the file.
++        self.data.sat_file = openfile('Select saturated NOE peak list', 
+directory=directory, default = 'all files (*.*)|*')
++
++        # Restore the backup file if no file was chosen.
++        if not self.data.sat_file:
++            self.data.sat_file = backup
++
++        # Place the path in the text box.
++        self.field_sat_noe.SetValue(self.data.sat_file)
++
++        # Terminate the event.
++        event.Skip()
++
++
++    def sync_ds(self, upload=False):
++        &quot;&quot;&quot;Synchronise the noe analysis frame and the relax data store, both 
+ways.
++
++        This method allows the frame information to be uploaded into the 
+relax data store, or for the information in the relax data store to be 
+downloaded by the frame.
++
++        @keyword upload:    A flag which if True will cause the frame to 
+send data to the relax data store.  If False, data will be downloaded from 
+the relax data store to update the frame.
++        @type upload:       bool
++        &quot;&quot;&quot;
++
++        # The frequency.
++        if upload:
++            self.data.frq = gui_to_str(self.field_nmr_frq.GetValue())
++        else:
++            self.field_nmr_frq.SetValue(str_to_gui(self.data.frq))
++
++        # The results directory.
++        if upload:
++            self.data.save_dir = 
+gui_to_str(self.field_results_dir.GetValue())
++        else:
++            self.field_results_dir.SetValue(str_to_gui(self.data.save_dir))
++
++        # The sequence file.
++        if upload:
++            file = gui_to_str(self.field_sequence.GetValue())
++            if file != self.gui.sequence_file_msg:
++                self.data.sequence_file = 
+gui_to_str(self.field_sequence.GetValue())
++        elif hasattr(self.data, 'sequence_file'):
++            self.field_sequence.SetValue(str_to_gui(self.data.sequence_file))
++
++        # The structure file.
++        if upload:
++            file = gui_to_str(self.field_structure.GetValue())
++            if file != self.gui.structure_file_pdb_msg:
++                self.data.structure_file = 
+gui_to_str(self.field_structure.GetValue())
++        elif hasattr(self.data, 'structure_file'):
++            
+self.field_structure.SetValue(str_to_gui(self.data.structure_file))
++
++        # Unresolved residues.
++        if upload:
++            self.data.unresolved = 
+gui_to_str(self.field_unresolved.GetValue())
++        elif hasattr(self.data, 'unresolved'):
++            self.field_unresolved.SetValue(str_to_gui(self.data.unresolved))
++
++        # Reference peak file.
++        if upload:
++            self.data.ref_file = gui_to_str(self.field_ref_noe.GetValue())
++        elif hasattr(self.data, 'ref_file'):
++            self.field_ref_noe.SetValue(str_to_gui(self.data.ref_file))
++
++        # Reference rmsd.
++        if upload:
++            self.data.ref_rmsd = gui_to_str(self.field_ref_rmsd.GetValue())
++        elif hasattr(self.data, 'ref_rmsd'):
++            self.field_ref_rmsd.SetValue(str_to_gui(self.data.ref_rmsd))
++
++        # Saturated peak file.
++        if upload:
++            self.data.sat_file = gui_to_str(self.field_sat_noe.GetValue())
++        elif hasattr(self.data, 'sat_file'):
++            self.field_sat_noe.SetValue(str_to_gui(self.data.sat_file))
++
++        # Saturated rmsd.
++        if upload:
++            self.data.sat_rmsd = gui_to_str(self.field_sat_rmsd.GetValue())
++        elif hasattr(self.data, 'sat_rmsd'):
++            self.field_sat_rmsd.SetValue(str_to_gui(self.data.sat_rmsd))
++
++
++
++class Execute:
++    &quot;&quot;&quot;The NOE analysis execution object.&quot;&quot;&quot;
++
++    def __init__(self, gui, data):
++        &quot;&quot;&quot;Set up the NOE analysis execution object.
++
++        @param gui:     The GUI object.
++        @type gui:      wx object
+         @param data:    The data container with all data for the analysis.
+         @type data:     class instance
+         &quot;&quot;&quot;
++
++        # Store the args.
++        self.gui = gui
++        self.data = data
++
++        # Execute.
++        self.run()
++
++
++    def run(self):
++        &quot;&quot;&quot;Execute the calculation.&quot;&quot;&quot;
+ 
+         # Controller.
+         if not status.debug:
+@@ -331,194 +520,44 @@
+             time.sleep(0.5)
+ 
+         # Execute.
+-        NOE_calc(seq_args=data.seq_args, pipe_name=data.pipe_name, 
+noe_ref=data.ref_file, noe_ref_rmsd=data.ref_rmsd, noe_sat=data.sat_file, 
+noe_sat_rmsd=data.sat_rmsd, unresolved=data.unresolved, 
+pdb_file=data.structure_file, output_file=data.filename, 
+results_dir=data.save_dir, int_method='height', heteronuc=data.heteronuc, 
+proton=data.proton, heteronuc_pdb='@N')
++        NOE_calc(seq_args=self.data.seq_args, pipe_name=self.data.pipe_name, 
+noe_ref=self.data.ref_file, noe_ref_rmsd=self.data.ref_rmsd, 
+noe_sat=self.data.sat_file, noe_sat_rmsd=self.data.sat_rmsd, 
+unresolved=self.data.unresolved, pdb_file=self.data.structure_file, 
+output_file=self.data.filename, results_dir=self.data.save_dir, 
+int_method='height', heteronuc=self.data.heteronuc, proton=self.data.proton, 
+heteronuc_pdb='@N')
+ 
+         # Feedback about success.
+         if not status.debug:
+             wx.CallAfter(self.gui.controller.log_panel.AppendText, 
+'\n\n__________________________________________________________\n\nSuccessfully
+ calculated NOE 
+values\n__________________________________________________________')
+ 
+         # Add noe grace plot to results list.
+-        self.gui.list_noe.Append(data.save_dir+sep+'grace'+sep+'noe.agr')
++        
+self.gui.list_noe.Append(self.data.save_dir+sep+'grace'+sep+'noe.agr')
+ 
+         # Add noe grace plot to relax data store.
+-        
+ds.relax_gui.results_noe.append(data.save_dir+sep+'grace'+sep+'noe.agr')
++        
+ds.relax_gui.results_noe.append(self.data.save_dir+sep+'grace'+sep+'noe.agr')
+ 
+         # Create color coded structure pymol macro.
+-        color_code_noe(self, data.save_dir, data.structure_file)
++        color_code_noe(self.data.save_dir, self.data.structure_file)
+ 
+         # add macro to results tab
+-        self.gui.list_noe.Append(data.save_dir+sep+'noe.pml')
++        self.gui.list_noe.Append(self.data.save_dir+sep+'noe.pml')
+ 
+         # Add noe macro to relax data store.
+-        ds.relax_gui.results_noe.append(data.save_dir+sep+'noe.pml')
+-
+-
+-    def load_sequence(self, event):
+-        &quot;&quot;&quot;The sequence loading GUI element.
+-
+-        @param event:   The wx event.
+-        @type event:    wx event
+-        &quot;&quot;&quot;
+-
+-        # Select the file.
+-        file = load_sequence()
+-
+-        # Nothing selected.
+-        if file == None:
+-            return
+-
+-        # Store the file.
+-        self.field_sequence.SetValue(str_to_gui(file))
+-
+-        # Terminate the event.
+-        event.Skip()
+-
+-
+-    def ref_file(self, event):
+-        &quot;&quot;&quot;The results directory selection.
+-
+-        @param event:   The wx event.
+-        @type event:    wx event
+-        &quot;&quot;&quot;
+-
+-        # Store the original directory.
+-        backup = gui_to_str(self.field_ref_noe.GetValue())
+-
+-        # The directory.
+-        directory = None
+-        if backup != None:
+-            directory = dirname(backup)
+-
+-        # Select the file.
+-        self.data.ref_file = openfile('Select reference NOE peak list', 
+directory=directory, default = 'all files (*.*)|*')
+-
+-        # Restore the backup file if no file was chosen.
+-        if not self.data.ref_file:
+-            self.data.ref_file = backup
+-
+-        # Place the path in the text box.
+-        self.field_ref_noe.SetValue(self.data.ref_file)
+-
+-        # Terminate the event.
+-        event.Skip()
+-
+-
+-    def results_directory(self, event):
+-        &quot;&quot;&quot;The results directory selection.
+-
+-        @param event:   The wx event.
+-        @type event:    wx event
+-        &quot;&quot;&quot;
+-
+-        # Store the original directory.
+-        backup = self.field_results_dir.GetValue()
+-
+-        # Select the file.
+-        self.data.save_dir = opendir('Select results directory', 
+default=self.field_results_dir.GetValue())
+-
+-        # Restore the backup file if no file was chosen.
+-        if not self.data.save_dir:
+-            self.data.save_dir = backup
+-
+-        # Place the path in the text box.
+-        self.field_results_dir.SetValue(self.data.save_dir)
+-
+-        # Terminate the event.
+-        event.Skip()
+-
+-
+-    def sat_file(self, event):
+-        &quot;&quot;&quot;The results directory selection.
+-
+-        @param event:   The wx event.
+-        @type event:    wx event
+-        &quot;&quot;&quot;
+-
+-        # Store the original directory.
+-        backup = gui_to_str(self.field_sat_noe.GetValue())
+-
+-        # The directory.
+-        directory = None
+-        if backup != None:
+-            directory = dirname(backup)
+-
+-        # Select the file.
+-        self.data.sat_file = openfile('Select saturated NOE peak list', 
+directory=directory, default = 'all files (*.*)|*')
+-
+-        # Restore the backup file if no file was chosen.
+-        if not self.data.sat_file:
+-            self.data.sat_file = backup
+-
+-        # Place the path in the text box.
+-        self.field_sat_noe.SetValue(self.data.sat_file)
+-
+-        # Terminate the event.
+-        event.Skip()
+-
+-
+-    def sync_ds(self, upload=False):
+-        &quot;&quot;&quot;Synchronise the noe analysis frame and the relax data store, both 
+ways.
+-
+-        This method allows the frame information to be uploaded into the 
+relax data store, or for the information in the relax data store to be 
+downloaded by the frame.
+-
+-        @keyword upload:    A flag which if True will cause the frame to 
+send data to the relax data store.  If False, data will be downloaded from 
+the relax data store to update the frame.
+-        @type upload:       bool
+-        &quot;&quot;&quot;
+-
+-        # The frequency.
+-        if upload:
+-            self.data.frq = gui_to_str(self.field_nmr_frq.GetValue())
+-        else:
+-            self.field_nmr_frq.SetValue(str_to_gui(self.data.frq))
+-
+-        # The results directory.
+-        if upload:
+-            self.data.save_dir = 
+gui_to_str(self.field_results_dir.GetValue())
+-        else:
+-            self.field_results_dir.SetValue(str_to_gui(self.data.save_dir))
+-
+-        # The sequence file.
+-        if upload:
+-            file = gui_to_str(self.field_sequence.GetValue())
+-            if file != self.gui.sequence_file_msg:
+-                self.data.sequence_file = 
+gui_to_str(self.field_sequence.GetValue())
+-        elif hasattr(self.data, 'sequence_file'):
+-            self.field_sequence.SetValue(str_to_gui(self.data.sequence_file))
+-
+-        # The structure file.
+-        if upload:
+-            file = gui_to_str(self.field_structure.GetValue())
+-            if file != self.gui.structure_file_pdb_msg:
+-                self.data.structure_file = 
+gui_to_str(self.field_structure.GetValue())
+-        elif hasattr(self.data, 'structure_file'):
+-            
+self.field_structure.SetValue(str_to_gui(self.data.structure_file))
+-
+-        # Unresolved residues.
+-        if upload:
+-            self.data.unresolved = 
+gui_to_str(self.field_unresolved.GetValue())
+-        elif hasattr(self.data, 'unresolved'):
+-            self.field_unresolved.SetValue(str_to_gui(self.data.unresolved))
+-
+-        # Reference peak file.
+-        if upload:
+-            self.data.ref_file = gui_to_str(self.field_ref_noe.GetValue())
+-        elif hasattr(self.data, 'ref_file'):
+-            self.field_ref_noe.SetValue(str_to_gui(self.data.ref_file))
+-
+-        # Reference rmsd.
+-        if upload:
+-            self.data.ref_rmsd = gui_to_str(self.field_ref_rmsd.GetValue())
+-        elif hasattr(self.data, 'ref_rmsd'):
+-            self.field_ref_rmsd.SetValue(str_to_gui(self.data.ref_rmsd))
+-
+-        # Saturated peak file.
+-        if upload:
+-            self.data.sat_file = gui_to_str(self.field_sat_noe.GetValue())
+-        elif hasattr(self.data, 'sat_file'):
+-            self.field_sat_noe.SetValue(str_to_gui(self.data.sat_file))
+-
+-        # Saturated rmsd.
+-        if upload:
+-            self.data.sat_rmsd = gui_to_str(self.field_sat_rmsd.GetValue())
+-        elif hasattr(self.data, 'sat_rmsd'):
+-            self.field_sat_rmsd.SetValue(str_to_gui(self.data.sat_rmsd))
++        ds.relax_gui.results_noe.append(self.data.save_dir+sep+'noe.pml')
++
++
++
++class Execute_thread(Execute, Thread):
++    &quot;&quot;&quot;The NOE analysis thread execution object.&quot;&quot;&quot;
++
++    def __init__(self, gui, data):
++        &quot;&quot;&quot;Set up the NOE analysis thread execution object.
++
++        @param gui:     The GUI object.
++        @type gui:      wx object
++        @param data:    The data container with all data for the analysis.
++        @type data:     class instance
++        &quot;&quot;&quot;
++
++        # Store the args.
++        self.gui = gui
++        self.data = data
++
++        # Set up the thread object.
++        Thread.__init__(self)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Jun 28 12:40:03 2011</div>  
+</body>
+</html>

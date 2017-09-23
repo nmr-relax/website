@@ -1,0 +1,281 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r5988 &#45; /1.3/generic_fns/intensity.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 24 Apr 2008 17:53:22 +0200 -->
+<!--X-Message-Id: E1Jp3lC&#45;0003Qt&#45;8c@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r5988 - /1.3/generic_fns/intensity.py -- April 24, 2008 - 17:53</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r5988 - /1.3/generic_fns/intensity.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00746" class="tabs">Index by Date</a> | <a href="threads.html#00746" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00745.html">Date Prev</a>] [<a href="msg00747.html">Date Next</a>] [<a href="msg00745.html">Thread Prev</a>] [<a href="msg00747.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 24 Apr 2008 15:53:22 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00746.html">E1Jp3lC-0003Qt-8c@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on April 24, 2008 - 17:53:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Apr 24 17:53:20 2008
+New Revision: 5988
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=5988&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=5988&amp;view=rev</a>
+Log:
+Converted the read function to the new relax design.
+
+
+Modified:
+    1.3/generic_fns/intensity.py
+
+Modified: 1.3/generic_fns/intensity.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/generic_fns/intensity.py?rev=5988&amp;r1=5987&amp;r2=5988&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/generic_fns/intensity.py?rev=5988&amp;r1=5987&amp;r2=5988&amp;view=diff</a>
+==============================================================================
+--- 1.3/generic_fns/intensity.py (original)
++++ 1.3/generic_fns/intensity.py Thu Apr 24 17:53:20 2008
+@@ -1,6 +1,6 @@
+ 
+###############################################################################
+ #                                                                            
+ #
+-# Copyright (C) 2004, 2007 Edward d'Auvergne                                 
+ #
++# Copyright (C) 2004, 2007-2008 Edward d'Auvergne                            
+ #
+ #                                                                            
+ #
+ # This file is part of the program relax.                                    
+ #
+ #                                                                            
+ #
+@@ -30,7 +30,9 @@
+ 
+ # relax module imports.
+ from data import Data as relax_data_store
++from generic_fns.selection import generate_spin_id, return_spin
+ from relax_errors import RelaxError, RelaxArgNotInListError, 
+RelaxNoPipeError, RelaxNoSequenceError
++from relax_io import extract_data, strip
+ from relax_warnings import RelaxWarning
+ 
+ 
+@@ -171,92 +173,97 @@
+     return header_lines
+ 
+ 
+-def read(run=None, file=None, dir=None, format=None, heteronuc=None, 
+proton=None, int_col=None, assign_func=None):
+-    &quot;&quot;&quot;Function for reading peak intensity data.&quot;&quot;&quot;
+-
+-    # Arguments.
+-    self.run = run
+-    self.format = format
+-    self.heteronuc = heteronuc
+-    self.proton = proton
+-    self.int_col = int_col
+-    self.assign_func = assign_func
++def read(file=None, dir=None, format=None, heteronuc=None, proton=None, 
+int_col=None, assign_func=None):
++    &quot;&quot;&quot;Read the peak intensity data.
++
++    @keyword file:          The name of the file containing the peak 
+intensities.
++    @type file:             str
++    @keyword dir:           The directory where the file is located.
++    @type dir:              str
++    @keyword format:        The type of file containing peak intensities.  
+This can currently be
++                            one of 'sparky' or 'xeasy'.
++    @type format:           str
++    @keyword heteronuc:     The name of the heteronucleus as specified in 
+the peak intensity
++                            file.
++    @type heteronuc:        str
++    @keyword proton:        The name of the proton as specified in the peak 
+intensity file.
++    @type proton:           str
++    @keyword int_col:       The column containing the peak intensity data 
+(for a non-standard
++                            formatted file).
++    @type int_col:          int
++    @keyword assign_func:   A function used to place the intensity data 
+within the spin container.
++    @type assign_func:      func
++    &quot;&quot;&quot;
+ 
+     # Format argument.
+     format_list = ['sparky', 'xeasy']
+-    if self.format not in format_list:
+-        raise RelaxArgNotInListError, ('format', self.format, format_list)
++    if format not in format_list:
++        raise RelaxArgNotInListError, ('format', format, format_list)
+ 
+     # Sparky.
+-    if self.format == 'sparky':
++    if format == 'sparky':
+         # Print out.
+         print &quot;Sparky formatted data file.\n&quot;
+ 
+         # Set the intensity reading function.
+-        self.intensity = self.intensity_sparky
++        intensity = intensity_sparky
+ 
+     # XEasy.
+-    elif self.format == 'xeasy':
++    elif format == 'xeasy':
+         # Print out.
+         print &quot;XEasy formatted data file.\n&quot;
+ 
+         # Set the intensity reading function.
+-        self.intensity = self.intensity_xeasy
++        intensity = intensity_xeasy
+ 
+         # Set the default proton dimension.
+-        self.H_dim = 'w1'
+-
+-    # Test if the run exists.
+-    if not self.run in relax_data_store.run_names:
+-        raise RelaxNoPipeError, self.run
++        H_dim = 'w1'
++
++    # Test if the current data pipe exists.
++    if not relax_data_store.current_pipe:
++        raise RelaxNoPipeError
+ 
+     # Test if sequence data is loaded.
+-    if not relax_data_store.res.has_key(self.run):
+-        raise RelaxNoSequenceError, self.run
++    if not exists_mol_res_spin_data():
++        raise RelaxNoSequenceError
+ 
+     # Extract the data from the file.
+-    self.file_data = self.relax.IO.extract_data(file, dir)
++    file_data = extract_data(file, dir)
+ 
+     # Determine the number of header lines.
+-    num = self.number_of_header_lines()
++    num = number_of_header_lines()
+     print &quot;Number of header lines found: &quot; + `num`
+ 
+     # Remove the header.
+-    self.file_data = self.file_data[num:]
++    file_data = file_data[num:]
+ 
+     # Strip the data.
+-    self.file_data = self.relax.IO.strip(self.file_data)
++    file_data = strip(file_data)
+ 
+     # Determine the proton and heteronucleus dimensions in the XEasy text 
+file.
+-    if self.format == 'xeasy':
+-        self.det_dimensions()
++    if format == 'xeasy':
++        det_dimensions()
+ 
+     # Loop over the peak intensity data.
+-    for i in xrange(len(self.file_data)):
++    for i in xrange(len(file_data)):
+         # Extract the data.
+-        res_num, H_name, X_name, intensity = 
+self.intensity(self.file_data[i])
++        res_num, H_name, X_name, intensity = intensity(file_data[i])
+ 
+         # Skip data.
+-        if X_name != self.heteronuc or H_name != self.proton:
+-            warn(RelaxWarning(&quot;Proton and heteronucleus names do not match, 
+skipping the data %s: &quot; % `self.file_data[i]`))
++        if X_name != heteronuc or H_name != proton:
++            warn(RelaxWarning(&quot;Proton and heteronucleus names do not match, 
+skipping the data %s: &quot; % `file_data[i]`))
+             continue
+ 
+-        # Find the index of relax_data_store.res[self.run] which corresponds 
+to res_num.
+-        index = None
+-        for j in xrange(len(relax_data_store.res[self.run])):
+-            if relax_data_store.res[self.run][j].num == res_num:
+-                index = j
+-                break
+-        if index == None:
+-            warn(RelaxWarning(&quot;Cannot find residue number %s within the 
+sequence.&quot; % res_num))
++        # Get the spin container.
++        spin_id = generate_spin_id(res_num=res_num, spin_name=X_name)
++        spin = return_spin(spin_id)
++        if not spin:
++            warn(RelaxWarning(&quot;Cannot find the spin %s within the sequence.&quot; 
+% spin_id))
+             continue
+ 
+-        # Remap the data structure 'relax_data_store.res[self.run][index]'.
+-        data = relax_data_store.res[self.run][index]
+-
+-        # Skip unselected residues.
+-        if not data.select:
++        # Skip unselected spins.
++        if not spin.select:
+             continue
+ 
+         # Assign the data.
+-        self.assign_func(run=self.run, i=index, intensity=intensity)
++        assign_func(spin=spin, intensity=intensity)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Apr 24 18:00:28 2008</div>  
+</body>
+</html>

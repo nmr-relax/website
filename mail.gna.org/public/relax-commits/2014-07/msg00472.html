@@ -1,0 +1,174 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r24838 &#45; in /branches/frame_order_cleanup: ./ pipe_control/structure/mass.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 30 Jul 2014 17:03:08 +0200 -->
+<!--X-Message-Id: E1XCVPI&#45;0008K8&#45;Cb@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r24838 - in /branches/frame_order_cleanup: ./ pipe_control/structure/mass.py -- July 30, 2014 - 17:03</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r24838 - in /branches/frame_order_cleanup: ./ pipe_control/structure/mass.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00472" class="tabs">Index by Date</a> | <a href="threads.html#00472" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00471.html">Date Prev</a>] [<a href="msg00473.html">Date Next</a>] [<a href="msg00471.html">Thread Prev</a>] [<a href="msg00473.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 30 Jul 2014 15:03:08 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00472.html">E1XCVPI-0008K8-Cb@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on July 30, 2014 - 17:03:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Jul 30 17:03:07 2014
+New Revision: 24838
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=24838&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=24838&amp;view=rev</a>
+Log:
+Merged revisions 24837 via svnmerge from 
+svn+ssh://bugman@xxxxxxxxxxx/svn/relax/trunk
+
+........
+  r24837 | bugman | 2014-07-30 17:01:58 +0200 (Wed, 30 Jul 2014) | 9 lines
+  
+  Changed the behaviour of the 
+pipe_control.structure.mass.pipe_centre_of_mass() function.
+  
+  This function returns the CoM and optionally the mass of the structural 
+data loaded into the current
+  data pipe.  However it was matching the structural data to the 
+molecule-residue-spin data structure
+  and skipping spins that were deselected.  This illogical deselection part 
+has been eliminated, as
+  spins can be deselected for various analysis purposes and this should not 
+change the CoM.  The
+  deletion also significantly speeds up the function.
+........
+
+Modified:
+    branches/frame_order_cleanup/   (props changed)
+    branches/frame_order_cleanup/pipe_control/structure/mass.py
+
+Propchange: branches/frame_order_cleanup/
+------------------------------------------------------------------------------
+--- svnmerge-integrated (original)
++++ svnmerge-integrated Wed Jul 30 17:03:07 2014
+@@ -1 +1 @@
+-/trunk:1-24806
++/trunk:1-24837
+
+Modified: branches/frame_order_cleanup/pipe_control/structure/mass.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/pipe_control/structure/mass.py?rev=24838&amp;r1=24837&amp;r2=24838&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/pipe_control/structure/mass.py?rev=24838&amp;r1=24837&amp;r2=24838&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/pipe_control/structure/mass.py (original)
++++ branches/frame_order_cleanup/pipe_control/structure/mass.py Wed Jul 30 
+17:03:07 2014
+@@ -26,8 +26,6 @@
+ from lib.errors import RelaxNoPdbError
+ from lib.structure.mass import centre_of_mass
+ from lib.warnings import RelaxWarning
+-from pipe_control.mol_res_spin import return_molecule, return_residue, 
+return_spin
+-
+ 
+ 
+ def pipe_centre_of_mass(atom_id=None, model=None, return_mass=False, 
+verbosity=1):
+@@ -53,33 +51,20 @@
+     coord = []
+     element_list = []
+     for mol_name, res_num, res_name, atom_num, atom_name, element, pos in 
+cdp.structure.atom_loop(atom_id=atom_id, model_num=model, mol_name_flag=True, 
+res_num_flag=True, res_name_flag=True, atom_num_flag=True, 
+atom_name_flag=True, element_flag=True, pos_flag=True, ave=True):
+-        # Initialise the spin id string.
++        # Initialise the spin 
+         id = ''
+ 
+         # Get the corresponding molecule container.
+-        if mol_name == None:
+-            mol_cont = cdp.mol[0]
+-        else:
++        if mol_name != None:
+             id = id + '#' + mol_name
+-            mol_cont = return_molecule(id)
+ 
+         # Get the corresponding residue container.
+-        if res_name == None and res_num == None:
+-            res_cont = mol_cont.res[0]
+-        else:
++        if res_num != None:
+             id = id + ':' + repr(res_num)
+-            res_cont = return_residue(id)
+ 
+         # Get the corresponding spin container.
+-        if atom_name == None and atom_num == None:
+-            spin_cont = res_cont.spin[0]
+-        else:
++        if atom_num != None:
+             id = id + '@' + repr(atom_num)
+-            spin_cont = return_spin(id)
+-
+-        # Deselected spins.
+-        if spin_cont and not spin_cont.select:
+-            continue
+ 
+         # No element?
+         if element == None:
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Jul 30 17:40:02 2014</div>  
+</body>
+</html>

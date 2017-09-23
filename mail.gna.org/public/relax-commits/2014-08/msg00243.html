@@ -1,0 +1,145 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r25109 &#45; /trunk/specific_analyses/relax_disp/parameters.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 20 Aug 2014 19:07:00 +0200 -->
+<!--X-Message-Id: E1XK9Lg&#45;00064J&#45;Lv@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r25109 - /trunk/specific_analyses/relax_disp/parameters.py -- August 20, 2014 - 19:07</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r25109 - /trunk/specific_analyses/relax_disp/parameters.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00243" class="tabs">Index by Date</a> | <a href="threads.html#00243" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00242.html">Date Prev</a>] [<a href="msg00244.html">Date Next</a>] [<a href="msg00242.html">Thread Prev</a>] [<a href="msg00244.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 20 Aug 2014 17:07:00 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00243.html">E1XK9Lg-00064J-Lv@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on August 20, 2014 - 19:07:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Aug 20 19:07:00 2014
+New Revision: 25109
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=25109&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=25109&amp;view=rev</a>
+Log:
+Implemented the specific_analyses.relax_disp.parameters.r1_setup() function.
+
+This matches the description at 
+<a  rel="nofollow" href="http://thread.gmane.org/gmane.science.nmr.relax.scm/22850/focus=6739">http://thread.gmane.org/gmane.science.nmr.relax.scm/22850/focus=6739</a>
+and <a  rel="nofollow" href="http://thread.gmane.org/gmane.science.nmr.relax.scm/22850/focus=6736">http://thread.gmane.org/gmane.science.nmr.relax.scm/22850/focus=6736</a>.
+
+
+Modified:
+    trunk/specific_analyses/relax_disp/parameters.py
+
+Modified: trunk/specific_analyses/relax_disp/parameters.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/relax_disp/parameters.py?rev=25109&amp;r1=25108&amp;r2=25109&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/relax_disp/parameters.py?rev=25109&amp;r1=25108&amp;r2=25109&amp;view=diff</a>
+==============================================================================
+--- trunk/specific_analyses/relax_disp/parameters.py    (original)
++++ trunk/specific_analyses/relax_disp/parameters.py    Wed Aug 20 19:07:00 
+2014
+@@ -33,7 +33,7 @@
+ from lib.text.sectioning import subsection
+ from pipe_control import pipes
+ from pipe_control.mol_res_spin import exists_mol_res_spin_data, return_spin
+-from specific_analyses.relax_disp.data import count_spins, generate_r20_key, 
+has_exponential_exp_type, loop_cluster, loop_exp_frq
++from specific_analyses.relax_disp.data import count_spins, generate_r20_key, 
+has_exponential_exp_type, is_r1_optimsed, loop_cluster, loop_exp_frq
+ from specific_analyses.relax_disp.variables import 
+MODEL_LIST_ANALYTIC_R1RHO, MODEL_LIST_CPMG_ONLY, MODEL_LIST_MMQ, 
+MODEL_LIST_NUMERIC_R1RHO, MODEL_M61B, MODEL_NS_MMQ_3SITE, 
+MODEL_NS_MMQ_3SITE_LINEAR, MODEL_NS_R1RHO_3SITE, MODEL_NS_R1RHO_3SITE_LINEAR, 
+PARAMS_R20
+ 
+ 
+@@ -951,6 +951,27 @@
+     return num
+ 
+ 
++def r1_setup():
++    &quot;&quot;&quot;Modify the current spin parameter list to either include or exclude 
+the R1 parameter.&quot;&quot;&quot;
++
++    # Loop over the spins.
++    for spin, spin_id in spin_loop(return_id=True, skip_desel=True):
++        # No model set up.
++        if not hasattr(spin, 'params') or not hasattr(spin, 'model'):
++            continue
++
++        # Should R1 data be optimised?
++        r1_fit = is_r1_optimsed(spin.model)
++
++        # Prepend R1.
++        if r1_fit and 'r1' not in spin.params:
++            spin.params.insert(0, 'r1')
++
++        # Remove the R1 parameter.
++        if not r1_fit and 'r1' in spin.params:
++            spin.params.remove('r1')
++
++
+ def set_value(value=None, key=None, spins=None, sim_index=None, 
+param_name=None, spin_index=None, r20_key=None):
+     &quot;&quot;&quot;Return the value for the given parameter.
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Aug 20 19:20:02 2014</div>  
+</body>
+</html>

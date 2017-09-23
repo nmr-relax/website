@@ -1,0 +1,462 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r25678 &#45; in /trunk: auto_analyses/relax_disp_repeat_cpmg.py test_suite/system_tests/relax_disp.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Sun, 07 Sep 2014 19:31:30 +0200 -->
+<!--X-Message-Id: E1XQgJG&#45;00022S&#45;PD@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r25678 - in /trunk: auto_analyses/relax_disp_repeat_cpmg.py test_suite/system_tests/relax_disp.py -- September 07, 2014 - 19:31</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r25678 - in /trunk: auto_analyses/relax_disp_repeat_cpmg.py test_suite/system_tests/relax_disp.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00184" class="tabs">Index by Date</a> | <a href="threads.html#00184" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00183.html">Date Prev</a>] [<a href="msg00185.html">Date Next</a>] [<a href="msg00183.html">Thread Prev</a>] [<a href="msg00185.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Sun, 07 Sep 2014 17:31:30 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00184.html">E1XQgJG-00022S-PD@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on September 07, 2014 - 19:31:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Sun Sep  7 19:31:30 2014
+New Revision: 25678
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=25678&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=25678&amp;view=rev</a>
+Log:
+Further extended methods in the tclass for repeated analysis of dispersion 
+data.
+
+Task #7826 (<a  rel="nofollow" href="https://gna.org/task/index.php?7826">https://gna.org/task/index.php?7826</a>): Write an python class for 
+the repeated analysis of dispersion data.
+
+Modified:
+    trunk/auto_analyses/relax_disp_repeat_cpmg.py
+    trunk/test_suite/system_tests/relax_disp.py
+
+Modified: trunk/auto_analyses/relax_disp_repeat_cpmg.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/auto_analyses/relax_disp_repeat_cpmg.py?rev=25678&amp;r1=25677&amp;r2=25678&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/auto_analyses/relax_disp_repeat_cpmg.py?rev=25678&amp;r1=25677&amp;r2=25678&amp;view=diff</a>
+==============================================================================
+--- trunk/auto_analyses/relax_disp_repeat_cpmg.py       (original)
++++ trunk/auto_analyses/relax_disp_repeat_cpmg.py       Sun Sep  7 19:31:30 
+2014
+@@ -30,6 +30,7 @@
+ from datetime import datetime
+ from glob import glob
+ from os import F_OK, access, getcwd, sep
++from numpy import asarray, std
+ import sys
+ 
+ # relax module imports.
+@@ -37,7 +38,7 @@
+ from lib.text.sectioning import section, subsection, subtitle, title
+ from pipe_control import pipes
+ from prompt.interpreter import Interpreter
+-from specific_analyses.relax_disp.data import has_exponential_exp_type, 
+is_r1_optimised, return_param_key_from_data
++from specific_analyses.relax_disp.data import has_exponential_exp_type, 
+is_r1_optimised, loop_exp_frq_offset_point, return_param_key_from_data, 
+spin_loop
+ from specific_analyses.relax_disp.variables import MODEL_NOREX, 
+MODEL_PARAMS, MODEL_R2EFF
+ from status import Status; status = Status()
+ 
+@@ -211,7 +212,7 @@
+         # Read the intensity per spectrum id and set the RMSD error.
+ 
+         # Switch to the pipe.
+-        if pipes.get_pipe() != pipe_name:
++        if pipes.cdp_name() != pipe_name:
+             self.interpreter.pipe.switch(pipe_name)
+ 
+         # Loop over spectrometer frequencies.
+@@ -265,7 +266,7 @@
+ 
+ 
+         # Switch to the pipe.
+-        if pipes.get_pipe() != pipe_name:
++        if pipes.cdp_name() != pipe_name:
+             self.interpreter.pipe.switch(pipe_name)
+ 
+         # Loop over spectrometer frequencies.
+@@ -295,7 +296,7 @@
+             self.interpreter.spectrum.error_analysis(subset=spectrum_ids)
+ 
+ 
+-    def set_int(self, list_glob_ini=[0]):
++    def set_int(self, list_glob_ini=[0], force=False):
+         &quot;&quot;&quot;Call both the setup of data and the error analysis&quot;&quot;&quot;
+ 
+         # Define model
+@@ -306,10 +307,12 @@
+             # Check previous, and get the pipe name.
+             found, pipe_name, resfile, path = 
+self.check_previous_result(model=model, glob_ini=glob_ini, 
+method=self.method, clusterid='', bundle=self.method)
+ 
+-            # If found, then pass, else calculate it.
+-            if found:
+-                pass
+-            else:
++            if not found:
++                calculate = True
++            elif found:
++                calculate = False
++
++            if calculate:
+                 # Create the data pipe, by copying setup pipe.
+                 
+self.interpreter.pipe.copy(pipe_from=self.base_setup_pipe_name, 
+pipe_to=pipe_name, bundle_to=self.method)
+                 self.interpreter.pipe.switch(pipe_name)
+@@ -319,6 +322,12 @@
+ 
+                 # Call error analysis.
+                 self.do_spectrum_error_analysis(pipe_name=pipe_name, 
+glob_ini=glob_ini)
++
++                # Save results, and store the current settings dic to pipe.
++                cdp.settings = self.settings
++                self.interpreter.results.write(file=resfile, dir=path, 
+force=force)
++
++
+ 
+ 
+     def calc_r2eff(self, list_glob_ini=[0], force=False):
+@@ -331,11 +340,12 @@
+             # Check previous, and get the pipe name.
+             found, pipe_name, resfile, path = 
+self.check_previous_result(model=model, glob_ini=glob_ini, 
+method=self.method, clusterid='', bundle=self.method)
+ 
+-            # If found, then pass, else calculate it.
+-            if found:
+-                pass
+-
+-            else:
++            if not found:
++                calculate = True
++            elif found:
++                calculate = False
++
++            if calculate:
+                 # Create the data pipe by copying the intensity pipe, then 
+switching to it.
+                 # If not intensity pipe name pipe exists, then calculate it.
+                 intensity_pipe_name = self.name_pipe(model='int', 
+glob_ini=glob_ini, method=self.method, clusterid='')
+@@ -356,8 +366,10 @@
+                 if model == MODEL_R2EFF and not has_exponential_exp_type():
+                     self.interpreter.minimise.calculate()
+ 
+-                # Finally save the R2eff results.
++                # Save results, and store the current settings dic to pipe.
++                cdp.settings = self.settings
+                 self.interpreter.results.write(file=resfile, dir=path, 
+force=force)
++
+ 
+ 
+     def minimise_model(self, model=None, list_glob_ini=[0], force=False, 
+redo=False):
+@@ -368,12 +380,16 @@
+             # Check previous, and get the pipe name.
+             found, pipe_name, resfile, path = 
+self.check_previous_result(model=model, glob_ini=glob_ini, 
+method=self.method, clusterid='', bundle=self.method)
+ 
+-            # If found, then pass, else calculate it.
+-            if found:
+-                pass
+-
+-            else:
+-
++            if not found:
++                calculate = True
++
++            elif found and redo == False:
++                calculate = False
++
++            elif found and redo == True:
++                calculate = True
++
++            if calculate:
+                 # Get the pipe name for R2eff values.
+                 r2eff_pipe_name = self.name_pipe(model=MODEL_R2EFF, 
+glob_ini=glob_ini, method=self.method, clusterid='')
+ 
+@@ -383,6 +399,7 @@
+ 
+                 # Copy pipe from base setup.
+                 
+self.interpreter.pipe.copy(pipe_from=self.base_setup_pipe_name, 
+pipe_to=pipe_name, bundle_to=self.method)
++                self.interpreter.pipe.switch(pipe_name)
+ 
+                 # Now copy the R2eff values.
+                 self.interpreter.value.copy(pipe_from=r2eff_pipe_name, 
+pipe_to=pipe_name, param='r2eff')
+@@ -396,7 +413,8 @@
+                 # Now optimise.
+                 self.optimise(model=model)
+ 
+-                # Finally save the model results.
++                # Save results, and store the current settings dic to pipe.
++                cdp.settings = self.settings
+                 self.interpreter.results.write(file=resfile, dir=path, 
+force=force)
+ 
+ 
+@@ -536,6 +554,119 @@
+         return list_dub_mapping
+ 
+ 
++    def col_r2eff(self, method=None, list_glob_ini=[0]):
++
++        # Loop over the glob ini:
++        res_dic = {}
++        res_dic['method'] = method
++        for glob_ini in list_glob_ini:
++            # Store under glob_ini
++            res_dic[str(glob_ini)] = {}
++
++            # Get the pipe name for R2eff values.
++            pipe_name = self.name_pipe(model=MODEL_R2EFF, glob_ini=glob_ini, 
+method=method, clusterid='')
++
++            # Check if pipe exists, or else calculate.
++            if not pipes.has_pipe(pipe_name):
++                self.calc_r2eff(list_glob_ini=[glob_ini])
++
++            if pipes.get_pipe() != pipe_name:
++                self.interpreter.pipe.switch(pipe_name)
++
++            # Results dictionary.
++            res_dic[str(glob_ini)] = {}
++            res_dic[str(glob_ini)]['r2eff'] = {}
++            res_dic[str(glob_ini)]['r2eff_err'] = {}
++            spin_point_r2eff_list = []
++            spin_point_r2eff_err_list = []
++
++            # Loop over the spins.
++            for cur_spin, mol_name, resi, resn, spin_id in 
+spin_loop(full_info=True, return_id=True, skip_desel=True):
++                # Make spin dic.
++                res_dic[str(glob_ini)]['r2eff'][spin_id] = {}
++                res_dic[str(glob_ini)]['r2eff_err'][spin_id] = {}
++
++                # Loop over the R2eff points
++                for exp_type, frq, offset, point, ei, mi, oi, di in 
+loop_exp_frq_offset_point(return_indices=True):
++                    # Define the key.
++                    data_key = 
+return_param_key_from_data(exp_type=self.exp_type, frq=frq, offset=offset, 
+point=point)
++
++                    # Check for bad data has skipped r2eff points
++                    if data_key in cur_spin.r2eff:
++                        r2eff_point = cur_spin.r2eff[data_key]
++                        r2eff_err_point = cur_spin.r2eff_err[data_key]
++
++                        res_dic[str(glob_ini)]['r2eff'][spin_id][data_key] = 
+r2eff_point
++                        
+res_dic[str(glob_ini)]['r2eff_err'][spin_id][data_key] = r2eff_err_point
++                        spin_point_r2eff_list.append(r2eff_point)
++                        spin_point_r2eff_err_list.append(r2eff_err_point)
++
++            res_dic[str(glob_ini)]['r2eff_arr'] = 
+asarray(spin_point_r2eff_list)
++            res_dic[str(glob_ini)]['r2eff_err_arr'] = 
+asarray(spin_point_r2eff_err_list)
++
++        return res_dic
++
++    def get_r2eff_stat_dic(self, list_r2eff_dics=None, list_glob_ini=[0]):
++
++        # Loop over the result dictionaries:
++        res_dic = {}
++        for i, r2eff_dic in enumerate(list_r2eff_dics):
++            # Let the reference dic be initial dic
++            r2eff_dic_ref = list_r2eff_dics[0]
++            method_ref = r2eff_dic_ref['method']
++            res_dic['method_ref'] = method_ref
++
++            # Let the reference R2eff array be the initial glob.
++            r2eff_arr_ref = r2eff_dic_ref[str(list_glob_ini[0])]['r2eff_arr']
++            res_dic['r2eff_arr_ref'] = r2eff_arr_ref
++
++            # Get the current method
++            method_cur = r2eff_dic['method']
++            res_dic[method_cur] = {}
++            res_dic[method_cur]['method'] = method_cur
++
++            # Now loop over glob_ini:
++            for glob_ini in list_glob_ini:
++                # Get the array, if it exists.
++                if str(glob_ini) not in r2eff_dic:
++                    continue
++
++                r2eff_arr = r2eff_dic[str(glob_ini)]['r2eff_arr']
++
++                # Make a normalised R2eff array according to reference.
++                # This require that all number of points are equal.
++                if len(r2eff_arr) != len(r2eff_arr_ref):
++                    continue
++
++                # Get the normalised array.
++                r2eff_norm_arr = r2eff_arr/r2eff_arr_ref
++
++                # Calculate the standard deviation
++                r2eff_norm_std = std(r2eff_norm_arr, ddof=1)
++
++                # Get the diff, then norm
++                r2eff_diff_norm_arr = (r2eff_arr - r2eff_arr_ref) / 
+r2eff_arr_ref
++                r2eff_diff_norm_std = std(r2eff_diff_norm_arr, ddof=1)
++
++                # Store to result dic.
++                res_dic[method_cur]['r2eff_arr'] = r2eff_arr
++                res_dic[method_cur]['r2eff_norm_arr'] = r2eff_norm_arr
++                res_dic[method_cur]['r2eff_norm_std'] = r2eff_norm_std
++                res_dic[method_cur]['r2eff_diff_norm_arr'] = 
+r2eff_diff_norm_arr
++                res_dic[method_cur]['r2eff_diff_norm_std'] = 
+r2eff_diff_norm_std
++
++
++        return res_dic
++
++    def plot_r2eff_stat(self, r2eff_stat_dic=None, methods=[], 
+list_glob_ini=[], show=False):
++
++        # Loop over the methods.
++        for method in methods:
++            if method not in r2eff_stat_dic:
++                continue
++
++            print method
++
+     def interpreter_start(self):
+         # Load the interpreter.
+         self.interpreter = Interpreter(show_script=False, 
+raise_relax_error=True)
+
+Modified: trunk/test_suite/system_tests/relax_disp.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/test_suite/system_tests/relax_disp.py?rev=25678&amp;r1=25677&amp;r2=25678&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/test_suite/system_tests/relax_disp.py?rev=25678&amp;r1=25677&amp;r2=25678&amp;view=diff</a>
+==============================================================================
+--- trunk/test_suite/system_tests/relax_disp.py (original)
++++ trunk/test_suite/system_tests/relax_disp.py Sun Sep  7 19:31:30 2014
+@@ -5950,7 +5950,7 @@
+         sdic[e_2]['rmsd_folder'] = rmsd_folder_2
+ 
+         # Define temporary folder.
+-        sdic['results_dir'] = self.tmpdir
++        #sdic['results_dir'] = self.tmpdir
+ 
+         # Setup class with data.
+         RDR =  Relax_disp_rep(sdic)
+@@ -5962,10 +5962,37 @@
+         #RDR.set_int(list_glob_ini=[128, 126])
+ 
+         # Now calculate R2eff.
+-        #RDR.calc_r2eff(list_glob_ini=[128, 126])
+-
+-        RDR.minimise_model(model=MODEL_CR72, list_glob_ini=[128])
+-
++        RDR.calc_r2eff(list_glob_ini=[128, 126, 6])
++
++        # Minimise.
++        #RDR.minimise_model(model=MODEL_CR72, list_glob_ini=[128, 126])
++
++        # Try for bad data.
++        #RDR.calc_r2eff(list_glob_ini=[6, 4])
++
++        # Change method.
++        RDR.set_self(key='method', value='MDD')
++
++        # Now calculate R2eff.
++        RDR.calc_r2eff(list_glob_ini=[128, 126])
++
++        # Minimise.
++        #RDR.minimise_model(model=MODEL_CR72, list_glob_ini=[128, 126])
++
++        # Collect r2eff values.
++        r2eff_ft = RDR.col_r2eff(method='FT', list_glob_ini=[128, 126, 6])
++
++        # Collect r2eff values.
++        r2eff_mdd = RDR.col_r2eff(method='MDD', list_glob_ini=[128, 126])
++
++        # Get R2eff stats.
++        r2eff_stat_dic = RDR.get_r2eff_stat_dic(list_r2eff_dics=[r2eff_ft, 
+r2eff_mdd], list_glob_ini=[128, 126, 6])
++
++        # Plot R2eff stats
++        RDR.plot_r2eff_stat(r2eff_stat_dic=r2eff_stat_dic, methods=['FT'], 
+list_glob_ini=[128, 126, 6], show=True)
++
++        # Print the pipes.
++        self.interpreter.pipe.display()
+ 
+ 
+     def test_r1rho_kjaergaard_auto(self):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Sep 08 09:00:03 2014</div>  
+</body>
+</html>

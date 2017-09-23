@@ -1,0 +1,140 @@
+<!-- MHonArc v2.6.10 -->
+<!--X-Subject: Re: [Fwd: Re: [bug #6503] Uncaught nan in xh_vect] -->
+<!--X-From-R13: "Sqjneq q'Ohiretar" <rqjneq.qnhiretarNtznvy.pbz> -->
+<!--X-Date: Wed, 09 Aug 2006 18:12:00 +0200 -->
+<!--X-Message-Id: 7f080ed10608090911p78765841l4ce568fd849e103b@mail.gmail.com -->
+<!--X-Content-Type: text/plain -->
+<!--X-Reference: 44DA0348.902@bmb.leeds.ac.uk -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>Re: [Fwd: Re: [bug #6503] Uncaught nan in xh_vect] -- August 09, 2006 - 18:12</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />Re: [Fwd: Re: [bug #6503] Uncaught nan in xh_vect]</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00046" class="tabs">Index by Date</a> | <a href="threads.html#00046" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00045.html">Date Prev</a>] [<a href="msg00047.html">Date Next</a>] [<a href="msg00042.html">Thread Prev</a>] [<a href="msg00050.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: &quot;Gary S. Thompson&quot; &lt;garyt@xxxxxxxxxxxxxxx&gt;</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 10 Aug 2006 02:11:24 +1000</li>
+<li class="menuitem">
+<em>Cc</em>: relax-devel@xxxxxxx</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00046.html">7f080ed10608090911p78765841l4ce568fd849e103b@mail.gmail.com</a>&gt;</li>
+<li class="menuitem">
+<em>References</em>: &lt;<a href="msg00042.html">44DA0348.902@bmb.leeds.ac.uk</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>Edward d'Auvergne</strong> on August 09, 2006 - 18:12:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<blockquote class="blockquote"><pre style="margin: 0em;">&gt;&gt; I'm resonably convinced by this as far as it goes - NaN in Chi2 almost
+&gt;&gt; certainly reflects a serious error in the input, and will likely be
+&gt;&gt; evident from the very begining of the calculation. As such I no longer
+&gt;&gt; have concerns about Chi2 == NaN raising RelaxError. The only exception
+&gt;&gt; would be the case of a corrupt PDB file, where not all residues are
+&gt;&gt; affected. The current behaviour for missing protons is to print a
+&gt;&gt; warning, deselect the affected residue, and continue. I believe a
+&gt;&gt; similar approach should also apply in the case of bad proton positions.
+&gt;
+&gt;
+&gt; The warning should be sufficient for the user to notice something is
+&gt; wrong.  The setting of the vector to None rather than deselecting the
+&gt; residue in your change to 'pdb.py' is good as isotropic diffusion and
+&gt; the local tm models, which are independent of the XH bond orientation,
+&gt; will be unaffected.  In addition the PDB reader in Scientific Python
+&gt; is not perfect and may trigger the problem.</pre><br>
+<pre style="margin: 0em;"><br>One of the problems with this sort of thing is that warnings can be lost
+in the rest of the output. It maybe worthwhile putting warnings into a
+different stream say the error stream or even better/as well print a
+message along the lines of warnings were generated... see output for
+details at the end of each run. Other thoughts are that warnings could
+go into a weakly referenced buffer (to prevent out of memory problems)
+and then be re-reported at completion. Certainly all warnings should
+start with a clearly delineated string which is easily grepped for. This
+might be forced by making warningsgo via a specific function which
+prepends the relevant text. Of course a flag to turn warnings into
+failures can also be useful as found out by man y generations of comiler
+users and writers and would be made available by the same use of a
+bottlneck function.
+</pre></blockquote><pre style="margin: 0em;"><br>I've always had in the back of my mind the creation of RelaxWarnings.
+The messages go to stderr but the program continues.  I've tended
+towards RelaxErrors rather than RelaxWarnings though because it is
+very easy to miss the warning - relax is deliberately quite verbose.
+This PDB case may be perfect for introducing a RelaxWarning as the
+message appears at the very start and is a lot more noticable.  The
+easily greppable string is 'RelaxWarning', and the implementation
+would be within 'error.py'.  In most other situations I would prefer
+the RelaxError as the program terminates at the error and hence the
+user is fully aware that there is a problem and what the issue is.</pre><br>
+<pre style="margin: 0em;">My idea would be to have a second class in the 'error.py' file called
+RelaxWarnings.  This would be activated in the file 'relax' just under
+the line 'RelaxErrors()'.  The RelaxWarnings class would have exactly
+the same structure as the RelaxErrors class, i.e. loop over all the
+objects in 'self' and place them into '__builtin__', create the
+BaseWarning class which uses 'Warning' as it's base class, and then
+create the specific warning called something like
+RelaxZeroVectorWarning.  I don't currently have access to the svn
+repository so feel free to give this a go if you like.  Otherwise I
+might give it a go tomorrow.</pre><br>
+<pre style="margin: 0em;">Edward</pre><br>
+<br>
+
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<ul><li><strong>Follow-Ups</strong>:
+<ul>
+<li><strong><a name="00050" href="msg00050.html">Re: [Fwd: Re: [bug #6503] Uncaught nan in xh_vect]</a></strong>
+<ul><li><em>From:</em> Edward d'Auvergne</li></ul></li>
+</ul></li></ul>
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<ul><li><strong>References</strong>:
+<ul>
+<li><strong><a name="00042" href="msg00042.html">[Fwd: Re: [bug #6503] Uncaught nan in xh_vect]</a></strong>
+<ul><li><em>From:</em> Gary S. Thompson</li></ul></li>
+</ul></li></ul>
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Aug 10 10:00:28 2006</div>  
+</body>
+</html>

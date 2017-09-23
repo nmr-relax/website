@@ -1,0 +1,251 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r12465 &#45; in /branches/bmrb/generic_fns: bmrb.py relax_data.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 31 Jan 2011 15:38:28 +0100 -->
+<!--X-Message-Id: E1Pjutg&#45;0007J7&#45;Kt@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r12465 - in /branches/bmrb/generic_fns: bmrb.py relax_data.py -- January 31, 2011 - 15:38</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r12465 - in /branches/bmrb/generic_fns: bmrb.py relax_data.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00405" class="tabs">Index by Date</a> | <a href="threads.html#00405" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00404.html">Date Prev</a>] [<a href="msg00406.html">Date Next</a>] [<a href="msg00404.html">Thread Prev</a>] [<a href="msg00406.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 31 Jan 2011 14:38:28 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00405.html">E1Pjutg-0007J7-Kt@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on January 31, 2011 - 15:38:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Mon Jan 31 15:38:28 2011
+New Revision: 12465
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=12465&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=12465&amp;view=rev</a>
+Log:
+Shifted the sequence generation code into the BMRB specific 
+generate_sequence() function.
+
+This is to allow for strangeness in the BMRB entries :S
+
+
+Modified:
+    branches/bmrb/generic_fns/bmrb.py
+    branches/bmrb/generic_fns/relax_data.py
+
+Modified: branches/bmrb/generic_fns/bmrb.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/bmrb/generic_fns/bmrb.py?rev=12465&amp;r1=12464&amp;r2=12465&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/bmrb/generic_fns/bmrb.py?rev=12465&amp;r1=12464&amp;r2=12465&amp;view=diff</a>
+==============================================================================
+--- branches/bmrb/generic_fns/bmrb.py (original)
++++ branches/bmrb/generic_fns/bmrb.py Mon Jan 31 15:38:28 2011
+@@ -1,6 +1,6 @@
+ 
+###############################################################################
+ #                                                                            
+ #
+-# Copyright (C) 2008-2009 Edward d'Auvergne                                  
+ #
++# Copyright (C) 2008-2011 Edward d'Auvergne                                  
+ #
+ #                                                                            
+ #
+ # This file is part of the program relax.                                    
+ #
+ #                                                                            
+ #
+@@ -31,10 +31,11 @@
+ from data.exp_info import ExpInfo
+ import dep_check
+ from generic_fns import exp_info
++from generic_fns.mol_res_spin import create_spin, generate_spin_id, 
+return_residue, return_spin
+ from info import Info_box
+ from relax_errors import RelaxError, RelaxFileError, 
+RelaxFileOverwriteError, RelaxNoModuleInstallError, RelaxNoPipeError
+ from relax_io import get_file_path, mkdir_nofail
+-from specific_fns.setup import get_specific_fn
++import specific_fns
+ from version import version_full
+ 
+ 
+@@ -50,10 +51,49 @@
+         raise RelaxNoPipeError
+ 
+     # Specific results writing function.
+-    write_function = get_specific_fn('bmrb_write', 
+ds[ds.current_pipe].pipe_type, raise_error=False)
++    write_function = specific_fns.setup.get_specific_fn('bmrb_write', 
+ds[ds.current_pipe].pipe_type, raise_error=False)
+ 
+     # Write the results.
+     write_function(sys.stdout, version=version)
++
++
++def generate_sequence(N=0, spin_ids=None, spin_nums=None, spin_names=None, 
+res_nums=None, res_names=None, mol_names=None):
++    &quot;&quot;&quot;Generate the sequence data from the BRMB information.
++
++    @keyword N:             The number of spins.
++    @type N:                int
++    @keyword spin_ids:      The list of spin IDs.
++    @type spin_ids:         list of str
++    @keyword spin_nums:     The list of spin numbers.
++    @type spin_nums:        list of int or None
++    @keyword spin_names:    The list of spin names.
++    @type spin_names:       list of str or None
++    @keyword res_nums:      The list of residue numbers.
++    @type res_nums:         list of int or None
++    @keyword res_names:     The list of residue names.
++    @type res_names:        list of str or None
++    @keyword mol_names:     The list of molecule names.
++    @type mol_names:        list of str or None
++    &quot;&quot;&quot;
++
++    print cdp.mol[0].res
++    # Loop over the spin data.
++    for i in range(N):
++        # The spin already exists.
++        spin = return_spin(spin_ids[i])
++        if spin:
++            continue
++
++        # The spin container needs to be named.
++        res_cont = return_residue(generate_spin_id(mol_name=mol_names[i], 
+res_num=res_nums[i], res_name=res_names[i]))
++        if res_cont and len(res_cont.spin) == 1 and res_cont.spin[0].name == 
+None and res_cont.spin[0].num == None:
++            # Name and number the spin.
++            res_cont.spin[0].name = spin_names[i]
++            res_cont.spin[0].num = spin_nums[i]
++            continue
++
++        # Create the spin.
++        create_spin(spin_num=spin_nums[i], spin_name=spin_names[i], 
+res_num=res_nums[i], res_name=res_names[i], mol_name=mol_names[i])
+ 
+ 
+ def read(file=None, directory=None, version='3.1'):
+@@ -79,7 +119,7 @@
+         raise RelaxFileError(file_path)
+ 
+     # Specific results reading function.
+-    read_function = get_specific_fn('bmrb_read', 
+ds[ds.current_pipe].pipe_type)
++    read_function = specific_fns.setup.get_specific_fn('bmrb_read', 
+ds[ds.current_pipe].pipe_type)
+ 
+     # Read the results.
+     read_function(file_path, version=version)
+@@ -101,7 +141,7 @@
+         directory = ds.current_pipe
+ 
+     # Specific results writing function.
+-    write_function = get_specific_fn('bmrb_write', 
+ds[ds.current_pipe].pipe_type)
++    write_function = specific_fns.setup.get_specific_fn('bmrb_write', 
+ds[ds.current_pipe].pipe_type)
+ 
+     # Get the full file path.
+     file_path = get_file_path(file, directory)
+
+Modified: branches/bmrb/generic_fns/relax_data.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/bmrb/generic_fns/relax_data.py?rev=12465&amp;r1=12464&amp;r2=12465&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/bmrb/generic_fns/relax_data.py?rev=12465&amp;r1=12464&amp;r2=12465&amp;view=diff</a>
+==============================================================================
+--- branches/bmrb/generic_fns/relax_data.py (original)
++++ branches/bmrb/generic_fns/relax_data.py Mon Jan 31 15:38:28 2011
+@@ -33,6 +33,7 @@
+ # relax module imports.
+ from data import Relax_data_store; ds = Relax_data_store()
+ from data.exp_info import ExpInfo
++from generic_fns.bmrb import generate_sequence
+ from generic_fns.mol_res_spin import create_spin, exists_mol_res_spin_data, 
+find_index, generate_spin_id, get_molecule_names, return_spin, 
+spin_index_loop, spin_loop
+ from generic_fns import pipes
+ from generic_fns import value
+@@ -800,16 +801,16 @@
+     # Update the global data.
+     update_data_structures_pipe(ri_label, frq_label, frq)
+ 
++    # Generate the sequence.
++    if gen_seq:
++        generate_sequence(N, spin_ids=spin_ids, spin_nums=spin_nums, 
+spin_names=spin_names, res_nums=res_nums, res_names=res_names, 
+mol_names=mol_names)
++
+     # Loop over the spin data.
+     for i in range(N):
+         # Get the corresponding spin container.
+         spin = return_spin(spin_ids[i])
+         if spin == None:
+-            if not gen_seq:
+-                raise RelaxNoSpinError(spin_ids[i])
+-            else:
+-                create_spin(spin_num=spin_nums[i], spin_name=spin_names[i], 
+res_num=res_nums[i], res_name=res_names[i], mol_name=mol_names[i])
+-                spin = return_spin(spin_ids[i])
++            raise RelaxNoSpinError(spin_ids[i])
+ 
+         # Update all data structures.
+         update_data_structures_spin(spin, ri_label, frq_label, frq, 
+values[i], errors[i])
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Jan 31 16:00:02 2011</div>  
+</body>
+</html>

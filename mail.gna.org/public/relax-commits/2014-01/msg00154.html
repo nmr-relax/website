@@ -1,0 +1,258 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r22107 &#45; /branches/double_rotor/target_functions/frame_order.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 31 Jan 2014 17:32:20 +0100 -->
+<!--X-Message-Id: E1W9H0u&#45;0002Ta&#45;Kf@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r22107 - /branches/double_rotor/target_functions/frame_order.py -- January 31, 2014 - 17:32</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r22107 - /branches/double_rotor/target_functions/frame_order.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00154" class="tabs">Index by Date</a> | <a href="threads.html#00154" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00153.html">Date Prev</a>] [Date Next] [<a href="msg00153.html">Thread Prev</a>] [Thread Next]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 31 Jan 2014 16:32:20 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00154.html">E1W9H0u-0002Ta-Kf@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on January 31, 2014 - 17:32:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Jan 31 17:32:20 2014
+New Revision: 22107
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=22107&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=22107&amp;view=rev</a>
+Log:
+Initial implementation of the double rotor frame order model target function.
+
+The target function func_double_rotor() has been created as a copy of the 
+func_rotor_qrint() method,
+modified for the double rotor model.  Modifications will likely be needed as 
+the
+compile_2nd_matrix_double_rotor() and pcs_numeric_int_double_rotor() 
+functions are implemented.
+
+
+Modified:
+    branches/double_rotor/target_functions/frame_order.py
+
+Modified: branches/double_rotor/target_functions/frame_order.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/double_rotor/target_functions/frame_order.py?rev=22107&amp;r1=22106&amp;r2=22107&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/double_rotor/target_functions/frame_order.py?rev=22107&amp;r1=22106&amp;r2=22107&amp;view=diff</a>
+==============================================================================
+--- branches/double_rotor/target_functions/frame_order.py (original)
++++ branches/double_rotor/target_functions/frame_order.py Fri Jan 31 17:32:20 
+2014
+@@ -334,6 +334,9 @@
+             elif model == 'free rotor':
+                 self.create_sobol_data(n=self.num_int_pts, dims=['sigma'])
+                 self.func = self.func_free_rotor_qrint
++            elif model == 'double rotor':
++                self.create_sobol_data(n=self.num_int_pts, dims=['sigma', 
+'sigma2'])
++                self.func = self.func_double_rotor
+ 
+         # The target function aliases (Scipy numerical integration).
+         else:
+@@ -380,6 +383,7 @@
+ 
+         # The rotation to the Frame Order eigenframe.
+         self.R_eigen = zeros((3, 3), float64)
++        self.R_eigen_2 = zeros((3, 3), float64)
+         self.R_ave = zeros((3, 3), float64)
+         self.Ri_prime = zeros((3, 3), float64)
+         self.tensor_3D = zeros((3, 3), float64)
+@@ -388,8 +392,101 @@
+         self.cone_axis = zeros(3, float64)
+         self.z_axis = array([0, 0, 1], float64)
+ 
++        # The rotor axes.
++        self.rotor_axis = zeros(3, float64)
++        self.rotor_axis_2 = zeros(3, float64)
++
+         # Initialise the Frame Order matrices.
+         self.frame_order_2nd = zeros((9, 9), float64)
++
++
++    def func_double_rotor(self, params):
++        &quot;&quot;&quot;Target function for the optimisation of the double rotor frame 
+order model.
++
++        This function optimises the model parameters using the RDC and PCS 
+base data.  Quasi-random, Sobol' sequence based, numerical integration is 
+used for the PCS.
++
++
++        @param params:  The vector of parameter values.  These are the 
+tensor rotation angles {alpha, beta, gamma, theta, phi, sigma_max}.
++        @type params:   list of float
++        @return:        The chi-squared or SSE value.
++        @rtype:         float
++        &quot;&quot;&quot;
++
++        # Scaling.
++        if self.scaling_flag:
++            params = dot(params, self.scaling_matrix)
++
++        # Unpack the parameters.
++        if self.translation_opt and self.pivot_opt:
++            self._param_pivot = params[:3]
++            self._param_pivot_2 = params[3:6]
++            self._translation_vector = params[6:9]
++            ave_pos_alpha, ave_pos_beta, ave_pos_gamma, axis_theta, 
+axis_phi, axis_theta_2, axis_phi_2, sigma_max, sigma_max_2 = params[9:]
++        elif self.translation_opt:
++            self._translation_vector = params[:3]
++            ave_pos_alpha, ave_pos_beta, ave_pos_gamma, axis_theta, 
+axis_phi, axis_theta_2, axis_phi_2, sigma_max, sigma_max_2 = params[3:]
++        elif self.pivot_opt:
++            self._param_pivot = params[:3]
++            self._param_pivot_2 = params[3:6]
++            ave_pos_alpha, ave_pos_beta, ave_pos_gamma, axis_theta, 
+axis_phi, axis_theta_2, axis_phi_2, sigma_max, sigma_max_2 = params[6:]
++        else:
++            ave_pos_alpha, ave_pos_beta, ave_pos_gamma, axis_theta, 
+axis_phi, axis_theta_2, axis_phi_2, sigma_max, sigma_max_2 = params
++
++        # Generate both rotation axes from the spherical angles.
++        spherical_to_cartesian([1.0, axis_theta, axis_phi], self.rotor_axis)
++        spherical_to_cartesian([1.0, axis_theta_2, axis_phi_2], 
+self.rotor_axis_2)
++
++        # Pre-calculate the eigenframe rotation matrix.
++        two_vect_to_R(self.z_axis, self.rotor_axis, self.R_eigen)
++        two_vect_to_R(self.z_axis, self.rotor_axis_2, self.R_eigen_2)
++
++        # Combine the rotations.
++        R_eigen_full = dot(self.R_eigen_2, self.R_eigen)
++
++        # The Kronecker product of the eigenframe rotation.
++        Rx2_eigen = kron_prod(R_eigen_full, R_eigen_full)
++
++        # Generate the 2nd degree Frame Order super matrix.
++        frame_order_2nd = 
+compile_2nd_matrix_double_rotor(self.frame_order_2nd, Rx2_eigen, sigma_max, 
+sigma_max_2)
++
++        # The average frame rotation matrix (and reduce and rotate the 
+tensors).
++        self.reduce_and_rot(ave_pos_alpha, ave_pos_beta, ave_pos_gamma, 
+frame_order_2nd)
++
++        # Pre-transpose matrices for faster calculations.
++        RT_eigen = transpose(R_eigen_full)
++        RT_ave = transpose(self.R_ave)
++
++        # Pre-calculate all the necessary vectors.
++        if self.pcs_flag:
++            self.calc_vectors(self._param_pivot, self.R_ave, RT_ave)
++
++        # Initial chi-squared (or SSE) value.
++        chi2_sum = 0.0
++
++        # Loop over each alignment.
++        for align_index in range(self.num_align):
++            # RDCs.
++            if self.rdc_flag[align_index]:
++                # Loop over the RDCs.
++                for j in range(self.num_interatom):
++                    # The back calculated RDC.
++                    if not self.missing_rdc[align_index, j]:
++                        self.rdc_theta[align_index, j] = 
+rdc_tensor(self.dip_const[j], self.rdc_vect[j], self.A_3D_bc[align_index])
++
++                # Calculate and sum the single alignment chi-squared value 
+(for the RDC).
++                chi2_sum = chi2_sum + chi2(self.rdc[align_index], 
+self.rdc_theta[align_index], self.rdc_error[align_index])
++
++        # PCS via numerical integration.
++        if self.pcs_flag_sum:
++            # Numerical integration of the PCSs.
++            pcs_numeric_int_double_rotor(points=self.sobol_angles, 
+sigma_max=sigma_max, sigma_max_2=sigma_max_2, c=self.pcs_const, 
+full_in_ref_frame=self.full_in_ref_frame, r_pivot_atom=self.r_pivot_atom, 
+r_pivot_atom_rev=self.r_pivot_atom_rev, r_ln_pivot=self.r_ln_pivot, 
+A=self.A_3D, R_eigen=R_eigen_full, RT_eigen=RT_eigen, Ri_prime=self.Ri_prime, 
+pcs_theta=self.pcs_theta, pcs_theta_err=self.pcs_theta_err, 
+missing_pcs=self.missing_pcs, error_flag=False)
++
++            # Calculate and sum the single alignment chi-squared value (for 
+the PCS).
++            for align_index in range(self.num_align):
++                chi2_sum = chi2_sum + chi2(self.pcs[align_index], 
+self.pcs_theta[align_index], self.pcs_error[align_index])
++
++        # Return the chi-squared value.
++        return chi2_sum
+ 
+ 
+     def func_free_rotor(self, params):
+@@ -1904,7 +2001,7 @@
+                     self.sobol_angles[i, j] = 2.0 * pi * point[j]
+ 
+                 # The torsion angle - the angle of rotation about the z' 
+axis.
+-                if dims[j] in ['sigma']:
++                if dims[j] in ['sigma', 'sigma2']:
+                     self.sobol_angles[i, j] = 2.0 * pi * (point[j] - 0.5)
+ 
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Jan 31 17:40:02 2014</div>  
+</body>
+</html>

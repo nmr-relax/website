@@ -1,0 +1,207 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r15067 &#45; in /branches/frame_order_testing/generic_fns: align_tensor.py	pcs.py rdc.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 08 Dec 2011 14:34:39 +0100 -->
+<!--X-Message-Id: E1RYe7T&#45;0001XX&#45;8i@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r15067 - in /branches/frame_order_testing/generic_fns: align_tensor.py	pcs.py rdc.py -- December 08, 2011 - 14:34</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r15067 - in /branches/frame_order_testing/generic_fns: align_tensor.py	pcs.py rdc.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00054" class="tabs">Index by Date</a> | <a href="threads.html#00054" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00053.html">Date Prev</a>] [<a href="msg00055.html">Date Next</a>] [<a href="msg00053.html">Thread Prev</a>] [<a href="msg00055.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 08 Dec 2011 13:34:39 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00054.html">E1RYe7T-0001XX-8i@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on December 08, 2011 - 14:34:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Dec  8 14:34:38 2011
+New Revision: 15067
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=15067&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=15067&amp;view=rev</a>
+Log:
+Fixes for the back-calculation of RDC and PCS data - the alignment tensor is 
+now correctly returned.
+
+
+Modified:
+    branches/frame_order_testing/generic_fns/align_tensor.py
+    branches/frame_order_testing/generic_fns/pcs.py
+    branches/frame_order_testing/generic_fns/rdc.py
+
+Modified: branches/frame_order_testing/generic_fns/align_tensor.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_testing/generic_fns/align_tensor.py?rev=15067&amp;r1=15066&amp;r2=15067&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_testing/generic_fns/align_tensor.py?rev=15067&amp;r1=15066&amp;r2=15067&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_testing/generic_fns/align_tensor.py (original)
++++ branches/frame_order_testing/generic_fns/align_tensor.py Thu Dec  8 
+14:34:38 2011
+@@ -37,6 +37,7 @@
+ from generic_fns import pipes
+ from physical_constants import g1H, h_bar, kB, mu0, return_gyromagnetic_ratio
+ from relax_errors import RelaxError, RelaxNoTensorError, RelaxStrError, 
+RelaxTensorError, RelaxUnknownParamCombError, RelaxUnknownParamError
++from relax_warnings import RelaxWarning
+ 
+ 
+ def align_data_exists(tensor, pipe=None):
+@@ -576,15 +577,17 @@
+     return gdo
+ 
+ 
+-def get_tensor_index(tensor, pipe=None):
++def get_tensor_index(tensor=None, align_id=None, pipe=None):
+     &quot;&quot;&quot;Function for returning the index corresponding to the 'tensor' 
+argument.
+ 
+-    @param tensor:  The alignment tensor identification string.
+-    @type tensor:   str
+-    @param pipe:    The data pipe to search for data in.
+-    @type pipe:     str
+-    @return:        The index corresponding to the 'tensor' arg.
+-    @rtype:         int
++    @keyword tensor:    The alignment tensor identification string.
++    @type tensor:       str or None
++    @keyword align_id:  Alternative to the tensor argument, used to return 
+the tensor index for the tensors corresponding to the alignment ID string.  
+If more than one tensor exists, then this will fail.
++    @type align_id:     str or None
++    @keyword pipe:      The data pipe to search for data in.
++    @type pipe:         str
++    @return:            The index corresponding to the 'tensor' arg.
++    @rtype:             int
+     &quot;&quot;&quot;
+ 
+     # The data pipe to check.
+@@ -596,11 +599,29 @@
+ 
+     # Init.
+     index = None
++    count = 0
+ 
+     # Loop over the tensors.
+     for i in xrange(len(dp.align_tensors)):
+-        if dp.align_tensors[i].name == tensor:
++        # Tensor name match.
++        if tensor and dp.align_tensors[i].name == tensor:
+             index = i
++            count += 1
++
++        # Alignment ID match.
++        if align_id and hasattr(dp.align_tensors[i], 'align_id') and 
+dp.align_tensors[i].align_id == align_id:
++            index = i
++            count += 1
++
++    # No match.
++    if count == 0:
++        warn(RelaxWarning(&quot;No alignment tensors match the tensor name '%s' 
+or alignment ID '%s'.&quot; % (tensor, align_id)))
++        return None
++
++    # More than one match.
++    if count &gt; 1: 
++        warn(RelaxWarning(&quot;More than one alignment tensors matches the 
+tensor name '%s' or alignment ID '%s'.&quot; % (tensor, align_id)))
++        return None
+ 
+     # Return the index.
+     return index
+
+Modified: branches/frame_order_testing/generic_fns/pcs.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_testing/generic_fns/pcs.py?rev=15067&amp;r1=15066&amp;r2=15067&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_testing/generic_fns/pcs.py?rev=15067&amp;r1=15066&amp;r2=15067&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_testing/generic_fns/pcs.py (original)
++++ branches/frame_order_testing/generic_fns/pcs.py Thu Dec  8 14:34:38 2011
+@@ -110,7 +110,7 @@
+                 spin.pcs_bc = {}
+ 
+             # Calculate the PCSs (in ppm).
+-            spin.pcs_bc[id] = ave_pcs_tensor(dj, vect, cdp.N, 
+cdp.align_tensors[get_tensor_index(id)].A, weights=weights) * 1e6
++            spin.pcs_bc[id] = ave_pcs_tensor(dj, vect, cdp.N, 
+cdp.align_tensors[get_tensor_index(align_id=id)].A, weights=weights) * 1e6
+ 
+ 
+ def centre(pos=None, atom_id=None, pipe=None, verbosity=1, ave_pos=False, 
+force=False):
+
+Modified: branches/frame_order_testing/generic_fns/rdc.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_testing/generic_fns/rdc.py?rev=15067&amp;r1=15066&amp;r2=15067&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_testing/generic_fns/rdc.py?rev=15067&amp;r1=15066&amp;r2=15067&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_testing/generic_fns/rdc.py (original)
++++ branches/frame_order_testing/generic_fns/rdc.py Thu Dec  8 14:34:38 2011
+@@ -112,7 +112,7 @@
+ 
+         # Calculate the RDCs.
+         for id in align_ids:
+-            spin.rdc_bc[id] = ave_rdc_tensor(dj, unit_vect, cdp.N, 
+cdp.align_tensors[get_tensor_index(id)].A, weights=weights)
++            spin.rdc_bc[id] = ave_rdc_tensor(dj, unit_vect, cdp.N, 
+cdp.align_tensors[get_tensor_index(align_id=id)].A, weights=weights)
+ 
+ 
+ def convert(value, align_id, to_intern=False):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Dec 08 15:00:02 2011</div>  
+</body>
+</html>

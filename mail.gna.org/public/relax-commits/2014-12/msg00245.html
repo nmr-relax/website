@@ -1,0 +1,328 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r27122 &#45; in /trunk: pipe_control/structure/main.py user_functions/structure.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 18 Dec 2014 10:03:26 +0100 -->
+<!--X-Message-Id: E1Y1WzW&#45;00018R&#45;F2@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r27122 - in /trunk: pipe_control/structure/main.py user_functions/structure.py -- December 18, 2014 - 10:03</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r27122 - in /trunk: pipe_control/structure/main.py user_functions/structure.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00245" class="tabs">Index by Date</a> | <a href="threads.html#00245" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00244.html">Date Prev</a>] [<a href="msg00246.html">Date Next</a>] [<a href="msg00244.html">Thread Prev</a>] [<a href="msg00246.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 18 Dec 2014 09:03:26 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00245.html">E1Y1WzW-00018R-F2@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on December 18, 2014 - 10:03:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Dec 18 10:03:26 2014
+New Revision: 27122
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=27122&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=27122&amp;view=rev</a>
+Log:
+Implemented the structure.atomic_fluctuations user function.
+
+This is loosely based on the structure.web_of_motion user function and is 
+related to it.  The user
+function will write to file a correlation matrix of interatomic distance 
+fluctuations.
+
+
+Modified:
+    trunk/pipe_control/structure/main.py
+    trunk/user_functions/structure.py
+
+Modified: trunk/pipe_control/structure/main.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/pipe_control/structure/main.py?rev=27122&amp;r1=27121&amp;r2=27122&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/pipe_control/structure/main.py?rev=27122&amp;r1=27121&amp;r2=27122&amp;view=diff</a>
+==============================================================================
+--- trunk/pipe_control/structure/main.py        (original)
++++ trunk/pipe_control/structure/main.py        Thu Dec 18 10:03:26 2014
+@@ -21,7 +21,7 @@
+ 
+ # Python module imports.
+ from minfx.generic import generic_minimise
+-from numpy import array, float64, zeros
++from numpy import array, float64, std, zeros
+ from numpy.linalg import norm
+ from os import F_OK, access, getcwd
+ from re import search
+@@ -224,6 +224,80 @@
+ 
+     # Call the library method to do all of the work.
+     return assemble_coord_array(objects=objects, object_names=object_names, 
+molecules=molecules, models=models, atom_id=atom_id, 
+seq_info_flag=seq_info_flag)
++
++
++def atomic_fluctuations(pipes=None, models=None, molecules=None, 
+atom_id=None, file=None, format='text', dir=None, force=False):
++    &quot;&quot;&quot;Write out a correlation matrix of pairwise interatomic distance 
+fluctuations between different structures.
++
++    @keyword pipes:     The data pipes to generate the interatomic distance 
+fluctuation correlation matrix for.
++    @type pipes:        None or list of str
++    @keyword models:    The list of models to generate the interatomic 
+distance fluctuation correlation matrix for.  The number of elements must 
+match the pipes argument.  If set to None, then all models will be used.
++    @type models:       None or list of lists of int
++    @keyword molecules: The list of molecules to generate the interatomic 
+distance fluctuation correlation matrix for.  The number of elements must 
+match the pipes argument.
++    @type molecules:    None or list of lists of str
++    @keyword atom_id:   The atom identification string of the coordinates of 
+interest.  This matches the spin ID string format.
++    @type atom_id:      str or None
++    @keyword file:      The name of the PDB file to write.
++    @type file:         str
++    @keyword format:    The output format.  This is currently only &quot;text&quot; 
+for text file output.
++    @type format:       str
++    @keyword dir:       The directory where the PDB file will be placed.  If 
+set to None, then the file will be placed in the current directory.
++    @type dir:          str or None
++    @keyword force:     The force flag which if True will cause the file to 
+be overwritten.
++    @type force:        bool
++    &quot;&quot;&quot;
++
++    # Checks.
++    check_pipe()
++    check_structure()
++    format_list = ['text']
++    if format not in format_list:
++        raise RelaxError(&quot;The format '%s' must be one of %s.&quot; % (format, 
+format_list))
++
++    # Assemble the atomic coordinates.
++    coord, ids, mol_names, res_names, res_nums, atom_names, elements = 
+assemble_coordinates(pipes=pipes, molecules=molecules, models=models, 
+atom_id=atom_id, seq_info_flag=True)
++
++    # Check that more than one structure is present.
++    if not len(coord) &gt; 1:
++        raise RelaxError(&quot;Two or more structures are required.&quot;)
++
++    # The output file.
++    file = open_write_file(file, dir=dir, force=force)
++
++    # The header line.
++    file.write('#')
++    for i in range(len(atom_names)):
++        # The spin identification string.
++        id = generate_spin_id_unique(mol_name=mol_names[i], 
+res_num=res_nums[i], res_name=res_names[i], spin_name=atom_names[i])
++
++        # Output the spin ID.
++        if i == 0:
++            file.write(&quot; %18s&quot; % id)
++        else:
++            file.write(&quot; %20s&quot; % id)
++    file.write('\n')
++
++    # Generate the pairwise matrix.
++    n = len(atom_names)
++    matrix = zeros((n, n), float64)
++    for i in range(n):
++        for j in range(n):
++            # The interatomic distances between each structure.
++            dist = []
++            for k in range(len(coord)):
++                dist.append(norm(coord[k, i] - coord[k, j]))
++
++            # Calculate and store the corrected sample standard deviation.
++            matrix[i, j] = std(array(dist, float64), ddof=1)
++
++            # Output the matrix.
++            if j == 0:
++                file.write(&quot;%20.15f&quot; % matrix[i, j])
++            else:
++                file.write(&quot; %20.15f&quot; % matrix[i, j])
++
++        # End of the current line.
++        file.write('\n')
+ 
+ 
+ def connect_atom(index1=None, index2=None):
+
+Modified: trunk/user_functions/structure.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/user_functions/structure.py?rev=27122&amp;r1=27121&amp;r2=27122&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/user_functions/structure.py?rev=27122&amp;r1=27121&amp;r2=27122&amp;view=diff</a>
+==============================================================================
+--- trunk/user_functions/structure.py   (original)
++++ trunk/user_functions/structure.py   Thu Dec 18 10:03:26 2014
+@@ -256,6 +256,92 @@
+ uf.wizard_apply_button = False
+ uf.wizard_height_desc = 370
+ uf.wizard_size = (1000, 750)
++uf.wizard_image = WIZARD_IMAGE_PATH + 'structure' + sep + '2JK4.png'
++
++
++# The structure.atomic_fluctuations user function.
++uf = uf_info.add_uf('structure.atomic_fluctuations')
++uf.title = &quot;Create an interatomic distance fluctuation correlation matrix.&quot;
++uf.title_short = &quot;Interatomic distance fluctuation correlation matrix.&quot;
++uf.add_keyarg(
++    name = &quot;pipes&quot;,
++    py_type = &quot;str_list&quot;,
++    desc_short = &quot;data pipes&quot;,
++    desc = &quot;The data pipes to generate the interatomic distance fluctuation 
+correlation matrix for.&quot;,
++    wiz_combo_iter = pipe_names,
++    wiz_read_only = False,
++    can_be_none = True
++)
++uf.add_keyarg(
++    name = &quot;models&quot;,
++    py_type = &quot;int_list_of_lists&quot;,
++    desc_short = &quot;model list for each data pipe&quot;,
++    desc = &quot;The list of models for each data pipe to generate the 
+interatomic distance fluctuation correlation matrix for.  The number of 
+elements must match the pipes argument.  If no models are given, then all 
+will be used.&quot;,
++    can_be_none = True
++)
++uf.add_keyarg(
++    name = &quot;molecules&quot;,
++    py_type = &quot;str_list_of_lists&quot;,
++    desc_short = &quot;molecule list for each data pipe&quot;,
++    desc = &quot;The list of molecules for each data pipe to generate the 
+interatomic distance fluctuation correlation matrix for.  This allows 
+differently named molecules in the same or different data pipes to be 
+superimposed.  The number of elements must match the pipes argument.  If no 
+molecules are given, then all will be used.&quot;,
++    can_be_none = True
++)
++uf.add_keyarg(
++    name = &quot;atom_id&quot;,
++    py_type = &quot;str&quot;,
++    desc_short = &quot;atom identification string&quot;,
++    desc = &quot;The atom identification string of the coordinates of interest.  
+This can be used to restrict the correlation matrix to one atom per residue, 
+for example.&quot;,
++    can_be_none = True
++)
++uf.add_keyarg(
++    name = &quot;file&quot;,
++    py_type = &quot;str_or_inst&quot;,
++    arg_type = &quot;file sel&quot;,
++    desc_short = &quot;file name&quot;,
++    desc = &quot;The name of the text file.&quot;,
++    wiz_filesel_style = FD_SAVE
++)
++uf.add_keyarg(
++    name = &quot;format&quot;,
++    py_type = &quot;str&quot;,
++    default = &quot;text&quot;,
++    desc_short = &quot;output format&quot;,
++    desc = &quot;The output format.&quot;,
++    wiz_element_type = &quot;combo&quot;,
++    wiz_combo_choices = [&quot;Text file&quot;],
++    wiz_combo_data = [&quot;text&quot;]
++)
++uf.add_keyarg(
++    name = &quot;dir&quot;,
++    py_type = &quot;str&quot;,
++    arg_type = &quot;dir&quot;,
++    desc_short = &quot;directory name&quot;,
++    desc = &quot;The directory to save the file to.&quot;,
++    can_be_none = True
++)
++uf.add_keyarg(
++    name = &quot;force&quot;,
++    default = False,
++    py_type = &quot;bool&quot;,
++    desc_short = &quot;force flag&quot;,
++    desc = &quot;A flag which if set to True will cause any pre-existing files to 
+be overwritten.&quot;
++)
++# Description.
++uf.desc.append(Desc_container())
++uf.desc[-1].add_paragraph(&quot;This is used to visualise the interatomic 
+distance fluctuations between different structures.  The corrected sample 
+standard deviation (SD) is calculated for the distances between all atom 
+pairs, resulting in a pairwise matrix of SD values.  The matrix will be 
+output into a text file.&quot;)
++uf.desc[-1].add_paragraph(paragraph_multi_struct)
++uf.desc[-1].add_paragraph(paragraph_atom_id)
++# Prompt examples.
++uf.desc.append(Desc_container(&quot;Prompt examples&quot;))
++uf.desc[-1].add_paragraph(&quot;To create the interatomic distance fluctuation 
+correlation matrix for the models 1, 3, and 5, type:&quot;)
++uf.desc[-1].add_prompt(&quot;relax&gt; structure.atomic_fluctuations(models=[[1, 3, 
+5]], file='atomic_fluctuation_matrix')&quot;)
++uf.desc[-1].add_paragraph(&quot;To create the interatomic distance fluctuation 
+correlation matrix for the molecules 'A', 'B', 'C', and 'D', type:&quot;)
++uf.desc[-1].add_prompt(&quot;relax&gt; 
+structure.atomic_fluctuations(molecules=[['A', 'B', 'C', 'D']], 
+file='atomic_fluctuation_matrix')&quot;)
++uf.backend = pipe_control.structure.main.atomic_fluctuations
++uf.menu_text = &quot;&amp;atomic_fluctuations&quot;
++uf.wizard_height_desc = 450
++uf.wizard_size = (1000, 750)
++uf.wizard_apply_button = False
+ uf.wizard_image = WIZARD_IMAGE_PATH + 'structure' + sep + '2JK4.png'
+ 
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Dec 18 10:40:04 2014</div>  
+</body>
+</html>

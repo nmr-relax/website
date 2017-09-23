@@ -1,0 +1,282 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r21787 &#45; in /trunk: specific_analyses/relax_disp/disp_data.py	user_functions/relax_disp.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 04 Dec 2013 19:40:08 +0100 -->
+<!--X-Message-Id: E1VoHMm&#45;0001iz&#45;A2@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r21787 - in /trunk: specific_analyses/relax_disp/disp_data.py	user_functions/relax_disp.py -- December 04, 2013 - 19:40</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r21787 - in /trunk: specific_analyses/relax_disp/disp_data.py	user_functions/relax_disp.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00065" class="tabs">Index by Date</a> | <a href="threads.html#00065" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00064.html">Date Prev</a>] [<a href="msg00066.html">Date Next</a>] [<a href="msg00064.html">Thread Prev</a>] [<a href="msg00066.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 04 Dec 2013 18:40:08 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00065.html">E1VoHMm-0001iz-A2@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on December 04, 2013 - 19:40:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Dec  4 19:40:07 2013
+New Revision: 21787
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=21787&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=21787&amp;view=rev</a>
+Log:
+The relax_disp.r2eff_read_spin user function now can handle offset data in 
+the file.
+
+If the new offset_col argument is set and disp_point_col is not, then the 
+file being read can
+contain the spin-lock offset information rather than the spin-lock field 
+strength values.  This is
+only for R1rho-type data.
+
+
+Modified:
+    trunk/specific_analyses/relax_disp/disp_data.py
+    trunk/user_functions/relax_disp.py
+
+Modified: trunk/specific_analyses/relax_disp/disp_data.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/relax_disp/disp_data.py?rev=21787&amp;r1=21786&amp;r2=21787&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/relax_disp/disp_data.py?rev=21787&amp;r1=21786&amp;r2=21787&amp;view=diff</a>
+==============================================================================
+--- trunk/specific_analyses/relax_disp/disp_data.py (original)
++++ trunk/specific_analyses/relax_disp/disp_data.py Wed Dec  4 19:40:07 2013
+@@ -44,7 +44,7 @@
+ from lib.errors import RelaxError, RelaxNoSpectraError, RelaxNoSpinError, 
+RelaxSpinTypeError
+ from lib.float import isNaN
+ from lib.io import extract_data, get_file_path, open_write_file, 
+read_spin_data, strip, write_data, write_spin_data
+-from lib.nmr import frequency_to_rad_per_s
++from lib.nmr import frequency_to_ppm, frequency_to_rad_per_s
+ from lib.physical_constants import g1H, return_gyromagnetic_ratio
+ from lib.software.grace import write_xy_data, write_xy_header, 
+script_grace2images
+ from lib.warnings import RelaxWarning, RelaxNoSpinWarning
+@@ -1734,7 +1734,7 @@
+             spin_lock_field(spectrum_id=id, field=disp_frq)
+ 
+ 
+-def r2eff_read_spin(id=None, spin_id=None, file=None, dir=None, 
+disp_point_col=None, data_col=None, error_col=None, sep=None):
++def r2eff_read_spin(id=None, spin_id=None, file=None, dir=None, 
+disp_point_col=None, offset_col=None, data_col=None, error_col=None, 
+sep=None):
+     &quot;&quot;&quot;Read R2eff/R1rho values from file whereby each row is a different 
+dispersion point.
+ 
+     @keyword id:                The experiment ID string to associate the 
+data with.  This will be modified to include the dispersion point data as 
+&quot;%s_%s&quot; % (id, disp_point).
+@@ -1747,6 +1747,8 @@
+     @type dir:                  str or None
+     @keyword disp_point_col:    The column containing the dispersion point 
+information.  For CPMG-type data, this is the frequency of the CPMG pulse 
+train.  For R1rho-type data, this is the spin-lock field strength (nu1).  The 
+units must be Hertz.
+     @type disp_point_col:       int
++    @keyword offset_col:        This is for R1rho data - the dispersion 
+point column can be substituted for the offset values in Hertz.
++    @type offset_col:           None or int
+     @keyword data_col:          The column containing the R2eff/R1rho data 
+in Hz.
+     @type data_col:             int
+     @keyword error_col:         The column containing the R2eff/R1rho errors.
+@@ -1784,15 +1786,21 @@
+             continue
+ 
+         # Unpack.
+-        disp_point = line[disp_point_col-1]
++        if disp_point_col != None:
++            ref_data = line[disp_point_col-1]
++        if offset_col != None:
++            ref_data = line[offset_col-1]
+         value = line[data_col-1]
+         error = line[error_col-1]
+ 
+-        # Convert and check the dispersion point.
++        # Convert and check the dispersion point or offset.
+         try:
+-            disp_point = float(disp_point)
++            ref_data = float(ref_data)
+         except ValueError:
+-            warn(RelaxWarning(&quot;The dispersion point data of the line %s is 
+invalid.&quot; % line))
++            if disp_point_col != None:
++                warn(RelaxWarning(&quot;The dispersion point data of the line %s 
+is invalid.&quot; % line))
++            if offset_col != None:
++                warn(RelaxWarning(&quot;The offset data of the line %s is 
+invalid.&quot; % line))
+             continue
+ 
+         # Convert and check the value.
+@@ -1828,17 +1836,29 @@
+ 
+             # Find a close enough dispersion point (to one decimal place to 
+allow for user truncation).
+             if hasattr(cdp, 'cpmg_frqs') and spectrum_id in cdp.cpmg_frqs:
+-                if abs(disp_point - cdp.cpmg_frqs[spectrum_id]) &lt; 0.1:
++                if abs(ref_data - cdp.cpmg_frqs[spectrum_id]) &lt; 0.1:
+                     new_id = spectrum_id
+                     break
+-            if hasattr(cdp, 'spin_lock_nu1') and spectrum_id in 
+cdp.spin_lock_nu1:
+-                if abs(disp_point - cdp.spin_lock_nu1[spectrum_id]) &lt; 0.1:
++            if disp_point_col != None and hasattr(cdp, 'spin_lock_nu1') and 
+spectrum_id in cdp.spin_lock_nu1:
++                if abs(ref_data - cdp.spin_lock_nu1[spectrum_id]) &lt; 0.1:
+                     new_id = spectrum_id
+                     break
++            if offset_col != None and hasattr(cdp, 'spin_lock_offset') and 
+spectrum_id in cdp.spin_lock_offset:
++                # Convert the data.
++                if offset_col != None:
++                    data_new = frequency_to_ppm(frq=ref_data, 
+B0=cdp.spectrometer_frq[spectrum_id], isotope=spin.isotope)
++
++                # Store the ID.
++                if abs(data_new - cdp.spin_lock_offset[spectrum_id]) &lt; 0.1:
++                    new_id = spectrum_id
++                    break
+ 
+         # No match.
+         if new_id == None:
+-            raise RelaxError(&quot;The experiment ID corresponding to the base ID 
+'%s' and the dispersion point '%s' could not be found.&quot; % (id, disp_point))
++            if disp_point_col != None:
++                raise RelaxError(&quot;The experiment ID corresponding to the 
+base ID '%s' and the dispersion point '%s' could not be found.&quot; % (id, 
+ref_data))
++            if offset_col != None:
++                raise RelaxError(&quot;The experiment ID corresponding to the 
+base ID '%s' and the offset '%s' could not be found.&quot; % (id, ref_data))
+ 
+         # Add the ID to the list.
+         new_ids.append(new_id)
+@@ -1855,6 +1875,10 @@
+         exp_type = get_exp_type(id=new_id)
+ 
+         # The dispersion point key.
++        if disp_point_col != None:
++            disp_point = ref_data
++        if offset_col != None:
++            disp_point = cdp.spin_lock_nu1[new_id]
+         point_key = return_param_key_from_data(exp_type=exp_type, frq=frq, 
+point=disp_point)
+ 
+         # Store the R2eff data.
+
+Modified: trunk/user_functions/relax_disp.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/user_functions/relax_disp.py?rev=21787&amp;r1=21786&amp;r2=21787&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/user_functions/relax_disp.py?rev=21787&amp;r1=21786&amp;r2=21787&amp;view=diff</a>
+==============================================================================
+--- trunk/user_functions/relax_disp.py (original)
++++ trunk/user_functions/relax_disp.py Wed Dec  4 19:40:07 2013
+@@ -702,11 +702,21 @@
+ )
+ uf.add_keyarg(
+     name = &quot;disp_point_col&quot;,
+-    default = 1,
++    default = None,
+     min = 1,
+     py_type = &quot;int&quot;,
+     desc_short = &quot;dispersion point column&quot;,
+-    desc = &quot;The column containing the CPMG frequency or spin-lock field 
+strength (Hz).&quot;
++    desc = &quot;The column containing the CPMG frequency or spin-lock field 
+strength (Hz).&quot;,
++    can_be_none = True
++)
++uf.add_keyarg(
++    name = &quot;offset_col&quot;,
++    default = None,
++    min = 1,
++    py_type = &quot;int&quot;,
++    desc_short = &quot;offset column&quot;,
++    desc = &quot;The column containing the offset information for R1rho-type 
+data.&quot;,
++    can_be_none = True
+ )
+ uf.add_keyarg(
+     name = &quot;data_col&quot;,
+@@ -736,7 +746,7 @@
+ # Description.
+ uf.desc.append(Desc_container())
+ uf.desc[-1].add_paragraph(&quot;This will read R2eff/R1rho data for a single spin 
+directly from a file.  The data will be associated with an experiment ID 
+string.  This ID can be used for setting the type of dispersion experiment 
+the data is from, spectrometer proton frequency of the data, and the time of 
+the relaxation period.&quot;)
+-uf.desc[-1].add_paragraph(&quot;The format of this text file must be that each 
+row corresponds to a  dispersion point (i.e. per CPMG frequency nu_CPMG or 
+per spin-lock field strength nu1) and that there is one file per unique spin 
+system.  The file must be in columnar format.&quot;)
++uf.desc[-1].add_paragraph(&quot;The format of this text file must be that each 
+row corresponds to a dispersion point (i.e. per CPMG frequency nu_CPMG or per 
+spin-lock field strength nu1) and that there is one file per unique spin 
+system.  The file must be in columnar format.  For R1rho data, the dispersion 
+point column can be substituted for the offset values in Hertz.&quot;)
+ uf.backend = r2eff_read_spin
+ uf.menu_text = &quot;&amp;r2eff_read_spin&quot;
+ uf.gui_icon = &quot;oxygen.actions.document-open&quot;
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Dec 05 12:40:02 2013</div>  
+</body>
+</html>

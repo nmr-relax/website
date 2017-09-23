@@ -1,0 +1,187 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r11091 &#45; /1.3/generic_fns/pcs.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 20 Apr 2010 14:42:53 +0200 -->
+<!--X-Message-Id: E1O4Cmz&#45;0003fO&#45;M0@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r11091 - /1.3/generic_fns/pcs.py -- April 20, 2010 - 14:42</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r11091 - /1.3/generic_fns/pcs.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00039" class="tabs">Index by Date</a> | <a href="threads.html#00039" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00038.html">Date Prev</a>] [<a href="msg00040.html">Date Next</a>] [<a href="msg00038.html">Thread Prev</a>] [<a href="msg00040.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 20 Apr 2010 12:42:53 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00039.html">E1O4Cmz-0003fO-M0@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on April 20, 2010 - 14:42:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Apr 20 14:42:53 2010
+New Revision: 11091
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=11091&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=11091&amp;view=rev</a>
+Log:
+Wrote the back end for the pcs.display() and pcs.write() user functions.
+
+
+Modified:
+    1.3/generic_fns/pcs.py
+
+Modified: 1.3/generic_fns/pcs.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/generic_fns/pcs.py?rev=11091&amp;r1=11090&amp;r2=11091&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/generic_fns/pcs.py?rev=11091&amp;r1=11090&amp;r2=11091&amp;view=diff</a>
+==============================================================================
+--- 1.3/generic_fns/pcs.py (original)
++++ 1.3/generic_fns/pcs.py Tue Apr 20 14:42:53 2010
+@@ -27,13 +27,14 @@
+ from copy import deepcopy
+ from math import sqrt
+ from numpy import array, float64, zeros
++import sys
+ from warnings import warn
+ 
+ # relax module imports.
+ from generic_fns.mol_res_spin import exists_mol_res_spin_data, 
+generate_spin_id_data_array, return_spin, spin_index_loop, spin_loop
+ from generic_fns import pipes
+ from relax_errors import RelaxError, RelaxNoPdbError, RelaxNoSequenceError, 
+RelaxNoSpinError, RelaxPCSError
+-from relax_io import read_spin_data
++from relax_io import open_write_file, read_spin_data, write_spin_data
+ from relax_warnings import RelaxWarning
+ 
+ 
+@@ -349,6 +350,17 @@
+         # If the name is not in the container, add it as a variable set to 
+zero.
+         if name in zero_data and not hasattr(container, name):
+             setattr(container, name, 0)
++
++
++def display(align_id=None):
++    &quot;&quot;&quot;Display the PCS data corresponding to the alignment ID.
++
++    @keyword align_id:  The alignment tensor ID string.
++    @type align_id:     str
++    &quot;&quot;&quot;
++
++    # Call the write method with sys.stdout as the file.
++    write(align_id=align_id, file=sys.stdout)
+ 
+ 
+ def get_data_names(global_flag=False, sim_names=False):
+@@ -651,3 +663,51 @@
+         return 'The relaxation data'
+     if name == 'relax_error':
+         return 'The relaxation data errors'
++
++
++def write(align_id=None, file=None, dir=None, force=False):
++    &quot;&quot;&quot;Display the PCS data corresponding to the alignment ID.
++
++    @keyword align_id:  The alignment tensor ID string.
++    @type align_id:     str
++    @keyword file:      The file name or object to write to.
++    @type file:         str or file object
++    @keyword dir:       The name of the directory to place the file into 
+(defaults to the current directory).
++    @type dir:          str
++    @keyword force:     A flag which if True will cause any pre-existing 
+file to be overwritten.
++    @type force:        bool
++    &quot;&quot;&quot;
++
++    # Test if the current pipe exists.
++    pipes.test()
++
++    # Test if the sequence data is loaded.
++    if not exists_mol_res_spin_data():
++        raise RelaxNoSequenceError
++
++    # Test if data corresponding to 'align_id' exists.
++    if not hasattr(cdp, 'pcs_ids') or align_id not in cdp.pcs_ids:
++        raise RelaxNoPCSError(align_id)
++
++    # Open the file for writing.
++    file = open_write_file(file, dir, force)
++
++    # The index.
++    index = cdp.pcs_ids.index(align_id)
++
++    # Loop over the spins and collect the data.
++    spin_ids = []
++    values = []
++    errors = []
++    for spin, spin_id in spin_loop(return_id=True):
++        # Skip spins with no PCSs.
++        if not hasattr(spin, 'pcs'):
++            continue
++
++        # Store the data.
++        spin_ids.append(spin_id)
++        values.append(spin.pcs[index])
++        errors.append(spin.pcs_err[index])
++
++    # Write out.
++    write_spin_data(file=file, spin_ids=spin_ids, data=values, 
+data_name='PCSs', error=errors, error_name='PCS_error')
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Apr 21 11:20:02 2010</div>  
+</body>
+</html>

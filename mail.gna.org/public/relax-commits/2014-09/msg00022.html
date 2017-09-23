@@ -1,0 +1,176 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r25516 &#45; /branches/est_par_error/lib/statistics.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 01 Sep 2014 21:43:16 +0200 -->
+<!--X-Message-Id: E1XOXVT&#45;00060c&#45;SS@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r25516 - /branches/est_par_error/lib/statistics.py -- September 01, 2014 - 21:43</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r25516 - /branches/est_par_error/lib/statistics.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00022" class="tabs">Index by Date</a> | <a href="threads.html#00022" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00021.html">Date Prev</a>] [<a href="msg00023.html">Date Next</a>] [<a href="msg00021.html">Thread Prev</a>] [<a href="msg00023.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 01 Sep 2014 19:43:15 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00022.html">E1XOXVT-00060c-SS@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on September 01, 2014 - 21:43:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Mon Sep  1 21:43:15 2014
+New Revision: 25516
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=25516&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=25516&amp;view=rev</a>
+Log:
+Initial try to convert multifit_covar() to higher dimensional data.
+
+task #7824(<a  rel="nofollow" href="https://gna.org/task/index.php?7824">https://gna.org/task/index.php?7824</a>): Model parameter ERROR 
+estimation from Jacobian and Co-variance matrix of dispersion models.
+
+Modified:
+    branches/est_par_error/lib/statistics.py
+
+Modified: branches/est_par_error/lib/statistics.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/est_par_error/lib/statistics.py?rev=25516&amp;r1=25515&amp;r2=25516&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/est_par_error/lib/statistics.py?rev=25516&amp;r1=25515&amp;r2=25516&amp;view=diff</a>
+==============================================================================
+--- branches/est_par_error/lib/statistics.py    (original)
++++ branches/est_par_error/lib/statistics.py    Mon Sep  1 21:43:15 2014
+@@ -24,7 +24,7 @@
+ &quot;&quot;&quot;Module for calculating simple statistics.&quot;&quot;&quot;
+ 
+ # Python module imports.
+-from numpy import absolute, diag, dot, eye, multiply, transpose
++from numpy import absolute, diag, dot, eye, einsum, multiply, newaxis, 
+transpose
+ from numpy.linalg import inv, qr
+ 
+ # Python module imports.
+@@ -169,9 +169,9 @@
+ 
+     The parameter 'epsrel' is used to remove linear-dependent columns when J 
+is rank deficient.
+ 
+-    The weighting matrix 'W', is a square symmetric matrix. For independent 
+measurements, this is a diagonal matrix. Larger values indicate greater 
+significance.  It is formed by multiplying and Identity matrix with the 
+supplied weights vector::
+-
+-        W = I. w
++    The weighting matrix 'W', is a square symmetric matrix. For independent 
+measurements, this is a diagonal matrix. Larger values indicate greater 
+significance.  It is formed by 'element-wise multiplication' of the supplied 
+weights vector and Identity matrix::
++
++        W = numpy.multiply(w, I)
+ 
+     The weights should normally be supplied as a vector: 1 / errors^2. 
+ 
+@@ -222,19 +222,30 @@
+     # Weighting matrix. This is a square symmetric matrix.
+     # For independent measurements, this is a diagonal matrix. Larger values 
+indicate greater significance.
+ 
+-    # Make a square diagonal matrix.
+-    eye_mat = eye(weights.shape[0])
++    # If weights are vector, make it to one-dimensional matrix.
++    if len(weights.shape) == 1:
++        weights = weights[newaxis, ...]
++
++    # Get the expected shape of the higher dimensional column numpy array.
++    if len(weights.shape) == 2:
++        # Extract shapes from data.
++        NE, NS, NM, NO, ND = 1, 1, 1, 1, weights.shape[-1]
++
++    # Make a eye matrix, with Shape [ND][ND]
++    eye_mat = eye(ND)
+ 
+     # Form weight matrix.
+-    W = multiply(eye_mat, weights)
++    # Transform weights to a diagonal matrix, with elements from vector down 
+the diagonal.
++    W = multiply(weights, eye_mat)
+ 
+     # The covariance matrix (sometimes referred to as the 
+variance-covariance matrix), Qxx, is defined as:
+     # Qxx = (J^t W J)^(-1)
+ 
+     # Calculate step by step, by matrix multiplication.
++    # Einsum is equivalent to higher order matrix dot operations.
+     Jt = transpose(J)
+-    Jt_W = dot(Jt, W)
+-    Jt_W_J = dot(Jt_W, J)
++    Jt_W = einsum('...ij, ...jk', Jt, W)
++    Jt_W_J = einsum('...ij, ...jk', Jt_W, J)
+ 
+     # Invert matrix by QR decomposition, to check columns of R which 
+satisfy: |R_{kk}| &lt;= epsrel |R_{11}|
+     Q, R = qr(Jt_W_J)
+@@ -248,7 +259,7 @@
+     epsrel_check = absolute(R) &lt;= abs_epsrel_R11
+ 
+     # Form the covariance matrix.
+-    Qxx = dot(inv(R), transpose(Q) )
++    Qxx = einsum('...ij, ...jk', inv(R), transpose(Q))
+     #Qxx2 = dot(inv(R), inv(Q) )
+     #print(Qxx - Qxx2)
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Sep 01 22:00:02 2014</div>  
+</body>
+</html>

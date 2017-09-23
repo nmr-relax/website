@@ -1,0 +1,549 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r27265 &#45; in /trunk/lib/sequence_alignment: align_protein.py needleman_wunsch.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 22 Jan 2015 15:57:16 +0100 -->
+<!--X-Message-Id: E1YEJC8&#45;00028Y&#45;2J@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r27265 - in /trunk/lib/sequence_alignment: align_protein.py needleman_wunsch.py -- January 22, 2015 - 15:57</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r27265 - in /trunk/lib/sequence_alignment: align_protein.py needleman_wunsch.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00111" class="tabs">Index by Date</a> | <a href="threads.html#00111" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00110.html">Date Prev</a>] [<a href="msg00112.html">Date Next</a>] [<a href="msg00110.html">Thread Prev</a>] [<a href="msg00112.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 22 Jan 2015 14:57:16 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00111.html">E1YEJC8-00028Y-2J@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on January 22, 2015 - 15:57:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Jan 22 15:57:15 2015
+New Revision: 27265
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=27265&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=27265&amp;view=rev</a>
+Log:
+Modified the Needleman-Wunsch sequence alignment algorithm.
+
+The previous attempt was buggy.  The algorithm has been modified to match the 
+logic of the GPL
+licenced EMBOSS software (<a  rel="nofollow" href="http://emboss.sourceforge.net/">http://emboss.sourceforge.net/</a>) to allow for gap 
+opening and extension
+penalties, as well as end penalties.  No code was copied, rather the 
+algorithm for creating the
+scoring and penalty matrices, as well as the traceback matrix.
+
+
+Modified:
+    trunk/lib/sequence_alignment/align_protein.py
+    trunk/lib/sequence_alignment/needleman_wunsch.py
+
+Modified: trunk/lib/sequence_alignment/align_protein.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/lib/sequence_alignment/align_protein.py?rev=27265&amp;r1=27264&amp;r2=27265&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/lib/sequence_alignment/align_protein.py?rev=27265&amp;r1=27264&amp;r2=27265&amp;view=diff</a>
+==============================================================================
+--- trunk/lib/sequence_alignment/align_protein.py       (original)
++++ trunk/lib/sequence_alignment/align_protein.py       Thu Jan 22 15:57:15 
+2015
+@@ -25,32 +25,30 @@
+ # Python module imports.
+ from string import upper
+ import sys
+-from warnings import warn
+ 
+ # relax module imports.
+ from lib.errors import RelaxError
+ from lib.sequence_alignment.needleman_wunsch import needleman_wunsch_align
+ from lib.sequence_alignment.substitution_matrices import BLOSUM62, 
+BLOSUM62_SEQ
+-from lib.warnings import RelaxWarning
+ 
+ 
+-def align_pairwise(sequence1, sequence2, algorithm='NW70', 
+matrix='BLOSUM62', gap_penalty=1.0, extend_penalty=1.0):
++def align_pairwise(sequence1, sequence2, algorithm='NW70', 
+matrix='BLOSUM62', gap_open_penalty=1.0, gap_extend_penalty=1.0):
+     &quot;&quot;&quot;Align two protein sequences.
+ 
+-    @param sequence1:           The first protein sequence as one letter 
+codes.
+-    @type sequence1:            str
+-    @param sequence2:           The second protein sequence as one letter 
+codes.
+-    @type sequence2:            str
+-    @keyword algorithm:         The alignment algorithm to use.
+-    @type algorithm:            str
+-    @keyword matrix:            The substitution matrix to use.
+-    @type matrix:               str
+-    @keyword gap_penalty:       The penalty for introducing gaps, as a 
+positive number.
+-    @type gap_penalty:          float
+-    @keyword extend_penalty:    The penalty for extending a gap, as a 
+positive number.
+-    @type extend_penalty:       float
+-    @return:                    The two alignment strings and the gap matrix.
+-    @rtype:                     str, str, numpy rank-2 int array
++    @param sequence1:               The first protein sequence as one letter 
+codes.
++    @type sequence1:                str
++    @param sequence2:               The second protein sequence as one 
+letter codes.
++    @type sequence2:                str
++    @keyword algorithm:             The alignment algorithm to use.
++    @type algorithm:                str
++    @keyword matrix:                The substitution matrix to use.
++    @type matrix:                   str
++    @keyword gap_open_penalty:      The penalty for introducing gaps, as a 
+positive number.
++    @type gap_open_penalty:         float
++    @keyword gap_extend_penalty:    The penalty for extending a gap, as a 
+positive number.
++    @type gap_extend_penalty:       float
++    @return:                        The two alignment strings and the gap 
+matrix.
++    @rtype:                         str, str, numpy rank-2 int array
+     &quot;&quot;&quot;
+ 
+     # Checks.
+@@ -65,16 +63,11 @@
+     sequence1 = upper(sequence1)
+     sequence2 = upper(sequence2)
+ 
+-    # Turn off the extension penalty for algorithms not supporting it.
+-    if extend_penalty != None and algorithm in ['NW70']:
+-        warn(RelaxWarning(&quot;The gap extension penalty is not supported by the 
+Needleman-Wunsch sequence alignment algorithm.&quot;))
+-        extend_penalty = None
+-
+     # Initial printout.
+     sys.stdout.write(&quot;\nPairwise protein alignment.\n&quot;)
+     sys.stdout.write(&quot;%-30s %s\n&quot; % (&quot;Substitution matrix:&quot;, matrix))
+-    sys.stdout.write(&quot;%-30s %s\n&quot; % (&quot;Gap penalty:&quot;, gap_penalty))
+-    sys.stdout.write(&quot;%-30s %s\n&quot; % (&quot;Extend penalty:&quot;, extend_penalty))
++    sys.stdout.write(&quot;%-30s %s\n&quot; % (&quot;Gap opening penalty:&quot;, 
+gap_open_penalty))
++    sys.stdout.write(&quot;%-30s %s\n&quot; % (&quot;Gap extend penalty:&quot;, 
+gap_extend_penalty))
+     sys.stdout.write(&quot;\n%-30s %s\n&quot; % (&quot;Input sequence 1:&quot;, sequence1))
+     sys.stdout.write(&quot;%-30s %s\n&quot; % (&quot;Input sequence 2:&quot;, sequence2))
+ 
+@@ -85,7 +78,7 @@
+ 
+     # The alignment.
+     if algorithm == 'NW70':
+-        align1, align2, gaps = needleman_wunsch_align(sequence1, sequence2, 
+sub_matrix=sub_matrix, sub_seq=sub_seq, gap_penalty=gap_penalty)
++        align1, align2, gaps = needleman_wunsch_align(sequence1, sequence2, 
+sub_matrix=sub_matrix, sub_seq=sub_seq, gap_open_penalty=gap_open_penalty, 
+gap_extend_penalty=gap_extend_penalty)
+ 
+     # Final printout.
+     sys.stdout.write(&quot;\n%-30s %s\n&quot; % (&quot;Aligned sequence 1:&quot;, align1))
+@@ -100,4 +93,3 @@
+ 
+     # Return the results.
+     return align1, align2, gaps
+-
+
+Modified: trunk/lib/sequence_alignment/needleman_wunsch.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/lib/sequence_alignment/needleman_wunsch.py?rev=27265&amp;r1=27264&amp;r2=27265&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/lib/sequence_alignment/needleman_wunsch.py?rev=27265&amp;r1=27264&amp;r2=27265&amp;view=diff</a>
+==============================================================================
+--- trunk/lib/sequence_alignment/needleman_wunsch.py    (original)
++++ trunk/lib/sequence_alignment/needleman_wunsch.py    Thu Jan 22 15:57:15 
+2015
+@@ -37,24 +37,26 @@
+ TRACEBACK_LEFT = 2
+ 
+ 
+-def needleman_wunsch_align(sequence1, sequence2, sub_matrix=None, 
+sub_seq=None, gap_penalty=SCORE_GAP_PENALTY):
+-    &quot;&quot;&quot;Align two sequences using the Needleman-Wunsch algorithm.
+-
+-    This is implemented as described in the U{Wikipedia article on the 
+Needleman-Wunsch algorithm 
+&lt;<a  rel="nofollow" href="https://en.wikipedia.org/wiki/Needleman%E2%80%93Wunsch_algorithm">https://en.wikipedia.org/wiki/Needleman%E2%80%93Wunsch_algorithm</a>&gt;}.
+-
+-
+-    @param sequence1:           The first sequence.
+-    @type sequence1:            str
+-    @param sequence2:           The second sequence.
+-    @type sequence2:            str
+-    @keyword sub_matrix:        The substitution matrix to use to determine 
+the penalties.
+-    @type sub_matrix:           numpy rank-2 int array
+-    @keyword sub_seq:           The one letter code sequence corresponding 
+to the substitution matrix indices.
+-    @type sub_seq:              str
+-    @keyword gap_penalty:       The penalty for introducing gaps, as a 
+positive number.
+-    @type gap_penalty:          float
+-    @return:                    The two alignment strings and the gap matrix.
+-    @rtype:                     str, str, numpy rank-2 int array
++def needleman_wunsch_align(sequence1, sequence2, sub_matrix=None, 
+sub_seq=None, gap_open_penalty=SCORE_GAP_PENALTY, gap_extend_penalty=1.0):
++    &quot;&quot;&quot;Align two sequences using the Needleman-Wunsch algorithm using the 
+EMBOSS logic for extensions.
++
++    This is implemented as described in the U{Wikipedia article on the 
+Needleman-Wunsch algorithm 
+&lt;<a  rel="nofollow" href="https://en.wikipedia.org/wiki/Needleman%E2%80%93Wunsch_algorithm">https://en.wikipedia.org/wiki/Needleman%E2%80%93Wunsch_algorithm</a>&gt;}.  The 
+algorithm has been modified to match that of 
+U{EMBOSS&lt;<a  rel="nofollow" href="http://emboss.sourceforge.net/">http://emboss.sourceforge.net/</a>&gt;} to allow for gap opening and 
+extension penalties, as well as end penalties.
++
++
++    @param sequence1:               The first sequence.
++    @type sequence1:                str
++    @param sequence2:               The second sequence.
++    @type sequence2:                str
++    @keyword sub_matrix:            The substitution matrix to use to 
+determine the penalties.
++    @type sub_matrix:               numpy rank-2 int array
++    @keyword sub_seq:               The one letter code sequence 
+corresponding to the substitution matrix indices.
++    @type sub_seq:                  str
++    @keyword gap_open_penalty:      The penalty for introducing gaps, as a 
+positive number.
++    @type gap_open_penalty:         float
++    @keyword gap_extend_penalty:    The penalty for extending a gap, as a 
+positive number.
++    @type gap_extend_penalty:       float
++    @return:                        The two alignment strings and the gap 
+matrix.
++    @rtype:                         str, str, numpy rank-2 int array
+     &quot;&quot;&quot;
+ 
+     # The sequence lengths.
+@@ -62,7 +64,7 @@
+     N = len(sequence2)
+ 
+     # Calculate the scoring and traceback matrices.
+-    matrix, traceback_matrix = needleman_wunsch_matrix(sequence1, sequence2, 
+sub_matrix=sub_matrix, sub_seq=sub_seq, gap_penalty=gap_penalty)
++    matrix, traceback_matrix = needleman_wunsch_matrix(sequence1, sequence2, 
+sub_matrix=sub_matrix, sub_seq=sub_seq, gap_open_penalty=gap_open_penalty, 
+gap_extend_penalty=gap_extend_penalty)
+ 
+     # Generate the alignment.
+     i = M - 1
+@@ -109,60 +111,176 @@
+     return align1, align2, gaps
+ 
+ 
+-def needleman_wunsch_matrix(sequence1, sequence2, sub_matrix=None, 
+sub_seq=None, gap_penalty=SCORE_GAP_PENALTY):
+-    &quot;&quot;&quot;Construct the Needleman-Wunsch matrix for the given two sequences.
+-
+-    @param sequence1:           The first sequence.
+-    @type sequence1:            str
+-    @param sequence2:           The second sequence.
+-    @type sequence2:            str
+-    @keyword sub_matrix:        The substitution matrix to use to determine 
+the penalties.
+-    @type sub_matrix:           numpy rank-2 int16 array
+-    @keyword sub_seq:           The one letter code sequence corresponding 
+to the substitution matrix indices.
+-    @type sub_seq:              str
+-    @keyword gap_penalty:       The penalty for introducing gaps, as a 
+positive number.
+-    @type gap_penalty:          float
+-    @return:                    The Needleman-Wunsch matrix and traceback 
+matrix.
+-    @rtype:                     numpy rank-2 float32 array, numpy rank-2 
+int16 array
++def needleman_wunsch_matrix(sequence1, sequence2, sub_matrix=None, 
+sub_seq=None, gap_open_penalty=SCORE_GAP_PENALTY, gap_extend_penalty=1.0, 
+end_gap_open_penalty=0.0, end_gap_extend_penalty=0.0, epsilon=1e-7):
++    &quot;&quot;&quot;Construct the Needleman-Wunsch matrix for the given two sequences 
+using the EMBOSS logic.
++
++    The algorithm has been modified to match that of 
+U{EMBOSS&lt;<a  rel="nofollow" href="http://emboss.sourceforge.net/">http://emboss.sourceforge.net/</a>&gt;} to allow for gap opening and 
+extension penalties, as well as end penalties.
++
++
++    @param sequence1:                   The first sequence.
++    @type sequence1:                    str
++    @param sequence2:                   The second sequence.
++    @type sequence2:                    str
++    @keyword sub_matrix:                The substitution matrix to use to 
+determine the penalties.
++    @type sub_matrix:                   numpy rank-2 int16 array
++    @keyword sub_seq:                   The one letter code sequence 
+corresponding to the substitution matrix indices.
++    @type sub_seq:                      str
++    @keyword gap_open_penalty:          The penalty for introducing gaps, as 
+a positive number.
++    @type gap_open_penalty:             float
++    @keyword gap_extend_penalty:        The penalty for extending a gap, as 
+a positive number.
++    @type gap_extend_penalty:           float
++    @keyword end_gap_open_penalty:      The optional penalty for opening a 
+gap at the end of a sequence.
++    @type end_gap_open_penalty:         float
++    @keyword end_gap_extend_penalty:    The optional penalty for extending a 
+gap at the end of a sequence.
++    @type end_gap_extend_penalty:       float
++    @keyword epsilon:                   A value close to zero to determine 
+if two numbers are the same, within this precision.
++    @type epsilon:                      float
++    @return:                            The Needleman-Wunsch matrix and 
+traceback matrix.
++    @rtype:                             numpy rank-2 float32 array, numpy 
+rank-2 int16 array
+     &quot;&quot;&quot;
+ 
+     # Initial scoring matrix.
+-    matrix = zeros((len(sequence1)+1, len(sequence2)+1), float32)
+-    for i in range(1, len(matrix)):
+-        matrix[i, 0] = -gap_penalty*i
+-    for j in range(1, len(matrix[0])):
+-        matrix[0, j] = -gap_penalty*j
++    M = len(sequence1)
++    N = len(sequence2)
++    matrix = zeros((M, N), float32)
++
++    # Initial gap matrices.
++    gap_matrix_vert = zeros((M, N), float32)
++    gap_matrix_hori = zeros((M, N), float32)
+ 
+     # Initial traceback matrix.
+-    traceback_matrix = zeros((len(sequence1), len(sequence2)), int16)
+-
+-    # Calculate the scores.
+-    for i in range(1, len(matrix)):
+-        for j in range(1, len(matrix[0])):
+-            # Substitution scores when no matrix is provided.
+-            if sub_matrix == None:
+-                sub_score = SCORE_MISMATCH
+-                if sequence1[i-1] == sequence2[j-1]:
+-                    sub_score = SCORE_MATCH
+-
++    traceback_matrix = zeros((M, N), int16)
++
++    # Set up position [0, 0].
++    matrix[0, 0] = sub_matrix[sub_seq.index(sequence1[0]), 
+sub_seq.index(sequence2[0])]
++    gap_matrix_vert[0, 0] = -gap_open_penalty
++    gap_matrix_hori[0, 0] = -gap_open_penalty
++
++    # Set up the first column.
++    for i in range(1, M):
++        # Substitution scores from the matrix.
++        matrix[i, 0] = sub_matrix[sub_seq.index(sequence1[i]), 
+sub_seq.index(sequence2[0])]
++
++        # Gap scores.
++        score_gap_open = matrix[i-1, 0] - gap_open_penalty
++        score_gap_extend = gap_matrix_hori[i-1, 0] - gap_extend_penalty
++
++        # Update the vertical gap matrix.
++        if i &lt; M-1:
++            gap_matrix_vert[i, 0] = -gap_open_penalty
++
++        # Update the horizontal gap matrix.
++        gap_matrix_hori[i, 0] = max(score_gap_open, score_gap_extend)
++
++    # Set up the first row.
++    for j in range(1, N):
++        # Substitution scores from the matrix.
++        matrix[0, j] = sub_matrix[sub_seq.index(sequence1[0]), 
+sub_seq.index(sequence2[j])]
++
++        # Gap scores.
++        score_gap_open = matrix[0, j-1] - gap_open_penalty
++        score_gap_extend = gap_matrix_vert[0, j-1] - gap_extend_penalty
++
++        # Update the vertical gap matrix.
++        gap_matrix_vert[0, j] = max(score_gap_open, score_gap_extend)
++
++        # Update the horizontal gap matrix.
++        if j &lt; N-1:
++            gap_matrix_hori[0, j] = -gap_open_penalty
++
++    # Fill in the rest of the matrix.
++    for j in range(1, N):
++        for i in range(1, M):
+             # Substitution scores from the matrix.
++            sub_score = sub_matrix[sub_seq.index(sequence1[i]), 
+sub_seq.index(sequence2[j])]
++
++            # The diagonal score.
++            SCORES[0] = matrix[i-1, j-1]
++
++            # The top score.
++            SCORES[1] = gap_matrix_vert[i-1, j-1]
++
++            # The left score.
++            SCORES[2] = gap_matrix_hori[i-1, j-1]
++
++            # Store the score.
++            matrix[i, j] = SCORES.max() + sub_score
++
++            # Horizontal gap scores.
++            if j == N-1:
++                score_gap_open = matrix[i-1, j] - end_gap_open_penalty
++                score_gap_extend = gap_matrix_hori[i-1, j] - 
+end_gap_extend_penalty
+             else:
+-                sub_score = sub_matrix[sub_seq.index(sequence1[i-1]), 
+sub_seq.index(sequence2[j-1])]
+-
+-            # The diagonal score.
+-            SCORES[0] = matrix[i-1, j-1] + sub_score
+-
+-            # The top score.
+-            SCORES[1] = matrix[i-1, j] - gap_penalty
+-
+-            # The left score.
+-            SCORES[2] = matrix[i, j-1] - gap_penalty
+-
+-            # Store the best score.
+-            matrix[i, j] = SCORES.max()
+-
+-            # Update the traceback matrix.
+-            traceback_matrix[i-1, j-1] = SCORES.argmax()
+-
+-    # Return the matrix.
++                score_gap_open = max(matrix[i-1, j], gap_matrix_vert[i-1, 
+j]) - gap_open_penalty
++                score_gap_extend = gap_matrix_hori[i-1, j] - 
+gap_extend_penalty
++            gap_matrix_hori[i, j] = max(score_gap_open, score_gap_extend)
++
++            # Vertical gap scores.
++            if i == M-1:
++                score_gap_open = matrix[i, j-1] - end_gap_open_penalty
++                score_gap_extend = gap_matrix_vert[i, j-1] - 
+end_gap_extend_penalty
++            else:
++                score_gap_open = max(matrix[i, j-1], gap_matrix_hori[i, 
+j-1]) - gap_open_penalty
++                score_gap_extend = gap_matrix_vert[i, j-1] - 
+gap_extend_penalty
++            gap_matrix_vert[i, j] = max(score_gap_open, score_gap_extend)
++
++    # Determine the best traceback path.
++    j = N - 1
++    i = M - 1
++    last_move = 0
++    while j &gt;= 0 and i &gt;= 0:
++        # The current indices.
++        curr_i = i
++        curr_j = j
++
++        # Choose the correct gap extension penalties.
++        left_gap_extend_penalty = gap_extend_penalty
++        top_gap_extend_penalty = gap_extend_penalty
++        if i == 0 or i == M-1:
++            left_gap_extend_penalty = end_gap_extend_penalty
++        if j == 0 or j == N-1:
++            top_gap_extend_penalty = end_gap_extend_penalty
++
++        # Extending the gap to the left.
++        if last_move == TRACEBACK_LEFT and abs(left_gap_extend_penalty - 
+(gap_matrix_vert[i, j] - gap_matrix_vert[i, j+1])) &lt; epsilon:
++            traceback_matrix[i, j] = TRACEBACK_LEFT
++            j -= 1
++
++        # Extending the gap to the top.
++        elif last_move== TRACEBACK_TOP and abs(top_gap_extend_penalty - 
+(gap_matrix_hori[i, j] - gap_matrix_hori[i+1, j])) &lt; epsilon:
++            traceback_matrix[i, j] = TRACEBACK_TOP
++            i -= 1
++
++        # Match.
++        elif matrix[i, j] &gt;= gap_matrix_vert[i, j] and matrix[i, j] &gt;= 
+gap_matrix_hori[i, j]:
++            # Add another gap to the left.
++            if last_move == TRACEBACK_LEFT and abs(matrix[i, j] - 
+gap_matrix_vert[i, j]) &lt; epsilon:
++                traceback_matrix[i, j] = TRACEBACK_LEFT
++                j -= 1
++
++            # Add another gap to the top.
++            elif last_move == TRACEBACK_TOP and abs(matrix[i, j] - 
+gap_matrix_hori[i, j]) &lt; epsilon:
++                traceback_matrix[i, j] = TRACEBACK_TOP
++                i -= 1
++
++            # Take the match.
++            else:
++                traceback_matrix[i, j] = 0
++                i -= 1
++                j -= 1
++
++        # First gap to the left.
++        elif gap_matrix_vert[i, j] &gt;= gap_matrix_hori[i, j] and j &gt;= 0:
++            traceback_matrix[i, j] = TRACEBACK_LEFT
++            j -= 1
++
++        # First gap to the top.
++        elif i &gt;= 0:
++            traceback_matrix[i, j] = TRACEBACK_TOP
++            i -= 1
++
++        # Store the last move.
++        last_move = traceback_matrix[curr_i, curr_j]
++
++    # Return the matrices.
+     return matrix, traceback_matrix
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Jan 22 16:20:02 2015</div>  
+</body>
+</html>

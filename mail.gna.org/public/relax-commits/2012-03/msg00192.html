@@ -1,0 +1,171 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r15607 &#45; /1.3/multi/slave_commands.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 22 Mar 2012 16:31:51 +0100 -->
+<!--X-Message-Id: E1SAjzT&#45;0002zX&#45;Jt@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r15607 - /1.3/multi/slave_commands.py -- March 22, 2012 - 16:31</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r15607 - /1.3/multi/slave_commands.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00192" class="tabs">Index by Date</a> | <a href="threads.html#00192" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00191.html">Date Prev</a>] [<a href="msg00193.html">Date Next</a>] [<a href="msg00191.html">Thread Prev</a>] [<a href="msg00193.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 22 Mar 2012 15:31:51 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00192.html">E1SAjzT-0002zX-Jt@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on March 22, 2012 - 16:31:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Mar 22 16:31:51 2012
+New Revision: 15607
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=15607&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=15607&amp;view=rev</a>
+Log:
+Created the special command object Slave_storage_command for transferring 
+data to slaves.
+
+This command currently has two special methods:
+    - add(), used by the master processor to add data to the command for 
+transfer.
+    - clear(), used by the slave (via run()) or the master to clear out all 
+data.
+
+
+Modified:
+    1.3/multi/slave_commands.py
+
+Modified: 1.3/multi/slave_commands.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/multi/slave_commands.py?rev=15607&amp;r1=15606&amp;r2=15607&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/multi/slave_commands.py?rev=15607&amp;r1=15606&amp;r2=15607&amp;view=diff</a>
+==============================================================================
+--- 1.3/multi/slave_commands.py (original)
++++ 1.3/multi/slave_commands.py Thu Mar 22 16:31:51 2012
+@@ -102,3 +102,60 @@
+ 
+         # Then set the flag.
+         processor.do_quit = True
++
++
++
++class Slave_storage_command(Slave_command):
++    &quot;&quot;&quot;Special command for sending data for storage on the slaves.&quot;&quot;&quot;
++
++    def __init__(self):
++        &quot;&quot;&quot;Set up the command.&quot;&quot;&quot;
++
++        # Initialise the base class.
++        super(Slave_command, self).__init__()
++
++        # Initialise variables for holding data in transit.
++        self.names = []
++        self.values = []
++
++
++    def add(self, name, value):
++        &quot;&quot;&quot;Pump in data to be held and transfered to the slave by the 
+command.
++
++        @keyword name:  The name of the data structure to store.
++        @type name:     str
++        @keyword value: The data structure.
++        @type value:    anything
++        &quot;&quot;&quot;
++
++        # Store the data.
++        self.names.append(name)
++        self.values.append(value)
++
++
++    def clear(self):
++        &quot;&quot;&quot;Remove all data from the slave.&quot;&quot;&quot;
++
++        # Reinitialise the structures.
++        self.names = []
++        self.values = []
++
++
++    def run(self, processor, completed):
++        &quot;&quot;&quot;Set the slave processor's do_quit flag to terminate.
++
++        @param processor:   The slave processor the command is running on.  
+Results from the command are returned via calls to processor.return_object.
++        @type processor:    Processor instance
++        @param completed:   The flag used in batching result returns to 
+indicate that the sequence of batched result commands has completed.  This 
+value should be returned via the last result object retuned by this method or 
+methods it calls. All other Result_commands should be initialised with 
+completed=False.  This is an optimisation to prevent the sending an extra 
+batched result queue completion result command being sent, it may be an over 
+early optimisation.
++        @type completed:    bool
++        &quot;&quot;&quot;
++
++        # First return no result.
++        processor.return_object(processor.NULL_RESULT)
++
++        # Loop over and store the data.
++        for i in range(len(self.names)):
++            setattr(processor.data_store, self.names[i], self.values[i])
++
++        # Clear the data.
++        self.clear()
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Mar 23 11:20:01 2012</div>  
+</body>
+</html>

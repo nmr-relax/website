@@ -1,0 +1,153 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r8655 &#45; in /branches/ave_noe/generic_fns: noesy.py xplor.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 26 Jan 2009 18:44:14 +0100 -->
+<!--X-Message-Id: E1LRVVN&#45;0004nf&#45;Vn@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r8655 - in /branches/ave_noe/generic_fns: noesy.py xplor.py -- January 26, 2009 - 18:44</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r8655 - in /branches/ave_noe/generic_fns: noesy.py xplor.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00430" class="tabs">Index by Date</a> | <a href="threads.html#00430" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00429.html">Date Prev</a>] [<a href="msg00431.html">Date Next</a>] [<a href="msg00429.html">Thread Prev</a>] [<a href="msg00431.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 26 Jan 2009 17:44:13 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00430.html">E1LRVVN-0004nf-Vn@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on January 26, 2009 - 18:44:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Mon Jan 26 18:44:13 2009
+New Revision: 8655
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=8655&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=8655&amp;view=rev</a>
+Log:
+Shifted the checks of the atom id strings from the Xplor parser to the NOE 
+restraint reading fn.
+
+
+Modified:
+    branches/ave_noe/generic_fns/noesy.py
+    branches/ave_noe/generic_fns/xplor.py
+
+Modified: branches/ave_noe/generic_fns/noesy.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/ave_noe/generic_fns/noesy.py?rev=8655&amp;r1=8654&amp;r2=8655&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/ave_noe/generic_fns/noesy.py?rev=8655&amp;r1=8654&amp;r2=8655&amp;view=diff</a>
+==============================================================================
+--- branches/ave_noe/generic_fns/noesy.py (original)
++++ branches/ave_noe/generic_fns/noesy.py Mon Jan 26 18:44:13 2009
+@@ -29,7 +29,7 @@
+ 
+ # relax module imports.
+ from generic_fns import pipes
+-from generic_fns.mol_res_spin import exists_mol_res_spin_data
++from generic_fns.mol_res_spin import exists_mol_res_spin_data, return_spin
+ from generic_fns.xplor import parse_noe_restraints
+ from relax_errors import RelaxNoSequenceError
+ from relax_io import open_read_file
+@@ -112,3 +112,10 @@
+     # Parse and extract the NOE restraints.
+     if format == 'xplor':
+         cdp.noe_restraints = parse_noe_restraints(lines)
++
++    # Check for the presence of the spin containers corresponding to the 
+atom ids.
++    for restraint in cdp.noe_restraints:
++        if not return_spin(restraint[0]):
++            raise RelaxError, &quot;The spin container corresponding to '%s' 
+cannot be found.&quot; % restraint[0]
++        if not return_spin(restraint[1]):
++            raise RelaxError, &quot;The spin container corresponding to '%s' 
+cannot be found.&quot; % restraint[1]
+
+Modified: branches/ave_noe/generic_fns/xplor.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/ave_noe/generic_fns/xplor.py?rev=8655&amp;r1=8654&amp;r2=8655&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/ave_noe/generic_fns/xplor.py?rev=8655&amp;r1=8654&amp;r2=8655&amp;view=diff</a>
+==============================================================================
+--- branches/ave_noe/generic_fns/xplor.py (original)
++++ branches/ave_noe/generic_fns/xplor.py Mon Jan 26 18:44:13 2009
+@@ -120,10 +120,7 @@
+                 atom = atom + lines[line_index][char_index]
+ 
+             # Convert the atom data to a relax atom id.
+-            relax_id = __convert_to_id(atom)
+-            data[-1][0] = relax_id
+-            if not return_spin(relax_id):
+-                raise RelaxError, &quot;The spin container corresponding to '%s' 
+(or '%s' in Xplor format) cannot be found.&quot; % (relax_id, atom)
++            data[-1][0] = __convert_to_id(atom)
+ 
+             # Extract the second atom string.
+             atom = ''
+@@ -152,10 +149,7 @@
+                 atom = atom + lines[line_index][char_index]
+ 
+             # Convert the atom data to a relax atom id.
+-            relax_id = __convert_to_id(atom)
+-            data[-1][1] = relax_id
+-            if not return_spin(relax_id):
+-                raise RelaxError, &quot;The spin container corresponding to '%s' 
+(or '%s' in Xplor format) cannot be found.&quot; % (relax_id, atom)
++            data[-1][1] = __convert_to_id(atom)
+ 
+             # The rest of the data (NOE restraint info).
+             info = split(lines[line_index][char_index+1:])
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Jan 26 22:40:03 2009</div>  
+</body>
+</html>

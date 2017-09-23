@@ -1,0 +1,355 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r14633 &#45; /1.3/gui/spin_viewer/frame.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 14 Sep 2011 18:06:31 +0200 -->
+<!--X-Message-Id: E1R3ryp&#45;0007zb&#45;43@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r14633 - /1.3/gui/spin_viewer/frame.py -- September 14, 2011 - 18:06</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r14633 - /1.3/gui/spin_viewer/frame.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00079" class="tabs">Index by Date</a> | <a href="threads.html#00079" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00078.html">Date Prev</a>] [<a href="msg00080.html">Date Next</a>] [<a href="msg00078.html">Thread Prev</a>] [<a href="msg00080.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 14 Sep 2011 16:06:31 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00079.html">E1R3ryp-0007zb-43@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on September 14, 2011 - 18:06:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Sep 14 18:06:30 2011
+New Revision: 14633
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=14633&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=14633&amp;view=rev</a>
+Log:
+Added a toolbar button to the spin viewer window to launch a wizard for 
+loading spins.
+
+A simple wizard has been created for the spin viewer window for loading spins 
+which directs the user
+to either the sequence.read user function or the structure.read_pdb and 
+structure.load_spins user
+functions.  The wizard page Load_method_page has been added at the start to 
+allow the user to choose
+the method, and the last page Finish_page has been added so that the wizard 
+can have a finish
+button and terminal page.
+
+
+Modified:
+    1.3/gui/spin_viewer/frame.py
+
+Modified: 1.3/gui/spin_viewer/frame.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/gui/spin_viewer/frame.py?rev=14633&amp;r1=14632&amp;r2=14633&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/gui/spin_viewer/frame.py?rev=14633&amp;r1=14632&amp;r2=14633&amp;view=diff</a>
+==============================================================================
+--- 1.3/gui/spin_viewer/frame.py (original)
++++ 1.3/gui/spin_viewer/frame.py Wed Sep 14 18:06:30 2011
+@@ -30,15 +30,17 @@
+ # relax module imports.
+ from generic_fns.pipes import cdp_name, pipe_names
+ from status import Status; status = Status()
++from relax_errors import RelaxNoPipeError
+ 
+ # relax GUI module imports.
+-from gui import paths
++from gui.paths import icon_32x32, WIZARD_IMAGE_PATH
+ from gui.components.menu import build_menu_item
+ from gui.icons import relax_icons
+ from gui.menu import Uf_menus
+-from gui.misc import gui_to_str, str_to_gui
++from gui.misc import gui_raise, gui_to_str, str_to_gui
+ from gui.spin_viewer.splitter import Tree_splitter
+-from gui.user_functions import User_functions; user_functions = 
+User_functions()
++from gui.user_functions import User_functions, sequence, structure; 
+user_functions = User_functions()
++from gui.wizard import Wiz_page, Wiz_window
+ 
+ 
+ class Spin_view_window(wx.Frame):
+@@ -180,6 +182,54 @@
+         self.Hide()
+ 
+ 
++    def load_spins_wizard(self, event):
++        &quot;&quot;&quot;The spin loading wizard.
++
++        @param event:   The wx event.
++        @type event:    wx event
++        &quot;&quot;&quot;
++
++        # No current data pipe.
++        if not cdp_name():
++            gui_raise(RelaxNoPipeError())
++            return
++
++        # Change the cursor to busy.
++        wx.BeginBusyCursor()
++
++        # Initialise a wizard.
++        self.wizard = Wiz_window(parent=self, size_x=800, size_y=700, 
+title=&quot;Load spins&quot;)
++        self.page_indices = {}
++
++        # The loading method page.
++        self.page_method = Load_method_page(self.wizard)
++        self.page_indices['method'] = self.wizard.add_page(self.page_method, 
+apply_button=True, skip_button=True)
++        self.wizard.set_seq_next_fn(self.page_indices['method'], 
+self.wizard_page_after_load_method)
++
++        # The sequence.read page.
++        page = sequence.Read_page(self.wizard)
++        self.page_indices['sequence.read'] = self.wizard.add_page(page, 
+skip_button=True)
++        self.wizard.set_seq_next_fn(self.page_indices['sequence.read'], 
+self.wizard_page_after_sequence_read)
++
++        # The structure.read_pdb page.
++        page = structure.Read_pdb_page(self.wizard)
++        self.page_indices['structure.read_pdb'] = self.wizard.add_page(page, 
+skip_button=True)
++
++        # The structure.load_spins page.
++        page = structure.Load_spins_page(self.wizard)
++        self.page_indices['structure.load_spins'] = 
+self.wizard.add_page(page)
++
++        # The termination page.
++        page = Finish_page(self.wizard)
++        self.page_indices['fin'] = self.wizard.add_page(page, 
+apply_button=False, skip_button=False)
++
++        # Reset the cursor.
++        wx.EndBusyCursor()
++
++        # Run the wizard.
++        self.wizard.run()
++
++
+     def setup_window(self):
+         &quot;&quot;&quot;Set up the window.
+ 
+@@ -210,9 +260,17 @@
+         # Init.
+         self.bar = self.CreateToolBar(wx.TB_HORIZONTAL|wx.TB_FLAT)
+ 
++        # The spin loading button.
++        id = wx.NewId()
++        self.bar.AddLabelTool(id, &quot;Load spins&quot;, wx.Bitmap(icon_32x32.spin, 
+wx.BITMAP_TYPE_ANY), shortHelp=&quot;Load spins&quot;, longHelp=&quot;Load spins from either 
+a sequence file or from a 3D structure file&quot;)
++        self.Bind(wx.EVT_TOOL, self.load_spins_wizard, id=id)
++
++        # A separator.
++        self.bar.AddSeparator()
++
+         # The refresh button.
+         id = wx.NewId()
+-        self.bar.AddLabelTool(id, &quot;Refresh&quot;, 
+wx.Bitmap(paths.icon_32x32.view_refresh, wx.BITMAP_TYPE_ANY), 
+shortHelp=&quot;Refresh&quot;, longHelp=&quot;Refresh the spin view&quot;)
++        self.bar.AddLabelTool(id, &quot;Refresh&quot;, 
+wx.Bitmap(icon_32x32.view_refresh, wx.BITMAP_TYPE_ANY), shortHelp=&quot;Refresh&quot;, 
+longHelp=&quot;Refresh the spin view&quot;)
+         self.Bind(wx.EVT_TOOL, self.refresh, id=id)
+ 
+         # A separator.
+@@ -277,3 +335,129 @@
+ 
+         # Reset the cursor.
+         wx.EndBusyCursor()
++
++
++    def wizard_page_after_load_method(self):
++        &quot;&quot;&quot;Set the page after the load method choice.
++
++        @return:    The index of the next page.
++        @rtype:     int
++        &quot;&quot;&quot;
++
++        # Go to the spectrum.baseplane_rmsd page.
++        if self.page_method.selection == 'sequence':
++            return self.page_indices['sequence.read']
++
++        # Go to the spectrum.replicated page.
++        elif self.page_method.selection == 'structure':
++            return self.page_indices['structure.read_pdb']
++
++
++    def wizard_page_after_sequence_read(self):
++        &quot;&quot;&quot;Set the page after the sequence.read user function page.
++
++        @return:    The index of the last page.
++        @rtype:     int
++        &quot;&quot;&quot;
++
++        # Return the index of the terminal page.
++        return  self.page_indices['fin']
++
++
++
++class Finish_page(Wiz_page):
++    &quot;&quot;&quot;The terminating wizard page.&quot;&quot;&quot;
++
++    # Class variables.
++    image_path = WIZARD_IMAGE_PATH + 'spin.png'
++    main_text = 'The spin systems should now have been loaded into the relax 
+data store.'
++    title = 'Spin loading complete'
++
++    def add_contents(self, sizer):
++        &quot;&quot;&quot;This blank method is needed so that the page shows and does 
+nothing.
++
++        @param sizer:   A sizer object.
++        @type sizer:    wx.Sizer instance
++        &quot;&quot;&quot;
++
++
++
++class Load_method_page(Wiz_page):
++    &quot;&quot;&quot;The wizard page for specifying how to load spins.&quot;&quot;&quot;
++
++    # Class variables.
++    image_path = WIZARD_IMAGE_PATH + 'spin.png'
++    main_text = 'Select the method for loading spins into relax.  To options 
+are possible.  The first is to read sequence information out of a file via 
+the sequence.read user function.  The second is to read in a 3D structure 
+file via the structure.read_pdb user function and then to load the spins from 
+this structure using the structure.load_spins user function.'
++    title = 'Spin loading'
++
++
++    def add_contents(self, sizer):
++        &quot;&quot;&quot;Add the specific GUI elements.
++
++        @param sizer:   A sizer object.
++        @type sizer:    wx.Sizer instance
++        &quot;&quot;&quot;
++
++        # Intro text.
++        msg = &quot;Please specify which method should be used.&quot;
++        text = wx.StaticText(self, -1, msg)
++        text.Wrap(self._main_size)
++        sizer.Add(text, 0, wx.LEFT|wx.ALIGN_CENTER_VERTICAL, 0)
++
++        # Spacing.
++        sizer.AddStretchSpacer()
++
++        # A box sizer for placing the box sizer in.
++        sizer2 = wx.BoxSizer(wx.HORIZONTAL)
++        sizer.Add(sizer2, 1, wx.ALL|wx.EXPAND, 0)
++
++        # Bottom spacing.
++        sizer.AddStretchSpacer()
++
++        # A bit of indentation.
++        sizer2.AddStretchSpacer()
++
++        # A vertical sizer for the radio buttons.
++        sizer_radio = wx.BoxSizer(wx.VERTICAL)
++        sizer2.Add(sizer_radio, 1, wx.ALL|wx.EXPAND, 0)
++
++        # The sequence radio button.
++        self.radio_seq = wx.RadioButton(self, -1, &quot;Sequence file.&quot;)
++        sizer_radio.Add(self.radio_seq, 0, wx.LEFT|wx.ALIGN_CENTER_VERTICAL, 
+0)
++
++        # Spacing.
++        sizer_radio.AddSpacer(20)
++
++        # The PDB radio button.
++        self.radio_structure = wx.RadioButton(self, -1, &quot;3D structure file.&quot;)
++        sizer_radio.Add(self.radio_structure, 0, 
+wx.LEFT|wx.ALIGN_CENTER_VERTICAL, 0)
++
++        # Bind the buttons.
++        self.Bind(wx.EVT_RADIOBUTTON, self._on_select, self.radio_seq)
++        self.Bind(wx.EVT_RADIOBUTTON, self._on_select, self.radio_structure)
++
++        # Right side spacing.
++        sizer2.AddStretchSpacer(3)
++
++        # Bottom spacing.
++        sizer.AddStretchSpacer()
++
++        # Set the default selection.
++        self.selection = 'sequence'
++
++
++    def _on_select(self, event):
++        &quot;&quot;&quot;Handle the radio button switching.
++
++        @param event:   The wx event.
++        @type event:    wx event
++        &quot;&quot;&quot;
++
++        # The button.
++        button = event.GetEventObject()
++
++        # RMSD.
++        if button == self.radio_seq:
++            self.selection = 'sequence'
++        elif button == self.radio_structure:
++            self.selection = 'structure'
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Sep 14 18:20:02 2011</div>  
+</body>
+</html>

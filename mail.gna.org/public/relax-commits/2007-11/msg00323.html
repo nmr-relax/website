@@ -1,0 +1,254 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r3710 &#45; /1.3/relax_io.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 20 Nov 2007 18:12:09 +0100 -->
+<!--X-Message-Id: E1IuWds&#45;00061F&#45;OP@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r3710 - /1.3/relax_io.py -- November 20, 2007 - 18:12</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r3710 - /1.3/relax_io.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00323" class="tabs">Index by Date</a> | <a href="threads.html#00323" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00322.html">Date Prev</a>] [<a href="msg00324.html">Date Next</a>] [<a href="msg00322.html">Thread Prev</a>] [<a href="msg00324.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 20 Nov 2007 17:12:08 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00323.html">E1IuWds-00061F-OP@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on November 20, 2007 - 18:12:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Nov 20 18:12:07 2007
+New Revision: 3710
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=3710&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=3710&amp;view=rev</a>
+Log:
+Converted the open_write_file class method into a module function.
+
+
+Modified:
+    1.3/relax_io.py
+
+Modified: 1.3/relax_io.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/relax_io.py?rev=3710&amp;r1=3709&amp;r2=3710&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/relax_io.py?rev=3710&amp;r1=3709&amp;r2=3710&amp;view=diff</a>
+==============================================================================
+--- 1.3/relax_io.py (original)
++++ 1.3/relax_io.py Tue Nov 20 18:12:07 2007
+@@ -122,6 +122,73 @@
+     return file
+ 
+ 
++def open_write_file(file_name=None, dir=None, force=0, compress_type=0, 
+print_flag=1, return_path=0):
++    &quot;&quot;&quot;Function for opening a file for writing and creating directories if 
+necessary.&quot;&quot;&quot;
++
++    # The null device.
++    if search('devnull', file_name):
++        # Devnull could not be imported!
++        if not devnull_import:
++            raise RelaxError, devnull_import_message + &quot;.  To use devnull, 
+please upgrade to Python &gt;= 2.4.&quot;
++
++        # Print out.
++        if print_flag:
++            print &quot;Opening the null device file for writing.&quot;
++
++        # Open the null device.
++        file = open(devnull, 'w')
++
++        # Return the file.
++        if return_path:
++            return file, None
++        else:
++            return file
++
++    # Create the directories.
++    mkdir(dir, print_flag=0)
++
++    # File path.
++    file_path = file_path(file_name, dir)
++
++    # Bzip2 compression.
++    if compress_type == 1 and not search('.bz2$', file_path):
++        # Bz2 module exists.
++        if bz2_module:
++            file_path = file_path + '.bz2'
++
++        # Switch to gzip compression.
++        else:
++            print &quot;Cannot use bz2 compression, using gzip compression 
+instead.  &quot; + bz2_module_message + &quot;.&quot;
++            compress_type = 2
++
++    # Gzip compression.
++    if compress_type == 2 and not search('.gz$', file_path):
++        file_path = file_path + '.gz'
++
++    # Fail if the file already exists and the force flag is set to 0.
++    if access(file_path, F_OK) and not force:
++        raise RelaxFileOverwriteError, (file_path, 'force flag')
++
++    # Open the file for writing.
++    try:
++        if print_flag:
++            print &quot;Opening the file &quot; + `file_path` + &quot; for writing.&quot;
++        if compress_type == 0:
++            file = open(file_path, 'w')
++        elif compress_type == 1:
++            file = BZ2File(file_path, 'w')
++        elif compress_type == 2:
++            file = GzipFile(file_path, 'w')
++    except IOError, message:
++        raise RelaxError, &quot;Cannot open the file &quot; + `file_path` + &quot;.  &quot; + 
+message.args[1] + &quot;.&quot;
++
++    # Return the opened file.
++    if return_path:
++        return file, file_path
++    else:
++        return file
++
++
+ 
+ 
+ class IO:
+@@ -268,73 +335,6 @@
+                 print &quot;Directory ./&quot; + dir + &quot; already exists.\n&quot;
+ 
+ 
+-    def open_write_file(self, file_name=None, dir=None, force=0, 
+compress_type=0, print_flag=1, return_path=0):
+-        &quot;&quot;&quot;Function for opening a file for writing and creating directories 
+if necessary.&quot;&quot;&quot;
+-
+-        # The null device.
+-        if search('devnull', file_name):
+-            # Devnull could not be imported!
+-            if not devnull_import:
+-                raise RelaxError, devnull_import_message + &quot;.  To use 
+devnull, please upgrade to Python &gt;= 2.4.&quot;
+-
+-            # Print out.
+-            if print_flag:
+-                print &quot;Opening the null device file for writing.&quot;
+-
+-            # Open the null device.
+-            file = open(devnull, 'w')
+-
+-            # Return the file.
+-            if return_path:
+-                return file, None
+-            else:
+-                return file
+-
+-        # Create the directories.
+-        self.mkdir(dir, print_flag=0)
+-
+-        # File path.
+-        file_path = self.file_path(file_name, dir)
+-
+-        # Bzip2 compression.
+-        if compress_type == 1 and not search('.bz2$', file_path):
+-            # Bz2 module exists.
+-            if bz2_module:
+-                file_path = file_path + '.bz2'
+-
+-            # Switch to gzip compression.
+-            else:
+-                print &quot;Cannot use bz2 compression, using gzip compression 
+instead.  &quot; + bz2_module_message + &quot;.&quot;
+-                compress_type = 2
+-
+-        # Gzip compression.
+-        if compress_type == 2 and not search('.gz$', file_path):
+-            file_path = file_path + '.gz'
+-
+-        # Fail if the file already exists and the force flag is set to 0.
+-        if access(file_path, F_OK) and not force:
+-            raise RelaxFileOverwriteError, (file_path, 'force flag')
+-
+-        # Open the file for writing.
+-        try:
+-            if print_flag:
+-                print &quot;Opening the file &quot; + `file_path` + &quot; for writing.&quot;
+-            if compress_type == 0:
+-                file = open(file_path, 'w')
+-            elif compress_type == 1:
+-                file = BZ2File(file_path, 'w')
+-            elif compress_type == 2:
+-                file = GzipFile(file_path, 'w')
+-        except IOError, message:
+-            raise RelaxError, &quot;Cannot open the file &quot; + `file_path` + &quot;.  &quot; 
++ message.args[1] + &quot;.&quot;
+-
+-        # Return the opened file.
+-        if return_path:
+-            return file, file_path
+-        else:
+-            return file
+-
+-
+     def strip(self, data):
+         &quot;&quot;&quot;Function to remove all comment and empty lines from the file data 
+structure.&quot;&quot;&quot;
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Nov 20 18:40:13 2007</div>  
+</body>
+</html>

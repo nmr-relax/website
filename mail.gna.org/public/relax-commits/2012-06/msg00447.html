@@ -1,0 +1,254 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r17002 &#45; /branches/interatomic/generic_fns/mol_res_spin.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 20 Jun 2012 14:00:55 +0200 -->
+<!--X-Message-Id: E1ShJah&#45;00067v&#45;QI@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r17002 - /branches/interatomic/generic_fns/mol_res_spin.py -- June 20, 2012 - 14:00</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r17002 - /branches/interatomic/generic_fns/mol_res_spin.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00447" class="tabs">Index by Date</a> | <a href="threads.html#00447" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00446.html">Date Prev</a>] [<a href="msg00448.html">Date Next</a>] [<a href="msg00446.html">Thread Prev</a>] [<a href="msg00448.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 20 Jun 2012 12:00:55 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00447.html">E1ShJah-00067v-QI@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on June 20, 2012 - 14:00:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Jun 20 14:00:55 2012
+New Revision: 17002
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=17002&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=17002&amp;view=rev</a>
+Log:
+The return_spin() and return_spin_from_selection() functions can now handle 
+multiple spins.
+
+It the 'multi' flag is supplied, then lists of spins (and associated data) 
+will be returned, rather
+than a RelaxMultiSpinIDError error raised.
+
+
+Modified:
+    branches/interatomic/generic_fns/mol_res_spin.py
+
+Modified: branches/interatomic/generic_fns/mol_res_spin.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/interatomic/generic_fns/mol_res_spin.py?rev=17002&amp;r1=17001&amp;r2=17002&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/interatomic/generic_fns/mol_res_spin.py?rev=17002&amp;r1=17001&amp;r2=17002&amp;view=diff</a>
+==============================================================================
+--- branches/interatomic/generic_fns/mol_res_spin.py (original)
++++ branches/interatomic/generic_fns/mol_res_spin.py Wed Jun 20 14:00:55 2012
+@@ -2363,17 +2363,19 @@
+         return res_container
+ 
+ 
+-def return_spin(spin_id=None, pipe=None, full_info=False):
++def return_spin(spin_id=None, pipe=None, full_info=False, multi=False):
+     &quot;&quot;&quot;Return the spin data container corresponding to the given spin ID 
+string.
+ 
+     @keyword spin_id:   The unique spin ID string.
+     @type spin_id:      str
+-    @param pipe:        The data pipe containing the spin.  Defaults to the 
+current data pipe.
++    @keyword pipe:      The data pipe containing the spin.  Defaults to the 
+current data pipe.
+     @type pipe:         str
+-    @param full_info:   A flag specifying if the amount of information to be 
+returned.  If false, only the data container is returned.  If true, the 
+molecule name, residue number, and residue name is additionally returned.
+-    @type full_info:    boolean
++    @keyword full_info: A flag specifying if the amount of information to be 
+returned.  If false, only the data container is returned.  If true, the 
+molecule name, residue number, and residue name is additionally returned.
++    @type full_info:    bool
++    @keyword multi:     A flag which if True will allow multiple spins to be 
+returned.
++    @type multi:        bool
+     @return:            The spin system specific data container and, if 
+full_info=True, the molecule name, residue number, and residue name.
+-    @rtype:             SpinContainer instance or tuple of (str, int, str, 
+SpinContainer instance)
++    @rtype:             SpinContainer instance of list of instances or tuple 
+of (str, int, str, SpinContainer instance or list of instances)
+     &quot;&quot;&quot;
+ 
+     # The data pipe.
+@@ -2385,31 +2387,37 @@
+ 
+     # No spin ID, so switch to selection matching.
+     if not dp.mol.lookup_table.has_key(spin_id):
+-        return return_spin_from_selection(selection=spin_id, pipe=pipe, 
+full_info=full_info)
++        return return_spin_from_selection(selection=spin_id, pipe=pipe, 
+full_info=full_info, multi=multi)
+ 
+     # The indices from the look up table.
+     mol_index, res_index, spin_index = dp.mol.lookup_table[spin_id]
+ 
+     # Return the data.
+-    if full_info:
++    if full_info and multi:
++        return [dp.mol[mol_index].name], 
+[dp.mol[mol_index].res[res_index].num], 
+[dp.mol[mol_index].res[res_index].name], 
+[dp.mol[mol_index].res[res_index].spin[spin_index]]
++    elif full_info:
+         return dp.mol[mol_index].name, dp.mol[mol_index].res[res_index].num, 
+dp.mol[mol_index].res[res_index].name, 
+dp.mol[mol_index].res[res_index].spin[spin_index]
++    elif multi:
++        return [dp.mol[mol_index].res[res_index].spin[spin_index]]
+     else:
+         return dp.mol[mol_index].res[res_index].spin[spin_index]
+ 
+ 
+-def return_spin_from_selection(selection=None, pipe=None, full_info=False):
++def return_spin_from_selection(selection=None, pipe=None, full_info=False, 
+multi=False):
+     &quot;&quot;&quot;Function for returning the spin data container of the given selection.
+ 
+     If more than one selection is given, then the boolean AND operation will 
+be used to pull out the spin.
+ 
+-    @param selection:   The spin selection identifier.
++    @keyword selection: The spin selection identifier.
+     @type selection:    str
+-    @param pipe:        The data pipe containing the spin.  Defaults to the 
+current data pipe.
++    @keyword pipe:      The data pipe containing the spin.  Defaults to the 
+current data pipe.
+     @type pipe:         str
+-    @param full_info:   A flag specifying if the amount of information to be 
+returned.  If false, only the data container is returned.  If true, the 
+molecule name, residue number, and residue name is additionally returned.
+-    @type full_info:    boolean
++    @keyword full_info: A flag specifying if the amount of information to be 
+returned.  If false, only the data container is returned.  If true, the 
+molecule name, residue number, and residue name is additionally returned.
++    @type full_info:    bool
++    @keyword multi:     A flag which if True will allow multiple spins to be 
+returned.
++    @type multi:        bool
+     @return:            The spin system specific data container and, if 
+full_info=True, the molecule name, residue number, and residue name.
+-    @rtype:             SpinContainer instance or tuple of (str, int, str, 
+SpinContainer instance)
++    @rtype:             SpinContainer instance of list of instances or tuple 
+of (str, int, str, SpinContainer instance or list of instances)
+     &quot;&quot;&quot;
+ 
+     # Handle Unicode.
+@@ -2427,9 +2435,11 @@
+     select_obj = Selection(selection)
+ 
+     # Loop over the molecules.
+-    spin = None
+     spin_num = 0
+-    spin_container = None
++    spins = []
++    mol_names = []
++    res_nums = []
++    res_names = []
+     for mol in dp.mol:
+         # Skip the molecule if there is no match to the selection.
+         if mol not in select_obj:
+@@ -2447,23 +2457,28 @@
+                 if spin not in select_obj:
+                     continue
+ 
+-                # Store all containers.
+-                mol_container = mol
+-                res_container = res
+-                spin_container = spin
++                # Store all data.
++                mol_names.append(mol.name)
++                res_nums.append(res.nums)
++                res_names.append(res.name)
++                spins.append(spin)
+ 
+                 # Increment the spin number counter.
+                 spin_num = spin_num + 1
+ 
+     # No unique identifier.
+-    if spin_num &gt; 1:
++    if not multi and spin_num &gt; 1:
+         raise RelaxMultiSpinIDError(selection)
+ 
+     # Return the spin container.
+-    if full_info:
+-        return mol_container.name, res_container.num, res_container.name, 
+spin_container
++    if full_info and multi:
++        return mol_names, res_nums, res_names, spins
++    elif full_info:
++        return mol_names[0], res_nums[0], res_names[0], spins[0]
++    elif multi:
++        return spins
+     else:
+-        return spin_container
++        return spins[0]
+ 
+ 
+ def return_spin_from_index(global_index=None, pipe=None, 
+return_spin_id=False):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Jun 20 14:20:02 2012</div>  
+</body>
+</html>

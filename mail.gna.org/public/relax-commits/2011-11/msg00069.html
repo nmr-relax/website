@@ -1,0 +1,441 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r15012 &#45; in /1.3: generic_fns/structure/main.py	generic_fns/structure/superimpose.py prompt/structure.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 24 Nov 2011 14:04:43 +0100 -->
+<!--X-Message-Id: E1RTYyp&#45;0002IG&#45;1o@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r15012 - in /1.3: generic_fns/structure/main.py	generic_fns/structure/superimpose.py prompt/structure.py -- November 24, 2011 - 14:04</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r15012 - in /1.3: generic_fns/structure/main.py	generic_fns/structure/superimpose.py prompt/structure.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00069" class="tabs">Index by Date</a> | <a href="threads.html#00069" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00068.html">Date Prev</a>] [Date Next] [<a href="msg00068.html">Thread Prev</a>] [Thread Next]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 24 Nov 2011 13:04:43 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00069.html">E1RTYyp-0002IG-1o@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on November 24, 2011 - 14:04:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Nov 24 14:04:42 2011
+New Revision: 15012
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=15012&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=15012&amp;view=rev</a>
+Log:
+Created a new algorithm for finding the pivot of motion between different 
+structural models.
+
+This is available through the structure.find_pivot user function.
+
+
+Modified:
+    1.3/generic_fns/structure/main.py
+    1.3/generic_fns/structure/superimpose.py
+    1.3/prompt/structure.py
+
+Modified: 1.3/generic_fns/structure/main.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/generic_fns/structure/main.py?rev=15012&amp;r1=15011&amp;r2=15012&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/generic_fns/structure/main.py?rev=15012&amp;r1=15011&amp;r2=15012&amp;view=diff</a>
+==============================================================================
+--- 1.3/generic_fns/structure/main.py (original)
++++ 1.3/generic_fns/structure/main.py Thu Nov 24 14:04:42 2011
+@@ -22,6 +22,7 @@
+ 
+ # Python module imports.
+ from math import sqrt
++from minfx.generic import generic_minimise
+ from numpy import array, dot, float64, ndarray, zeros
+ from numpy.linalg import norm
+ from os import F_OK, access
+@@ -37,7 +38,7 @@
+ from generic_fns.structure.api_base import Displacements
+ from generic_fns.structure.internal import Internal
+ from generic_fns.structure.scientific import Scientific_data
+-from generic_fns.structure.superimpose import fit_to_first, fit_to_mean
++from generic_fns.structure.superimpose import fit_to_first, fit_to_mean, 
+Pivot_finder
+ from relax_errors import RelaxError, RelaxFileError, RelaxNoPdbError, 
+RelaxNoSequenceError
+ from relax_io import get_file_path, open_write_file, write_spin_data
+ from relax_warnings import RelaxWarning, RelaxNoPDBFileWarning, 
+RelaxZeroVectorWarning
+@@ -168,6 +169,57 @@
+ 
+             # Send to the base container for the calculations.
+             cdp.structure.displacements._calculate(model_from=model_from[i], 
+model_to=model_to[j], coord_from=array(coord_from), coord_to=array(coord_to), 
+centroid=centroid)
++
++
++def find_pivot(models=None, atom_id=None, init_pos=None):
++    &quot;&quot;&quot;Superimpose a set of structural models.
++
++    @keyword models:    The list of models to use.  If set to None, then all 
+models will be used.
++    @type models:       list of int or None
++    @keyword atom_id:   The molecule, residue, and atom identifier string.  
+This matches the spin ID string format.
++    @type atom_id:      str or None
++    @keyword init_pos:  The starting pivot position for the pivot point 
+optimisation.
++    @type init_pos:     list of float or numpy rank-1, 3D array
++    &quot;&quot;&quot;
++
++    # Initialised the starting position if needed.
++    if init_pos == None:
++        init_pos = zeros(3, float64)
++    init_pos = array(init_pos)
++
++    # Validate the models.
++    cdp.structure.validate_models()
++
++    # Create a list of all models.
++    if models == None:
++        models = []
++        for model in cdp.structure.model_loop():
++            models.append(model.num)
++
++    # Assemble the atomic coordinates of all models.
++    coord = []
++    for model in models:
++        coord.append([])
++        for pos in cdp.structure.atom_loop(atom_id=atom_id, model_num=model, 
+pos_flag=True):
++            coord[-1].append(pos[0])
++        coord[-1] = array(coord[-1])
++    coord = array(coord)
++
++    # The target function.
++    finder = Pivot_finder(models, coord)
++    results = generic_minimise(func=finder.func, x0=init_pos, 
+min_algor='simplex', print_flag=1)
++
++    # No result.
++    if results == None:
++        return
++
++    # Store the data.
++    cdp.structure.pivot = results
++
++    # Print out.
++    print(&quot;Motional pivot found at:  %s&quot; % results)
++
++
+ 
+ 
+ def get_pos(spin_id=None, str_id=None, ave_pos=False):
+
+Modified: 1.3/generic_fns/structure/superimpose.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/generic_fns/structure/superimpose.py?rev=15012&amp;r1=15011&amp;r2=15012&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/generic_fns/structure/superimpose.py?rev=15012&amp;r1=15011&amp;r2=15012&amp;view=diff</a>
+==============================================================================
+--- 1.3/generic_fns/structure/superimpose.py (original)
++++ 1.3/generic_fns/structure/superimpose.py Thu Nov 24 14:04:42 2011
+@@ -26,11 +26,90 @@
+ # Python module imports.
+ from copy import deepcopy
+ from math import pi
+-from numpy import diag, dot, eye, float64, outer, sign, transpose, zeros
++from numpy import diag, dot, eye, float64, outer, sign, sqrt, transpose, 
+zeros
+ from numpy.linalg import det, norm, svd
+ 
+ # relax module import.
+ from maths_fns.rotation_matrix import R_to_axis_angle
++
++
++class Pivot_finder:
++    &quot;&quot;&quot;Class for finding the optimal pivot point for motions between the 
+given models.&quot;&quot;&quot;
++
++    def __init__(self, models, coord):
++        &quot;&quot;&quot;Set up the class for pivot point optimisation.
++
++        @keyword models:    The list of models to use.  If set to None, then 
+all models will be used.
++        @type models:       list of int or None
++        @keyword coord:     The array of molecular coordinates.  The first 
+dimension corresponds to the model, the second the atom, the third the 
+coordinate.
++        @type coord:        rank-3 numpy array
++        &quot;&quot;&quot;
++
++        # Store the args.
++        self.models = models
++        self.coord = coord
++
++        # Store a copy of the coordinates for restoration.
++        self.orig_coord = deepcopy(coord)
++
++
++    def func(self, params):
++        &quot;&quot;&quot;Target function for the optimisation of the motional pivot point.
++
++        @param params:  The parameter vector from the optimisation algorithm.
++        @type params:   list
++        @return:        The target function value defined as the combined 
+RMSD value.
++        @rtype:         float
++        &quot;&quot;&quot;
++
++        # The fit to mean algorithm.
++        T, R, pivot = fit_to_mean(models=self.models, coord=self.coord, 
+centroid=params, verbosity=0)
++
++        # The RMSD.
++        val = atomic_rmsd(self.coord)
++
++        # Restore the coordinates.
++        self.coord = deepcopy(self.orig_coord)
++
++        # Return the RMSD.
++        return val
++
++
++
++def atomic_rmsd(coord):
++    &quot;&quot;&quot;Determine the RMSD for the given atomic coordinates.
++
++    This is the per atom RMSD to the mean structure.
++
++
++    @keyword coord:     The array of molecular coordinates.  The first 
+dimension corresponds to the model, the second the atom, the third the 
+coordinate.
++    @type coord:        rank-3 numpy array
++    &quot;&quot;&quot;
++
++    # Init.
++    M = len(coord)
++    N = len(coord[0])
++    model_rmsd = zeros(M, float64)
++    mean = zeros((N, 3), float64)
++
++    # Calculate the mean structure.
++    calc_mean_structure(coord, mean)
++
++    # Loop over the models.
++    for i in range(M):
++        # Loop over the atoms.
++        for j in range(N):
++            # The vector connecting the mean to model atom.
++            vect = mean[j] - coord[i][j]
++
++            # The atomic RMSD.
++            model_rmsd[i] += norm(vect)**2
++
++        # Normalise, and sqrt.
++        model_rmsd[i] = sqrt(model_rmsd[i] / N)
++
++    # Return the average RMSD.
++    return sum(model_rmsd) / M
+ 
+ 
+ def calc_mean_structure(coord=None, mean=None):
+@@ -111,7 +190,7 @@
+     return T_list, R_list, pivot_list
+ 
+ 
+-def fit_to_mean(models=None, coord=None, centroid=None):
++def fit_to_mean(models=None, coord=None, centroid=None, verbosity=1):
+     &quot;&quot;&quot;Superimpose a set of structural models using the fit to first 
+algorithm.
+ 
+     @keyword models:    The list of models to superimpose.
+@@ -120,12 +199,15 @@
+     @type coord:        list of numpy rank-2, Nx3 arrays
+     @keyword centroid:  An alternative position of the centroid to allow for 
+different superpositions, for example of pivot point motions.
+     @type centroid:     list of float or numpy rank-1, 3D array
++    @keyword verbosity: The amount of information to print out.  If 0, 
+nothing will be printed.
++    @type verbosity:    int
+     @return:            The lists of translation vectors, rotation matrices, 
+and rotation pivots.
+     @rtype:             list of numpy rank-1 3D arrays, list of numpy rank-2 
+3D arrays, list of numpy rank-1 3D arrays
+     &quot;&quot;&quot;
+ 
+     # Print out.
+-    print(&quot;\nSuperimposition of structural models %s using the 'fit to mean' 
+algorithm.&quot; % models)
++    if verbosity:
++        print(&quot;\nSuperimposition of structural models %s using the 'fit to 
+mean' algorithm.&quot; % models)
+ 
+     # Duplicate the coordinates.
+     orig_coord = deepcopy(coord)
+@@ -144,8 +226,9 @@
+     iter = 0
+     while not converged:
+         # Print out.
+-        print(&quot;\nIteration %i of the algorithm.&quot; % iter)
+-        print(&quot;%-10s%-25s%-25s&quot; % (&quot;Model&quot;, &quot;Translation (Angstrom)&quot;, 
+&quot;Rotation (deg)&quot;))
++        if verbosity:
++            print(&quot;\nIteration %i of the algorithm.&quot; % iter)
++            print(&quot;%-10s%-25s%-25s&quot; % (&quot;Model&quot;, &quot;Translation (Angstrom)&quot;, 
+&quot;Rotation (deg)&quot;))
+ 
+         # Calculate the mean structure.
+         calc_mean_structure(coord, mean)
+@@ -157,10 +240,10 @@
+             trans_vect, trans_dist, R, axis, angle, pivot = 
+kabsch(name_from='model %s'%models[0], name_to='mean', coord_from=coord[i], 
+coord_to=mean, centroid=centroid, verbosity=0)
+ 
+             # Table print out.
+-            print(&quot;%-10i%25.3g%25.3g&quot; % (i, trans_dist, (angle / 2.0 / pi * 
+360.0)))
++            if verbosity:
++                print(&quot;%-10i%25.3g%25.3g&quot; % (i, trans_dist, (angle / 2.0 / 
+pi * 360.0)))
+ 
+             # Shift the coordinates.
+-            print coord[i][0]
+             for j in range(N):
+                 # Translate.
+                 coord[i][j] += trans_vect
+@@ -173,7 +256,6 @@
+ 
+                 # The new position.
+                 coord[i][j] += pivot
+-            print coord[i][0]
+ 
+             # Convergence test.
+             if trans_dist &gt; 1e-10 or angle &gt; 1e-10:
+@@ -185,7 +267,7 @@
+     # Perform the fit once from the original coordinates to obtain the full 
+transforms.
+     for i in range(len(models)):
+         # Calculate the displacements (Kabsch algorithm).
+-        trans_vect, trans_dist, R, axis, angle, pivot = 
+kabsch(name_from='model %s'%models[i], name_to='the mean structure', 
+coord_from=orig_coord[i], coord_to=mean, centroid=centroid)
++        trans_vect, trans_dist, R, axis, angle, pivot = 
+kabsch(name_from='model %s'%models[i], name_to='the mean structure', 
+coord_from=orig_coord[i], coord_to=mean, centroid=centroid, verbosity=0)
+ 
+         # Store the transforms.
+         T_list.append(trans_vect)
+
+Modified: 1.3/prompt/structure.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/prompt/structure.py?rev=15012&amp;r1=15011&amp;r2=15012&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/prompt/structure.py?rev=15012&amp;r1=15011&amp;r2=15012&amp;view=diff</a>
+==============================================================================
+--- 1.3/prompt/structure.py (original)
++++ 1.3/prompt/structure.py Thu Nov 24 14:04:42 2011
+@@ -332,6 +332,41 @@
+     _build_doc(displacement)
+ 
+ 
++    def find_pivot(self, models=None, atom_id=None, init_pos=None):
++        # Function intro text.
++        if self._exec_info.intro:
++            text = self._exec_info.ps3 + &quot;structure.find_pivot(&quot;
++            text = text + &quot;models=&quot; + repr(models)
++            text = text + &quot;, atom_id=&quot; + repr(atom_id)
++            text = text + &quot;, init_pos=&quot; + repr(init_pos) + &quot;)&quot;
++            print(text)
++
++        # The argument checks.
++        arg_check.is_int_list(models, 'model list', can_be_none=True)
++        arg_check.is_str(atom_id, 'atom identification string', 
+can_be_none=True)
++        arg_check.is_float_array(init_pos, 'initial pivot position', 
+can_be_none=True)
++
++        # Execute the functional code.
++        generic_fns.structure.main.find_pivot(models=models, 
+atom_id=atom_id, init_pos=init_pos)
++
++    # The function doc info.
++    find_pivot._doc_title = &quot;Find the pivot point of the motion of a set of 
+structures.&quot;
++    find_pivot._doc_title_short = &quot;Pivot search.&quot;
++    find_pivot._doc_args = [
++        [&quot;models&quot;, &quot;The list of models to use.&quot;],
++        [&quot;atom_id&quot;, &quot;The atom identification string.&quot;],
++        [&quot;init_pos&quot;, &quot;The initial position of the pivot.&quot;]
++    ]
++    find_pivot._doc_desc = &quot;&quot;&quot;
++        This is used to find pivot point of motion between a set of 
+structural models.  If the list of models is not supplied, then all models 
+will be used.
++
++        The atom ID, which uses the same notation as the spin ID strings, 
+can be used to restrict the search to certain molecules, residues, or atoms.  
+For example to only use backbone heavy atoms in a protein, use the atom ID of 
+'@N,C,CA,O', assuming those are the names of the atoms from the structural 
+file.
++
++        By supplying the position of the centroid, an alternative position 
+than the standard rigid body centre is used as the focal point of the 
+superimposition.  The allows, for example, the superimposition about a pivot 
+point.
++        &quot;&quot;&quot;
++    _build_doc(find_pivot)
++
++
+     def load_spins(self, spin_id=None, ave_pos=True):
+         # Function intro text.
+         if self._exec_info.intro:
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Nov 24 14:20:02 2011</div>  
+</body>
+</html>

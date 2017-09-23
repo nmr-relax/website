@@ -1,0 +1,157 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r6901 &#45; /branches/rdc_analysis/maths_fns/n_state_model.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 09 Jul 2008 17:46:49 +0200 -->
+<!--X-Message-Id: E1KGbm8&#45;0005dX&#45;QQ@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r6901 - /branches/rdc_analysis/maths_fns/n_state_model.py -- July 09, 2008 - 17:46</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r6901 - /branches/rdc_analysis/maths_fns/n_state_model.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00295" class="tabs">Index by Date</a> | <a href="threads.html#00295" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00294.html">Date Prev</a>] [<a href="msg00296.html">Date Next</a>] [<a href="msg00294.html">Thread Prev</a>] [<a href="msg00296.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 09 Jul 2008 15:40:12 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00295.html">E1KGbm8-0005dX-QQ@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on July 09, 2008 - 17:46:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Jul  9 17:40:12 2008
+New Revision: 6901
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=6901&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=6901&amp;view=rev</a>
+Log:
+Fix for the func_population() method.
+
+The RDC errors are now set to 1.0 if no errors are supplied, converting the 
+chi2 value to a SSE
+value.
+
+
+Modified:
+    branches/rdc_analysis/maths_fns/n_state_model.py
+
+Modified: branches/rdc_analysis/maths_fns/n_state_model.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/rdc_analysis/maths_fns/n_state_model.py?rev=6901&amp;r1=6900&amp;r2=6901&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/rdc_analysis/maths_fns/n_state_model.py?rev=6901&amp;r1=6900&amp;r2=6901&amp;view=diff</a>
+==============================================================================
+--- branches/rdc_analysis/maths_fns/n_state_model.py (original)
++++ branches/rdc_analysis/maths_fns/n_state_model.py Wed Jul  9 17:40:12 2008
+@@ -21,7 +21,7 @@
+ 
+###############################################################################
+ 
+ # Python module imports.
+-from numpy import array, dot, float64, transpose, zeros
++from numpy import array, dot, float64, ones, transpose, zeros
+ 
+ # relax module imports.
+ from chi2 import chi2
+@@ -32,7 +32,7 @@
+ class N_state_opt:
+     &quot;&quot;&quot;Class containing the target function of the optimisation of the 
+N-state model.&quot;&quot;&quot;
+ 
+-    def __init__(self, model=None, N=None, init_params=None, 
+full_tensors=None, red_data=None, red_errors=None, full_in_ref_frame=None, 
+rdcs=None, xh_vect=None):
++    def __init__(self, model=None, N=None, init_params=None, 
+full_tensors=None, red_data=None, red_errors=None, full_in_ref_frame=None, 
+rdcs=None, rdc_errors=None, xh_vect=None):
+         &quot;&quot;&quot;Set up the class instance for optimisation.
+ 
+         All constant data required for the N-state model are initialised 
+here.
+@@ -59,6 +59,10 @@
+                                 and the second index correspond to the RDCs 
+of different alignment
+                                 media.
+         @type rdcs:             list of lists of float
++        @keyword rdc_errors:    The RDC error lists.  The first index must 
+correspond to the spin
++                                systems and the second index correspond to 
+the RDCs of different
++                                alignment media.
++        @type rdc_errors:       list of lists of float
+         @keyword xh_vect:       The unit XH vector lists.  The dimensions of 
+this argument are the
+                                 same as for 'rdcs'.
+         @type xh_vect:          list of lists of float
+@@ -111,11 +115,16 @@
+             # The total number of alignments.
+             self.num_align = len(rdcs[0])
+ 
+-            # RDC set up.
++            # Convert to lists of numpy arrays.
+             self.rdcs = []
++            self.rdc_errors = []
+             self.xh_vect = []
+             for i in xrange(self.num_spins):
+                 self.rdcs.append(array(rdcs[i], float64))
++                if rdc_errors:
++                    self.rdc_errors.append(array(rdc_errors[i], float64))
++                else:
++                    self.rdc_errors.append(ones(self.num_align, float64))
+                 self.xh_vect.append(array(xh_vect[i], float64))
+ 
+             # Set the target function.
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Jul 09 18:00:13 2008</div>  
+</body>
+</html>

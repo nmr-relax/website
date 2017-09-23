@@ -1,0 +1,235 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r23564 &#45; in /branches/disp_speed: lib/dispersion/ target_functions/ test_suite/unit_tests/_lib/_dispersion/ -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 28 May 2014 19:17:12 +0200 -->
+<!--X-Message-Id: E1WphTU&#45;0003HK&#45;95@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r23564 - in /branches/disp_speed: lib/dispersion/ target_functions/ test_suite/unit_tests/_lib/_dispersion/ -- May 28, 2014 - 19:17</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r23564 - in /branches/disp_speed: lib/dispersion/ target_functions/ test_suite/unit_tests/_lib/_dispersion/</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00667" class="tabs">Index by Date</a> | <a href="threads.html#00667" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00666.html">Date Prev</a>] [<a href="msg00668.html">Date Next</a>] [<a href="msg00666.html">Thread Prev</a>] [<a href="msg00668.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 28 May 2014 17:17:12 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00667.html">E1WphTU-0003HK-95@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on May 28, 2014 - 19:17:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Wed May 28 19:17:11 2014
+New Revision: 23564
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=23564&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=23564&amp;view=rev</a>
+Log:
+Converting back to having back_calc as a function argument to model CR72:
+
+This is to clean up the API.
+There can be bo no partial measures/implementations in the relax trunk.
+
+The problem is, that many numerical models can't be optimised further, since 
+they
+evolve the spin-magnetisation in a matrix.  That spin evolvement can't be put 
+into
+a larger numpy array.
+
+This is related to: task #7793: (<a  rel="nofollow" href="https://gna.org/task/?7793">https://gna.org/task/?7793</a>) Speed-up of 
+dispersion models.
+
+Modified:
+    branches/disp_speed/lib/dispersion/cr72.py
+    branches/disp_speed/target_functions/relax_disp.py
+    branches/disp_speed/test_suite/unit_tests/_lib/_dispersion/test_cr72.py
+
+Modified: branches/disp_speed/lib/dispersion/cr72.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/disp_speed/lib/dispersion/cr72.py?rev=23564&amp;r1=23563&amp;r2=23564&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/disp_speed/lib/dispersion/cr72.py?rev=23564&amp;r1=23563&amp;r2=23564&amp;view=diff</a>
+==============================================================================
+--- branches/disp_speed/lib/dispersion/cr72.py  (original)
++++ branches/disp_speed/lib/dispersion/cr72.py  Wed May 28 19:17:11 2014
+@@ -97,7 +97,7 @@
+ # Repetitive calculations (to speed up calculations).
+ eta_scale = 2.0**(-3.0/2.0)
+ 
+-def r2eff_CR72(r20a=None, r20b=None, pA=None, dw=None, kex=None, 
+cpmg_frqs=None, num_points=None):
++def r2eff_CR72(r20a=None, r20b=None, pA=None, dw=None, kex=None, 
+cpmg_frqs=None, back_calc=None, num_points=None):
+     &quot;&quot;&quot;Calculate the R2eff values for the CR72 model.
+ 
+     See the module docstring for details.
+@@ -115,9 +115,16 @@
+     @type kex:              float
+     @keyword cpmg_frqs:     The CPMG nu1 frequencies.
+     @type cpmg_frqs:        numpy rank-1 float array
+-    @keyword num_points:    The number of points on the dispersion curve, 
+equal to the length of the cpmg_frqs.
++    @keyword back_calc:     The array for holding the back calculated R2eff 
+values.  Each element corresponds to one of the CPMG nu1 frequencies.
++    @type back_calc:        numpy rank-1 float array
++    @keyword num_points:    The number of points on the dispersion curve, 
+equal to the length of the cpmg_frqs and back_calc arguments.
+     @type num_points:       int
+     &quot;&quot;&quot;
++
++    # Catch parameter values that will result in no exchange, returning flat 
+R2eff = R20 lines (when kex = 0.0, k_AB = 0.0).
++    if dw == 0.0 or pA == 1.0 or kex == 0.0:
++        back_calc[:] = array([r20a]*num_points)
++        return
+ 
+     # The B population.
+     pB = 1.0 - pA
+@@ -127,10 +134,6 @@
+     r20_kex = (r20a + r20b + kex) / 2.0
+     k_BA = pA * kex
+     k_AB = pB * kex
+-
+-    # Catch parameter values that will result in no exchange, returning flat 
+R2eff = R20 lines (when kex = 0.0, k_AB = 0.0).
+-    if dw == 0.0 or pA == 1.0 or k_AB == 0.0:
+-        return array([r20a]*num_points)
+ 
+     # The Psi and zeta values.
+     if r20a != r20b:
+@@ -156,12 +159,14 @@
+     # Catch math domain error of cosh(val &gt; 710).
+     # This is when etapos &gt; 710.
+     if max(etapos) &gt; 700:
+-        return array([r20a]*num_points)
++        back_calc[:] = array([r20a]*num_points)
++        return
+ 
+     # The arccosh argument - catch invalid values.
+     fact = Dpos * cosh(etapos) - Dneg * cos(etaneg)
+     if min(fact) &lt; 1.0:
+-        return array([r20_kex]*num_points)
++        back_calc[:] = array([r20_kex]*num_points)
++        return
+ 
+     # Calculate R2eff.
+     R2eff = r20_kex - cpmg_frqs * arccosh( fact )
+@@ -171,4 +176,4 @@
+     if not isfinite(sum(R2eff)):
+         R2eff = array([1e100]*num_points)
+ 
+-    return R2eff
++    back_calc[:] = R2eff
+
+Modified: branches/disp_speed/target_functions/relax_disp.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/disp_speed/target_functions/relax_disp.py?rev=23564&amp;r1=23563&amp;r2=23564&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/disp_speed/target_functions/relax_disp.py?rev=23564&amp;r1=23563&amp;r2=23564&amp;view=diff</a>
+==============================================================================
+--- branches/disp_speed/target_functions/relax_disp.py  (original)
++++ branches/disp_speed/target_functions/relax_disp.py  Wed May 28 19:17:11 
+2014
+@@ -484,7 +484,7 @@
+                 dw_frq = dw[si] * self.frqs[0][si][mi]
+ 
+                 # Back calculate the R2eff values.
+-                self.back_calc[0][si][mi][0] = 
+r2eff_CR72(r20a=R20A[r20_index], r20b=R20B[r20_index], pA=pA, dw=dw_frq, 
+kex=kex, cpmg_frqs=self.cpmg_frqs[0][mi][0], 
+num_points=self.num_disp_points[0][si][mi][0])
++                r2eff_CR72(r20a=R20A[r20_index], r20b=R20B[r20_index], 
+pA=pA, dw=dw_frq, kex=kex, cpmg_frqs=self.cpmg_frqs[0][mi][0], back_calc = 
+self.back_calc[0][si][mi][0], num_points=self.num_disp_points[0][si][mi][0])
+ 
+                 # For all missing data points, set the back-calculated value 
+to the measured values so that it has no effect on the chi-squared value.
+                 for di in range(self.num_disp_points[0][si][mi][0]):
+
+Modified: 
+branches/disp_speed/test_suite/unit_tests/_lib/_dispersion/test_cr72.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/disp_speed/test_suite/unit_tests/_lib/_dispersion/test_cr72.py?rev=23564&amp;r1=23563&amp;r2=23564&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/disp_speed/test_suite/unit_tests/_lib/_dispersion/test_cr72.py?rev=23564&amp;r1=23563&amp;r2=23564&amp;view=diff</a>
+==============================================================================
+--- branches/disp_speed/test_suite/unit_tests/_lib/_dispersion/test_cr72.py   
+  (original)
++++ branches/disp_speed/test_suite/unit_tests/_lib/_dispersion/test_cr72.py   
+  Wed May 28 19:17:11 2014
+@@ -45,6 +45,7 @@
+         self.ncyc = array([2, 4, 8, 10, 20, 40, 500])
+         relax_times = 0.04
+         self.cpmg_frqs = self.ncyc / relax_times
++        self.R2eff = zeros(self.num_points, float64)
+ 
+         # The spin Larmor frequencies.
+         self.sfrq = 200. * 1E6
+@@ -57,11 +58,11 @@
+         k_AB, k_BA, pB, dw_frq = self.param_conversion(pA=self.pA, 
+kex=self.kex, dw=self.dw, sfrq=self.sfrq)
+ 
+         # Calculate the R2eff values.
+-        R2eff = r2eff_CR72(r20a=self.r20a, r20b=self.r20b, pA=self.pA, 
+dw=dw_frq, kex=self.kex, cpmg_frqs=self.cpmg_frqs, num_points=self.num_points)
++        r2eff_CR72(r20a=self.r20a, r20b=self.r20b, pA=self.pA, dw=dw_frq, 
+kex=self.kex, cpmg_frqs=self.cpmg_frqs, back_calc=self.R2eff, 
+num_points=self.num_points)
+ 
+         # Check all R2eff values.
+         for i in range(self.num_points):
+-            self.assertAlmostEqual(R2eff[i], self.r20a)
++            self.assertAlmostEqual(self.R2eff[i], self.r20a)
+ 
+ 
+     def param_conversion(self, pA=None, kex=None, dw=None, sfrq=None):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed May 28 19:20:03 2014</div>  
+</body>
+</html>

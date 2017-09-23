@@ -1,0 +1,250 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r18216 &#45; in /trunk: generic_fns/rdc.py user_functions/rdc.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 18 Jan 2013 12:14:17 +0100 -->
+<!--X-Message-Id: E1Tw9tp&#45;000866&#45;Cv@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r18216 - in /trunk: generic_fns/rdc.py user_functions/rdc.py -- January 18, 2013 - 12:14</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r18216 - in /trunk: generic_fns/rdc.py user_functions/rdc.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00043" class="tabs">Index by Date</a> | <a href="threads.html#00043" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00042.html">Date Prev</a>] [<a href="msg00044.html">Date Next</a>] [<a href="msg00042.html">Thread Prev</a>] [<a href="msg00044.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 18 Jan 2013 11:14:17 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00043.html">E1Tw9tp-000866-Cv@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on January 18, 2013 - 12:14:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Jan 18 12:14:17 2013
+New Revision: 18216
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=18216&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=18216&amp;view=rev</a>
+Log:
+Implemented the rdc.set_errors user function.
+
+
+Modified:
+    trunk/generic_fns/rdc.py
+    trunk/user_functions/rdc.py
+
+Modified: trunk/generic_fns/rdc.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/generic_fns/rdc.py?rev=18216&amp;r1=18215&amp;r2=18216&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/generic_fns/rdc.py?rev=18216&amp;r1=18215&amp;r2=18216&amp;view=diff</a>
+==============================================================================
+--- trunk/generic_fns/rdc.py (original)
++++ trunk/generic_fns/rdc.py Fri Jan 18 12:14:17 2013
+@@ -1,6 +1,6 @@
+ 
+###############################################################################
+ #                                                                            
+ #
+-# Copyright (C) 2003-2012 Edward d'Auvergne                                  
+ #
++# Copyright (C) 2003-2013 Edward d'Auvergne                                  
+ #
+ #                                                                            
+ #
+ # This file is part of the program relax (<a  rel="nofollow" href="http://www.nmr-relax.com">http://www.nmr-relax.com</a>).         
+ #
+ #                                                                            
+ #
+@@ -708,6 +708,48 @@
+         cdp.rdc_ids.append(align_id)
+ 
+ 
++def set_errors(align_id=None, spin_id1=None, spin_id2=None, sd=None):
++    &quot;&quot;&quot;Set the RDC errors if not already present.
++
++    @keyword align_id:  The optional alignment tensor ID string.
++    @type align_id:     str
++    @keyword spin_id1:  The optional spin ID string of the first spin.
++    @type spin_id1:     None or str
++    @keyword spin_id2:  The optional spin ID string of the second spin.
++    @type spin_id2:     None or str
++    @keyword sd:        The RDC standard deviation in Hz.
++    @type sd:           float or int.
++    &quot;&quot;&quot;
++
++    # Test if sequence data exists.
++    if not exists_mol_res_spin_data():
++        raise RelaxNoSequenceError
++
++    # Test if data corresponding to 'align_id' exists.
++    if not hasattr(cdp, 'rdc_ids') or (align_id and align_id not in 
+cdp.rdc_ids):
++        raise RelaxNoRDCError(align_id)
++
++    # Arg check.
++    if align_id and align_id not in cdp.rdc_ids:
++        raise RelaxError(&quot;The alignment ID '%s' is not in the RDC ID list 
+%s.&quot; % (align_id, cdp.rdc_ids))
++
++    # Convert the align IDs to an array, or take all IDs.
++    if align_id:
++        align_ids = [align_id]
++    else:
++        align_ids = cdp.rdc_ids
++
++    # Loop over the interatomic data.
++    for interatom in interatomic_loop(selection1=spin_id1, 
+selection2=spin_id2):
++        # No data structure.
++        if not hasattr(interatom, 'rdc_err'):
++            interatom.rdc_err = {}
++
++        # Set the error.
++        for id in align_ids:
++            interatom.rdc_err[id] = sd
++
++
+ def weight(align_id=None, spin_id=None, weight=1.0):
+     &quot;&quot;&quot;Set optimisation weights on the RDC data.
+ 
+
+Modified: trunk/user_functions/rdc.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/user_functions/rdc.py?rev=18216&amp;r1=18215&amp;r2=18216&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/user_functions/rdc.py?rev=18216&amp;r1=18215&amp;r2=18216&amp;view=diff</a>
+==============================================================================
+--- trunk/user_functions/rdc.py (original)
++++ trunk/user_functions/rdc.py Fri Jan 18 12:14:17 2013
+@@ -1,6 +1,6 @@
+ 
+###############################################################################
+ #                                                                            
+ #
+-# Copyright (C) 2003-2012 Edward d'Auvergne                                  
+ #
++# Copyright (C) 2003-2013 Edward d'Auvergne                                  
+ #
+ #                                                                            
+ #
+ # This file is part of the program relax (<a  rel="nofollow" href="http://www.nmr-relax.com">http://www.nmr-relax.com</a>).         
+ #
+ #                                                                            
+ #
+@@ -32,6 +32,7 @@
+ 
+ # relax module imports.
+ from generic_fns import align_tensor, pipes, rdc
++from generic_fns.mol_res_spin import get_spin_ids
+ from graphics import WIZARD_IMAGE_PATH
+ from user_functions.data import Uf_info; uf_info = Uf_info()
+ from user_functions.objects import Desc_container
+@@ -385,6 +386,54 @@
+ uf.wizard_image = WIZARD_IMAGE_PATH + 'align_tensor.png'
+ 
+ 
++# The rdc.set_errors user function.
++uf = uf_info.add_uf('rdc.set_errors')
++uf.title = &quot;Set the errors for the RDCs.&quot;
++uf.title_short = &quot;RDC error setting.&quot;
++uf.add_keyarg(
++    name = &quot;align_id&quot;,
++    py_type = &quot;str&quot;,
++    desc_short = &quot;alignment ID string&quot;,
++    desc = &quot;The optional alignment ID string.&quot;,
++    wiz_element_type = 'combo',
++    wiz_combo_iter = align_tensor.get_ids,
++    wiz_read_only = True,
++    can_be_none = True
++)
++uf.add_keyarg(
++    name = &quot;spin_id1&quot;,
++    py_type = &quot;str&quot;,
++    arg_type = &quot;spin ID&quot;,
++    desc_short = &quot;first spin ID string&quot;,
++    desc = &quot;The optional spin ID string of the first spin.&quot;,
++    wiz_combo_iter = get_spin_ids,
++    can_be_none = True
++)
++uf.add_keyarg(
++    name = &quot;spin_id2&quot;,
++    py_type = &quot;str&quot;,
++    arg_type = &quot;spin ID&quot;,
++    desc_short = &quot;second spin ID string&quot;,
++    desc = &quot;The optional spin ID string of the second spin.&quot;,
++    wiz_combo_iter = get_spin_ids,
++    can_be_none = True
++)
++uf.add_keyarg(
++    name = &quot;sd&quot;,
++    default = 1.0,
++    py_type = &quot;num&quot;,
++    desc_short = &quot;RDC error (Hz)&quot;,
++    desc = &quot;The RDC standard deviation value in Hertz.&quot;
++)
++# Description.
++uf.desc.append(Desc_container())
++uf.desc[-1].add_paragraph(&quot;If the RDC errors have not already been read from 
+a RDC data file or if they need to be changed, then the errors can be set via 
+this user function.&quot;)
++uf.backend = rdc.set_errors
++uf.menu_text = &quot;&amp;set_errors&quot;
++uf.gui_icon = &quot;oxygen.actions.edit-rename&quot;
++uf.wizard_image = WIZARD_IMAGE_PATH + 'align_tensor.png'
++
++
+ # The rdc.weight user function.
+ uf = uf_info.add_uf('rdc.weight')
+ uf.title = &quot;Set optimisation weights on the RDC data.&quot;
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Jan 18 12:40:02 2013</div>  
+</body>
+</html>

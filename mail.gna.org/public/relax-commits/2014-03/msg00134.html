@@ -1,0 +1,169 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r22524 &#45; /branches/double_rotor/test_suite/system_tests/scripts/frame_order/cam/base_script.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 25 Mar 2014 10:00:05 +0100 -->
+<!--X-Message-Id: E1WSNDI&#45;0005Q5&#45;W8@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r22524 - /branches/double_rotor/test_suite/system_tests/scripts/frame_order/cam/base_script.py -- March 25, 2014 - 10:00</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r22524 - /branches/double_rotor/test_suite/system_tests/scripts/frame_order/cam/base_script.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00134" class="tabs">Index by Date</a> | <a href="threads.html#00134" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00133.html">Date Prev</a>] [<a href="msg00135.html">Date Next</a>] [<a href="msg00133.html">Thread Prev</a>] [<a href="msg00135.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 25 Mar 2014 09:00:04 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00134.html">E1WSNDI-0005Q5-W8@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on March 25, 2014 - 10:00:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Mar 25 10:00:04 2014
+New Revision: 22524
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=22524&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=22524&amp;view=rev</a>
+Log:
+Changes for the convert_rotor() method of the CaM frame order system test 
+base script.
+
+The method now sets the alpha angle rather than returning it.  The method now 
+also resets the pivot
+point to the point on the rotation axis closest to the CoM.
+
+
+Modified:
+    
+branches/double_rotor/test_suite/system_tests/scripts/frame_order/cam/base_script.py
+
+Modified: 
+branches/double_rotor/test_suite/system_tests/scripts/frame_order/cam/base_script.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/double_rotor/test_suite/system_tests/scripts/frame_order/cam/base_script.py?rev=22524&amp;r1=22523&amp;r2=22524&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/double_rotor/test_suite/system_tests/scripts/frame_order/cam/base_script.py?rev=22524&amp;r1=22523&amp;r2=22524&amp;view=diff</a>
+==============================================================================
+--- 
+branches/double_rotor/test_suite/system_tests/scripts/frame_order/cam/base_script.py
+        (original)
++++ 
+branches/double_rotor/test_suite/system_tests/scripts/frame_order/cam/base_script.py
+        Tue Mar 25 10:00:04 2014
+@@ -84,7 +84,7 @@
+ 
+         # Parameter conversions.
+         if self.AXIS_THETA != None and self.AXIS_ALPHA == None:
+-            self.AXIS_ALPHA = self.convert_rotor(theta=self.AXIS_THETA, 
+phi=self.AXIS_PHI, pivot=self.PIVOT, com=self.COM)
++            self.convert_rotor(theta=self.AXIS_THETA, phi=self.AXIS_PHI, 
+pivot=self.PIVOT, com=self.COM)
+ 
+         # Alias the user function executor method.
+         self._execute_uf = exec_fn
+@@ -118,6 +118,9 @@
+ 
+     def convert_rotor(self, theta=None, phi=None, pivot=None, com=None):
+         &quot;&quot;&quot;Convert the rotor axis spherical angles to the axis alpha 
+notation.
++
++        The pivot will be shifted to the point on the axis closest to the 
+CoM, and the alpha angle set.
++
+ 
+         @keyword theta: The polar spherical angle.
+         @type theta:    float
+@@ -127,19 +130,17 @@
+         @type pivot:    numpy rank-1 3D array
+         @keyword com:   The pivot point on the rotation axis.
+         @type com:      numpy rank-1 3D array
+-        @return:        The axis alpha angle for the system.
+-        @rtype:         float
+         &quot;&quot;&quot;
+ 
+         # The axis.
+         axis = zeros(3, float64)
+         spherical_to_cartesian([1.0, theta, phi], axis)
+ 
+-        # The closest point on the line to the CoM (shift the pivot).
+-        new_piv = closest_point_ax(line_pt=pivot, axis=axis, point=com)
++        # Reset the pivot to the closest point on the line to the CoM (shift 
+the pivot).
++        self.PIVOT = closest_point_ax(line_pt=pivot, axis=axis, point=com)
+ 
+         # The CoM-pivot unit vector (for the shifted pivot).
+-        piv_com = com - new_piv
++        piv_com = com - self.PIVOT
+         piv_com = piv_com / norm(piv_com)
+ 
+         # The vector perpendicular to the CoM-pivot vector.
+@@ -147,11 +148,8 @@
+         perp_vect = cross(piv_com, z_axis)
+         perp_vect = perp_vect / norm(perp_vect)
+ 
+-        # The alpha angle (the angle between the perpendicular vector and 
+the axis).
+-        alpha = vector_angle(axis, perp_vect, piv_com)
+-
+-        # Return the axis alpha angle.
+-        return alpha
++        # Set the alpha angle (the angle between the perpendicular vector 
+and the axis).
++        self.AXIS_ALPHA = vector_angle(perp_vect, axis, piv_com)
+ 
+ 
+     def optimisation(self):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Mar 25 10:20:01 2014</div>  
+</body>
+</html>

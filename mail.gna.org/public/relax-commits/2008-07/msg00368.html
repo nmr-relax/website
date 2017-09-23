@@ -1,0 +1,167 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r6971 &#45; /branches/rdc_analysis/specific_fns/n_state_model.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 25 Jul 2008 13:08:08 +0200 -->
+<!--X-Message-Id: E1KMJwF&#45;0008Vo&#45;Ka@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r6971 - /branches/rdc_analysis/specific_fns/n_state_model.py -- July 25, 2008 - 13:08</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r6971 - /branches/rdc_analysis/specific_fns/n_state_model.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00368" class="tabs">Index by Date</a> | <a href="threads.html#00368" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00362.html">Date Prev</a>] [<a href="msg00371.html">Date Next</a>] [<a href="msg00362.html">Thread Prev</a>] [<a href="msg00371.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 25 Jul 2008 09:50:14 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00368.html">E1KMJwF-0008Vo-Ka@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on July 25, 2008 - 13:08:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Jul 25 11:49:58 2008
+New Revision: 6971
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=6971&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=6971&amp;view=rev</a>
+Log:
+Pre-calculated the dipolar constants prior to optimisation.
+
+
+Modified:
+    branches/rdc_analysis/specific_fns/n_state_model.py
+
+Modified: branches/rdc_analysis/specific_fns/n_state_model.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/rdc_analysis/specific_fns/n_state_model.py?rev=6971&amp;r1=6970&amp;r2=6971&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/rdc_analysis/specific_fns/n_state_model.py?rev=6971&amp;r1=6970&amp;r2=6971&amp;view=diff</a>
+==============================================================================
+--- branches/rdc_analysis/specific_fns/n_state_model.py (original)
++++ branches/rdc_analysis/specific_fns/n_state_model.py Fri Jul 25 11:49:58 
+2008
+@@ -22,6 +22,7 @@
+ 
+ # Python module imports.
+ from math import acos, cos, pi
++from minfx.generic import generic_minimise
+ from numpy import array, dot, float64, identity, zeros
+ from numpy.linalg import inv, norm
+ from re import search
+@@ -37,7 +38,7 @@
+ from generic_fns.structure.internal import Internal
+ from maths_fns.n_state_model import N_state_opt
+ from maths_fns.rotation_matrix import R_2vect, R_euler_zyz
+-from minfx.generic import generic_minimise
++from physical_constants import dipolar_constant, return_gyromagnetic_ratio
+ from relax_errors import RelaxError, RelaxInfError, RelaxModelError, 
+RelaxNaNError, RelaxNoModelError, RelaxNoTensorError
+ from relax_io import open_write_file
+ from relax_warnings import RelaxWarning
+@@ -839,6 +840,7 @@
+         # Initialise.
+         rdcs = []
+         xh_vectors = []
++        dj = []
+ 
+         # Spin loop.
+         for spin, spin_id in spin_loop(return_id=True):
+@@ -859,24 +861,31 @@
+             rdcs.append(spin.rdc)
+             xh_vectors.append(spin.xh_vect)
+ 
++            # Gyromagnetic ratios.
++            gx = return_gyromagnetic_ratio(spin.heteronuc_type)
++            gh = return_gyromagnetic_ratio(spin.proton_type)
++
++            # Calculate the dipolar constant, and append it to the list.
++            dj.append(3.0/(2.0*pi) * diploar_constant(gx, gh, spin.r))
++
+         # Initialise the numpy objects (the rdc matrix is transposed!).
+         rdcs_numpy = zeros((len(rdcs[0]), len(rdcs)), float64)
+         xh_vect_numpy = zeros((len(xh_vectors), len(xh_vectors[0]), 3), 
+float64)
+ 
+         # Loop over the spins.
+-        for i in xrange(len(rdcs)):
++        for spin_index in xrange(len(rdcs)):
+             # Loop over the alignments.
+-            for j in xrange(len(rdcs[i])):
++            for align_index in xrange(len(rdcs[spin_index])):
+                 # Transpose and store the RDC value.
+-                rdcs_numpy[j, i] = rdcs[i][j]
++                rdcs_numpy[align_index, spin_index] = 
+rdcs[spin_index][align_index]
+ 
+             # Loop over the N states.
+-            for j in xrange(len(xh_vectors[i])):
++            for state_index in xrange(len(xh_vectors[spin_index])):
+                 # Store the unit vector.
+-                xh_vect_numpy[i,j] = xh_vectors[i][j]
++                xh_vect_numpy[spin_index, state_index] = 
+xh_vectors[spin_index][state_index]
+ 
+         # Set up the class instance containing the target function.
+-        model = N_state_opt(model=cdp.model, N=cdp.N, 
+init_params=param_vector, rdcs=rdcs_numpy, xh_vect=xh_vect_numpy, 
+scaling_matrix=scaling_matrix)
++        model = N_state_opt(model=cdp.model, N=cdp.N, 
+init_params=param_vector, rdcs=rdcs_numpy, xh_vect=xh_vect_numpy, 
+dip_const=dj, scaling_matrix=scaling_matrix)
+ 
+         # Return the instantiated class.
+         return model
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Jul 25 13:40:14 2008</div>  
+</body>
+</html>

@@ -1,0 +1,275 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r6597 &#45; /1.3/generic_fns/eliminate.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Sun, 29 Jun 2008 15:55:20 +0200 -->
+<!--X-Message-Id: E1KCxEE&#45;0008E1&#45;8C@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r6597 - /1.3/generic_fns/eliminate.py -- June 29, 2008 - 15:55</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r6597 - /1.3/generic_fns/eliminate.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00283" class="tabs">Index by Date</a> | <a href="threads.html#00283" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00282.html">Date Prev</a>] [<a href="msg00284.html">Date Next</a>] [<a href="msg00282.html">Thread Prev</a>] [<a href="msg00284.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Sun, 29 Jun 2008 13:46:03 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00283.html">E1KCxEE-0008E1-8C@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on June 29, 2008 - 15:55:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Sun Jun 29 15:45:51 2008
+New Revision: 6597
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=6597&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=6597&amp;view=rev</a>
+Log:
+Converted the eliminate() function to the new relax design.
+
+
+Modified:
+    1.3/generic_fns/eliminate.py
+
+Modified: 1.3/generic_fns/eliminate.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/generic_fns/eliminate.py?rev=6597&amp;r1=6596&amp;r2=6597&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/generic_fns/eliminate.py?rev=6597&amp;r1=6596&amp;r2=6597&amp;view=diff</a>
+==============================================================================
+--- 1.3/generic_fns/eliminate.py (original)
++++ 1.3/generic_fns/eliminate.py Sun Jun 29 15:45:51 2008
+@@ -29,47 +29,84 @@
+ # relax module imports.
+ from data import Relax_data_store; ds = Relax_data_store()
+ from relax_errors import RelaxError, RelaxNoPipeError
++from specific_fns.setup import get_specific_fn
+ 
+ 
+ 
+-def eliminate(run=None, function=None, args=None):
+-    &quot;&quot;&quot;Function for model elimination.&quot;&quot;&quot;
++def eliminate(function=None, args=None):
++    &quot;&quot;&quot;Model elimination.
+ 
+-    # Create the list of runs.
+-    self.runs = self.relax.generic.runs.list_of_runs(run)
++    @keyword function:  A user supplied function for model elimination.  
+This function should accept
++                        five arguments, a string defining a certain 
+parameter, the value of the
++                        parameter, the minimisation instance (ie the residue 
+index if the model
++                        is residue specific), and the function arguments.  
+If the model is rejected,
++                        the function should return True, otherwise it should 
+return False.  The
++                        function will be executed multiple times, once for 
+each parameter of the model. 
++    @type function:     function
++    @param args:        The arguments to be passed to the user supplied 
+function.
++    @type args:         tuple
++    &quot;&quot;&quot;
+ 
+-    # Loop over the runs.
+-    for self.run in self.runs:
+-        # Test if the run exists.
+-        if not self.run in ds.run_names:
+-            raise RelaxNoPipeError, self.run
++    # Test if the current data pipe exists.
++    if not ds.current_pipe:
++        raise RelaxNoPipeError
+ 
+-        # Function type.
+-        function_type = ds.run_types[ds.run_names.index(self.run)]
++    # Alias the current data pipe.
++    cdp = ds[ds.current_pipe]
+ 
+-        # Specific eliminate, parameter names, parameter values, number of 
+instances, and deselect function setup.
+-        eliminate = self.relax.specific_setup.setup('eliminate', 
+function_type)
+-        param_names = self.relax.specific_setup.setup('param_names', 
+function_type)
+-        param_values = self.relax.specific_setup.setup('param_values', 
+function_type)
+-        num_instances = self.relax.specific_setup.setup('num_instances', 
+function_type)
+-        deselect = self.relax.specific_setup.setup('deselect', function_type)
++    # Specific eliminate, parameter names, parameter values, number of 
+instances, and deselect function setup.
++    eliminate = get_specific_fn('eliminate', cdp.pipe_type)
++    param_names = get_specific_fn('param_names', cdp.pipe_type)
++    param_values = get_specific_fn('param_values', cdp.pipe_type)
++    num_instances = get_specific_fn('num_instances', cdp.pipe_type)
++    deselect = get_specific_fn('deselect', cdp.pipe_type)
+ 
+-        # Get the number of instances and loop over them.
+-        for i in xrange(num_instances(self.run)):
+-            # Determine if simulations are active for the run.
+-            if hasattr(ds, 'sim_state') and ds.sim_state.has_key(self.run) 
+and ds.sim_state[self.run] == 1:
+-                sim_state = 1
+-            else:
+-                sim_state = 0
++    # Get the number of instances and loop over them.
++    for i in xrange(num_instances()):
++        # Determine if simulations are active.
++        if hasattr(cdp, 'sim_state') and cdp.sim_state == True:
++            sim_state = True
++        else:
++            sim_state = False
+ 
+ 
+-            # Model elimination.
+-            ####################
++        # Model elimination.
++        ####################
+ 
+-            if sim_state == 0:
++        if not sim_state:
++            # Get the parameter names and values.
++            names = param_names(i)
++            values = param_values(i)
++
++            # No data.
++            if names == None or values == None:
++                continue
++
++            # Test that the names and values vectors are of equal length.
++            if len(names) != len(values):
++                raise RelaxError, &quot;The names vector &quot; + `names` + &quot; is of a 
+different length to the values vector &quot; + `values` + &quot;.&quot;
++
++            # Loop over the parameters.
++            flag = False
++            for j in xrange(len(names)):
++                # Eliminate function.
++                if eliminate(names[j], values[j], i, args):
++                    flag = True
++
++            # Deselect.
++            if flag:
++                deselect(i)
++
++
++        # Simulation elimination.
++        #########################
++
++        else:
++            # Loop over the simulations.
++            for j in xrange(cdp.sim_number):
+                 # Get the parameter names and values.
+-                names = param_names(self.run, i)
+-                values = param_values(self.run, i)
++                names = param_names(i)
++                values = param_values(i, sim_index=j)
+ 
+                 # No data.
+                 if names == None or values == None:
+@@ -80,42 +117,12 @@
+                     raise RelaxError, &quot;The names vector &quot; + `names` + &quot; is 
+of a different length to the values vector &quot; + `values` + &quot;.&quot;
+ 
+                 # Loop over the parameters.
+-                flag = 0
+-                for j in xrange(len(names)):
++                flag = False
++                for k in xrange(len(names)):
+                     # Eliminate function.
+-                    if eliminate(names[j], values[j], self.run, i, args):
+-                        flag = 1
++                    if eliminate(names[k], values[k], i, args):
++                        flag = True
+ 
+                 # Deselect.
+                 if flag:
+-                    deselect(self.run, i)
+-
+-
+-            # Simulation elimination.
+-            #########################
+-
+-            else:
+-                # Loop over the simulations.
+-                for j in xrange(ds.sim_number[self.run]):
+-                    # Get the parameter names and values.
+-                    names = param_names(self.run, i)
+-                    values = param_values(self.run, i, sim_index=j)
+-
+-                    # No data.
+-                    if names == None or values == None:
+-                        continue
+-
+-                    # Test that the names and values vectors are of equal 
+length.
+-                    if len(names) != len(values):
+-                        raise RelaxError, &quot;The names vector &quot; + `names` + &quot; 
+is of a different length to the values vector &quot; + `values` + &quot;.&quot;
+-
+-                    # Loop over the parameters.
+-                    flag = 0
+-                    for k in xrange(len(names)):
+-                        # Eliminate function.
+-                        if eliminate(names[k], values[k], self.run, i, args):
+-                            flag = 1
+-
+-                    # Deselect.
+-                    if flag:
+-                        deselect(self.run, i, sim_index=j)
++                    deselect(i, sim_index=j)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Sun Jun 29 16:00:20 2008</div>  
+</body>
+</html>

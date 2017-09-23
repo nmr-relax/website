@@ -1,0 +1,235 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r13850 &#45; /1.3/generic_fns/structure/internal.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 25 Jul 2011 12:02:18 +0200 -->
+<!--X-Message-Id: E1QlHzO&#45;00010V&#45;Iy@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r13850 - /1.3/generic_fns/structure/internal.py -- July 25, 2011 - 12:02</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r13850 - /1.3/generic_fns/structure/internal.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00493" class="tabs">Index by Date</a> | <a href="threads.html#00493" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00492.html">Date Prev</a>] [<a href="msg00494.html">Date Next</a>] [<a href="msg00492.html">Thread Prev</a>] [<a href="msg00494.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 25 Jul 2011 10:02:18 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00493.html">E1QlHzO-00010V-Iy@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on July 25, 2011 - 12:02:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Mon Jul 25 12:02:17 2011
+New Revision: 13850
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=13850&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=13850&amp;view=rev</a>
+Log:
+Added initial support for determining protein connectivities in the internal 
+structural reader.
+
+This is currently only for intra-residue connectivities in the protein 
+backbone.  A number of new
+methods have been added:
+    _mol_type()
+    _protein_connect()
+    _protein_intra_connect()
+
+
+Modified:
+    1.3/generic_fns/structure/internal.py
+
+Modified: 1.3/generic_fns/structure/internal.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/generic_fns/structure/internal.py?rev=13850&amp;r1=13849&amp;r2=13850&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/generic_fns/structure/internal.py?rev=13850&amp;r1=13849&amp;r2=13850&amp;view=diff</a>
+==============================================================================
+--- 1.3/generic_fns/structure/internal.py (original)
++++ 1.3/generic_fns/structure/internal.py Mon Jul 25 12:02:17 2011
+@@ -84,9 +84,19 @@
+         # Init.
+         bonded_found = False
+ 
+-        # No bonded atoms, so go find everything within 2 Angstroms and say 
+they are bonded.
++        # No bonded atoms, so determine the connectivities.
+         if not mol.bonded[index]:
+-            self.__find_bonded_atoms(index, mol, radius=2)
++            # Determine the molecule type if needed.
++            if not hasattr(mol, 'type'):
++                self._mol_type(mol)
++
++            # Protein.
++            if mol.type == 'protein':
++                self._protein_connect(mol)
++
++            # Find everything within 2 Angstroms and say they are bonded.
++            else:
++                self.__find_bonded_atoms(index, mol, radius=2)
+ 
+         # Loop over the bonded atoms.
+         matching_list = []
+@@ -365,6 +375,102 @@
+         # Check the other lengths.
+         if len(struct.bonded) != num and len(struct.chain_id) != num and 
+len(struct.element) != num and len(struct.pdb_record) != num and 
+len(struct.res_name) != num and len(struct.res_num) != num and 
+len(struct.seg_id) != num and len(struct.x) != num and len(struct.y) != num 
+and len(struct.z) != num:
+             raise RelaxError(&quot;The structural data is invalid.&quot;)
++
++
++    def _mol_type(self, mol):
++        &quot;&quot;&quot;Determine the type of molecule.
++
++        @param mol:     The molecule data container.
++        @type mol:      MolContainer instance
++        &quot;&quot;&quot;
++
++        # Amino acids.
++        aa = ['ALA', 'ARG', 'ASN', 'ASP', 'CYS', 'GLU', 'GLN', 'GLY', 'HIS', 
+'ILE', 'LEU', 'LYS', 'MET', 'PHE', 'PRO', 'SER', 'THR', 'TRP', 'TYR', 'VAL']
++
++        # Set the molecule type to default to 'other'.
++        mol.type = 'other'
++
++        # Loop over the residues.
++        for res in mol.res_name:
++            # Protein.
++            if res in aa:
++                # Set the molecule type and return.
++                mol.type = 'protein'
++                return
++
++
++    def _protein_connect(self, mol):
++        &quot;&quot;&quot;Set up the connectivities for the protein.
++
++        @param mol:     The molecule data container.
++        @type mol:      MolContainer instance
++        &quot;&quot;&quot;
++
++        # Initialise some residue data.
++        curr_res_num = None
++        res_atoms = []
++
++        # Loop over all atoms.
++        for i in range(len(mol.atom_num)):
++            # New residue.
++            if mol.res_num[i] != curr_res_num:
++                # Intra-residue connectivites.
++                if len(res_atoms):
++                    self._protein_intra_connect(mol, res_atoms)
++
++                # Update the residue number.
++                curr_res_num = mol.res_num[i]
++
++                # Reset the residue atom index list.
++                res_atoms = []
++
++            # Add the atom index to the list.
++            res_atoms.append(i)
++
++            # Last atom.
++            if i == len(mol.atom_num) - 1 and len(res_atoms):
++                self._protein_intra_connect(mol, res_atoms)
++
++
++    def _protein_intra_connect(self, mol, res_atoms):
++        &quot;&quot;&quot;Set up the connectivities for the protein.
++
++        @param mol:         The molecule data container.
++        @type mol:          MolContainer instance
++        @param res_atoms:   The list of atom indices corresponding to the 
+residue.
++        @type res_atoms:    list of int
++        &quot;&quot;&quot;
++
++        # Back bond connectivity.
++        indices = {
++            'N': None,
++            'C': None,
++            'O': None,
++            'CA': None,
++            'HN': None,
++            'H': None,  # Same as HN.
++            'HA': None
++        }
++
++        # Loop over all atoms to find the indices.
++        for index in res_atoms:
++            if indices.has_key(mol.atom_name[index]):
++                indices[mol.atom_name[index]] = index
++
++        # Connect the atom pairs.
++        pairs = [
++            ['N', 'HN'],
++            ['N', 'H'],
++            ['N', 'CA'],
++            ['CA', 'HA'],
++            ['CA', 'C'],
++            ['C', 'O']
++        ]
++
++        # Loop over the atoms pairs and connect them.
++        for pair in pairs:
++            if indices[pair[0]] != None and indices[pair[1]] != None:
++                mol.atom_connect(indices[pair[0]], indices[pair[1]])
+ 
+ 
+     def _translate(self, data, format='str'):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Jul 25 12:40:02 2011</div>  
+</body>
+</html>

@@ -1,0 +1,552 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r27022 &#45; in /branches/nmrglue: data_store/ pipe_control/ -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 08 Dec 2014 17:40:36 +0100 -->
+<!--X-Message-Id: E1Xy1MS&#45;0000Nn&#45;Fo@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r27022 - in /branches/nmrglue: data_store/ pipe_control/ -- December 08, 2014 - 17:40</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r27022 - in /branches/nmrglue: data_store/ pipe_control/</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00145" class="tabs">Index by Date</a> | <a href="threads.html#00145" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00144.html">Date Prev</a>] [<a href="msg00146.html">Date Next</a>] [<a href="msg00144.html">Thread Prev</a>] [<a href="msg00146.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 08 Dec 2014 16:40:36 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00145.html">E1Xy1MS-0000Nn-Fo@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on December 08, 2014 - 17:40:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Mon Dec  8 17:40:35 2014
+New Revision: 27022
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=27022&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=27022&amp;view=rev</a>
+Log:
+Full support for saving and loading nmrglue data in the relax data store.
+
+This is for XML formatted relax state and results files.  The implementation 
+was complicated as a
+special data_store.data_classes.RelaxDictType object with to_xml() and 
+from_xml() method has been
+introduced to handle custom dictionary-type objects.
+
+The cdp.nmrglue object is the data_store.nmrglue.Nmrglue_dict object which 
+inherits from the
+RelaxDictType object.  This has elements set to data_store.nmrglue.Nmrglue 
+instances.  This Nmrglue
+object inherits from data_store.data_classes.Element, however the to_xml() 
+and from_xml() methods
+have been copied and modified for this special object.  This Nmrglue 
+container has three main
+attributes, the nmrglue dic, udic, and data objects.
+
+The Nmrglue to_xml() and from_xml() methods handle the 'data' object by 
+encoding and decoding it in
+the Base64 string format.  All the other objects are handled by the 
+fill_object_contents() or
+xml_to_object() functions of lib.xml.
+
+
+Modified:
+    branches/nmrglue/data_store/data_classes.py
+    branches/nmrglue/data_store/nmrglue.py
+    branches/nmrglue/data_store/pipe_container.py
+    branches/nmrglue/pipe_control/nmrglue.py
+
+Modified: branches/nmrglue/data_store/data_classes.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/nmrglue/data_store/data_classes.py?rev=27022&amp;r1=27021&amp;r2=27022&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/nmrglue/data_store/data_classes.py?rev=27022&amp;r1=27021&amp;r2=27022&amp;view=diff</a>
+==============================================================================
+--- branches/nmrglue/data_store/data_classes.py (original)
++++ branches/nmrglue/data_store/data_classes.py Mon Dec  8 17:40:35 2014
+@@ -162,6 +162,110 @@
+         # Execute the object to_xml() methods.
+         for obj in to_xml_list:
+             obj.to_xml(doc, cont_element)
++
++
++
++class RelaxDictType(dict):
++    &quot;&quot;&quot;An empty dict type container.&quot;&quot;&quot;
++
++    def __init__(self):
++        &quot;&quot;&quot;Initialise some class variables.&quot;&quot;&quot;
++
++        # Execute the base class __init__() method.
++        super(RelaxDictType, self).__init__()
++
++        # Some generic initial names.
++        self.dict_name = 'relax_dict'
++        self.dict_desc = 'relax dict container'
++        self.element_name = 'relax_dict_element'
++        self.element_desc = 'relax container'
++
++        # Blacklisted objects.
++        self.blacklist = []
++
++
++    def from_xml(self, super_node, file_version=1):
++        &quot;&quot;&quot;Recreate the data structure from the XML node.
++
++        @param super_node:      The XML nodes.
++        @type super_node:       xml.dom.minicompat.Element instance
++        @keyword file_version:  The relax XML version of the XML file.
++        @type file_version:     int
++        &quot;&quot;&quot;
++
++        # Recreate all the data structures.
++        xml_to_object(super_node, self, file_version=file_version, 
+blacklist=self.blacklist)
++
++        # Get the individual elements.
++        nodes = super_node.getElementsByTagName(self.element_name)
++
++        # Loop over the child nodes (each element).
++        for node in nodes:
++            # Get the key.
++            key = str(node.getAttribute('key'))
++            key = key.strip(&quot;'&quot;)
++
++            # Add the data container.
++            self.add_item(key=key, node=node, file_version=file_version)
++
++
++    def to_xml(self, doc, element):
++        &quot;&quot;&quot;Create an XML element for the dict data structure.
++
++        @param doc:     The XML document object.
++        @type doc:      xml.dom.minidom.Document instance
++        @param element: The element to add the dict data structure XML 
+element to.
++        @type element:  XML element object
++        &quot;&quot;&quot;
++
++        # Create the element and add it to the higher level element.
++        dict_element = doc.createElement(self.dict_name)
++        element.appendChild(dict_element)
++
++        # Set the dict attributes.
++        dict_element.setAttribute('desc', self.dict_desc)
++
++        # Blacklisted objects.
++        blacklist = ['dict_name', 'dict_desc', 'element_name', 
+'element_desc', 'blacklist'] + list(self.__dict__.keys()) + 
+list(RelaxListType.__dict__.keys()) + list(self.__class__.__dict__.keys()) + 
+list(dict.__dict__.keys()) + list(dict.__dict__.keys())
++
++        # Add all simple python objects within the list to the list element.
++        fill_object_contents(doc, dict_element, object=self, 
+blacklist=blacklist)
++
++        # Loop over the keys.
++        for key in self:
++            # Create an XML element for each container.
++            dict_item_element = doc.createElement(self.element_name)
++            dict_element.appendChild(dict_item_element)
++            dict_item_element.setAttribute('key', repr(key))
++            dict_item_element.setAttribute('desc', self.element_desc)
++
++            # The element has its own to_xml() method.
++            if hasattr(self[key], 'to_xml'):
++                self[key].to_xml(doc, dict_item_element)
++
++            # Normal element.
++            else:
++                # Blacklisted objects.
++                blacklist = list(self[key].__class__.__dict__.keys())
++
++                # Add objects which have to_xml() methods.
++                for name in dir(self[key]):
++                    # Skip blacklisted objects.
++                    if name in blacklist:
++                        continue
++
++                    # Skip special objects.
++                    if search('^_', name):
++                        continue
++
++                    # Execute any to_xml() methods, and add that object to 
+the blacklist.
++                    obj = getattr(self[key], name)
++                    if hasattr(obj, 'to_xml'):
++                        obj.to_xml(doc, list_item_element)
++                        blacklist = blacklist + [name]
++
++                # Add all simple python objects within the container to the 
+XML element.
++                fill_object_contents(doc, dict_item_element, 
+object=self[key], blacklist=blacklist)
+ 
+ 
+ 
+
+Modified: branches/nmrglue/data_store/nmrglue.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/nmrglue/data_store/nmrglue.py?rev=27022&amp;r1=27021&amp;r2=27022&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/nmrglue/data_store/nmrglue.py?rev=27022&amp;r1=27021&amp;r2=27022&amp;view=diff</a>
+==============================================================================
+--- branches/nmrglue/data_store/nmrglue.py      (original)
++++ branches/nmrglue/data_store/nmrglue.py      Mon Dec  8 17:40:35 2014
+@@ -25,14 +25,43 @@
+ # Python module imports.
+ from base64 import b64encode, decodestring
+ from numpy import float32, frombuffer
++from re import search
+ 
+ # relax module imports.
+-from data_store.data_classes import Element
+-from lib.xml import object_to_xml, xml_to_object
++from data_store.data_classes import Element, RelaxDictType
++from lib.xml import fill_object_contents, xml_to_object
+ 
+ 
+ class Nmrglue(Element):
+     &quot;&quot;&quot;Container for the global GUI data structures.&quot;&quot;&quot;
++
++    def __repr__(self):
++        # Header.
++        text = &quot;%-25s%-100s\n\n&quot; % (&quot;Data structure&quot;, &quot;Value&quot;)
++
++        # Data structures.
++        for name in dir(self):
++            # Skip Nmrglue and derived class methods.
++            if name in Nmrglue.__dict__ or name in self.__class__.__dict__:
++                continue
++
++            # Skip special objects.
++            if search(&quot;^_&quot;, name):
++                continue
++
++            # Get the object.
++            obj = getattr(self, name)
++
++            # The data.
++            if name == 'data':
++                obj = obj.shape
++
++            # Generate the text.
++            text = text + &quot;%-25s %-100s\n&quot; % (name, repr(obj))
++
++        # Return the lot.
++        return text
++
+ 
+     def __init__(self, dic=None, udic=None, data=None):
+         &quot;&quot;&quot;Initialise the container info.
+@@ -52,6 +81,7 @@
+         self.dic = dic
+         self.udic = udic
+         self.data = data
++        self.element_name = 'nmrglue_container'
+ 
+ 
+     def from_xml(self, nmrglue_node, file_version=1):
+@@ -67,21 +97,25 @@
+         data_nodes = nmrglue_node.getElementsByTagName('data')
+ 
+         # Loop over the info nodes of the Python object.
+-        for sub_node in node.childNodes:
+-            # Get the value.
+-            if sub_node.localName == 'value':
++        for sub_node in nmrglue_node.childNodes:
++            # Get the numpy data.
++            if sub_node.localName == 'data':
++                # Get the value node.
++                value_node = sub_node.getElementsByTagName('value')[0]
++
+                 # Convert from Base64 to numpy.float32.
+-                buffer = decodestring(sub_node.childNodes[0])
+-                self.data = frombuffer(buffer, dtype=np.float32)
++                value = value_node.childNodes[0].nodeValue.strip()
++                buffer = decodestring(value)
++                self.data = frombuffer(buffer, dtype=float32)
+ 
+                 # The shape attribute.
+-                shape = eval(node.getAttribute('shape'))
++                shape = eval(sub_node.getAttribute('shape'))
+ 
+                 # Reshape the data.
+-                self.data.reshape(shape)
++                self.data = self.data.reshape(shape)
+ 
+         # Recreate all the other data structures.
+-        xml_to_object(gui_node, self, file_version=file_version, 
+blacklist=['data'])
++        xml_to_object(nmrglue_node, self, file_version=file_version, 
+blacklist=['data'])
+ 
+ 
+     def to_xml(self, doc, element):
+@@ -93,18 +127,69 @@
+         @type element:  XML element object
+         &quot;&quot;&quot;
+ 
+-        # Call the parent class method for all but the data variable.
+-        self.blacklist.append('data')
+-        super(Nmrglue, self).to_xml(doc, element)
++        # Create an XML element for the numpy data.
++        data_elem = doc.createElement('data')
++        element.appendChild(data_elem)
+ 
+         # Convert the data into a Base64 string.
+         string = b64encode(self.data)
+ 
+         # Store the value as the string.
+         val_elem = doc.createElement('value')
+-        element.appendChild(val_elem)
++        data_elem.appendChild(val_elem)
+         val_elem.appendChild(doc.createTextNode(string))
+ 
+         # Set the type and shape as attributes.
+-        element.setAttribute('type', 'base64, numpy.float32')
+-        element.setAttribute('shape', repr(self.data.shape))
++        data_elem.setAttribute('type', 'base64, numpy.float32')
++        data_elem.setAttribute('shape', repr(self.data.shape))
++
++        # Add all simple Python objects within the container to the XML 
+element.
++        fill_object_contents(doc, element, object=self, blacklist=['name', 
+'desc', 'blacklist', 'data', 'is_empty', 'element_name'] + 
+list(Nmrglue.__dict__.keys()) + list(self.__class__.__dict__.keys()))
++
++
++
++class Nmrglue_dict(RelaxDictType):
++    &quot;&quot;&quot;The main storage structure for all nmrglue data.&quot;&quot;&quot;
++
++    def __init__(self):
++        &quot;&quot;&quot;Initialise the class.&quot;&quot;&quot;
++
++        # Call the base class method.
++        super(Nmrglue_dict, self).__init__()
++
++        # The metadata.
++        self.dict_name = 'nmrglue'
++        self.dict_desc = 'main storage for nmrglue data'
++        self.element_name = 'nmrglue_container'
++        self.element_desc = 'nmrglue container'
++
++        # Blacklist.
++        self.blacklist.append('nmrglue_container')
++
++
++    def from_xml(self, super_node, file_version=1):
++        &quot;&quot;&quot;Recreate the data structure from the XML node.
++
++        @param super_node:      The XML nodes.
++        @type super_node:       xml.dom.minicompat.Element instance
++        @keyword file_version:  The relax XML version of the XML file.
++        @type file_version:     int
++        &quot;&quot;&quot;
++
++        # Recreate all the data structures.
++        xml_to_object(super_node, self, file_version=file_version, 
+blacklist=self.blacklist)
++
++        # Get the individual elements.
++        nodes = super_node.getElementsByTagName(self.element_name)
++
++        # Loop over the child nodes (each element).
++        for node in nodes:
++            # Get the key.
++            key = str(node.getAttribute('key'))
++            key = key.strip(&quot;'&quot;)
++
++            # Create a new element.
++            self[key] = Nmrglue()
++
++            # Recreate from the XML.
++            self[key].from_xml(node, file_version=file_version)
+
+Modified: branches/nmrglue/data_store/pipe_container.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/nmrglue/data_store/pipe_container.py?rev=27022&amp;r1=27021&amp;r2=27022&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/nmrglue/data_store/pipe_container.py?rev=27022&amp;r1=27021&amp;r2=27022&amp;view=diff</a>
+==============================================================================
+--- branches/nmrglue/data_store/pipe_container.py       (original)
++++ branches/nmrglue/data_store/pipe_container.py       Mon Dec  8 17:40:35 
+2014
+@@ -31,6 +31,7 @@
+ from data_store.exp_info import ExpInfo
+ from data_store.interatomic import InteratomList
+ from data_store.mol_res_spin import MoleculeList
++from data_store.nmrglue import Nmrglue, Nmrglue_dict
+ from data_store.prototype import Prototype
+ from lib.errors import RelaxFromXMLNotEmptyError
+ from lib.structure.internal.object import Internal
+@@ -224,6 +225,15 @@
+             # Fill its contents.
+             self.align_tensors.from_xml(align_tensor_nodes[0], 
+file_version=file_version)
+ 
++        # Get the nmrglue data nodes and, if they exist, fill the contents.
++        nmrglue_nodes = pipe_node.getElementsByTagName('nmrglue')
++        if nmrglue_nodes:
++            # Create the data container.
++            self.nmrglue = Nmrglue_dict()
++
++            # Fill its contents.
++            self.nmrglue.from_xml(nmrglue_nodes[0], 
+file_version=file_version)
++
+         # Recreate the interatomic data structure (this needs to be before 
+the 'mol' structure as the backward compatibility hooks can create 
+interatomic data containers!).
+         interatom_nodes = pipe_node.getElementsByTagName('interatomic')
+         self.interatomic.from_xml(interatom_nodes, file_version=file_version)
+@@ -303,7 +313,7 @@
+         global_element = doc.createElement('global')
+         element.appendChild(global_element)
+         global_element.setAttribute('desc', 'Global data located in the top 
+level of the data pipe')
+-        fill_object_contents(doc, global_element, object=self, 
+blacklist=['align_tensors', 'diff_tensor', 'exp_info', 'interatomic', 
+'hybrid_pipes', 'mol', 'pipe_type', 'structure'] + 
+list(self.__class__.__dict__.keys()))
++        fill_object_contents(doc, global_element, object=self, 
+blacklist=['align_tensors', 'diff_tensor', 'exp_info', 'interatomic', 
+'hybrid_pipes', 'mol', 'pipe_type', 'structure', 'nmrglue'] + 
+list(self.__class__.__dict__.keys()))
+ 
+         # Hybrid info.
+         self.xml_create_hybrid_element(doc, element)
+@@ -319,6 +329,10 @@
+         # Add the alignment tensor data.
+         if hasattr(self, 'align_tensors'):
+             self.align_tensors.to_xml(doc, element)
++
++        # Add the experimental information.
++        if hasattr(self, 'nmrglue'):
++            self.nmrglue.to_xml(doc, element)
+ 
+         # Add the molecule-residue-spin data.
+         self.mol.to_xml(doc, element, pipe_type=pipe_type)
+
+Modified: branches/nmrglue/pipe_control/nmrglue.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/nmrglue/pipe_control/nmrglue.py?rev=27022&amp;r1=27021&amp;r2=27022&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/nmrglue/pipe_control/nmrglue.py?rev=27022&amp;r1=27021&amp;r2=27022&amp;view=diff</a>
+==============================================================================
+--- branches/nmrglue/pipe_control/nmrglue.py    (original)
++++ branches/nmrglue/pipe_control/nmrglue.py    Mon Dec  8 17:40:35 2014
+@@ -23,30 +23,32 @@
+ &quot;&quot;&quot;Module for the using of nmrglue.&quot;&quot;&quot;
+ 
+ # relax module imports.
++from data_store.nmrglue import Nmrglue, Nmrglue_dict
+ from lib.errors import RelaxError
+ from lib.software.nmrglue import contour_plot, hist_plot, read_spectrum
+ from pipe_control.pipes import check_pipe
+ from pipe_control.spectrum import check_spectrum_id, delete
+ 
+ 
+-def add_nmrglue_data(object_name=None, nmrglue_id=None, nmrglue_data=None):
++def add_nmrglue_data(nmrglue_id=None, dic=None, udic=None, data=None):
+     &quot;&quot;&quot;Add the nmrglue data to the data store under the the given 
+object_name within a dictionary with nmrglue_id key.
+ 
+-    @keyword object_name:       The object name for where to store the data. 
+ As cdp.object_name.
+-    @type object_name:          str
+-    @keyword nmrglue_id:        The dictionary key, to access the data.  As 
+As cdp.object_name['nmrglue_id']
+-    @type nmrglue_id:           str
+-    @keyword nmrglue_data:      The type of data depending on called 
+function.
+-    @type nmrglue_data:         depend on function
++    @keyword nmrglue_id:    The dictionary key, to access the data as 
+cdp.nmrglue['nmrglue_id'].
++    @type nmrglue_id:       str
++    @keyword dic:           The dic structure from nmrglue.
++    @type dic:              dict
++    @keyword udic:          The dic structure from nmrglue.
++    @type udic:             dict
++    @keyword data:          The type of data depending on called function.
++    @type data:             depend on function
+     &quot;&quot;&quot;
+ 
+     # Initialise the structure, if needed.
+-    if not hasattr(cdp, object_name):
+-        setattr(cdp, object_name, {})
++    if not hasattr(cdp, 'nmrglue'):
++        cdp.nmrglue = Nmrglue_dict()
+ 
+     # Add the data under the dictionary key.
+-    obj_dict = getattr(cdp, object_name)
+-    obj_dict[nmrglue_id] = nmrglue_data
++    cdp.nmrglue[nmrglue_id] = Nmrglue(dic=dic, udic=udic, data=data)
+ 
+ 
+ def add_nmrglue_id(nmrglue_id=None):
+@@ -130,9 +132,7 @@
+         dic, udic, data = read_spectrum(file=file_i, dir=dir)
+ 
+         # Store the data.
+-        add_nmrglue_data(object_name='nmrglue_dic', nmrglue_id=nmrglue_id_i, 
+nmrglue_data=dic)
+-        add_nmrglue_data(object_name='nmrglue_udic', 
+nmrglue_id=nmrglue_id_i, nmrglue_data=udic)
+-        add_nmrglue_data(object_name='nmrglue_data', 
+nmrglue_id=nmrglue_id_i, nmrglue_data=data)
++        add_nmrglue_data(nmrglue_id=nmrglue_id_i, dic=dic, udic=udic, 
+data=data)
+ 
+ 
+ def plot_contour(nmrglue_id=None, contour_start=30000., contour_num=20, 
+contour_factor=1.20, ppm=True, show=False):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Dec 08 18:00:02 2014</div>  
+</body>
+</html>

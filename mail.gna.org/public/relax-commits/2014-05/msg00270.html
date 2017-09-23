@@ -1,0 +1,168 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r23167 &#45; /trunk/pipe_control/rdc.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 14 May 2014 11:13:40 +0200 -->
+<!--X-Message-Id: E1WkVFs&#45;0006UF&#45;Dd@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r23167 - /trunk/pipe_control/rdc.py -- May 14, 2014 - 11:13</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r23167 - /trunk/pipe_control/rdc.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00270" class="tabs">Index by Date</a> | <a href="threads.html#00270" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00269.html">Date Prev</a>] [<a href="msg00271.html">Date Next</a>] [<a href="msg00269.html">Thread Prev</a>] [<a href="msg00271.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 14 May 2014 09:13:40 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00270.html">E1WkVFs-0006UF-Dd@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on May 14, 2014 - 11:13:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed May 14 11:13:39 2014
+New Revision: 23167
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=23167&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=23167&amp;view=rev</a>
+Log:
+Improvements for the 2D Grace plots created by the rdc.corr_plot user 
+function.
+
+The autoscaling is now turned off, as the data set representing the diagonal 
+(with points
+[-100, -100] and [100, 100]) causes the world view to be set to be between 
+-100 to 100 or -200 to
+200.
+
+The world view is set to be between -50 and 50 Hz, so that all RDCs should be 
+visible.  The ticks in
+the plot have also been set so that the minor ticks are at every Hz increment.
+
+
+Modified:
+    trunk/pipe_control/rdc.py
+
+Modified: trunk/pipe_control/rdc.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/pipe_control/rdc.py?rev=23167&amp;r1=23166&amp;r2=23167&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/pipe_control/rdc.py?rev=23167&amp;r1=23166&amp;r2=23167&amp;view=diff</a>
+==============================================================================
+--- trunk/pipe_control/rdc.py   (original)
++++ trunk/pipe_control/rdc.py   Wed May 14 11:13:39 2014
+@@ -401,6 +401,8 @@
+ 
+     # Init.
+     data = []
++    title = &quot;RDC correlation plot&quot;
++    axis_labels = [&quot;Measured RDC&quot;, &quot;Back-calculated RDC&quot;]
+ 
+     # The diagonal.
+     data.append([[-100, -100, 0], [100, 100, 0]])
+@@ -424,13 +426,23 @@
+             if not hasattr(interatom, 'rdc') or not hasattr(interatom, 
+'rdc_bc') or not align_id in interatom.rdc.keys() or not align_id in 
+interatom.rdc_bc.keys():
+                 continue
+ 
+-            # Append the data.
++            # Convert between the 2D and D notation.
+             rdc_bc = convert(interatom.rdc_bc[align_id], 
+interatom.rdc_data_types[align_id], align_id)
+             rdc = convert(interatom.rdc[align_id], 
+interatom.rdc_data_types[align_id], align_id)
++
++            # T=J+D type data.
+             if hasattr(interatom, 'rdc_data_types') and align_id in 
+interatom.rdc_data_types and interatom.rdc_data_types[align_id] == 'T':
+-                rdc_bc -= interatom.j_coupling
+-                rdc -= interatom.j_coupling
+-            data[-1].append([rdc_bc, rdc])
++                # Convert T=J+D type data to D, if not absolute.
++                if not interatom.absolute_rdc[align_id]:
++                    rdc_bc -= interatom.j_coupling
++                    rdc -= interatom.j_coupling
++
++                # A different title and axis labels.
++                title = &quot;T = J+D correlation plot&quot;
++                axis_labels = [&quot;Measured T = J+D&quot;, &quot;Back-calculated T = J+D&quot;]
++
++            # Append the data.
++            data[-1].append([rdc, rdc_bc])
+ 
+             # Errors.
+             if err_flag:
+@@ -457,10 +469,10 @@
+     # Grace file.
+     if format == 'grace':
+         # The header.
+-        grace.write_xy_header(file=file, title=&quot;RDC correlation plot&quot;, 
+sets=[size], set_names=[[None]+cdp.rdc_ids], linestyle=[[2]+[0]*size], 
+data_type=['rdc_bc', 'rdc'], legend_pos=[[1, 0.5]])
++        grace.write_xy_header(file=file, title=title, world=[[-50, -50, 50, 
+50]], sets=[size], set_names=[[None]+cdp.rdc_ids], linestyle=[[2]+[0]*size], 
+data_type=['rdc', 'rdc_bc'], axis_labels=[axis_labels], 
+tick_major_spacing=[[10, 10]], tick_minor_count=[[9, 9]], legend_pos=[[1, 
+0.5]])
+ 
+         # The main data.
+-        grace.write_xy_data(data=data, file=file, graph_type=graph_type)
++        grace.write_xy_data(data=data, file=file, graph_type=graph_type, 
+autoscale=False)
+ 
+ 
+ def delete(align_id=None):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed May 14 11:20:02 2014</div>  
+</body>
+</html>

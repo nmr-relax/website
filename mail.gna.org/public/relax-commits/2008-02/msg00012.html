@@ -1,0 +1,270 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r4910 &#45; /1.3/generic_fns/sequence.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 04 Feb 2008 18:06:18 +0100 -->
+<!--X-Message-Id: E1JM4lt&#45;0004Eb&#45;8U@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r4910 - /1.3/generic_fns/sequence.py -- February 04, 2008 - 18:06</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r4910 - /1.3/generic_fns/sequence.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00012" class="tabs">Index by Date</a> | <a href="threads.html#00012" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00011.html">Date Prev</a>] [<a href="msg00013.html">Date Next</a>] [<a href="msg00011.html">Thread Prev</a>] [<a href="msg00013.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 04 Feb 2008 17:06:16 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00012.html">E1JM4lt-0004Eb-8U@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on February 04, 2008 - 18:06:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Mon Feb  4 18:06:15 2008
+New Revision: 4910
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=4910&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=4910&amp;view=rev</a>
+Log:
+Huge redesign of the load_PDB_sequence() function (and converted it to the 
+new relax design).
+
+This new function should give much more flexibility and abstraction in the 
+mapping from the
+molecular structure to the relax mol-res-spin data structure.
+
+
+Modified:
+    1.3/generic_fns/sequence.py
+
+Modified: 1.3/generic_fns/sequence.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/generic_fns/sequence.py?rev=4910&amp;r1=4909&amp;r2=4910&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/generic_fns/sequence.py?rev=4910&amp;r1=4909&amp;r2=4910&amp;view=diff</a>
+==============================================================================
+--- 1.3/generic_fns/sequence.py (original)
++++ 1.3/generic_fns/sequence.py Mon Feb  4 18:06:15 2008
+@@ -22,9 +22,9 @@
+ 
+ # relax module imports.
+ from data import Data as relax_data_store
++from generic_fns.selection import count_spins, parse_token, spin_loop, 
+tokenise
+ from relax_errors import RelaxError, RelaxFileEmptyError, 
+RelaxNoPdbChainError, RelaxNoPipeError, RelaxNoSequenceError, 
+RelaxSequenceError
+ from relax_io import extract_data, open_write_file, strip
+-from generic_fns.selection import count_spins, spin_loop
+ import sys
+ 
+ 
+@@ -57,44 +57,118 @@
+     write_body(file=sys.stdout, mol_name_col=mol_name_col, 
+res_num_col=res_num_col, res_name_col=res_name_col, 
+spin_num_col=spin_num_col, spin_name_col=spin_name_col, sep=sep)
+ 
+ 
+-def load_PDB_sequence():
++def load_PDB_sequence(spin_id=None):
+     &quot;&quot;&quot;Function for loading the sequence out of a PDB file.
+ 
+-    This needs to be modified to handle multiple peptide chains.
++    @param spin_id: The molecule, residue, and spin identifier string.
++    @type spin_id:  str
+     &quot;&quot;&quot;
+ 
+     # Print out.
+     print &quot;\nLoading the sequence from the PDB file.\n&quot;
+ 
++    # Alias the current data pipe.
++    cdp = relax_data_store[relax_data_store.current_pipe]
++
+     # Reassign the sequence of the first structure.
+-    if relax_data_store.pdb[run].structures[0].peptide_chains:
+-        res = 
+relax_data_store.pdb[run].structures[0].peptide_chains[0].residues
++    if cdp.structure.structures[0].peptide_chains:
++        chains = cdp.structure.structures[0].peptide_chains
+         molecule = 'protein'
+-    elif relax_data_store.pdb[run].structures[0].nucleotide_chains:
+-        res = 
+relax_data_store.pdb[run].structures[0].nucleotide_chains[0].residues
++    elif cdp.structure.structures[0].nucleotide_chains:
++        chains = cdp.structure.structures[0].nucleotide_chains
+         molecule = 'nucleic acid'
+     else:
+         raise RelaxNoPdbChainError
+ 
+-    # Add the run to 'relax_data_store.res'.
+-    relax_data_store.res.add_list(run)
+-
+-    # Loop over the sequence.
+-    for i in xrange(len(res)):
+-        # Append a data container.
+-        relax_data_store.res[run].add_item()
+-
+-        # Residue number.
+-        relax_data_store.res[run][i].num = res[i].number
+-
+-        # Residue name.
+-        if molecule == 'nucleic acid':
+-            relax_data_store.res[run][i].name = res[i].name[-1]
++    # Split up the selection string.
++    mol_token, res_token, spin_token = tokenise(spin_id)
++
++    # Parse the tokens.
++    molecules = parse_token(mol_token)
++    residues = parse_token(res_token)
++    spins = parse_token(spin_token)
++
++    # Init some indecies.
++    mol_index = 0
++    res_index = 0
++    spin_index = 0
++
++    # Loop over the molecules.
++    for chain in chains:
++        # The name of the molecule.
++        if chain.chain_id:
++            mol_name = chain.chain_id
++        elif chain.segment_id:
++            mol_name = chain.segment_id
+         else:
+-            relax_data_store.res[run][i].name = res[i].name
+-
+-        # Select the residue.
+-        relax_data_store.res[run][i].select = 1
++            mol_name = None
++
++        # Skip non-matching molecules.
++        if mol_token and mol_name not in molecules:
++            continue
++
++        # Add the molecule if there is a molecule name (otherwise everything 
+goes into the default first MolecularContainer).
++        if mol_name:
++            # Replace the first empty molecule.
++            if mol_index == 0 and cdp.mol[0].name == None:
++                cdp.mol[0].name = chain.name
++
++            # Create a new molecule.
++            else:
++                # Add the molecule.
++                cdp.mol.add_item(mol_name=chain.name)
++
++        # Loop over the residues.
++        for res in chain.residues:
++            # The residue name and number.
++            if molecule == 'nucleic acid':
++                res_name = res.name[-1]
++            else:
++                res_name = res.name
++            res_num = res.number
++
++            # Skip non-matching residues.
++            if res_token and not (res_name in residues or res_num in 
+residues):
++                continue
++
++            # Replace the first empty residue.
++            if res_index == 0 and cdp.mol[mol_index].res[0].name == None:
++                cdp.mol[mol_index].res[0].name = res_name
++                cdp.mol[mol_index].res[0].num = res_num
++
++            # Create a new residue.
++            else:
++                # Add the residue.
++                cdp.mol[mol_index].res.add_item(res_name=res_name, 
+res_num=res_num)
++
++            # Loop over the spins.
++            for atom in res.atom_list:
++                # The spin name and number.
++                spin_name = atom.name
++                spin_num = atom.properties['serial_number']
++
++                # Skip non-matching spins.
++                if spin_token and not (spin_name in spins or spin_num in 
+spins):
++                    continue
++
++                # Replace the first empty residue.
++                if spin_index == 0 and 
+cdp.mol[mol_index].res[res_index].spin[0].name == None:
++                    cdp.mol[mol_index].res[res_index].spin[0].name = 
+spin_name
++                    cdp.mol[mol_index].res[res_index].spin[0].num = spin_num
++
++                # Create a new residue.
++                else:
++                    # Add the residue.
++                    
+cdp.mol[mol_index].res[res_index].spin.add_item(spin_name=spin_name, 
+spin_num=spin_num)
++
++                # Increment the residue index.
++                spin_index = spin_index + 1
++
++            # Increment the residue index.
++            res_index = res_index + 1
++
++        # Increment the molecule index.
++        mol_index = mol_index + 1
+ 
+ 
+ def read(file=None, dir=None, mol_name_col=None, res_num_col=0, 
+res_name_col=1, spin_num_col=None, spin_name_col=None, sep=None):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Feb 07 10:40:08 2008</div>  
+</body>
+</html>

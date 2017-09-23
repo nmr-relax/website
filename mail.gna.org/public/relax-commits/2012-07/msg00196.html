@@ -1,0 +1,345 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r17310 &#45; in /branches/frame_order_testing: generic_fns/align_tensor.py	user_functions/align_tensor.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 25 Jul 2012 11:02:25 +0200 -->
+<!--X-Message-Id: E1StxU9&#45;0007wO&#45;LU@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r17310 - in /branches/frame_order_testing: generic_fns/align_tensor.py	user_functions/align_tensor.py -- July 25, 2012 - 11:02</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r17310 - in /branches/frame_order_testing: generic_fns/align_tensor.py	user_functions/align_tensor.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00196" class="tabs">Index by Date</a> | <a href="threads.html#00196" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00195.html">Date Prev</a>] [<a href="msg00197.html">Date Next</a>] [<a href="msg00195.html">Thread Prev</a>] [<a href="msg00197.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 25 Jul 2012 09:02:25 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00196.html">E1StxU9-0007wO-LU@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on July 25, 2012 - 11:02:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Jul 25 11:02:25 2012
+New Revision: 17310
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=17310&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=17310&amp;view=rev</a>
+Log:
+Redesigned the align_tensor.init user function.
+
+This is to better handle multiple tensors per alignment (and/or per domain).  
+The tensor ID is now
+optional and the alignment ID must be supplied.  The order of the arguments 
+has also changed so all
+the IDs (tensor, alignment, and domain) are at the start.  The function
+generic_fns.align_tensor.get_tensor_object_from_align() has been added to 
+handle the retrieval of
+alignment tensors without a tensor ID or name.
+
+
+Modified:
+    branches/frame_order_testing/generic_fns/align_tensor.py
+    branches/frame_order_testing/user_functions/align_tensor.py
+
+Modified: branches/frame_order_testing/generic_fns/align_tensor.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_testing/generic_fns/align_tensor.py?rev=17310&amp;r1=17309&amp;r2=17310&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_testing/generic_fns/align_tensor.py?rev=17310&amp;r1=17309&amp;r2=17310&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_testing/generic_fns/align_tensor.py (original)
++++ branches/frame_order_testing/generic_fns/align_tensor.py Wed Jul 25 
+11:02:25 2012
+@@ -647,7 +647,7 @@
+ 
+ 
+ def get_tensor_object(tensor, pipe=None):
+-    &quot;&quot;&quot;Function for returning the AlignTensorData instance corresponding to 
+the 'tensor' argument.
++    &quot;&quot;&quot;Return the AlignTensorData instance corresponding to the tensor ID.
+ 
+     @param tensor:  The alignment tensor identification string.
+     @type tensor:   str
+@@ -673,11 +673,43 @@
+     return data
+ 
+ 
+-def init(tensor=None, params=None, scale=1.0, angle_units='deg', 
+param_types=0, align_id=None, domain=None, errors=False):
++def get_tensor_object_from_align(align_id, pipe=None):
++    &quot;&quot;&quot;Return the unique AlignTensorData instance corresponding to the 
+alignment ID.
++
++    @param align_id:    The alignment ID for the unique tensor.
++    @type align_id:     str
++    @return:            The alignment tensor object corresponding to the 
+'tensor' arg.
++    @rtype:             AlignTensorData instance
++    &quot;&quot;&quot;
++
++    # The data pipe to check.
++    if pipe == None:
++        pipe = pipes.cdp_name()
++
++    # Init.
++    data = None
++
++    # Loop over the tensors.
++    count = 0
++    for i in xrange(len(cdp.align_tensors)):
++        if cdp.align_tensors[i].align_id == align_id:
++            data = cdp.align_tensors[i]
++            count += 1
++
++    # Multiple matches.
++    if count &gt; 1:
++        raise RelaxError(&quot;Multiple alignment tensors match the alignment ID 
+'%s'.&quot; % align_id)
++    # Return the object.
++    return data
++
++
++def init(tensor=None, align_id=None, params=None, scale=1.0, 
+angle_units='deg', param_types=0, domain=None, errors=False):
+     &quot;&quot;&quot;Function for initialising the alignment tensor.
+ 
+     @keyword tensor:        The alignment tensor identification string.
+     @type tensor:           str
++    @keyword align_id:      The alignment ID string that the tensor 
+corresponds to.
++    @type align_id:         str or None
+     @keyword params:        The alignment tensor parameters.
+     @type params:           float
+     @keyword scale:         The alignment tensor eigenvalue scaling value.
+@@ -686,8 +718,6 @@
+     @type angle_units:      str
+     @keyword param_types:   The type of parameters supplied.  The flag 
+values correspond to, 0: {Axx, Ayy, Axy, Axz, Ayz}, and 1: {Azz, Axx-yy, Axy, 
+Axz, Ayz}.
+     @type param_types:      int
+-    @keyword align_id:      The alignment ID string that the tensor 
+corresponds to.
+-    @type align_id:         str or None
+     @keyword domain:        The domain label.
+     @type domain:           str or None
+     @keyword errors:        A flag which determines if the alignment tensor 
+data or its errors are being input.
+@@ -697,25 +727,28 @@
+     # Test if the current data pipe exists.
+     pipes.test()
+ 
+-    # Test if alignment tensor data already exists.
+-    if errors and not align_data_exists(tensor):
+-        raise RelaxNoTensorError('alignment')
++    # Parameter checks.
++    if align_id == None:
++        raise RelaxError(&quot;The alignment ID must be given.&quot;)
+ 
+     # Check the validity of the angle_units argument.
+     valid_types = ['deg', 'rad']
+     if not angle_units in valid_types:
+         raise RelaxError(&quot;The alignment tensor 'angle_units' argument &quot; + 
+repr(angle_units) + &quot; should be either 'deg' or 'rad'.&quot;)
+ 
++    # Test if alignment tensor data already exists.
++    if errors and not align_data_exists(align_id):
++        raise RelaxNoTensorError('alignment')
++
+     # Check that the domain is defined.
+     if domain and (not hasattr(cdp, 'domain') or domain not in 
+cdp.domain.keys()):
+         raise RelaxError(&quot;The domain '%s' has not been defined.  Please use 
+the domain user function.&quot; % domain)
+ 
+     # Add the align ID to the current data pipe if needed.
+-    if align_id:
+-        if not hasattr(cdp, 'align_ids'):
+-            cdp.align_ids = []
+-        if align_id not in cdp.align_ids:
+-            cdp.align_ids.append(align_id)
++    if not hasattr(cdp, 'align_ids'):
++        cdp.align_ids = []
++    if align_id not in cdp.align_ids:
++        cdp.align_ids.append(align_id)
+ 
+     # Add the align_tensors object to the data pipe.
+     if not errors:
+@@ -724,11 +757,14 @@
+             cdp.align_tensors = AlignTensorList()
+ 
+         # Add the tensor, if it doesn't already exist.
+-        if tensor not in cdp.align_tensors.names():
++        if tensor == None or tensor not in cdp.align_tensors.names():
+             cdp.align_tensors.add_item(tensor)
+ 
+     # Get the tensor.
+-    tensor_obj = get_tensor_object(tensor)
++    if tensor:
++        tensor_obj = get_tensor_object(tensor)
++    else:
++        tensor_obj = get_tensor_object_from_align(align_id)
+ 
+     # {Sxx, Syy, Sxy, Sxz, Syz}.
+     if param_types == 0:
+
+Modified: branches/frame_order_testing/user_functions/align_tensor.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_testing/user_functions/align_tensor.py?rev=17310&amp;r1=17309&amp;r2=17310&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_testing/user_functions/align_tensor.py?rev=17310&amp;r1=17309&amp;r2=17310&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_testing/user_functions/align_tensor.py (original)
++++ branches/frame_order_testing/user_functions/align_tensor.py Wed Jul 25 
+11:02:25 2012
+@@ -188,7 +188,21 @@
+     name = &quot;tensor&quot;,
+     py_type = &quot;str&quot;,
+     desc_short = &quot;tensor ID&quot;,
+-    desc = &quot;The alignment tensor identification string.&quot;
++    desc = &quot;The optional alignment tensor ID string, required if multiple 
+tensors exist per alignment.&quot;,
++    can_be_none = True
++)
++uf.add_keyarg(
++    name = &quot;align_id&quot;,
++    py_type = &quot;str&quot;,
++    desc_short = &quot;alignment ID&quot;,
++    desc = &quot;The alignment ID string that the tensor corresponds to.&quot;
++)
++uf.add_keyarg(
++    name = &quot;domain&quot;,
++    py_type = &quot;str&quot;,
++    desc_short = &quot;domain ID&quot;,
++    desc = &quot;The optional domain ID string that the tensor corresponds to.&quot;,
++    can_be_none = True
+ )
+ uf.add_keyarg(
+     name = &quot;params&quot;,
+@@ -242,20 +256,6 @@
+     wiz_read_only = True
+ )
+ uf.add_keyarg(
+-    name = &quot;align_id&quot;,
+-    py_type = &quot;str&quot;,
+-    desc_short = &quot;alignment ID string&quot;,
+-    desc = &quot;The optional alignment ID string that the tensor corresponds 
+to.&quot;,
+-    can_be_none = True
+-)
+-uf.add_keyarg(
+-    name = &quot;domain&quot;,
+-    py_type = &quot;str&quot;,
+-    desc_short = &quot;domain ID string&quot;,
+-    desc = &quot;The optional domain ID string that the tensor corresponds to.&quot;,
+-    can_be_none = True
+-)
+-uf.add_keyarg(
+     name = &quot;errors&quot;,
+     default = False,
+     py_type = &quot;bool&quot;,
+@@ -263,7 +263,8 @@
+     desc = &quot;A flag which determines if the alignment tensor data or its 
+errors are being input.&quot;
+ )
+ uf.desc.append(Desc_container())
+-uf.desc[-1].add_paragraph(&quot;Using this function, the alignment tensor data 
+can be set up.  The alignment tensor parameters should be a tuple of floating 
+point numbers (a list surrounded by round brakets).  These correspond to the 
+parameters of the tensor which can be specified by the parameter types 
+whereby the values correspond to:&quot;)
++uf.desc[-1].add_paragraph(&quot;The tensor ID is only required if there are 
+multiple unique tensors per alignment.  An example is if internal domain 
+motions cause multiple parts of the molecule to align differently.  The 
+tensor ID is optional and in the case of only a single tensor per alignment, 
+the tensor can be identified using the alignment ID instead.&quot;)
++uf.desc[-1].add_paragraph(&quot;The alignment tensor parameters should be a tuple 
+of floating point numbers (a list surrounded by round brakets).  These 
+correspond to the parameters of the tensor which can be specified by the 
+parameter types whereby the values correspond to:&quot;)
+ uf.desc[-1].add_item_list_element(&quot;0&quot;, &quot;{Sxx, Syy, Sxy, Sxz, Syz}  
+(unitless),&quot;)
+ uf.desc[-1].add_item_list_element(&quot;1&quot;, &quot;{Szz, Sxx-yy, Sxy, Sxz, Syz}  (Pales 
+default format),&quot;)
+ uf.desc[-1].add_item_list_element(&quot;2&quot;, &quot;{Axx, Ayy, Axy, Axz, Ayz}  
+(unitless),&quot;)
+@@ -279,12 +280,12 @@
+ uf.desc[-1].add_paragraph(&quot;where I is the identity matrix.  For the 
+alignment tensor to be supplied in Hertz, the bond vectors must all be of 
+equal length.&quot;)
+ # Prompt examples.
+ uf.desc.append(Desc_container(&quot;Prompt examples&quot;))
+-uf.desc[-1].add_paragraph(&quot;To set a rhombic tensor to the run 'CaM', type 
+one of:&quot;)
+-uf.desc[-1].add_prompt(&quot;relax&gt; align_tensor.init('super media', 
+(-8.6322e-05, -5.5786e-04, -3.1732e-05, 2.2927e-05, 2.8599e-04), 
+param_types=1)&quot;)
+-uf.desc[-1].add_prompt(&quot;relax&gt; align_tensor.init(tensor='super media', 
+params=(-8.6322e-05, -5.5786e-04, -3.1732e-05, 2.2927e-05, 2.8599e-04), 
+param_types=1)&quot;)
++uf.desc[-1].add_paragraph(&quot;To set a rhombic tensor for the domain labelled 
+'domain 1' with the alignment named 'super media', type one of:&quot;)
++uf.desc[-1].add_prompt(&quot;relax&gt; align_tensor.init('domain 1', 'super media', 
+(-8.6322e-05, -5.5786e-04, -3.1732e-05, 2.2927e-05, 2.8599e-04), 
+param_types=1)&quot;)
++uf.desc[-1].add_prompt(&quot;relax&gt; align_tensor.init(tensor='domain 1', 
+align_id='super media', params=(-8.6322e-05, -5.5786e-04, -3.1732e-05, 
+2.2927e-05, 2.8599e-04), param_types=1)&quot;)
+ uf.backend = align_tensor.init
+ uf.menu_text = &quot;&amp;init&quot;
+-uf.wizard_height_desc = 420
++uf.wizard_height_desc = 370
+ uf.wizard_size = (1000, 750)
+ uf.gui_icon = &quot;relax.align_tensor&quot;
+ uf.wizard_image = WIZARD_IMAGE_PATH + 'align_tensor.png'
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Jul 25 12:20:01 2012</div>  
+</body>
+</html>

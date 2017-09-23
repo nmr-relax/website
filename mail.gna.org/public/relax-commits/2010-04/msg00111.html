@@ -1,0 +1,200 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r11163 &#45; /1.3/maths_fns/rdc.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 28 Apr 2010 16:35:27 +0200 -->
+<!--X-Message-Id: E1O78MJ&#45;00040A&#45;6n@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r11163 - /1.3/maths_fns/rdc.py -- April 28, 2010 - 16:35</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r11163 - /1.3/maths_fns/rdc.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00111" class="tabs">Index by Date</a> | <a href="threads.html#00111" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00110.html">Date Prev</a>] [<a href="msg00112.html">Date Next</a>] [<a href="msg00110.html">Thread Prev</a>] [<a href="msg00112.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 28 Apr 2010 14:35:27 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00111.html">E1O78MJ-00040A-6n@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on April 28, 2010 - 16:35:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Apr 28 16:35:26 2010
+New Revision: 11163
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=11163&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=11163&amp;view=rev</a>
+Log:
+Huge bug fix for the 'population' N-state model.
+
+The probabilities of each state was being set to that of the last state.  
+This is fatal for this
+model.  Earlier code did not have this problem, but it is unknown when this 
+bug was introduced.
+
+
+Modified:
+    1.3/maths_fns/rdc.py
+
+Modified: 1.3/maths_fns/rdc.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/maths_fns/rdc.py?rev=11163&amp;r1=11162&amp;r2=11163&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/maths_fns/rdc.py?rev=11163&amp;r1=11162&amp;r2=11163&amp;view=diff</a>
+==============================================================================
+--- 1.3/maths_fns/rdc.py (original)
++++ 1.3/maths_fns/rdc.py Wed Apr 28 16:35:26 2010
+@@ -72,21 +72,17 @@
+     # No weights given.
+     if weights == None:
+         pc = 1.0 / N
+-
+-    # Loop over the structures.
++        weights = [pc] * N
++
++    # Missing last weight.
++    if len(weights) &lt; N:
++        pN = 1.0 - sum(weights, axis=0)
++        weights = weights.tolist()
++        weights.append(pN)
++
++    # Back-calculate the RDC.
+     for c in xrange(N):
+-        # The given weights.
+-        if weights != None:
+-            # Missing last weight.
+-            if len(weights) &lt; N: 
+-                pc = 1.0 - sum(weights, axis=0)
+-
+-            # Given weight.
+-            else:
+-                pc = weights[c]
+-
+-        # Back-calculate the RDC.
+-        val = val + pc * (vect[c, 0]**2 - vect[c, 2]**2)*A[0] + (vect[c, 
+1]**2 - vect[c, 2]**2)*A[1] + 2.0*vect[c, 0]*vect[c, 1]*A[2] + 2.0*vect[c, 
+0]*vect[c, 2]*A[3] + 2.0*vect[c, 1]*vect[c, 2]*A[4]
++        val = val + weights[c] * (vect[c, 0]**2 - vect[c, 2]**2)*A[0] + 
+(vect[c, 1]**2 - vect[c, 2]**2)*A[1] + 2.0*vect[c, 0]*vect[c, 1]*A[2] + 
+2.0*vect[c, 0]*vect[c, 2]*A[3] + 2.0*vect[c, 1]*vect[c, 2]*A[4]
+ 
+     # Return the average RDC.
+     return dj * val
+@@ -151,21 +147,17 @@
+     # No weights given.
+     if weights == None:
+         pc = 1.0 / N
+-
+-    # Loop over the structures c.
++        weights = [pc] * N
++
++    # Missing last weight.
++    if len(weights) &lt; N:
++        pN = 1.0 - sum(weights, axis=0)
++        weights = weights.tolist()
++        weights.append(pN)
++
++    # Back-calculate the RDC.
+     for c in xrange(N):
+-        # The given weights.
+-        if weights != None:
+-            # Missing last weight.
+-            if len(weights) &lt; N: 
+-                pc = 1.0 - sum(weights, axis=0)
+-
+-            # Given weight.
+-            else:
+-                pc = weights[c]
+-
+-        # Back-calculate the RDC.
+-        val = val + pc * dot(vect[c], dot(A, vect[c]))
++        val = val + weights[c] * dot(vect[c], dot(A, vect[c]))
+ 
+     # Return the average RDC.
+     return dj * val
+@@ -217,21 +209,17 @@
+     # No weights given.
+     if weights == None:
+         pc = 1.0 / N
+-
+-    # Loop over the structures.
++        weights = [pc] * N
++
++    # Missing last weight.
++    if len(weights) &lt; N:
++        pN = 1.0 - sum(weights, axis=0)
++        weights = weights.tolist()
++        weights.append(pN)
++
++    # Back-calculate the RDC gradient element.
+     for c in xrange(N):
+-        # The given weights.
+-        if weights != None:
+-            # Missing last weight.
+-            if len(weights) &lt; N: 
+-                pc = 1.0 - sum(weights, axis=0)
+-
+-            # Given weight.
+-            else:
+-                pc = weights[c]
+-
+-        # Back-calculate the RDC gradient element.
+-        grad = grad + pc * dot(vect[c], dot(dAi_dAmn, vect[c]))
++        grad = grad + weights[c] * dot(vect[c], dot(dAi_dAmn, vect[c]))
+ 
+     # Return the average RDC gradient element.
+     return dj * grad
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Apr 28 17:20:03 2010</div>  
+</body>
+</html>

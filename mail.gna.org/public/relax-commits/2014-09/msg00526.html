@@ -1,0 +1,258 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r26020 &#45; /branches/frame_order_cleanup/auto_analyses/frame_order.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 24 Sep 2014 17:50:53 +0200 -->
+<!--X-Message-Id: E1XWoqD&#45;0002rA&#45;3n@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r26020 - /branches/frame_order_cleanup/auto_analyses/frame_order.py -- September 24, 2014 - 17:50</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r26020 - /branches/frame_order_cleanup/auto_analyses/frame_order.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00526" class="tabs">Index by Date</a> | <a href="threads.html#00526" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00525.html">Date Prev</a>] [<a href="msg00527.html">Date Next</a>] [<a href="msg00525.html">Thread Prev</a>] [<a href="msg00527.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 24 Sep 2014 15:50:53 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00526.html">E1XWoqD-0002rA-3n@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on September 24, 2014 - 17:50:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Sep 24 17:50:52 2014
+New Revision: 26020
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=26020&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=26020&amp;view=rev</a>
+Log:
+The frame order auto-analysis Optimisation_settings object now supports the 
+quad_int flag.
+
+This is for activating the SciPy quadratic integration.  It is accepted as an 
+argument for the
+add_grid() and add_min() methods, and it returned by the new 
+get_grid_quad_int() and
+get_min_quad_int() methods.
+
+
+Modified:
+    branches/frame_order_cleanup/auto_analyses/frame_order.py
+
+Modified: branches/frame_order_cleanup/auto_analyses/frame_order.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/auto_analyses/frame_order.py?rev=26020&amp;r1=26019&amp;r2=26020&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/auto_analyses/frame_order.py?rev=26020&amp;r1=26019&amp;r2=26020&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/auto_analyses/frame_order.py   (original)
++++ branches/frame_order_cleanup/auto_analyses/frame_order.py   Wed Sep 24 
+17:50:52 2014
+@@ -37,7 +37,7 @@
+ 
+ # relax module imports.
+ from data_store import Relax_data_store; ds = Relax_data_store()
+-from lib.arg_check import is_float, is_int, is_str
++from lib.arg_check import is_bool, is_float, is_int, is_str
+ from lib.errors import RelaxError
+ from lib.frame_order.conversions import convert_axis_alpha_to_spherical
+ from lib.frame_order.variables import MODEL_DOUBLE_ROTOR, MODEL_FREE_ROTOR, 
+MODEL_ISO_CONE, MODEL_ISO_CONE_FREE_ROTOR, MODEL_ISO_CONE_TORSIONLESS, 
+MODEL_LIST_FREE_ROTORS, MODEL_LIST_ISO_CONE, MODEL_LIST_NONREDUNDANT, 
+MODEL_LIST_PSEUDO_ELLIPSE, MODEL_PSEUDO_ELLIPSE, 
+MODEL_PSEUDO_ELLIPSE_FREE_ROTOR, MODEL_PSEUDO_ELLIPSE_TORSIONLESS, 
+MODEL_RIGID, MODEL_ROTOR
+@@ -957,6 +957,7 @@
+         self._grid_zoom = []
+         self._grid_sobol_max_points = []
+         self._grid_sobol_oversample = []
++        self._grid_quad_int = []
+ 
+         # Initialise some private structures for the minimisation.
+         self._min_count = 0
+@@ -965,6 +966,7 @@
+         self._min_max_iter = []
+         self._min_sobol_max_points = []
+         self._min_sobol_oversample = []
++        self._min_quad_int = []
+ 
+ 
+     def _check_index(self, i, iter_type=None):
+@@ -987,7 +989,7 @@
+             raise RelaxError(&quot;The iteration index %i is too high, only %i 
+minimisations are set up.&quot; % (i, self._min_count))
+ 
+ 
+-    def add_grid(self, inc=None, zoom=None, sobol_max_points=None, 
+sobol_oversample=None):
++    def add_grid(self, inc=None, zoom=None, sobol_max_points=None, 
+sobol_oversample=None, quad_int=False):
+         &quot;&quot;&quot;Add a grid search step.
+ 
+         @keyword inc:               The grid search size (the number of 
+increments per dimension).
+@@ -998,6 +1000,8 @@
+         @type sobol_max_points:     None or int
+         @keyword sobol_oversample:  The Sobol' oversampling factor.  See the 
+frame_order.sobol_setup user function for details.
+         @type sobol_oversample:     None or int
++        @keyword quad_int:          The SciPy quadratic integration flag.  
+See the frame_order.quad_int user function for details.
++        @type quad_int:             bool
+         &quot;&quot;&quot;
+ 
+         # Value checking, as this will be set up by a user.
+@@ -1005,18 +1009,20 @@
+         is_int(zoom, name='zoom', can_be_none=True)
+         is_int(sobol_max_points, name='sobol_max_points', can_be_none=True)
+         is_int(sobol_oversample, name='sobol_oversample', can_be_none=True)
++        is_bool(quad_int, name='quad_int')
+ 
+         # Store the values.
+         self._grid_incs.append(inc)
+         self._grid_zoom.append(zoom)
+         self._grid_sobol_max_points.append(sobol_max_points)
+         self._grid_sobol_oversample.append(sobol_oversample)
++        self._grid_quad_int.append(quad_int)
+ 
+         # Increment the count.
+         self._grid_count += 1
+ 
+ 
+-    def add_min(self, min_algor='simplex', func_tol=1e-25, max_iter=1000000, 
+sobol_max_points=None, sobol_oversample=None):
++    def add_min(self, min_algor='simplex', func_tol=1e-25, max_iter=1000000, 
+sobol_max_points=None, sobol_oversample=None, quad_int=False):
+         &quot;&quot;&quot;Add an optimisation step.
+ 
+         @keyword min_algor:         The optimisation technique.
+@@ -1029,6 +1035,8 @@
+         @type sobol_max_points:     None or int
+         @keyword sobol_oversample:  The Sobol' oversampling factor.  See the 
+frame_order.sobol_setup user function for details.
+         @type sobol_oversample:     None or int
++        @keyword quad_int:          The SciPy quadratic integration flag.  
+See the frame_order.quad_int user function for details.
++        @type quad_int:             bool
+         &quot;&quot;&quot;
+ 
+         # Value checking, as this will be set up by a user.
+@@ -1037,6 +1045,7 @@
+         is_int(max_iter, name='max_iter', can_be_none=True)
+         is_int(sobol_max_points, name='sobol_max_points', can_be_none=True)
+         is_int(sobol_oversample, name='sobol_oversample', can_be_none=True)
++        is_bool(quad_int, name='quad_int')
+ 
+         # Store the values.
+         self._min_algor.append(min_algor)
+@@ -1044,6 +1053,7 @@
+         self._min_max_iter.append(max_iter)
+         self._min_sobol_max_points.append(sobol_max_points)
+         self._min_sobol_oversample.append(sobol_oversample)
++        self._min_quad_int.append(quad_int)
+ 
+         # Increment the count.
+         self._min_count += 1
+@@ -1065,6 +1075,22 @@
+         return self._grid_incs[i]
+ 
+ 
++    def get_grid_quad_int(self, i):
++        &quot;&quot;&quot;Return the SciPy quadratic integration flag for the given 
+iteration.
++
++        @param i:   The grid search iteration from the loop_grid() method.
++        @type i:    int
++        @return:    The SciPy quadratic integration flag for the iteration.
++        @rtype:     bool
++        &quot;&quot;&quot;
++
++        # Check the index.
++        self._check_index(i, iter_type='grid')
++
++        # Return the value.
++        return self._grid_quad_int[i]
++
++
+     def get_grid_sobol_info(self, i):
+         &quot;&quot;&quot;Return the number of numerical integration points and 
+oversampling factor for the given iteration.
+ 
+@@ -1145,6 +1171,22 @@
+         return self._min_max_iter[i]
+ 
+ 
++    def get_min_quad_int(self, i):
++        &quot;&quot;&quot;Return the SciPy quadratic integration flag for the given 
+iteration.
++
++        @param i:   The minimisation iteration from the loop_min() method.
++        @type i:    int
++        @return:    The SciPy quadratic integration flag for the iterationor.
++        @rtype:     bool
++        &quot;&quot;&quot;
++
++        # Check the index.
++        self._check_index(i, iter_type='min')
++
++        # Return the value.
++        return self._min_quad_int[i]
++
++
+     def get_min_sobol_info(self, i):
+         &quot;&quot;&quot;Return the number of numerical integration points and 
+oversampling factor for the given iteration.
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Sep 24 19:00:04 2014</div>  
+</body>
+</html>

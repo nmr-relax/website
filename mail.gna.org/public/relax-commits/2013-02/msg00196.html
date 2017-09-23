@@ -1,0 +1,305 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r18524 &#45; /trunk/generic_fns/structure/pdb_write.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 20 Feb 2013 14:17:41 +0100 -->
+<!--X-Message-Id: E1U89YL&#45;0000vh&#45;Ny@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r18524 - /trunk/generic_fns/structure/pdb_write.py -- February 20, 2013 - 14:17</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r18524 - /trunk/generic_fns/structure/pdb_write.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00196" class="tabs">Index by Date</a> | <a href="threads.html#00196" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00195.html">Date Prev</a>] [<a href="msg00197.html">Date Next</a>] [<a href="msg00195.html">Thread Prev</a>] [<a href="msg00197.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 20 Feb 2013 13:17:41 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00196.html">E1U89YL-0000vh-Ny@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on February 20, 2013 - 14:17:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Feb 20 14:17:40 2013
+New Revision: 18524
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=18524&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=18524&amp;view=rev</a>
+Log:
+Implemented the PDB HELIX record writing function 
+generic_fns.structure.pdb_write.helix().
+
+
+Modified:
+    trunk/generic_fns/structure/pdb_write.py
+
+Modified: trunk/generic_fns/structure/pdb_write.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/generic_fns/structure/pdb_write.py?rev=18524&amp;r1=18523&amp;r2=18524&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/generic_fns/structure/pdb_write.py?rev=18524&amp;r1=18523&amp;r2=18524&amp;view=diff</a>
+==============================================================================
+--- trunk/generic_fns/structure/pdb_write.py (original)
++++ trunk/generic_fns/structure/pdb_write.py Wed Feb 20 14:17:40 2013
+@@ -27,6 +27,23 @@
+ 
+ # Python module imports.
+ from textwrap import wrap
++
++
++def _handle_none(value):
++    &quot;&quot;&quot;Auxiliary function for handling values of None.
++
++    @param value:   The value to convert.
++    @type value:    anything
++    @return:        If the value is None, then an empty string.  Otherwise 
+the original value is returned.
++    @rtype:         anything
++    &quot;&quot;&quot;
++
++    # Handle None.
++    if value == None:
++        return ''
++
++    # Normal value.
++    return value
+ 
+ 
+ def atom(file, serial='', name='', alt_loc='', res_name='', chain_id='', 
+res_seq='', icode='', x='', y='', z='', occupancy='', temp_factor='', 
+element='', charge=''):
+@@ -507,6 +524,142 @@
+     file.write(&quot;%-6s  %2s  %3s %2s%1s%-51s\n&quot; % ('FORMUL', comp_num, het_id, 
+continuation, asterisk, text))
+ 
+ 
++def helix(file, ser_num='', helix_id='', init_res_name='', init_chain_id='', 
+init_seq_id='', init_icode='', end_res_name='', end_chain_id='', 
+end_seq_num='', end_icode='', helix_class='', comment='', length=''):
++    &quot;&quot;&quot;Generate the HELIX record.
++
++    The following is the PDB v3.3 documentation 
+U{<a  rel="nofollow" href="http://www.wwpdb.org/documentation/format33/sect5.html#HELIX}">http://www.wwpdb.org/documentation/format33/sect5.html#HELIX}</a>.
++
++    Overview
++    ========
++
++    HELIX records are used to identify the position of helices in the 
+molecule. Helices are named, numbered, and classified by type. The residues 
+where the helix begins and ends are noted, as well as the total length.
++
++
++    Record Format
++    =============
++
++     
+______________________________________________________________________________________________
++     |         |              |              |                               
+                     |
++     | Columns | Data type    | Field        | Definition                    
+                     |
++     
+|_________|______________|______________|____________________________________________________|
++     |         |              |              |                               
+                     |
++     |  1 -  6 | Record name  | &quot;HELIX &quot;     |                               
+                     |
++     |  8 - 10 | Integer      | serNum       | Serial number of the helix. 
+This starts at 1 and   |
++     |         |              |              |      increases incrementally. 
+                     |
++     | 12 - 14 | LString(3)   | helixID      | Helix identifier. In addition 
+to a serial number,  |
++     |         |              |              |      each helix is given an 
+alphanumeric character |
++     |         |              |              |      helix identifier.        
+                     |
++     | 16 - 18 | Residue name | initResName  | Name of the initial residue.  
+                     |
++     | 20      | Character    | initChainID  | Chain identifier for the 
+chain containing this     |
++     |         |              |              |      helix.                   
+                     |
++     | 22 - 25 | Integer      | initSeqNum   | Sequence number of the 
+initial residue.            |
++     | 26      | AChar        | initICode    | Insertion code of the initial 
+residue.             |
++     | 28 - 30 | Residue name | endResName   | Name of the terminal residue 
+of the helix.         |
++     | 32      | Character    | endChainID   | Chain identifier for the 
+chain containing this     |
++     |         |              |              |      helix.                   
+                     |
++     | 34 - 37 | Integer      | endSeqNum    | Sequence number of the 
+terminal residue.           |
++     | 38      | AChar        | endICode     | Insertion code of the 
+terminal residue.            |
++     | 39 - 40 | Integer      | helixClass   | Helix class (see below).      
+                     |
++     | 41 - 70 | String       | comment      | Comment about this helix.     
+                     |
++     | 72 - 76 | Integer      | length       | Length of this helix.         
+                     |
++     
+|_________|______________|______________|____________________________________________________|
++
++    Details
++    =======
++
++    - Additional HELIX records with different serial numbers and identifiers 
+occur if more than one helix is present.
++    - The initial residue of the helix is the N-terminal residue.
++    - Helices are classified as follows:
++
++     _____________________________________________________
++     |                               |  CLASS NUMBER     |
++     | TYPE OF  HELIX                | (COLUMNS 39 - 40) |
++     |_______________________________|___________________|
++     |                               |                   |
++     | Right-handed alpha (default)  |          1        |
++     | Right-handed omega            |          2        |
++     | Right-handed pi               |          3        |
++     | Right-handed gamma            |          4        |
++     | Right-handed 3 - 10           |          5        |
++     | Left-handed alpha             |          6        |
++     | Left-handed omega             |          7        |
++     | Left-handed gamma             |          8        |
++     | 2 - 7 ribbon/helix            |          9        |
++     | Polyproline                   |         10        |
++     |_______________________________|___________________|
++
++
++    Relationships to Other Record Types
++    ===================================
++
++    There may be related information in the REMARKs.
++
++
++    Example
++    =======
++
++             1         2         3         4         5         6         7   
+      8
++    
+12345678901234567890123456789012345678901234567890123456789012345678901234567890
++    HELIX    1  HA GLY A   86  GLY A   94  1                                 
+  9
++    HELIX    2  HB GLY B   86  GLY B   94  1                                 
+  9
++
++    HELIX   21  21 PRO J  385  LEU J  388  5                                 
+  4
++    HELIX   22  22 PHE J  397  PHE J  402  5                                 
+  6
++
++
++    @param file:            The file to write the record to.
++    @type file:             file object
++    @keyword ser_num:       The helix serial number
++    @type ser_num:          int
++    @keyword helix_id:      The helix identifier
++    @type helix_id:         str
++    @keyword init_res_name: The name of the initial residue
++    @type init_res_name:    str
++    @keyword init_chain_id: The chain identifier
++    @type init_chain_id:    str
++    @keyword init_seq_id:   The sequence number of the initial residue
++    @type init_seq_id:      int
++    @keyword init_icode:    The insertion code of the initial residue
++    @type init_icode:       str
++    @keyword end_res_name:  The name of the terminal residue
++    @type end_res_name:     str
++    @keyword end_chain_id:  The chain identifier
++    @type end_chain_id:     str
++    @keyword end_seq_num:   The sequence number of the terminal residue
++    @type end_seq_num:      int
++    @keyword end_icode:     The insertion code of the terminal residue
++    @type end_icode:        str
++    @keyword helix_class:   The helix class
++    @type helix_class:      int
++    @keyword comment:       The comment
++    @type comment:          str
++    @keyword length:        The helix length.
++    @type length:           int
++    &quot;&quot;&quot;
++
++    # The formatted record.
++    text = &quot;%-6s %3s %3s %3s %1s %4s%1s %3s %s %4s%1s%2s%30s %5s    &quot; % (
++        'HELIX',
++        _handle_none(ser_num),
++        _handle_none(helix_id),
++        _handle_none(init_res_name),
++        _handle_none(init_chain_id),
++        _handle_none(init_seq_id),
++        _handle_none(init_icode),
++        _handle_none(end_res_name),
++        _handle_none(end_chain_id),
++        _handle_none(end_seq_num),
++        _handle_none(end_icode),
++        _handle_none(helix_class),
++        _handle_none(comment),
++        _handle_none(length)
++    )
++
++    # Write out the formatted record.
++    file.write(text)
++    file.write('\n')
++
++
+ def het(file, het_id='', chain_id='', seq_num='', icode='', 
+num_het_atoms='', text=''):
+     &quot;&quot;&quot;Generate the HET record.
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Feb 20 14:40:01 2013</div>  
+</body>
+</html>

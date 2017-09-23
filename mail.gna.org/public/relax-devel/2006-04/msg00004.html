@@ -1,0 +1,576 @@
+<!-- MHonArc v2.6.10 -->
+<!--X-Subject: math_fns c code -->
+<!--X-From-R13: "Unel E. Fubzcfba" <tnelgNozo.yrrqf.np.hx> -->
+<!--X-Date: Thu, 06 Apr 2006 11:24:09 +0200 -->
+<!--X-Message-Id: 4434DD7F.2080503@bmb.leeds.ac.uk -->
+<!--X-Content-Type: multipart/mixed -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>math_fns c code -- April 06, 2006 - 11:24</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />math_fns c code</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00004" class="tabs">Index by Date</a> | <a href="threads.html#00004" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00003.html">Date Prev</a>] [<a href="msg00005.html">Date Next</a>] [<a href="msg00002.html">Thread Prev</a>] [<a href="msg00008.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-devel@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 06 Apr 2006 10:21:03 +0100</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00004.html">4434DD7F.2080503@bmb.leeds.ac.uk</a>&gt;</li>
+<li class="menuitem">
+<em>User-agent</em>: Mozilla Thunderbird 1.0 (X11/20041206)</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>Gary S. Thompson</strong> on April 06, 2006 - 11:24:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<tt>The main problem here was that you were getting copies of nump 
+arrays(numpy_values, numpy_sd, numpy_relax_times, numpy_scaling_matrix)  
+that you own from PyArray_ContiguousFromObject and never decrefing 
+them,  so their reference counts never reached zero... However, if you 
+Py_DECREF these objects at the end of setup they will be collected and 
+the double arrays values, sd, relax_time, scaling_matrix  which you 
+still have references to will no longer be allocated to these objects 
+and will contain junk if the memory allocator has reallocated stuff 
+where they were. So I have set it up so that you keep both  
+numpy_values, numpy_sd, numpy_relax_times, numpy_scaling_matrix and 
+values, sd, relax_time, scaling_matrix  in global varaibles and only 
+call Py_DECREF at the start of setup to junk them just before you 
+reallocate them (actually I call Py_XDECREF as they will be null the 
+first time the setup function is called).</tt><br>
+<br>
+<pre style="margin: 0em;"><br>So here are the patched files c math_fns which cure the memeory leaks Ed.
+The changes I have made are as follows</pre><br>
+<tt><br>1. for c_chi2 and exponential I have made them both into proper 
+functions with no references to any globals<br>
+2. for the relax_fit.c file I have basically done the following<br>
+  a. I have removed the global visibilty of numpy_params and made sure 
+that i call Py_DECREF in each function where you call 
+PyArray_ContiguousFromObject<br>
+  b. I have made sure that there are  numpy_values, numpy_sd, 
+numpy_relax_times, numpy_scaling_matrix.<br>
+  c. I call Py_XDECREF for each of numpy_values, numpy_sd, 
+numpy_relax_times, numpy_scaling_matrix  so that we don't orphan them 
+when we call PyArray_ContiguousFromObject but ignore null objects the 
+first time we are called.</tt><br>
+<br>
+<tt>3. note dfunc has a rather funny return ;-)<br>
+  /* Test code (convert aaa to a Numeric array */<br>
+  /* aaa_numpy = (PyArrayObject *) PyArray_FromDimsAndData(1, 
+num_params, PyArray_DOUBLE, aaa_pointer); */<br>
+  /*aaa_numpy = (PyArrayObject *) PyArray_FromDims(1, &amp;num_params, 
+PyArray_DOUBLE);<br>
+  aaa_pointer = (double *) aaa_numpy-&gt;data;*/</tt><br>
+<br>
+<pre style="margin: 0em;">  /* Fill the Numeric array */
+  /*for (i = 0; i &lt; 2; i++)
+      aaa_pointer[i] = aaa[i];*/</pre><br>
+<pre style="margin: 0em;">  Py_DECREF(numpy_params);
+  return NULL;
+  return PyArray_Return(aaa_numpy);
+which may cause some more careful compilers to choke (but not g77 ;-)</pre><br>
+<tt>4. Other comments (more things i could also sort at some point)<br>
+  a  this should really be an object, as it has state and a lifetime. 
+If I get time I will convert it...<br>
+  b.  MAXTIMES shouldn't really exist, data arrays should be allocated 
+on the fly  I guess</tt><br>
+<br>
+<pre style="margin: 0em;">regards
+gary</pre><br>
+<pre style="margin: 0em;">--
+-------------------------------------------------------------------
+Dr Gary Thompson
+Astbury Centre for Structural Molecular Biology,
+University of Leeds, Astbury Building,
+Leeds, LS2 9JT, West-Yorkshire, UK             Tel. +44-113-3433024
+email: garyt@xxxxxxxxxxxxxxx                   Fax  +44-113-2331407
+-------------------------------------------------------------------</pre><br>
+<br>
+<pre style="margin: 0em;">/*
+ * Copyright (C) 2003, 2006 Edward d'Auvergne
+ *
+ * This file is part of the program relax.
+ *
+ * relax is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * relax is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with relax; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
+#include &lt;stdio.h&gt;
+#include &lt;math.h&gt;
+
+#define square(x) (x)*(x)
+
+
+double chi2(double *values, double *sd, double *back_calc, int num_times) {
+        /* Function to calculate the chi-squared value.
+
+        The chi-sqared equation
+        ~~~~~~~~~~~~~~~~~~~~~~~
+                  _n_
+                  \    (yi - yi()) ** 2
+        Chi2()  =  &gt;   ----------------
+                  /__    sigma_i ** 2
+                  i=1
+
+        where:
+                yi are the values of the measured data set.
+                yi() are the values of the back calculated data set.
+                sigma_i are the values of the error set.
+
+        The chi-squared value is returned.
+        */
+
+        int i;
+        double chi2 = 0.0;
+
+    /* Loop over the time points and sum the chi-squared components */
+        for (i = 0; i &lt; num_times; ++i) {
+                chi2 = chi2 + square((values[i] - back_calc[i]) / sd[i]);
+        }
+
+        return chi2;
+}
+</pre><pre style="margin: 0em;">/*
+ * Copyright (C) 2006 Edward d'Auvergne
+ *
+ * This file is part of the program relax.
+ *
+ * relax is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * relax is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with relax; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
+#ifndef RELAX_C_CHI2 
+#define RELAX_C_CHI2
+
+double chi2(double *values, double *sd, double *back_calc, int num_times);
+
+#endif
+</pre><pre style="margin: 0em;">/*
+ * Copyright (C) 2006 Edward d'Auvergne
+ *
+ * This file is part of the program relax.
+ *
+ * relax is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * relax is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with relax; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
+
+/* This include must come first */
+#include &lt;Python.h&gt;
+
+/* The Numeric array object header file, must come second */
+#include &lt;Numeric/arrayobject.h&gt;
+
+/* The header for all functions which will be called */
+#include &quot;relax_fit.h&quot;
+
+
+
+void exponential(double *params, double *relax_times, double *back_calc, int 
+num_times) {
+        /* Function to back calculate the peak intensities.
+        */
+
+    /* Declarations */
+    double Rx, I0;
+    int i;
+
+
+    /* Loop over the time points */
+    /* for (i = 0; i &lt; num_times; i++) { */
+    for (i = 0; i &lt; num_times; i++) {
+        /* Zero Rx value */
+        if (params[0] == 0.0)
+            back_calc[i] = 0.0;
+
+        /* Back calculate */
+        else
+            back_calc[i] = params[1] * exp(-relax_times[i] * params[0]);
+
+    }
+}
+</pre><pre style="margin: 0em;">/*
+ * Copyright (C) 2006 Edward d'Auvergne
+ *
+ * This file is part of the program relax.
+ *
+ * relax is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * relax is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with relax; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+#ifndef RELAX_EXPONENTIAL 
+#define RELAX_EXPONENTIAL
+
+void exponential(double *params, double *relax_times, double *back_calc, int 
+num_times);
+
+#endif
+</pre><pre style="margin: 0em;">/*
+ * Copyright (C) 2006 Edward d'Auvergne
+ *
+ * This file is part of the program relax.
+ *
+ * relax is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * relax is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with relax; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
+/* This include must come first */
+#include &lt;Python.h&gt;
+
+/* The Numeric array object header file, must come second */
+#include &lt;Numeric/arrayobject.h&gt;
+
+/* The header for all functions which will be called */
+#include &quot;relax_fit.h&quot;
+
+/* functions for chi2 and exponential */
+#include &quot;c_chi2.h&quot;
+#include &quot;exponential.h&quot;
+
+static PyObject *
+setup(PyObject *self, PyObject *args, PyObject *keywords) {
+    /* Python declarations */
+    PyObject *values_arg, *sd_arg, *relax_times_arg, *scaling_matrix_arg;
+    extern PyArrayObject *numpy_values, *numpy_sd, *numpy_relax_times, 
+*numpy_scaling_matrix;
+
+    /* Normal declarations */
+    extern double *values, *sd, *relax_times, *scaling_matrix;
+    extern double relax_time_array;
+    extern int num_params, num_times;
+            
+    /* The keyword list */
+    static char *keyword_list[] = {&quot;num_params&quot;, &quot;num_times&quot;, &quot;values&quot;, &quot;sd&quot;, 
+&quot;relax_times&quot;, &quot;scaling_matrix&quot;, NULL};
+
+    /* Parse the function arguments */
+    if (!PyArg_ParseTupleAndKeywords(args, keywords, &quot;iiOOOO&quot;, keyword_list, 
+&amp;num_params, &amp;num_times, &amp;values_arg, &amp;sd_arg, &amp;relax_times_arg, 
+&amp;scaling_matrix_arg))
+        return NULL;
+    
+
+        
+    Py_XDECREF(numpy_values);    
+    Py_XDECREF(numpy_sd);
+    Py_XDECREF(numpy_relax_times);
+    Py_XDECREF(numpy_scaling_matrix);
+             
+    /* Make the Numeric arrays contiguous */
+    numpy_values = (PyArrayObject *) PyArray_ContiguousFromObject(values_arg, 
+PyArray_DOUBLE, 1, 1);
+    numpy_sd = (PyArrayObject *) PyArray_ContiguousFromObject(sd_arg, 
+PyArray_DOUBLE, 1, 1);
+    numpy_relax_times = (PyArrayObject *) 
+PyArray_ContiguousFromObject(relax_times_arg, PyArray_DOUBLE, 1, 1);
+    numpy_scaling_matrix = (PyArrayObject *) 
+PyArray_ContiguousFromObject(scaling_matrix_arg, PyArray_DOUBLE, 2, 2);
+
+    /* Pointers to the Numeric arrays */
+    values = (double *) numpy_values-&gt;data;
+    sd = (double *) numpy_sd-&gt;data;
+    relax_times = (double *) numpy_relax_times-&gt;data;
+    scaling_matrix = (double *) numpy_scaling_matrix-&gt;data;
+
+    /* Return nothing */
+    Py_INCREF(Py_None);
+    return Py_None;
+}
+
+
+static PyObject *
+func(PyObject *self, PyObject *args) {
+    /* Function for calculating and returning the chi-squared value.
+     *
+     * Firstly the back calculated intensities are generated, then the 
+chi-squared statistic is
+     * calculated
+     */
+
+    /* Declarations */
+    PyObject *arg1;
+    PyArrayObject *numpy_params;
+    double* params;
+
+
+    /* Parse the function arguments, the only argument should be the 
+parameter array */
+    if (!PyArg_ParseTuple(args, &quot;O&quot;, &amp;arg1))
+        return NULL;
+
+    /* Convert the Numeric array to be contiguous */
+    numpy_params = (PyArrayObject *) PyArray_ContiguousFromObject(arg1, 
+PyArray_DOUBLE, 1, 1);
+
+    /* Pointers to the Numeric arrays */
+    params = (double *) numpy_params-&gt;data;
+
+    /* Back calculated the peak intensities */
+    exponential(params, relax_times, back_calc, num_times);
+
+    Py_DECREF(numpy_params);
+    /* Calculate and return the chi-squared value */
+    return Py_BuildValue(&quot;f&quot;, chi2(values,sd,back_calc,num_times));
+}
+
+
+static PyObject *
+dfunc(PyObject *self, PyObject *args) {
+    /* Function for calculating and returning the chi-squared gradient. */
+
+    /* Declarations */
+    PyObject *arg1;
+    PyArrayObject *numpy_params;
+
+    /* Temp Declarations */
+    PyArrayObject *aaa_numpy;
+    double aaa[MAXPARAMS] = {1.0, 2.0};
+    double *aaa_pointer;
+    int i;
+    double* params; 
+
+    /* Parse the function arguments, the only argument should be the 
+parameter array */
+    if (!PyArg_ParseTuple(args, &quot;O&quot;, &amp;arg1))
+        return NULL;
+
+    /* Convert the Numeric array to be contiguous */
+    numpy_params = (PyArrayObject *) PyArray_ContiguousFromObject(arg1, 
+PyArray_DOUBLE, 1, 1);
+
+    /* Pointers to the Numeric arrays */
+    params = (double *) numpy_params-&gt;data;
+
+    /* Back calculated the peak intensities */
+    exponential(params, relax_times, back_calc, num_times);
+
+
+    /* Test code (convert aaa to a Numeric array */
+    /* aaa_numpy = (PyArrayObject *) PyArray_FromDimsAndData(1, num_params, 
+PyArray_DOUBLE, aaa_pointer); */
+    /*aaa_numpy = (PyArrayObject *) PyArray_FromDims(1, &amp;num_params, 
+PyArray_DOUBLE);
+    aaa_pointer = (double *) aaa_numpy-&gt;data;*/
+
+    /* Fill the Numeric array */
+    /*for (i = 0; i &lt; 2; i++)
+        aaa_pointer[i] = aaa[i];*/
+
+    Py_DECREF(numpy_params);
+    return NULL;
+    return PyArray_Return(aaa_numpy);
+}
+
+static PyObject *
+d2func(PyObject *self, PyObject *args) {
+    /* Function for calculating and returning the chi-squared Hessian. */
+    return Py_BuildValue(&quot;f&quot;, 0.0);
+}
+
+
+static PyObject *
+back_calc_I(PyObject *self, PyObject *args) {
+    /* Function for returning as a Numeric array the back calculated peak 
+intensities */
+
+    /* Declarations */
+    extern double back_calc[];
+    extern int num_times;
+    int i;
+
+    PyObject *back_calc_py = PyList_New(num_times);
+    assert(PyList_Check(back_calc_py));
+
+    /* Copy the values out of the C array into the Python array */
+    for (i = 0; i &lt; num_times; i++)
+        PyList_SetItem(back_calc_py, i, Py_BuildValue(&quot;f&quot;, back_calc[i]));
+
+    /* Return the Numeric array */
+    return back_calc_py;
+}
+
+
+/* The method table for the functions called by Python */
+static PyMethodDef relax_fit_methods[] = {
+    {&quot;setup&quot;, (PyCFunction)setup, METH_VARARGS | METH_KEYWORDS, &quot;The main 
+relaxation curve fitting setup function.&quot;},
+    {&quot;func&quot;, func, METH_VARARGS},
+    {&quot;dfunc&quot;, dfunc, METH_VARARGS},
+    {&quot;d2func&quot;, d2func, METH_VARARGS},
+    {&quot;back_calc_I&quot;, back_calc_I, METH_VARARGS},
+    {NULL, NULL, 0, NULL}        /* Sentinel */
+};
+
+
+/* Initialise as a Python module */
+PyMODINIT_FUNC
+initrelax_fit(void)
+{
+    (void) Py_InitModule(&quot;relax_fit&quot;, relax_fit_methods);
+
+    /* Import the Numeric array module.  This is essential. */
+    import_array();
+}
+</pre><pre style="margin: 0em;">/*
+ * Copyright (C) 2006 Edward d'Auvergne
+ *
+ * This file is part of the program relax.
+ *
+ * relax is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * relax is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with relax; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
+
+/* Required for the Python/C API??? */
+
+#define PY_ARRAY_UNIQUE_SYMBOL numarray
+
+
+/* The maximum number of parameters for this function */
+#define MAXPARAMS 3
+
+/* The maximum number of spectral time points */
+#define MAXTIMES 30
+
+
+/****************************************/
+/* External, hence permanent, variables */
+/****************************************/
+
+/* Variables sent to the setup function to be stored for later use */
+PyArrayObject *numpy_values, *numpy_sd, *numpy_relax_times, 
+*numpy_scaling_matrix;
+int num_params, num_times;
+double *sd;
+
+/* Variables sent to 'func', 'dfunc', and 'd2func' during optimisation */
+/*PyArrayObject *numpy_params;*/
+
+/* Pointers to contiguous PyArrayObjects */
+double *values, *sd, *relax_times, *scaling_matrix;
+/*double *params;*/
+
+
+/* Variables used for storage during the function calls of optimisation */
+double back_calc[MAXTIMES];
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<ul><li><strong>Follow-Ups</strong>:
+<ul>
+<li><strong><a name="00008" href="msg00008.html">Re: math_fns c code</a></strong>
+<ul><li><em>From:</em> Edward d'Auvergne</li></ul></li>
+</ul></li></ul>
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Apr 07 06:20:27 2006</div>  
+</body>
+</html>

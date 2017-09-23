@@ -1,0 +1,506 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r25465 &#45; in /trunk: lib/statistics.py specific_analyses/relax_disp/estimate_r2eff.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Sat, 30 Aug 2014 01:03:31 +0200 -->
+<!--X-Message-Id: E1XNVCd&#45;0004Vo&#45;DQ@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r25465 - in /trunk: lib/statistics.py specific_analyses/relax_disp/estimate_r2eff.py -- August 30, 2014 - 01:03</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r25465 - in /trunk: lib/statistics.py specific_analyses/relax_disp/estimate_r2eff.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00599" class="tabs">Index by Date</a> | <a href="threads.html#00599" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00598.html">Date Prev</a>] [<a href="msg00600.html">Date Next</a>] [<a href="msg00598.html">Thread Prev</a>] [<a href="msg00600.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 29 Aug 2014 23:03:31 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00599.html">E1XNVCd-0004Vo-DQ@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on August 30, 2014 - 01:03:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Sat Aug 30 01:03:30 2014
+New Revision: 25465
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=25465&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=25465&amp;view=rev</a>
+Log:
+Moved multifit_covar into lib.statistics, since it is an independent module.
+
+task #7822(<a  rel="nofollow" href="https://gna.org/task/index.php?7822">https://gna.org/task/index.php?7822</a>): Implement user function to 
+estimate R2eff and associated errors for exponential curve fitting.
+
+Modified:
+    trunk/lib/statistics.py
+    trunk/specific_analyses/relax_disp/estimate_r2eff.py
+
+Modified: trunk/lib/statistics.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/lib/statistics.py?rev=25465&amp;r1=25464&amp;r2=25465&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/lib/statistics.py?rev=25465&amp;r1=25464&amp;r2=25465&amp;view=diff</a>
+==============================================================================
+--- trunk/lib/statistics.py     (original)
++++ trunk/lib/statistics.py     Sat Aug 30 01:03:30 2014
+@@ -1,6 +1,7 @@
+ 
+###############################################################################
+ #                                                                            
+ #
+ # Copyright (C) 2013 Edward d'Auvergne                                       
+ #
++# Copyright (C) 2014 Troels E. Linnet                                        
+ #
+ #                                                                            
+ #
+ # This file is part of the program relax (<a  rel="nofollow" href="http://www.nmr-relax.com">http://www.nmr-relax.com</a>).         
+ #
+ #                                                                            
+ #
+@@ -21,6 +22,10 @@
+ 
+ # Module docstring.
+ &quot;&quot;&quot;Module for calculating simple statistics.&quot;&quot;&quot;
++
++# Python module imports.
++from numpy import absolute, diag, dot, eye, multiply, transpose
++from numpy.linalg import inv, qr
+ 
+ # Python module imports.
+ from math import exp, pi, sqrt
+@@ -153,3 +158,116 @@
+ 
+     # Return the SD.
+     return sd
++
++
++def multifit_covar(J=None, epsrel=0.0, weights=None):
++    &quot;&quot;&quot;This is the implementation of the multifit covariance.
++
++    This is inspired from GNU Scientific Library (GSL).
++
++    This function uses the Jacobian matrix J to compute the covariance 
+matrix of the best-fit parameters, covar.
++
++    The parameter 'epsrel' is used to remove linear-dependent columns when J 
+is rank deficient.
++
++    The weighting matrix 'W', is a square symmetric matrix. For independent 
+measurements, this is a diagonal matrix. Larger values indicate greater 
+significance.  It is formed by multiplying and Identity matrix with the 
+supplied weights vector::
++
++        W = I. w
++
++    The weights should normally be supplied as a vector: 1 / errors^2. 
++
++    The covariance matrix is given by::
++
++        covar = (J^T.W.J)^{-1} ,
++
++    and is computed by QR decomposition of J with column-pivoting. Any 
+columns of R which satisfy::
++
++        |R_{kk}| &lt;= epsrel |R_{11}| ,
++
++    are considered linearly-dependent and are excluded from the covariance 
+matrix (the corresponding rows and columns of the covariance matrix are set 
+to zero).  If the minimisation uses the weighted least-squares function::
++
++        f_i = (Y(x, t_i) - y_i) / sigma_i ,
++
++    then the covariance matrix above gives the statistical error on the 
+best-fit parameters resulting from the Gaussian errors 'sigma_i' on the 
+underlying data 'y_i'.
++
++    This can be verified from the relation 'd_f = J d_c' and the fact that 
+the fluctuations in 'f' from the data 'y_i' are normalised by 'sigma_i' and 
+so satisfy::
++
++        &lt;d_f d_f^T&gt; = I. ,
++
++    For an unweighted least-squares function f_i = (Y(x, t_i) - y_i) the 
+covariance matrix above should be multiplied by the variance of the residuals 
+about the best-fit::
++
++        sigma^2 = sum ( (y_i - Y(x, t_i))^2 / (n-p) ) ,
++
++    to give the variance-covariance matrix sigma^2 C.  This estimates the 
+statistical error on the best-fit parameters from the scatter of the 
+underlying data.
++
++    Links
++    =====
++
++    More information ca be found here:
++
++        - U{GSL - GNU Scientific Library&lt;<a  rel="nofollow" href="http://www.gnu.org/software/gsl/">http://www.gnu.org/software/gsl/</a>&gt;}
++        - U{Manual: 
+Overview&lt;<a  rel="nofollow" href="http://www.gnu.org/software/gsl/manual/gsl-ref_37.html#SEC510">http://www.gnu.org/software/gsl/manual/gsl-ref_37.html#SEC510</a>&gt;}
++        - U{Manual: Computing the covariance matrix of best fit 
+parameters&lt;<a  rel="nofollow" href="http://www.gnu.org/software/gsl/manual/gsl-ref_38.html#SEC528">http://www.gnu.org/software/gsl/manual/gsl-ref_38.html#SEC528</a>&gt;}
++        - U{Other reference&lt;<a  rel="nofollow" href="http://www.orbitals.com/self/least/least.htm">http://www.orbitals.com/self/least/least.htm</a>&gt;}
++
++    @param J:               The Jacobian matrix.
++    @type J:                numpy array
++    @param epsrel:          Any columns of R which satisfy |R_{kk}| &lt;= 
+epsrel |R_{11}| are considered linearly-dependent and are excluded from the 
+covariance matrix, where the corresponding rows and columns of the covariance 
+matrix are set to zero.
++    @type epsrel:           float
++    @keyword weigths:       The weigths which to scale with.  Normally 
+submitted as the 1 over standard deviation of the measured intensity values 
+per time point in power 2. weigths = 1 / sd_i^2.
++    @type weigths:          numpy array
++    @return:                The co-variance matrix
++    @rtype:                 square numpy array
++    &quot;&quot;&quot;
++
++    # Weighting matrix. This is a square symmetric matrix.
++    # For independent measurements, this is a diagonal matrix. Larger values 
+indicate greater significance.
++
++    # Make a square diagonal matrix.
++    eye_mat = eye(weights.shape[0])
++
++    # Form weight matrix.
++    W = multiply(eye_mat, weights)
++
++    # The covariance matrix (sometimes referred to as the 
+variance-covariance matrix), Qxx, is defined as:
++    # Qxx = (J^t W J)^(-1)
++
++    # Calculate step by step, by matrix multiplication.
++    Jt = transpose(J)
++    Jt_W = dot(Jt, W)
++    Jt_W_J = dot(Jt_W, J)
++
++    # Invert matrix by QR decomposition, to check columns of R which 
+satisfy: |R_{kk}| &lt;= epsrel |R_{11}|
++    Q, R = qr(Jt_W_J)
++
++    # Make the state ment matrix.
++    abs_epsrel_R11 = absolute( multiply(epsrel, R[0, 0]) )
++
++    # Make and array of True/False statements.
++    # These are considered linearly-dependent and are excluded from the 
+covariance matrix.
++    # The corresponding rows and columns of the covariance matrix are set to 
+zero
++    epsrel_check = absolute(R) &lt;= abs_epsrel_R11
++
++    # Form the covariance matrix.
++    Qxx = dot(inv(R), transpose(Q) )
++    #Qxx2 = dot(inv(R), inv(Q) )
++    #print(Qxx - Qxx2)
++
++    # Test direct invert matrix of matrix.
++    #Qxx_test = inv(Jt_W_J)
++
++    # Replace values in Covariance matrix with inf.
++    Qxx[epsrel_check] = 0.0
++
++    # Throw a warning, that some colums are considered linearly-dependent 
+and are excluded from the covariance matrix.
++    # Only check for the diagonal, since the that holds the variance.
++    diag_epsrel_check = diag(epsrel_check)
++
++    # If any of the diagonals does not meet the epsrel condition.
++    if any(diag_epsrel_check):
++        for i in range(diag_epsrel_check.shape[0]):
++            abs_Rkk = absolute(R[i, i])
++            if abs_Rkk &lt;= abs_epsrel_R11:
++                warn(RelaxWarning(&quot;Co-Variance element k,k=%i was found to 
+meet |R_{kk}| &lt;= epsrel |R_{11}|, meaning %1.1f &lt;= %1.3f * %1.1f , and is 
+therefore determined to be linearly-dependent and are excluded from the 
+covariance matrix by setting the value to 0.0.&quot; % (i+1, abs_Rkk, epsrel, 
+abs_epsrel_R11/epsrel) ))
++                #print(cond(Jt_W_J) &lt; 1./spacing(1.) )
++
++    return Qxx
+
+Modified: trunk/specific_analyses/relax_disp/estimate_r2eff.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/relax_disp/estimate_r2eff.py?rev=25465&amp;r1=25464&amp;r2=25465&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/relax_disp/estimate_r2eff.py?rev=25465&amp;r1=25464&amp;r2=25465&amp;view=diff</a>
+==============================================================================
+--- trunk/specific_analyses/relax_disp/estimate_r2eff.py        (original)
++++ trunk/specific_analyses/relax_disp/estimate_r2eff.py        Sat Aug 30 
+01:03:30 2014
+@@ -24,22 +24,20 @@
+ 
+ # Python module imports.
+ from copy import deepcopy
+-from numpy import absolute, allclose, any, array, asarray, diag, dot, exp, 
+eye, inf, log, multiply, ones, spacing, sqrt, sum, transpose, zeros
+-from numpy.linalg import cond, inv, qr
++from numpy import array, asarray, diag, dot, exp, eye, log, multiply, ones, 
+sqrt, sum, transpose, zeros
+ from minfx.generic import generic_minimise
+-from re import match, search
+ import sys
+ from warnings import warn
+ 
+ # relax module imports.
+ from dep_check import C_module_exp_fn, scipy_module
+ from lib.errors import RelaxError
++from lib.statistics import multifit_covar
+ from lib.text.sectioning import section, subsection
+ from lib.warnings import RelaxWarning
+ from pipe_control.mol_res_spin import generate_spin_string, spin_loop
+-from pipe_control.spectrum import error_analysis
+ from specific_analyses.relax_disp.checks import check_model_type
+-from specific_analyses.relax_disp.data import average_intensity, 
+loop_exp_frq_offset_point, loop_frq, loop_time, return_param_key_from_data
++from specific_analyses.relax_disp.data import average_intensity, 
+loop_exp_frq_offset_point, loop_time, return_param_key_from_data
+ from specific_analyses.relax_disp.parameters import disassemble_param_vector
+ from specific_analyses.relax_disp.variables import MODEL_R2EFF
+ from target_functions.chi2 import chi2_rankN, dchi2
+@@ -216,119 +214,6 @@
+             if len(print_strings) &gt; 0:
+                 for print_string in print_strings:
+                     print(print_string),
+-
+-
+-def multifit_covar(J=None, epsrel=0.0, weights=None):
+-    &quot;&quot;&quot;This is the implementation of the multifit covariance.
+-
+-    This is inspired from GNU Scientific Library (GSL).
+-
+-    This function uses the Jacobian matrix J to compute the covariance 
+matrix of the best-fit parameters, covar.
+-
+-    The parameter 'epsrel' is used to remove linear-dependent columns when J 
+is rank deficient.
+-
+-    The weighting matrix 'W', is a square symmetric matrix. For independent 
+measurements, this is a diagonal matrix. Larger values indicate greater 
+significance.  It is formed by multiplying and Identity matrix with the 
+supplied weights vector::
+-
+-        W = I. w
+-
+-    The weights should normally be supplied as a vector: 1 / errors^2. 
+-
+-    The covariance matrix is given by::
+-
+-        covar = (J^T.W.J)^{-1} ,
+-
+-    and is computed by QR decomposition of J with column-pivoting. Any 
+columns of R which satisfy::
+-
+-        |R_{kk}| &lt;= epsrel |R_{11}| ,
+-
+-    are considered linearly-dependent and are excluded from the covariance 
+matrix (the corresponding rows and columns of the covariance matrix are set 
+to zero).  If the minimisation uses the weighted least-squares function::
+-
+-        f_i = (Y(x, t_i) - y_i) / sigma_i ,
+-
+-    then the covariance matrix above gives the statistical error on the 
+best-fit parameters resulting from the Gaussian errors 'sigma_i' on the 
+underlying data 'y_i'.
+-
+-    This can be verified from the relation 'd_f = J d_c' and the fact that 
+the fluctuations in 'f' from the data 'y_i' are normalised by 'sigma_i' and 
+so satisfy::
+-
+-        &lt;d_f d_f^T&gt; = I. ,
+-
+-    For an unweighted least-squares function f_i = (Y(x, t_i) - y_i) the 
+covariance matrix above should be multiplied by the variance of the residuals 
+about the best-fit::
+-
+-        sigma^2 = sum ( (y_i - Y(x, t_i))^2 / (n-p) ) ,
+-
+-    to give the variance-covariance matrix sigma^2 C.  This estimates the 
+statistical error on the best-fit parameters from the scatter of the 
+underlying data.
+-
+-    Links
+-    =====
+-
+-    More information ca be found here:
+-
+-        - U{GSL - GNU Scientific Library&lt;<a  rel="nofollow" href="http://www.gnu.org/software/gsl/">http://www.gnu.org/software/gsl/</a>&gt;}
+-        - U{Manual: 
+Overview&lt;<a  rel="nofollow" href="http://www.gnu.org/software/gsl/manual/gsl-ref_37.html#SEC510">http://www.gnu.org/software/gsl/manual/gsl-ref_37.html#SEC510</a>&gt;}
+-        - U{Manual: Computing the covariance matrix of best fit 
+parameters&lt;<a  rel="nofollow" href="http://www.gnu.org/software/gsl/manual/gsl-ref_38.html#SEC528">http://www.gnu.org/software/gsl/manual/gsl-ref_38.html#SEC528</a>&gt;}
+-        - U{Other reference&lt;<a  rel="nofollow" href="http://www.orbitals.com/self/least/least.htm">http://www.orbitals.com/self/least/least.htm</a>&gt;}
+-
+-    @param J:               The Jacobian matrix.
+-    @type J:                numpy array
+-    @param epsrel:          Any columns of R which satisfy |R_{kk}| &lt;= 
+epsrel |R_{11}| are considered linearly-dependent and are excluded from the 
+covariance matrix, where the corresponding rows and columns of the covariance 
+matrix are set to zero.
+-    @type epsrel:           float
+-    @keyword weigths:       The weigths which to scale with.  Normally 
+submitted as the 1 over standard deviation of the measured intensity values 
+per time point in power 2. weigths = 1 / sd_i^2.
+-    @type weigths:          numpy array
+-    @return:                The co-variance matrix
+-    @rtype:                 square numpy array
+-    &quot;&quot;&quot;
+-
+-    # Weighting matrix. This is a square symmetric matrix.
+-    # For independent measurements, this is a diagonal matrix. Larger values 
+indicate greater significance.
+-
+-    # Make a square diagonal matrix.
+-    eye_mat = eye(weights.shape[0])
+-
+-    # Form weight matrix.
+-    W = multiply(eye_mat, weights)
+-
+-    # The covariance matrix (sometimes referred to as the 
+variance-covariance matrix), Qxx, is defined as:
+-    # Qxx = (J^t W J)^(-1)
+-
+-    # Calculate step by step, by matrix multiplication.
+-    Jt = transpose(J)
+-    Jt_W = dot(Jt, W)
+-    Jt_W_J = dot(Jt_W, J)
+-
+-    # Invert matrix by QR decomposition, to check columns of R which 
+satisfy: |R_{kk}| &lt;= epsrel |R_{11}|
+-    Q, R = qr(Jt_W_J)
+-
+-    # Make the state ment matrix.
+-    abs_epsrel_R11 = absolute( multiply(epsrel, R[0, 0]) )
+-
+-    # Make and array of True/False statements.
+-    # These are considered linearly-dependent and are excluded from the 
+covariance matrix.
+-    # The corresponding rows and columns of the covariance matrix are set to 
+zero
+-    epsrel_check = absolute(R) &lt;= abs_epsrel_R11
+-
+-    # Form the covariance matrix.
+-    Qxx = dot(inv(R), transpose(Q) )
+-    #Qxx2 = dot(inv(R), inv(Q) )
+-    #print(Qxx - Qxx2)
+-
+-    # Test direct invert matrix of matrix.
+-    #Qxx_test = inv(Jt_W_J)
+-
+-    # Replace values in Covariance matrix with inf.
+-    Qxx[epsrel_check] = 0.0
+-
+-    # Throw a warning, that some colums are considered linearly-dependent 
+and are excluded from the covariance matrix.
+-    # Only check for the diagonal, since the that holds the variance.
+-    diag_epsrel_check = diag(epsrel_check)
+-
+-    # If any of the diagonals does not meet the epsrel condition.
+-    if any(diag_epsrel_check):
+-        for i in range(diag_epsrel_check.shape[0]):
+-            abs_Rkk = absolute(R[i, i])
+-            if abs_Rkk &lt;= abs_epsrel_R11:
+-                warn(RelaxWarning(&quot;Co-Variance element k,k=%i was found to 
+meet |R_{kk}| &lt;= epsrel |R_{11}|, meaning %1.1f &lt;= %1.3f * %1.1f , and is 
+therefore determined to be linearly-dependent and are excluded from the 
+covariance matrix by setting the value to 0.0.&quot; % (i+1, abs_Rkk, epsrel, 
+abs_epsrel_R11/epsrel) ))
+-                #print(cond(Jt_W_J) &lt; 1./spacing(1.) )
+-
+-    return Qxx
+ 
+ 
+ #### This class is only for testing.
+@@ -693,28 +578,6 @@
+                 precalc = False
+                 break
+ 
+-    # If no error analysis of peak heights exists.
+-    if not precalc:
+-        # Printout.
+-        section(file=sys.stdout, text=&quot;Error analysis&quot;, prespace=2)
+-
+-        # Loop over the spectrometer frequencies.
+-        for frq in loop_frq():
+-            # Generate a list of spectrum IDs matching the frequency.
+-            ids = []
+-            for id in cdp.spectrum_ids:
+-                # Check that the spectrometer frequency matches.
+-                match_frq = True
+-                if frq != None and cdp.spectrometer_frq[id] != frq:
+-                    match_frq = False
+-
+-                # Add the ID.
+-                if match_frq:
+-                    ids.append(id)
+-
+-            # Run the error analysis on the subset.
+-            error_analysis(subset=ids)
+-
+     # Loop over the spins.
+     for cur_spin, mol_name, resi, resn, cur_spin_id in 
+spin_loop(selection=spin_id, full_info=True, return_id=True, skip_desel=True):
+         # Generate spin string.
+@@ -1034,8 +897,6 @@
+ 
+     # To compute one standard deviation errors on the parameters, take the 
+square root of the diagonal covariance.
+     param_vector_error = sqrt(diag(pcov))
+-    # Set error to inf.
+-    #param_vector_error = [inf, inf]
+ 
+     # Pack to list.
+     results = [param_vector, param_vector_error, chi2, iter_count, f_count, 
+g_count, h_count, warning]
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Sat Aug 30 01:20:02 2014</div>  
+</body>
+</html>

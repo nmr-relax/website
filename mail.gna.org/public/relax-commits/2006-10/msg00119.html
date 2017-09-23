@@ -1,0 +1,196 @@
+<!-- MHonArc v2.6.10 -->
+<!--X-Subject: r2684 &#45; /branches/tensor_pdb/generic_fns/pdb.py -->
+<!--X-From-R13: rqjneq.qnhiretarNtznvy.pbz -->
+<!--X-Date: Sun, 29 Oct 2006 04:01:25 +0100 -->
+<!--X-Message-Id: E1Ge0ut&#45;0002ps&#45;3Y@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r2684 - /branches/tensor_pdb/generic_fns/pdb.py -- October 29, 2006 - 04:01</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r2684 - /branches/tensor_pdb/generic_fns/pdb.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00119" class="tabs">Index by Date</a> | <a href="threads.html#00119" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00118.html">Date Prev</a>] [<a href="msg00120.html">Date Next</a>] [<a href="msg00118.html">Thread Prev</a>] [<a href="msg00120.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Sun, 29 Oct 2006 03:00:54 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00119.html">E1Ge0ut-0002ps-3Y@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward . dauvergne</strong> on October 29, 2006 - 04:01:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Sun Oct 29 04:00:54 2006
+New Revision: 2684
+
+URL: <a  href="http://svn.gna.org/viewcvs/relax?rev=2684&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=2684&amp;view=rev</a>
+Log:
+Created the geometric representation of the diffusion tensor in the tensor 
+PDB file.
+
+The lengths of the uniformly distributed vectors have been extended and 
+scaled to the shape of the
+geometric object.  Each atom has been connected to the previous atom in its 
+radial array (generating
+longitudinal lines) and the atoms of each radial array have been joined to 
+the equivalent atoms of
+the previous array (generating latitudinal lines).  To zip up a gap in the 
+geometric object where
+the latitudinal lines are not continuous ellipses, the atoms of the last 
+radial array have been
+joined to the first radial array.
+
+
+Modified:
+    branches/tensor_pdb/generic_fns/pdb.py
+
+Modified: branches/tensor_pdb/generic_fns/pdb.py
+URL: 
+<a  href="http://svn.gna.org/viewcvs/relax/branches/tensor_pdb/generic_fns/pdb.py?rev=2684&amp;r1=2683&amp;r2=2684&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/tensor_pdb/generic_fns/pdb.py?rev=2684&amp;r1=2683&amp;r2=2684&amp;view=diff</a>
+==============================================================================
+--- branches/tensor_pdb/generic_fns/pdb.py (original)
++++ branches/tensor_pdb/generic_fns/pdb.py Sun Oct 29 04:00:54 2006
+@@ -21,7 +21,7 @@
+ 
+###############################################################################
+ 
+ from math import sqrt, cos, pi, sin
+-from Numeric import Float64, arccos, dot, zeros
++from Numeric import Float64, arccos, dot, transpose, zeros
+ from os import F_OK, access
+ from re import compile
+ import Scientific.IO.PDB
+@@ -280,12 +280,55 @@
+             print
+ 
+ 
+-        # Uniform vector distribution.
+-        ##############################
+-
+-        vectors = self.uniform_vect_dist_spherical_angles()
+-        for i in xrange(len(vectors)):
+-            self.atom_add(atom_id='H'+`i`, element='H', pos=vectors[i])
++        # Vector distribution.
++        ######################
++
++        # Print out.
++        print &quot;Creating the vector distribution.&quot;
++
++        # Increment value.
++        inc = 20
++
++        # Get the uniform vector distribution.
++        vectors = self.uniform_vect_dist_spherical_angles(inc=20)
++
++        # Loop over the radial array of vectors (loop over the azimauthal 
+angle distribution of theta).
++        for i in range(inc):
++            # Loop over the vectors of the radial array (loop over the polar 
+angle distribution of phi).
++            for j in range(inc/2+1):
++                # Index.
++                index = i + j*inc
++
++                # Atom id.
++                atom_id = 'T' + `i` + 'P' + `j`
++
++                # Tranform from the structural into the diffusion frame.
++                vector = 
+dot(transpose(self.relax.data.diff[self.run].tensor), vectors[index])
++
++                # Scale the vector.
++                vector = vector * scale
++
++                # Position relative to the center of mass.
++                pos = R + vector
++
++                # Add the vector as a H atom.
++                self.atom_add(atom_id=atom_id, element='H', pos=pos)
++
++                # Connect to the previous atom.
++                if j != 0:
++                    prev_id = 'T' + `i` + 'P' + `j-1`
++                    self.atom_connect(atom_id=atom_id, bonded_id=prev_id)
++
++                # Connect across the radial arrays.
++                if i != 0:
++                    neighbour_id = 'T' + `i-1` + 'P' + `j`
++                    self.atom_connect(atom_id=atom_id, 
+bonded_id=neighbour_id)
++
++                # Connect the last radial array to the first.
++                if i == inc-1:
++                    neighbour_id = 'T' + `0` + 'P' + `j`
++                    self.atom_connect(atom_id=atom_id, 
+bonded_id=neighbour_id)
++
+ 
+ 
+         # Create the PDB file.
+@@ -630,7 +673,7 @@
+             # Replace the temporary vector list with the normalised average 
+vector.
+             data.xh_vect = ave_vector / sqrt(dot(ave_vector, ave_vector))
+ 
+- 
++
+     def uniform_vect_dist_spherical_angles(self, inc=20):
+         &quot;&quot;&quot;Uniform distribution of vectors on a sphere using uniform 
+spherical angles.
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Sun Oct 29 04:20:05 2006</div>  
+</body>
+</html>

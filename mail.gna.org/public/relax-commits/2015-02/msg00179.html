@@ -1,0 +1,161 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r27614 &#45; /trunk/lib/structure/internal/object.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 10 Feb 2015 12:54:18 +0100 -->
+<!--X-Message-Id: E1YL9OU&#45;0001BP&#45;6G@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r27614 - /trunk/lib/structure/internal/object.py -- February 10, 2015 - 12:54</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r27614 - /trunk/lib/structure/internal/object.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00179" class="tabs">Index by Date</a> | <a href="threads.html#00179" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00178.html">Date Prev</a>] [<a href="msg00180.html">Date Next</a>] [<a href="msg00178.html">Thread Prev</a>] [<a href="msg00180.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 10 Feb 2015 11:54:18 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00179.html">E1YL9OU-0001BP-6G@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on February 10, 2015 - 12:54:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Feb 10 12:54:17 2015
+New Revision: 27614
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=27614&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=27614&amp;view=rev</a>
+Log:
+Huge speed up of the internal structural object validate_models() method.
+
+The string formatting to create pseudo-PDB records and the large number of 
+calls to the _translate()
+method for atomic information string formatting has been shifted to only be 
+called when atomic
+information does not match.  Instead the structural information is directly 
+compared within a large
+if-else statement.
+
+
+Modified:
+    trunk/lib/structure/internal/object.py
+
+Modified: trunk/lib/structure/internal/object.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/lib/structure/internal/object.py?rev=27614&amp;r1=27613&amp;r2=27614&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/lib/structure/internal/object.py?rev=27614&amp;r1=27613&amp;r2=27614&amp;view=diff</a>
+==============================================================================
+--- trunk/lib/structure/internal/object.py      (original)
++++ trunk/lib/structure/internal/object.py      Tue Feb 10 12:54:17 2015
+@@ -2689,14 +2689,27 @@
+ 
+                 # Loop over the atoms.
+                 for k in range(len(mol.atom_name)):
+-                    # Create pseudo-pdb formatted records (with no atomic 
+coordinates).
+-                    atom = &quot;%-6s%5s %4s%1s%3s %1s%4s%1s   
+%8s%8s%8s%6.2f%6.2f      %4s%2s%2s&quot; % ('ATOM', mol.atom_num[k], 
+self._translate(mol.atom_name[k]), '', self._translate(mol.res_name[k]), 
+self._translate(mol.chain_id[k]), self._translate(mol.res_num[k]), '', '#', 
+'#', '#', 1.0, 0, self._translate(mol.seg_id[k]), 
+self._translate(mol.element[k]), '')
+-                    atom_ref = &quot;%-6s%5s %4s%1s%3s %1s%4s%1s   
+%8s%8s%8s%6.2f%6.2f      %4s%2s%2s&quot; % ('ATOM', mol_ref.atom_num[k], 
+self._translate(mol_ref.atom_name[k]), '', 
+self._translate(mol_ref.res_name[k]), self._translate(mol_ref.chain_id[k]), 
+self._translate(mol_ref.res_num[k]), '', '#', '#', '#', 1.0, 0, 
+self._translate(mol_ref.seg_id[k]), self._translate(mol_ref.element[k]), '')
+-
+-                    # Check the atom info.
+-                    if atom != atom_ref:
+-                        print(atom)
+-                        print(atom_ref)
++                    # Check all data.
++                    same = True
++                    if mol.chain_id[k] != mol_ref.chain_id[k]:
++                        same = False
++                    elif mol.atom_num[k] != mol_ref.atom_num[k]:
++                        same = False
++                    elif mol.atom_name[k] != mol_ref.atom_name[k]:
++                        same = False
++                    elif mol.res_name[k] != mol_ref.res_name[k]:
++                        same = False
++                    elif mol.res_num[k] != mol_ref.res_num[k]:
++                        same = False
++                    elif mol.seg_id[k] != mol_ref.seg_id[k]:
++                        same = False
++                    elif mol.element[k] != mol_ref.element[k]:
++                        same = False
++
++                    # Failure.
++                    if not same:
++                        print(&quot;%-6s%5s %4s%1s%3s %1s%4s%1s   
+%8s%8s%8s%6.2f%6.2f      %4s%2s%2s&quot; % ('ATOM', mol.atom_num[k], 
+self._translate(mol.atom_name[k]), '', self._translate(mol.res_name[k]), 
+self._translate(mol.chain_id[k]), self._translate(mol.res_num[k]), '', '#', 
+'#', '#', 1.0, 0, self._translate(mol.seg_id[k]), 
+self._translate(mol.element[k]), ''))
++                        print(&quot;%-6s%5s %4s%1s%3s %1s%4s%1s   
+%8s%8s%8s%6.2f%6.2f      %4s%2s%2s&quot; % ('ATOM', mol_ref.atom_num[k], 
+self._translate(mol_ref.atom_name[k]), '', 
+self._translate(mol_ref.res_name[k]), self._translate(mol_ref.chain_id[k]), 
+self._translate(mol_ref.res_num[k]), '', '#', '#', '#', 1.0, 0, 
+self._translate(mol_ref.seg_id[k]), self._translate(mol_ref.element[k]), ''))
+                         raise RelaxError(&quot;The atoms of model %i do not match 
+the first model.&quot; % self.structural_data[i].num)
+ 
+         # Final printout.
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Feb 10 13:00:03 2015</div>  
+</body>
+</html>

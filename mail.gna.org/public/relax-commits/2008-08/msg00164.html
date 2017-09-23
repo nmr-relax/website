@@ -1,0 +1,212 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r7206 &#45; /branches/rdc_analysis/generic_fns/pcs.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Sun, 17 Aug 2008 19:24:41 +0200 -->
+<!--X-Message-Id: E1KUllj&#45;0005Oe&#45;TF@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r7206 - /branches/rdc_analysis/generic_fns/pcs.py -- August 17, 2008 - 19:24</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r7206 - /branches/rdc_analysis/generic_fns/pcs.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00164" class="tabs">Index by Date</a> | <a href="threads.html#00164" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00163.html">Date Prev</a>] [<a href="msg00165.html">Date Next</a>] [<a href="msg00163.html">Thread Prev</a>] [<a href="msg00165.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Sun, 17 Aug 2008 17:10:19 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00164.html">E1KUllj-0005Oe-TF@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on August 17, 2008 - 19:24:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Sun Aug 17 19:10:17 2008
+New Revision: 7206
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=7206&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=7206&amp;view=rev</a>
+Log:
+Try 2:  PCS errors in a file separate from the data can now be read.
+
+This matches the changes for the RDC at r7202, and is what r7204 should have 
+been.
+
+
+Modified:
+    branches/rdc_analysis/generic_fns/pcs.py
+
+Modified: branches/rdc_analysis/generic_fns/pcs.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/rdc_analysis/generic_fns/pcs.py?rev=7206&amp;r1=7205&amp;r2=7206&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/rdc_analysis/generic_fns/pcs.py?rev=7206&amp;r1=7205&amp;r2=7206&amp;view=diff</a>
+==============================================================================
+--- branches/rdc_analysis/generic_fns/pcs.py (original)
++++ branches/rdc_analysis/generic_fns/pcs.py Sun Aug 17 19:10:17 2008
+@@ -596,7 +596,7 @@
+     @type spin_name_col:    int or None
+     @param spin_num_col:    The column containing the spin number 
+information.
+     @type spin_num_col:     int or None
+-    @param sep:             The column seperator which, if None, defaults to 
+whitespace.
++    @param sep:             The column separator which, if None, defaults to 
+whitespace.
+     @type sep:              str or None
+     &quot;&quot;&quot;
+ 
+@@ -611,8 +611,12 @@
+     cdp = ds[ds.current_pipe]
+ 
+     # Test if PCS data corresponding to 'id' already exists.
+-    if hasattr(cdp, 'pcs_ids') and id in cdp.pcs_ids:
++    if data_col != None and hasattr(cdp, 'pcs_ids') and id in cdp.pcs_ids:
+         raise RelaxPCSError, id
++
++    # Either the data or error column must be supplied.
++    if data_col == None and error_col == None:
++        raise RelaxError, &quot;One of either the data or error column must be 
+supplied.&quot;
+ 
+     # Minimum number of columns.
+     min_col_num = max(mol_name_col, res_num_col, res_name_col, spin_num_col, 
+spin_name_col, data_col, error_col)
+@@ -626,7 +630,10 @@
+         header_lines = 0
+         for i in xrange(len(file_data)):
+             try:
+-                float(file_data[i][data_col])
++                if data_col != None:
++                    float(file_data[i][data_col])
++                else:
++                    float(file_data[i][error_col])
+             except:
+                 header_lines = header_lines + 1
+             else:
+@@ -643,9 +650,9 @@
+             # Skip missing data.
+             if len(file_data[i]) &lt;= min_col_num:
+                 continue
+-            elif file_data[i][data_col] == 'None':
++            elif data_col != None and file_data[i][data_col] == 'None':
+                 continue
+-            elif error_col and file_data[i][error_col] == 'None':
++            elif error_col != None and file_data[i][error_col] == 'None':
+                 continue
+ 
+             # Test that the data are numbers.
+@@ -654,8 +661,9 @@
+                     int(file_data[i][res_num_col])
+                 if spin_num_col != None:
+                     int(file_data[i][spin_num_col])
+-                float(file_data[i][data_col])
+-                if error_col:
++                if data_col != None:
++                    float(file_data[i][data_col])
++                if error_col != None:
+                     float(file_data[i][error_col])
+             except ValueError:
+                 raise RelaxError, &quot;The PCS data in the line &quot; + 
+`file_data[i]` + &quot; is invalid.&quot;
+@@ -685,9 +693,16 @@
+         id = generate_spin_id_data_array(data=file_data[i], 
+mol_name_col=mol_name_col, res_num_col=res_num_col, 
+res_name_col=res_name_col, spin_num_col=spin_num_col, 
+spin_name_col=spin_name_col)
+ 
+         # Convert the data.
+-        value = eval(file_data[i][data_col])
+-        if error_col:
++        value = None
++        if data_col != None:
++            value = eval(file_data[i][data_col])
++        error = None
++        if error_col != None:
+             error = eval(file_data[i][error_col])
++
++        # Test the error value (cannot be 0.0).
++        if error == 0.0:
++            raise RelaxError, &quot;An invalid error value of zero has been 
+encountered.&quot;
+ 
+         # Get the corresponding spin container.
+         spin = return_spin(id)
+@@ -695,12 +710,21 @@
+             raise RelaxNoSpinError, id
+ 
+         # Add the data.
+-        if not hasattr(spin, 'pcs'):
+-            spin.pcs = []
+-        spin.pcs.append(value)
+-        if error_col:
++        if data_col != None:
++            # Initialise.
++            if not hasattr(spin, 'pcs'):
++                spin.pcs = []
++
++            # Append the value.
++            spin.pcs.append(value)
++
++        # Add the error.
++        if error_col != None:
++            # Initialise.
+             if not hasattr(spin, 'pcs_err'):
+                 spin.pcs_err = []
++
++            # Append the error.
+             spin.pcs_err.append(error)
+ 
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Sun Aug 17 19:40:18 2008</div>  
+</body>
+</html>

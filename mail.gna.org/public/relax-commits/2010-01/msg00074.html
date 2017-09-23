@@ -1,0 +1,303 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r10172 &#45; in /branches/multi_processor_merge:	generic_fns/subdivide_grid.py specific_fns/model_free/mf_minimise.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 11 Jan 2010 17:06:54 +0100 -->
+<!--X-Message-Id: E1NUMn8&#45;0005d2&#45;1G@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r10172 - in /branches/multi_processor_merge:	generic_fns/subdivide_grid.py specific_fns/model_free/mf_minimise.py -- January 11, 2010 - 17:06</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r10172 - in /branches/multi_processor_merge:	generic_fns/subdivide_grid.py specific_fns/model_free/mf_minimise.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00074" class="tabs">Index by Date</a> | <a href="threads.html#00074" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00073.html">Date Prev</a>] [<a href="msg00075.html">Date Next</a>] [<a href="msg00073.html">Thread Prev</a>] [<a href="msg00075.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 11 Jan 2010 16:06:53 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00074.html">E1NUMn8-0005d2-1G@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on January 11, 2010 - 17:06:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Mon Jan 11 17:06:53 2010
+New Revision: 10172
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=10172&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=10172&amp;view=rev</a>
+Log:
+Redesigned and cleaned up how the Grid_info class is initialised.
+
+This is necessary as the grid_ops data structure was eliminated from the 1.3 
+line a long time ago.
+Now the lower, upper, and inc data structure structures are passed in.  In 
+__init__(),
+calc_grid_size(), calc_grid_values(), and calc_strides(), the code has been 
+cleaned up, comments
+added, and docstrings written.
+
+
+Modified:
+    branches/multi_processor_merge/generic_fns/subdivide_grid.py
+    branches/multi_processor_merge/specific_fns/model_free/mf_minimise.py
+
+Modified: branches/multi_processor_merge/generic_fns/subdivide_grid.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/multi_processor_merge/generic_fns/subdivide_grid.py?rev=10172&amp;r1=10171&amp;r2=10172&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/multi_processor_merge/generic_fns/subdivide_grid.py?rev=10172&amp;r1=10171&amp;r2=10172&amp;view=diff</a>
+==============================================================================
+--- branches/multi_processor_merge/generic_fns/subdivide_grid.py (original)
++++ branches/multi_processor_merge/generic_fns/subdivide_grid.py Mon Jan 11 
+17:06:53 2010
+@@ -47,7 +47,7 @@
+         @type upper:    array of numbers
+         @keyword inc:   The increments for each dimension of the space for 
+the grid search.  The number of elements in the array must equal to the 
+number of parameters in the model.
+         @type inc:      array of int
+-        @keyword n:     The number of parameters.
++        @keyword n:     The number of parameters, i.e. the dimensionality of 
+the space.
+         @type n:        int
+         @keyword start: Unknown?
+         @type start:    int
+@@ -55,21 +55,23 @@
+         @type range:    int
+         &quot;&quot;&quot;
+ 
+-        self.grid_ops = grid_ops
+-        for op in self.grid_ops:
+-            op[GRID_LOWER] = float(op[GRID_LOWER])
+-            op[GRID_UPPER] = float(op[GRID_UPPER])
+-        self.steps = self.count_grid_steps(grid_ops)
+-        self.grid_dimension = len(grid_ops)
+-        self.values = self.calc_grid_values(grid_ops)
+-        self.strides = self.calc_strides(grid_ops)
++        # Store the args.
++        self.lower = lower
++        self.upper = upper
++        self.inc = inc
++        self.n = n
+         self.start = start
++        self.range = range
++
++        # Calculate the data structures used to sub-divide the grid.
++        self.steps = self.calc_grid_size()
++        self.values = self.calc_grid_values()
++        self.strides = self.calc_strides()
+ 
+         #FIXME needs range checking i.e. is start = range &gt; info.steps
+         # need checks for empty/fractional ranges
+-
+         if range == None:
+-            self.range = self.steps-start
++            self.range = self.steps - start
+         else:
+             self.range = range
+ 
+@@ -101,39 +103,62 @@
+         return divs
+ 
+ 
+-    def calc_strides(self, grid_ops):
++    def calc_strides(self):
++        &quot;&quot;&quot;Calculate the strides data structure for dividing up the grid.
++
++        @return:    The strides data structure.
++        @rtype:     list of int
++        &quot;&quot;&quot;
++
++        # Build the data structure.
+         stride = 1
+-        result = []
+-        for op in grid_ops:
+-            result.append(stride)
+-            stride = stride*op[GRID_STEPS]
+-
+-        return result
+-
+-
+-    def count_grid_steps(self, grid_ops=None):
+-        &quot;&quot;&quot; calculate the number of steps in a grid search &quot;&quot;&quot;
+-
+-        result = 1
+-        for op in grid_ops:
+-            result = result * op[GRID_STEPS]
+-
+-        return result
+-
+-
+-    def calc_grid_values(self, grid_ops=None):
+-        &quot;&quot;&quot; calculate the values the points along each grid dimension can 
+take&quot;&quot;&quot;
+-
+-        result = []
+-        for op in grid_ops:
++        data = []
++        for i in range(self.n):
++            data.append(stride)
++            stride = stride * self.inc[i]
++
++        # Return the strides data structure.
++        return data
++
++
++    def calc_grid_size(self):
++        &quot;&quot;&quot;Calculate the total number of grid points.
++
++        @return:    The number of grid points.
++        @rtype:     int
++        &quot;&quot;&quot;
++
++        # Multiply the increments of all dimensions.
++        size = 1
++        for inc in self.inc:
++            size = size * inc
++
++        # Return the size.
++        return size
++
++
++    def calc_grid_values(self):
++        &quot;&quot;&quot;Calculate the coordinates of all grid points.
++
++        @return:    A list of lists of coordinates for each grid point.  The 
+first index corresponds to the dimensionality of the grid and the second is 
+the increment values.
++        @rtype:     list of lists of float
++        &quot;&quot;&quot;
++
++        # Initialise the coordinate list.
++        coords = []
++
++        # Loop over the dimensions.
++        for i in range(self.n):
++            # Initialise the list of values for the dimension and add it to 
+the coordinate list.
+             values = []
+-            result.append(values)
+-
+-            op_range = op[GRID_UPPER] - op[GRID_LOWER]
+-            for i in xrange(op[GRID_STEPS]):
+-                values.append(op[GRID_LOWER] + i * op_range / 
+(op[GRID_STEPS] - 1))
+-
+-        return result
++            coords.append(values)
++
++            # Loop over the increments.
++            for j in range(self.inc[i]):
++                values.append(self.lower[i] + j * (self.upper[i] - 
+self.lower[i]) / (self.inc[i] - 1.0))
++
++        # Return the grid points.
++        return coords
+ 
+ 
+     def __str__(self):
+@@ -148,7 +173,7 @@
+ 
+                   '''
+         message = dedent(message)
+-        message = message % (self.grid_dimension, self.steps, self.start, 
+self.start+self.range)
++        message = message % (self.n, self.steps, self.start, 
+self.start+self.range)
+ 
+         op_message_list = []
+         for i, op in enumerate(self.grid_ops):
+@@ -172,7 +197,7 @@
+         for i in xrange(self.start, self.start+self.range):
+ 
+             print `i+1` + '. ', self.get_params(offsets)
+-            for j in range(self.grid_dimension):
++            for j in range(self.n):
+                 if offsets[j] &lt; self.grid_ops[j][GRID_STEPS]-1:
+                     offsets[j] = offsets[j] + 1
+ 
+@@ -245,7 +270,7 @@
+ 
+         def increment(self):
+             # Increment the grid search.
+-            for j in xrange(self.info.grid_dimension):
++            for j in xrange(self.info.n):
+                 if self.offsets[j] &lt; self.info.grid_ops[j][GRID_STEPS]-1:
+                     self.offsets[j] = self.offsets[j] + 1
+ 
+
+Modified: 
+branches/multi_processor_merge/specific_fns/model_free/mf_minimise.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/multi_processor_merge/specific_fns/model_free/mf_minimise.py?rev=10172&amp;r1=10171&amp;r2=10172&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/multi_processor_merge/specific_fns/model_free/mf_minimise.py?rev=10172&amp;r1=10171&amp;r2=10172&amp;view=diff</a>
+==============================================================================
+--- branches/multi_processor_merge/specific_fns/model_free/mf_minimise.py 
+(original)
++++ branches/multi_processor_merge/specific_fns/model_free/mf_minimise.py Mon 
+Jan 11 17:06:53 2010
+@@ -1587,7 +1587,7 @@
+             # Parallelised grid search for the diffusion parameter space.
+             if match('^[Gg]rid', min_algor) and data_store.model_type == 
+'diff' :
+                 # Split up the grid into chunks for each processor.
+-                full_grid_info = Grid_info(lower=lower, upper=upper, 
+inc=inc, n=num_params)
++                full_grid_info = Grid_info(lower=opt_params.lower, 
+upper=opt_params.upper, inc=opt_params.inc, n=num_params)
+                 sub_grid_list = 
+full_grid_info.sub_divide(processor.processor_size())
+ 
+                 # Set up the constrained super grid memo.
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Jan 11 17:20:02 2010</div>  
+</body>
+</html>

@@ -1,0 +1,283 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r27571 &#45; /website/api/rehead.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 06 Feb 2015 10:18:00 +0100 -->
+<!--X-Message-Id: E1YJf31&#45;0003DV&#45;LM@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r27571 - /website/api/rehead.py -- February 06, 2015 - 10:18</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r27571 - /website/api/rehead.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00136" class="tabs">Index by Date</a> | <a href="threads.html#00136" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00135.html">Date Prev</a>] [<a href="msg00137.html">Date Next</a>] [<a href="msg00135.html">Thread Prev</a>] [<a href="msg00137.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 06 Feb 2015 09:17:59 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00136.html">E1YJf31-0003DV-LM@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on February 06, 2015 - 10:18:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Feb  6 10:17:56 2015
+New Revision: 27571
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=27571&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=27571&amp;view=rev</a>
+Log:
+Created a script for modifying the &lt;head&gt; tag of the Epydoc generated API 
+documentation.
+
+This will be used to update old (or new) API documentation as needed to keep 
+the HTML current.
+
+
+Added:
+    website/api/rehead.py   (with props)
+
+Added: website/api/rehead.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/website/api/rehead.py?rev=27571&amp;view=auto">http://svn.gna.org/viewcvs/relax/website/api/rehead.py?rev=27571&amp;view=auto</a>
+==============================================================================
+--- website/api/rehead.py       (added)
++++ website/api/rehead.py       Fri Feb  6 10:17:56 2015
+@@ -0,0 +1,171 @@
++#! /usr/bin/env python
++
++&quot;&quot;&quot;Script for changing the headers of the epydoc documentation.
++
++This will recursively walk through the directory supplied as an argument, 
+find all *.html files, read the contents in the &lt;head&gt; tag, preserve the 
+&lt;title&gt; tag, and replace the rest of the header with a custom header.
++&quot;&quot;&quot;
++
++# Python module imports.
++from os import getcwd, sep, system, walk
++from re import search
++import sys
++
++
++# Blacklisted files to not change.
++BLACKLIST = [
++    'frames.html',
++    'index.html',
++    'redirect.html'
++]
++
++# The contents for the HEAD tag, excluding the title tag.
++HEAD_CONTENTS = [
++    &quot;&quot;,
++    &quot;  &lt;!--Epydoc setup--&gt;&quot;,
++    &quot;  &lt;link rel=\&quot;stylesheet\&quot; href=\&quot;epydoc.css\&quot; type=\&quot;text/css\&quot; /&gt;&quot;,
++    &quot;  &lt;script type=\&quot;text/javascript\&quot; src=\&quot;epydoc.js\&quot;&gt;&lt;/script&gt;&quot;,
++    &quot;&quot;,
++    &quot;  &lt;!--Mobile device support--&gt;&quot;,
++    &quot;  &lt;meta name=viewport content=\&quot;width=device-width, initial-scale=1\&quot;&gt;&quot;,
++    &quot;&quot;,
++    &quot;  &lt;!--Google analytics JS--&gt;&quot;,
++    &quot;  &lt;script type=\&quot;text/javascript\&quot;&gt;&quot;,
++    &quot;&quot;,
++    &quot;    var _gaq = _gaq || [];&quot;,
++    &quot;    _gaq.push(['_setAccount', 'UA-30096326-1']);&quot;,
++    &quot;    _gaq.push(['_setDomainName', 'nmr-relax.com']);&quot;,
++    &quot;    _gaq.push(['_trackPageview']);&quot;,
++    &quot;&quot;,
++    &quot;    (function() {&quot;,
++    &quot;      var ga = document.createElement('script'); ga.type = 
+'text/javascript'; ga.async = true;&quot;,
++    &quot;      ga.src = ('https:' == document.location.protocol ? '<a  rel="nofollow" href="https://ssl">https://ssl</a>' 
+: '<a  rel="nofollow" href="http://www">http://www</a>') + '.google-analytics.com/ga.js';&quot;,
++    &quot;      var s = document.getElementsByTagName('script')[0]; 
+s.parentNode.insertBefore(ga, s);&quot;,
++    &quot;    })();&quot;,
++    &quot;&quot;,
++    &quot;  &lt;/script&gt;&quot;,
++]
++
++# The expected head tag contents.
++EXPECTED = [
++    &quot;&lt;head&gt;&quot;,
++    None,
++    &quot;  &lt;link rel=\&quot;stylesheet\&quot; href=\&quot;epydoc.css\&quot; type=\&quot;text/css\&quot; /&gt;&quot;,
++    &quot;  &lt;script type=\&quot;text/javascript\&quot; src=\&quot;epydoc.js\&quot;&gt;&lt;/script&gt;&quot;,
++    &quot;&lt;/head&gt;&quot;,
++]
++
++
++class Rehead:
++    def __init__(self):
++        &quot;&quot;&quot;Change all HTML headers.&quot;&quot;&quot;
++
++        # Walk through the current dir.
++        for root, dirs, files in walk(sys.argv[1]):
++            # Loop over the files.
++            for file in files:
++                # Only work with HTML files.
++                if not search(&quot;.html$&quot;, file):
++                    continue
++        
++                # Skip blacklisted files.
++                if file in BLACKLIST:
++                    continue
++
++                # Full path to the file.
++                full_path = root + sep + file
++
++                # Extract the title.
++                title = self.extract_title(full_path)
++
++                # Process the head tag.
++                self.change_head(full_path, title=title)
++
++
++    def change_head(self, file_name, title=None):
++        &quot;&quot;&quot;Read the HTML file to extract the head tag, then recreate the 
+file.&quot;&quot;&quot;
++
++        # Open the file for writing.
++        file = open(file_name, 'w')
++
++        # Walk over the file contents, replacing the header.
++        index = 0
++        while 1:
++            # No more lines.
++            if index &gt;= len(self.file_lines):
++                break
++
++            # In the head tag.
++            if search(&quot;&lt;head&gt;&quot;, self.file_lines[index]):
++                # Write out the head tag and add the title.
++                file.write(&quot;&lt;head&gt;\n&quot;)
++                file.write(title)
++                file.write(&quot;\n&quot;)
++
++                # Add the rest of the head contents.
++                for line in HEAD_CONTENTS:
++                    file.write(&quot;%s\n&quot; % line)
++
++                # Go to the end of the head tag.
++                while not search(&quot;&lt;/head&gt;&quot;, self.file_lines[index]):
++                    index += 1
++
++            # Write out the line.
++            file.write(self.file_lines[index])
++
++            # Increment the line number.
++            index += 1
++
++
++    def extract_title(self, file_name):
++        &quot;&quot;&quot;Read the HTML file to extract and return the title tag.&quot;&quot;&quot;
++
++        # Read the file contents.
++        file = open(file_name)
++        self.file_lines = file.readlines()
++        file.close()
++
++        # Extract the title.
++        in_head = False
++        index = 0
++        pre_modified = False
++        for line in self.file_lines:
++            # In the head tag.
++            if search(&quot;&lt;head&gt;&quot;, line):
++                in_head = True
++
++            # Check the head contents, to be sure.
++            if in_head:
++                # Already modified.
++                if index == 2 and line[:-1] == &quot;&quot;:
++                    pre_modified = True
++
++                # Check the line, skipping the title tag.
++                if not pre_modified and EXPECTED[index] != None and 
+EXPECTED[index] != line[:-1]:
++                    print(&quot;%s: Unexpected head tag encountered, quitting.&quot; % 
+file_name)
++                    print(&quot;    Encountered line:  \&quot;%s\&quot;&quot; % line[:-1])
++                    print(&quot;    Expected line:  \&quot;%s\&quot;&quot; % EXPECTED[index])
++                    sys.exit()
++
++                # Increment the line index.
++                index += 1
++
++            # Out of the head tag.
++            if search(&quot;&lt;/head&gt;&quot;, line):
++                break
++
++            # Store the title.
++            if search(&quot;&lt;title&gt;&quot;, line):
++                title = line[:-1]
++
++        # Return the title.
++        return title
++
++
++if __name__ == &quot;__main__&quot;:
++    # Check the arguments.
++    if len(sys.argv) != 2:
++        print(&quot;Usage:  rehead.py dir&quot;)
++        sys.exit()
++
++    # Execute the code.
++    Rehead()
+
+Propchange: website/api/rehead.py
+------------------------------------------------------------------------------
+    svn:executable = *
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Feb 06 10:20:05 2015</div>  
+</body>
+</html>

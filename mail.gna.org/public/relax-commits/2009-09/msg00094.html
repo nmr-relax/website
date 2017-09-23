@@ -1,0 +1,411 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r9530 &#45; in /1.3: relax relax_io.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 18 Sep 2009 17:38:28 +0200 -->
+<!--X-Message-Id: E1MofXY&#45;0004JZ&#45;AU@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r9530 - in /1.3: relax relax_io.py -- September 18, 2009 - 17:38</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r9530 - in /1.3: relax relax_io.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00094" class="tabs">Index by Date</a> | <a href="threads.html#00094" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00093.html">Date Prev</a>] [<a href="msg00095.html">Date Next</a>] [<a href="msg00093.html">Thread Prev</a>] [<a href="msg00095.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 18 Sep 2009 15:38:28 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00094.html">E1MofXY-0004JZ-AU@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on September 18, 2009 - 17:38:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Sep 18 17:38:27 2009
+New Revision: 9530
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=9530&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=9530&amp;view=rev</a>
+Log:
+Final 1.3 line redesigns of the relax_io module.
+
+The log() and tee() functions have been renamed to io_streams_log() and 
+io_streams_tee(), and the
+old IO.logging_off() class method has been converted to the 
+io_streams_restore() function.  The
+io_streams_restore() function is also differently designed, using the true 
+original IO streams
+(sys.__stdin__, sys.__stdout__, and sys.__stderr__).
+
+The IO.delete() method has been converted to a module function.
+
+The IO class has been eliminated.
+
+
+Modified:
+    1.3/relax
+    1.3/relax_io.py
+
+Modified: 1.3/relax
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/relax?rev=9530&amp;r1=9529&amp;r2=9530&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/relax?rev=9530&amp;r1=9529&amp;r2=9530&amp;view=diff</a>
+==============================================================================
+--- 1.3/relax (original)
++++ 1.3/relax Fri Sep 18 17:38:27 2009
+@@ -53,7 +53,7 @@
+ from prompt.gpl import gpl
+ from prompt import interpreter
+ import relax_errors
+-from relax_io import log, tee
++from relax_io import io_streams_log, io_streams_tee
+ import relax_warnings
+ from test_suite.test_suite_runner import Test_suite_runner
+ import version
+@@ -112,11 +112,11 @@
+ 
+         # Logging.
+         if log_file:
+-            log(log_file)
++            io_streams_log(log_file)
+ 
+         # Tee.
+         elif tee_file:
+-            tee(tee_file)
++            io_streams_tee(tee_file)
+ 
+         # Create a string to pass to the interpreter to print.
+         intro_string = self.get_intro_string()
+
+Modified: 1.3/relax_io.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/relax_io.py?rev=9530&amp;r1=9529&amp;r2=9530&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/relax_io.py?rev=9530&amp;r1=9529&amp;r2=9530&amp;view=diff</a>
+==============================================================================
+--- 1.3/relax_io.py (original)
++++ 1.3/relax_io.py Fri Sep 18 17:38:27 2009
+@@ -50,6 +50,35 @@
+ 
+ 
+ 
++def delete(file_name, dir=None, fail=True):
++    &quot;&quot;&quot;Deleting the given file, taking into account missing compression 
+extensions.
++    
++    @param file_name:       The name of the file to delete.
++    @type file_name:        str
++    @keyword dir:           The directory containing the file.
++    @type dir:              None or str
++    @keyword fail:          A flag which if True will cause RelaxFileError 
+to be raised.
++    @type fail:             bool
++    @raises RelaxFileError: If the file does not exist, and fail is set to 
+true.
++    &quot;&quot;&quot;
++
++    # File path.
++    file_path = get_file_path(file_name, dir)
++
++    # Test if the file exists and determine the compression type.
++    if access(file_path, F_OK):
++        pass
++    elif access(file_path + '.bz2', F_OK):
++        file_path = file_path + '.bz2'
++    elif access(file_path + '.gz', F_OK):
++        file_path = file_path + '.gz'
++    elif fail:
++        raise RelaxFileError(file_path)
++
++    # Remove the file.
++    remove(file_path)
++
++
+ def determine_compression(file_path):
+     &quot;&quot;&quot;Function for determining the compression type, and for also testing 
+if the file exists.
+ 
+@@ -170,10 +199,25 @@
+     return file_path
+ 
+ 
+-def log(file_name=None, dir=None, verbosity=1):
++def io_streams_restore():
++    &quot;&quot;&quot;Restore all IO streams to the Python defaults.&quot;&quot;&quot;
++
++    # Print out.
++    if verbosity:
++        print(&quot;Restoring the sys.stdin IO stream to the Python STDIN IO 
+stream.&quot;)
++        print(&quot;Restoring the sys.stdout IO stream to the Python STDOUT IO 
+stream.&quot;)
++        print(&quot;Restoring the sys.stderr IO stream to the Python STDERR IO 
+stream.&quot;)
++
++    # Restore streams.
++    sys.stdin  = sys.__stdin__
++    sys.stdout = sys.__stdout__
++    sys.stderr = sys.__stderr__
++
++
++def io_streams_log(file_name=None, dir=None, verbosity=1):
+     &quot;&quot;&quot;Turn on logging, sending both STDOUT and STDERR streams to a file.
+ 
+-    @param file_name:   The name of the file to extract the data from.
++    @param file_name:   The name of the file.
+     @type file_name:    str
+     @param dir:         The path where the file is located.  If None, then 
+the current directory is
+                         assumed.
+@@ -204,6 +248,45 @@
+     sys.stdin  = log_stdin
+     sys.stdout = log_stdout
+     sys.stderr = log_stderr
++
++
++def io_streams_tee(file_name=None, dir=None, compress_type=0, verbosity=1):
++    &quot;&quot;&quot;Turn on teeing to split both STDOUT and STDERR streams and sending 
+second part to a file.
++
++    @param file_name:       The name of the file.
++    @type file_name:        str
++    @param dir:             The path where the file is located.  If None, 
+then the current directory
++                            is assumed.
++    @type dir:              str
++    @param compress_type:   The compression type.  The integer values 
+correspond to the compression
++                            type: 0, no compression; 1, Bzip2 compression; 
+2, Gzip compression.
++    @type compress_type:    int
++    @param verbosity:       The verbosity level.
++    @type verbosity:        int
++    &quot;&quot;&quot;
++
++    # Tee file.
++    tee_file, file_path = open_write_file(file_name=file_name, dir=dir, 
+force=True, compress_type=compress_type, verbosity=verbosity, return_path=1)
++
++    # Tee IO streams.
++    tee_stdin  = stdin
++    tee_stdout = SplitIO()
++    tee_stderr = SplitIO()
++
++    # Print out.
++    if verbosity:
++        print(&quot;Redirecting the sys.stdin IO stream to the python stdin IO 
+stream.&quot;)
++        print((&quot;Redirecting the sys.stdout IO stream to both the python 
+stdout IO stream and the log file '%s'.&quot; % file_path))
++        print((&quot;Redirecting the sys.stderr IO stream to both the python 
+stderr IO stream and the log file '%s'.&quot; % file_path))
++
++    # Set the tee IO streams.
++    tee_stdout.split(stdout, tee_file)
++    tee_stderr.split(stderr, tee_file)
++
++    # IO stream redirection.
++    sys.stdin  = tee_stdin
++    sys.stdout = tee_stdout
++    sys.stderr = tee_stderr
+ 
+ 
+ def mkdir_nofail(dir=None, verbosity=1):
+@@ -405,45 +488,6 @@
+     return new
+ 
+ 
+-def tee(file_name=None, dir=None, compress_type=0, verbosity=1):
+-    &quot;&quot;&quot;Turn on teeing to split both STDOUT and STDERR streams and sending 
+second part to a file.
+-
+-    @param file_name:       The name of the file to extract the data from.
+-    @type file_name:        str
+-    @param dir:             The path where the file is located.  If None, 
+then the current directory
+-                            is assumed.
+-    @type dir:              str
+-    @param compress_type:   The compression type.  The integer values 
+correspond to the compression
+-                            type: 0, no compression; 1, Bzip2 compression; 
+2, Gzip compression.
+-    @type compress_type:    int
+-    @param verbosity:       The verbosity level.
+-    @type verbosity:        int
+-    &quot;&quot;&quot;
+-
+-    # Tee file.
+-    tee_file, file_path = open_write_file(file_name=file_name, dir=dir, 
+force=True, compress_type=compress_type, verbosity=verbosity, return_path=1)
+-
+-    # Tee IO streams.
+-    tee_stdin  = stdin
+-    tee_stdout = SplitIO()
+-    tee_stderr = SplitIO()
+-
+-    # Print out.
+-    if verbosity:
+-        print(&quot;Redirecting the sys.stdin IO stream to the python stdin IO 
+stream.&quot;)
+-        print((&quot;Redirecting the sys.stdout IO stream to both the python 
+stdout IO stream and the log file '%s'.&quot; % file_path))
+-        print((&quot;Redirecting the sys.stderr IO stream to both the python 
+stderr IO stream and the log file '%s'.&quot; % file_path))
+-
+-    # Set the tee IO streams.
+-    tee_stdout.split(stdout, tee_file)
+-    tee_stderr.split(stderr, tee_file)
+-
+-    # IO stream redirection.
+-    sys.stdin  = tee_stdin
+-    sys.stdout = tee_stdout
+-    sys.stderr = tee_stderr
+-
+-
+ def test_binary(binary):
+     &quot;&quot;&quot;Function for testing that the binary string corresponds to a valid 
+executable file.
+ 
+@@ -542,85 +586,6 @@
+ 
+ 
+ 
+-class IO:
+-    def __init__(self, relax):
+-        &quot;&quot;&quot;Class containing the file operations.
+-
+-        IO streams
+-        ==========
+-
+-        Standard python IO streams:
+-
+-            - sys.stdin  = self.python_stdin
+-            - sys.stdout = self.python_stdout
+-            - sys.stderr = self.python_stderr
+-
+-        Logging IO streams:
+-
+-            - sys.stdin  = self.log_stdin  = self.python_stdin
+-            - sys.stdout = self.log_stdout = self.log_file
+-            - sys.stderr = self.log_stdout = (self.python_stderr, 
+self.log_file)
+-
+-        Tee IO streams:
+-
+-            - sys.stdin  = self.tee_stdin  = self.python_stdin
+-            - sys.stdout = self.tee_stdout = (self.python_stdout, 
+self.tee_file)
+-            - sys.stderr = self.tee_stdout = (self.python_stderr, 
+self.tee_file)
+-        &quot;&quot;&quot;
+-
+-        self.relax = relax
+-
+-        # Standard python IO streams.
+-        self.python_stdin  = stdin
+-        self.python_stdout = stdout
+-        self.python_stderr = stderr
+-
+-        # Logging IO streams.
+-        self.log_stdin  = stdin
+-        self.log_stdout = None
+-        self.log_stderr = SplitIO()
+-
+-        # Tee IO streams.
+-        self.tee_stdin  = stdin
+-        self.tee_stdout = SplitIO()
+-        self.tee_stderr = SplitIO()
+-
+-
+-    def delete(self, file_name=None, dir=None):
+-        &quot;&quot;&quot;Function for deleting the given file.&quot;&quot;&quot;
+-
+-        # File path.
+-        file_path = get_file_path(file_name, dir)
+-
+-        # Test if the file exists and determine the compression type.
+-        if access(file_path, F_OK):
+-            pass
+-        elif access(file_path + '.bz2', F_OK):
+-            file_path = file_path + '.bz2'
+-        elif access(file_path + '.gz', F_OK):
+-            file_path = file_path + '.gz'
+-        else:
+-            raise RelaxFileError(file_path)
+-
+-        # Remove the file.
+-        remove(file_path)
+-
+-
+-    def logging_off(self, file_name=None, dir=None, verbosity=1):
+-        &quot;&quot;&quot;Function for turning logging and teeing off.&quot;&quot;&quot;
+-
+-        # Print out.
+-        if verbosity:
+-            print(&quot;Redirecting the sys.stdin IO stream to the python stdin 
+IO stream.&quot;)
+-            print(&quot;Redirecting the sys.stdout IO stream to the python stdout 
+IO stream.&quot;)
+-            print(&quot;Redirecting the sys.stderr IO stream to the python stderr 
+IO stream.&quot;)
+-
+-        # IO stream redirection.
+-        sys.stdin  = self.python_stdin
+-        sys.stdout = self.python_stdout
+-        sys.stderr = self.python_stderr
+-
+-
+ class SplitIO:
+     def __init__(self):
+         &quot;&quot;&quot;Class for splitting an IO stream to two outputs.&quot;&quot;&quot;
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Sep 18 18:20:03 2009</div>  
+</body>
+</html>

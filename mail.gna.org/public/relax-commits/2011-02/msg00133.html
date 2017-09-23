@@ -1,0 +1,291 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r12612 &#45; /1.3/generic_fns/pdc.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 22 Feb 2011 15:33:57 +0100 -->
+<!--X-Message-Id: E1PrtJN&#45;00014M&#45;4k@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r12612 - /1.3/generic_fns/pdc.py -- February 22, 2011 - 15:33</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r12612 - /1.3/generic_fns/pdc.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00133" class="tabs">Index by Date</a> | <a href="threads.html#00133" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00132.html">Date Prev</a>] [<a href="msg00134.html">Date Next</a>] [<a href="msg00132.html">Thread Prev</a>] [<a href="msg00134.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 22 Feb 2011 14:33:57 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00133.html">E1PrtJN-00014M-4k@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on February 22, 2011 - 15:33:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Feb 22 15:33:56 2011
+New Revision: 12612
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=12612&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=12612&amp;view=rev</a>
+Log:
+Convert the pdc.read() back-end to use the \t delimination of the PDC file 
+for parsing.
+
+
+Modified:
+    1.3/generic_fns/pdc.py
+
+Modified: 1.3/generic_fns/pdc.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/generic_fns/pdc.py?rev=12612&amp;r1=12611&amp;r2=12612&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/generic_fns/pdc.py?rev=12612&amp;r1=12611&amp;r2=12612&amp;view=diff</a>
+==============================================================================
+--- 1.3/generic_fns/pdc.py (original)
++++ 1.3/generic_fns/pdc.py Tue Feb 22 15:33:56 2011
+@@ -25,6 +25,7 @@
+ 
+ # Python module imports.
+ from re import search, split
++from string import strip
+ 
+ # relax module imports.
+ from generic_fns import pipes
+@@ -33,10 +34,10 @@
+ from generic_fns.mol_res_spin import exists_mol_res_spin_data, name_spin, 
+spin_loop
+ from generic_fns.relax_data import pack_data, peak_intensity_type
+ from relax_errors import RelaxError
+-from relax_io import extract_data
+-
+-
+-def get_relax_data(data):
++from relax_io import open_read_file
++
++
++def convert_relax_data(data):
+     &quot;&quot;&quot;Determine the relaxation data from the given PDC data.
+ 
+     @param data:    The list of Tx, Tx error, and scaling factor for a given 
+residue from the PDC file.
+@@ -66,17 +67,15 @@
+     # Init.
+     res_num = None
+ 
+-    # Loop over the list.
+-    for i in range(len(data)):
+-        # Split the data.
+-        row = split('([0-9]+)', data[i])
+-
+-        # Loop over the new list.
+-        for j in range(len(row)):
+-            try:
+-                res_num = int(row[j])
+-            except ValueError:
+-                pass
++    # Split the data.
++    row = split('([0-9]+)', data)
++
++    # Loop over the new list.
++    for j in range(len(row)):
++        try:
++            res_num = int(row[j])
++        except ValueError:
++            pass
+ 
+     # Return the value.
+     return &quot;:%s&quot; % res_num
+@@ -99,7 +98,9 @@
+         raise RelaxNoSequenceError
+ 
+     # Extract the data from the file.
+-    file_data = extract_data(file, dir)
++    file_handle = open_read_file(file, dir)
++    lines = file_handle.readlines()
++    file_handle.close()
+ 
+     # Init.
+     values = []
+@@ -108,83 +109,88 @@
+ 
+     # Loop over the data.
+     in_ri_data = False
+-    for line in file_data:
++    for line in lines:
++        # Split the line.
++        row = split(&quot;\t&quot;, line)
++
++        # Strip the rubbish.
++        for j in range(len(row)):
++            row[j] = strip(row[j])
++
++        # Empty line.
++        if len(row) == 0:
++            continue
++
+         # The PDC version.
+-        if len(line) &gt; 2 and line[0] == 'generated' and line[1] == 'by:':
+-            version = line[2]
+-            for i in range(len(line)-3):
+-                version = version + ' ' + line[i+3]
++        if row[0] == 'generated by:':
++            version = row[1]
+ 
+         # Check for bad errors.
+-        if len(line) &gt;= 5 and line[0:5] == ['Systematic', 'error', 
+'estimation', 'of', 'data:']:
++        if row[0] == 'Systematic error estimation of data:':
+             # Badness.
+-            if line[5:] == ['worst', 'case', 'per', 'peak', 'scenario']:
++            if row[1] == 'worst case per peak scenario':
+                 raise RelaxError(&quot;The errors estimation method \&quot;worst case 
+per peak scenario\&quot; is not suitable for model-free analysis.  Please go back 
+to the PDC and switch to \&quot;average variance calculation\&quot;.&quot;)
+ 
+-
+         # The data type.
+-        if len(line) == 3 and search('T1', line[2]):
+-            ri_label = 'R1'
+-        elif len(line) == 3 and search('T2', line[2]):
+-            ri_label = 'R2'
+-        elif len(line) == 4 and line[3] == 'NOE':
+-            ri_label = 'NOE'
++        if row[0] == 'Project:':
++            if search('T1', row[1]):
++                ri_label = 'R1'
++            elif search('T2', row[1]):
++                ri_label = 'R2'
++            elif row[3] == 'NOE':
++                ri_label = 'NOE'
+ 
+         # Get the frequency.
+-        elif len(line) == 3 and line[0] == 'Proton' and line[1] == 
+'frequency[MHz]:':
+-            frq = float(line[2])
+-            frq_label = str(int(round(float(line[2])/10)*10))
++        elif row[0] == 'Proton frequency[MHz]:':
++            frq = float(row[1])
++            frq_label = str(int(round(float(row[1])/10)*10))
+ 
+         # Inside the relaxation data section.
+-        elif len(line) == 2 and line[0] == 'SECTION:' and line[1] == 
+'results':
++        elif row[0] == 'SECTION:' and row[1] == 'results':
+             in_ri_data = True
+ 
+         # The relaxation data.
+-        elif in_ri_data and line[0] != 'Peak':
+-            # Differences in the Rx and NOE files.
+-            if ri_label == 'NOE':
+-                index1 = -4
+-                index2 = -4
+-            else:
+-                index1 = -5
+-                index2 = -3
++        elif in_ri_data:
++            # Skip the header.
++            if row[0] == 'Peak name':
++                continue
+ 
+             # The residue info.
+-            res_nums.append(get_res_num(line[:index1]))
++            res_nums.append(get_res_num(row[0]))
+ 
+             # Get the relaxation data.
+             if ri_label != 'NOE':
+-                rx, rx_err = get_relax_data(line[index2:])
++                rx, rx_err = convert_relax_data(row[3:])
+             else:
+-                rx = float(line[-2])
+-                rx_err = float(line[-1])
++                rx = float(row[-2])
++                rx_err = float(row[-1])
+ 
+             # Append the data.
+             values.append(rx)
+             errors.append(rx_err)
+ 
+         # The temperature.
+-        elif len(line) == 3 and line[0] == 'Temperature':
++        elif row[0] == 'Temperature (K):':
+             # Set the value (not implemented yet).
+             pass
+ 
+         # The labelling.
+-        elif len(line) == 2 and line[0] == 'Labelling:':
++        elif row[0] == 'Labelling:':
+             # Set the heteronucleus value.
+-            value.set(line[1], 'heteronucleus')
++            value.set(row[1], 'heteronucleus')
+ 
+             # Name the spins.
+-            name = split('([A-Z]+)', line[1])[1]
++            name = split('([A-Z]+)', row[1])[1]
+             name_spin(name=name)
+ 
+         # The integration method.
+-        elif len(line) == 4 and line[0] == 'Used' and line[1] == 
+'integrals:':
++        elif row[0] == 'Used integrals:':
+             # Peak heights.
+-            if line[2] == 'peak' and line[3] == 'intensities':
++            if row[1] == 'peak intensities':
+                 int_type = 'height'
+ 
+             # Peak volumes:
+-            if line[2] == 'area' and line[3] == 'integral':
++            if row[1] == 'area integral':
+                 int_type = 'volume'
+ 
+     # Pack the data.
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Feb 22 15:40:02 2011</div>  
+</body>
+</html>

@@ -1,0 +1,175 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r27420 &#45; /trunk/lib/sequence_alignment/msa.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Sat, 31 Jan 2015 12:21:57 +0100 -->
+<!--X-Message-Id: E1YHW7h&#45;0004ik&#45;Im@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r27420 - /trunk/lib/sequence_alignment/msa.py -- January 31, 2015 - 12:21</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r27420 - /trunk/lib/sequence_alignment/msa.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00266" class="tabs">Index by Date</a> | <a href="threads.html#00266" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00265.html">Date Prev</a>] [<a href="msg00267.html">Date Next</a>] [<a href="msg00265.html">Thread Prev</a>] [<a href="msg00267.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Sat, 31 Jan 2015 11:21:57 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00266.html">E1YHW7h-0004ik-Im@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on January 31, 2015 - 12:21:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Sat Jan 31 12:21:57 2015
+New Revision: 27420
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=27420&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=27420&amp;view=rev</a>
+Log:
+Implemented the multiple sequence alignment method based on residue numbers.
+
+This is the new msa_residue_numbers() function in the 
+lib.sequence_alignment.msa module.  The logic
+is rather basic in that the alignment is based on a residue number range from 
+the lowest residue
+number to the highest - i.e. it does not take into account gaps in common 
+between all input
+sequences.
+
+
+Modified:
+    trunk/lib/sequence_alignment/msa.py
+
+Modified: trunk/lib/sequence_alignment/msa.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/lib/sequence_alignment/msa.py?rev=27420&amp;r1=27419&amp;r2=27420&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/lib/sequence_alignment/msa.py?rev=27420&amp;r1=27419&amp;r2=27420&amp;view=diff</a>
+==============================================================================
+--- trunk/lib/sequence_alignment/msa.py (original)
++++ trunk/lib/sequence_alignment/msa.py Sat Jan 31 12:21:57 2015
+@@ -165,3 +165,66 @@
+ 
+     # Return the results.
+     return strings, gaps
++
++
++def msa_residue_numbers(sequences, residue_numbers=None):
++    &quot;&quot;&quot;Align multiple sequences based on the residue numbering.
++
++    @param sequences:                   The list of residue sequences as one 
+letter codes.
++    @type sequences:                    list of str
++    @keyword residue_numbers:           The list of residue numbers for each 
+sequence.
++    @type residue_numbers:              list of list of int
++    @return:                            The list of alignment strings and 
+the gap matrix.
++    @rtype:                             list of str, numpy rank-2 int array
++    &quot;&quot;&quot;
++
++    # Initialise.
++    N = len(sequences)
++    strings = []
++    for i in range(N):
++        strings.append('')
++
++    # Printout.
++    sys.stdout.write(&quot;\nResidue number based multiple sequence 
+alignment.\n\n&quot;)
++    sys.stdout.write(&quot;Initial sequences:\n&quot;)
++    for i in range(N):
++        sys.stdout.write(&quot;%3i %s\n&quot; % (i+1, sequences[i]))
++
++    # The maximum and minimum residue numbers.
++    res_min = 1e100
++    res_max = -1e100
++    for i in range(N):
++        if min(residue_numbers[i]) &lt; res_min:
++            res_min = min(residue_numbers[i])
++        if max(residue_numbers[i]) &gt; res_max:
++            res_max = max(residue_numbers[i])
++
++    # The total number of residues.
++    M = res_max - res_min + 1
++
++    # Loop over the molecules and residues and determine if the residue is 
+present.
++    for i in range(N):
++        for res_num in range(res_min, res_max+1):
++            # The residue is present.
++            if res_num in residue_numbers[i]:
++                index = residue_numbers[i].index(res_num)
++                strings[i] += sequences[i][index]
++
++            # A gap.
++            else:
++                strings[i] += '-'
++
++    # Create the gap matrix.
++    gaps = zeros((N, M), int16)
++    for i in range(N):
++        for j in range(M):
++            if strings[i][j] == '-':
++                gaps[i, j] = 1
++
++    # Final printout.
++    sys.stdout.write(&quot;\nFinal MSA:\n&quot;)
++    for i in range(N):
++        sys.stdout.write(&quot;%3i %s\n&quot; % (i+1, strings[i]))
++
++    # Return the results.
++    return strings, gaps
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Sat Jan 31 12:40:02 2015</div>  
+</body>
+</html>

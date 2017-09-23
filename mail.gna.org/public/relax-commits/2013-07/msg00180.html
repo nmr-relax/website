@@ -1,0 +1,158 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r20438 &#45; /branches/relax_disp/auto_analyses/relax_disp.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Sat, 20 Jul 2013 17:51:47 +0200 -->
+<!--X-Message-Id: E1V0ZRj&#45;0007lQ&#45;H8@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r20438 - /branches/relax_disp/auto_analyses/relax_disp.py -- July 20, 2013 - 17:51</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r20438 - /branches/relax_disp/auto_analyses/relax_disp.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00180" class="tabs">Index by Date</a> | <a href="threads.html#00180" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00179.html">Date Prev</a>] [<a href="msg00181.html">Date Next</a>] [<a href="msg00179.html">Thread Prev</a>] [<a href="msg00181.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Sat, 20 Jul 2013 15:51:47 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00180.html">E1V0ZRj-0007lQ-H8@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on July 20, 2013 - 17:51:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Sat Jul 20 17:51:47 2013
+New Revision: 20438
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=20438&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=20438&amp;view=rev</a>
+Log:
+Fix for the dispersion auto-analysis for when only the single R2eff model is 
+optimised.
+
+This is for the case of exponential curve fitting, and allows Monte Carlo 
+simulations to proceed
+even when the mc_sim_all_models flag is False.
+
+
+Modified:
+    branches/relax_disp/auto_analyses/relax_disp.py
+
+Modified: branches/relax_disp/auto_analyses/relax_disp.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/auto_analyses/relax_disp.py?rev=20438&amp;r1=20437&amp;r2=20438&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_disp/auto_analyses/relax_disp.py?rev=20438&amp;r1=20437&amp;r2=20438&amp;view=diff</a>
+==============================================================================
+--- branches/relax_disp/auto_analyses/relax_disp.py (original)
++++ branches/relax_disp/auto_analyses/relax_disp.py Sat Jul 20 17:51:47 2013
+@@ -211,7 +211,7 @@
+         self.interpreter.minimise('simplex', func_tol=self.opt_func_tol, 
+max_iter=self.opt_max_iterations, constraints=True)
+ 
+         # Monte Carlo simulations.
+-        if self.mc_sim_all_models:
++        if self.mc_sim_all_models or len(self.model_pipes) &lt; 2:
+             self.interpreter.monte_carlo.setup(number=self.mc_sim_num)
+             self.interpreter.monte_carlo.create_data()
+             self.interpreter.monte_carlo.initial_values()
+@@ -226,7 +226,7 @@
+         self.error_analysis()
+ 
+         # Loop over the models.
+-        model_pipes = []
++        self.model_pipes = []
+         for model in self.models:
+             # Printout.
+             subtitle(file=sys.stdout, text=&quot;The '%s' model&quot; % model, 
+prespace=3)
+@@ -237,7 +237,7 @@
+             # The name of the data pipe for the model.
+             model_pipe = model
+             if model != 'R2eff':
+-                model_pipes.append(model_pipe)
++                self.model_pipes.append(model_pipe)
+ 
+             # Check that results do not already exist - i.e. a previous run 
+was interrupted.
+             path1 = path + sep + 'results'
+@@ -280,9 +280,9 @@
+             self.write_results(path=path, model=model)
+ 
+         # The final model selection data pipe.
+-        if len(model_pipes) &gt;= 2:
++        if len(self.model_pipes) &gt;= 2:
+             # Perform model selection.
+-            self.interpreter.model_selection(method=self.modsel, 
+modsel_pipe='final', pipes=model_pipes)
++            self.interpreter.model_selection(method=self.modsel, 
+modsel_pipe='final', pipes=self.model_pipes)
+ 
+             # Final Monte Carlo simulations only.
+             if not self.mc_sim_all_models:
+@@ -297,7 +297,7 @@
+ 
+         # No model selection.
+         else:
+-            warn(RelaxWarning(&quot;Model selection in the dispersion 
+auto-analysis has been skipped as only %s models have been optimised.&quot; % 
+len(model_pipes)))
++            warn(RelaxWarning(&quot;Model selection in the dispersion 
+auto-analysis has been skipped as only %s models have been optimised.&quot; % 
+len(self.model_pipes)))
+ 
+         # Finally save the program state.
+         self.interpreter.state.save(state='final_state', 
+dir=self.results_dir, force=True)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Jul 22 08:40:02 2013</div>  
+</body>
+</html>

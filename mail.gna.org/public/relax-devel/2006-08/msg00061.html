@@ -1,0 +1,203 @@
+<!-- MHonArc v2.6.10 -->
+<!--X-Subject: Re: r2533 &#45; in /1.2: errors.py prompt/interpreter.py relax -->
+<!--X-From-R13: Quevf [npDnvyq <p.n.znpenvyqNyrrqf.np.hx> -->
+<!--X-Date: Fri, 11 Aug 2006 17:50:29 +0200 -->
+<!--X-Message-Id: 1155311362.28764.560.camel@fbsdpcu021 -->
+<!--X-Content-Type: text/plain -->
+<!--X-Reference: E1GB7jy&#45;0002oT&#45;Rz@subversion.gna.org -->
+<!--X-Reference: 7f080ed10608100351k224db22ftb3f5ebc1ecc7b452@mail.gmail.com -->
+<!--X-Reference: 1155209240.28764.489.camel@fbsdpcu021 -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>Re: r2533 - in /1.2: errors.py prompt/interpreter.py relax -- August 11, 2006 - 17:50</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />Re: r2533 - in /1.2: errors.py prompt/interpreter.py relax</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00061" class="tabs">Index by Date</a> | <a href="threads.html#00061" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00060.html">Date Prev</a>] [<a href="msg00062.html">Date Next</a>] [<a href="msg00059.html">Thread Prev</a>] [<a href="msg00062.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: Edward d'Auvergne &lt;edward@xxxxxxxxxxxxx&gt;</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 11 Aug 2006 16:49:22 +0100</li>
+<li class="menuitem">
+<em>Cc</em>: relax-devel@xxxxxxx</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00061.html">1155311362.28764.560.camel@fbsdpcu021</a>&gt;</li>
+<li class="menuitem">
+<em>References</em>: &lt;E1GB7jy-0002oT-Rz@subversion.gna.org&gt;	&lt;<a href="msg00053.html">7f080ed10608100351k224db22ftb3f5ebc1ecc7b452@mail.gmail.com</a>&gt;	&lt;<a href="msg00054.html">1155209240.28764.489.camel@fbsdpcu021</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>Chris MacRaild</strong> on August 11, 2006 - 17:50:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">On Thu, 2006-08-10 at 12:27 +0100, Chris MacRaild wrote:
+</pre><blockquote class="blockquote"><pre style="margin: 0em;">On Thu, 2006-08-10 at 20:51 +1000, Edward d'Auvergne wrote:
+</pre><blockquote class="blockquote"><pre style="margin: 0em;">Thanks.  I have a suggestion to simplify the state saving code and
+that is that the save_state function is called within the BaseError
+class.  This means that save_state is only called from one place in
+the code by placing it within the __str__ function (which is called
+</pre></blockquote><pre style="margin: 0em;">to
+</pre><blockquote class="blockquote"><pre style="margin: 0em;">get the error message).  For example something like:
+
+    class BaseError(Exception):
+        def __str__(self):
+            # Save the program state.
+            if Debug:
+                self.save_state()
+
+            # The RelaxError message.
+            return (&quot;RelaxError: &quot; + self.text + &quot;\n&quot;)
+</pre></blockquote><pre style="margin: 0em;">
+
+There are a couple of reasons I didn't do it this way. One is that
+__str__ is a 'special' function as far as Python is concerned, and it
+exists for a specific purpose (same with all the double-underscore
+functions). Although it's difficult to imagine how it might cause
+problems in this case, I'm inclined to avoid messing with it on
+principle. The second reason is that the way I've implimented it now
+gives us greater control - perhaps there will be a set of Errors that
+we
+dont want to save state. Or, as I've done with RelaxFault, we might
+want
+to save state in all cases, not just if Debug (the logic here being
+that
+RelaxFault always reflects a bug, and we want all the info we can
+about
+it especially if it is difficult to reproduce). I appreciate that the
+if
+Debug: self.save_state() gets repeditive, but I think its a price
+worth
+paying in this case. 
+</pre></blockquote><pre style="margin: 0em;">
+
+I've been thinking some more about this, and wonder if there is a better
+way of doing it. The problem is that Python exceptions are generally
+pretty minimalist constructions, and it seems hard to avoid very crude
+hacks when getting them to do anything more sophisticated. It seems that
+this is historical - in early versions of Python, there was no special
+Exception class, and raise could act on any object. This is still the
+case, though it's deprecated, so there is nothing the Exception itself
+can do to change the way raise handles it. The way around it is to do
+the appropriate handling tasks in the program code itself. The sort of
+thing I'm thinking about would have:
+
+class BaseError(Exception):
+    # -1 =&gt; never, 0 =&gt; if Debug, 1 =&gt; always
+    save_state = 0
+    def __str__(self):
+        return (&quot;RelaxError: &quot; + self.text + &quot;\n&quot;)
+
+class RelaxFault(BaseError):
+    save_state = 1
+    def __init__(self):
+        ...
+
+Then in the main program script, around line 151 (in the if mode ==
+'prompt' or mode == 'script' block) we would have:
+
+try:
+    self.interpreter.run()
+except BaseError:
+    err = sys.exc_info()
+    exception = err[1]
+    if exception.save_state == 1
+        state.save()
+    elif exception.save_state == 0
+        if Debug:
+            self.interpreter._State.save()
+    del err, exception
+    raise
+
+The logic here is that BaseError simply defines a flag indicating the
+default behaviour, and subclasses can override this as appropriate. Then
+we use the more normal exception handling machinery to ensure that the
+behaviour occurs, rather than coding that into the exception itself.
+This gives us even more flexibility, because we might want (around line
+180):
+
+# Run the tests.
+elif mode == 'test suite':
+    try:
+        Test_suite(self)
+    except BaseError:
+        err = sys.exc_info()
+        exception = err[1]
+        if exception.save_state &gt;= 0
+            self.interpreter._State.save()
+        del err, exception
+        raise
+
+Here exceptions will cause a state.save(), irrespective of Debug status,
+because we will always want to know about about errors during testing.
+
+The other advantage of this approach is that the state.save() only
+happens if the exception has propagated all the way to the top of the
+stack. With the save_state() function in __init__(), the state is saved
+when the exception class is instantiated ie. when it is raised, even if
+it is subsequently caught and dealt with.
+
+Chris
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<ul><li><strong>Follow-Ups</strong>:
+<ul>
+<li><strong><a name="00062" href="msg00062.html">Re: r2533 - in /1.2: errors.py prompt/interpreter.py relax</a></strong>
+<ul><li><em>From:</em> Edward d'Auvergne</li></ul></li>
+</ul></li></ul>
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<ul><li><strong>References</strong>:
+<ul>
+<li><strong><a name="00053" href="msg00053.html">Re: r2533 - in /1.2: errors.py prompt/interpreter.py relax</a></strong>
+<ul><li><em>From:</em> Edward d'Auvergne</li></ul></li>
+<li><strong><a name="00054" href="msg00054.html">Re: r2533 - in /1.2: errors.py prompt/interpreter.py relax</a></strong>
+<ul><li><em>From:</em> Chris MacRaild</li></ul></li>
+</ul></li></ul>
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Aug 11 19:20:14 2006</div>  
+</body>
+</html>

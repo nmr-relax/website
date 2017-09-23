@@ -1,0 +1,167 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r19362 &#45; /branches/relax_disp/specific_analyses/relax_disp.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 04 Apr 2013 16:19:05 +0200 -->
+<!--X-Message-Id: E1UNl0L&#45;0005qK&#45;Oo@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r19362 - /branches/relax_disp/specific_analyses/relax_disp.py -- April 04, 2013 - 16:19</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r19362 - /branches/relax_disp/specific_analyses/relax_disp.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00081" class="tabs">Index by Date</a> | <a href="threads.html#00081" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00080.html">Date Prev</a>] [<a href="msg00082.html">Date Next</a>] [<a href="msg00080.html">Thread Prev</a>] [<a href="msg00082.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 04 Apr 2013 14:19:05 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00081.html">E1UNl0L-0005qK-Oo@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on April 04, 2013 - 16:19:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Apr  4 16:19:05 2013
+New Revision: 19362
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=19362&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=19362&amp;view=rev</a>
+Log:
+The specific_analyses.relax_disp module is now using minfx correctly.
+
+The minfx grid search is no longer part of generic_minimise() and must be 
+called separately.
+
+
+Modified:
+    branches/relax_disp/specific_analyses/relax_disp.py
+
+Modified: branches/relax_disp/specific_analyses/relax_disp.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp.py?rev=19362&amp;r1=19361&amp;r2=19362&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp.py?rev=19362&amp;r1=19361&amp;r2=19362&amp;view=diff</a>
+==============================================================================
+--- branches/relax_disp/specific_analyses/relax_disp.py (original)
++++ branches/relax_disp/specific_analyses/relax_disp.py Thu Apr  4 16:19:05 
+2013
+@@ -24,6 +24,8 @@
+ &quot;&quot;&quot;The relaxation dispersion curve fitting specific code.&quot;&quot;&quot;
+ 
+ # Python module imports.
++from minfx.generic import generic_minimise
++from minfx.grid import grid
+ from numpy import array, average, dot, float64, identity, log, zeros
+ from numpy.linalg import inv
+ from re import match, search
+@@ -32,7 +34,6 @@
+ # relax module imports.
+ from lib.errors import RelaxError, RelaxFuncSetupError, RelaxLenError, 
+RelaxNoModelError, RelaxNoSequenceError, RelaxNoSpectraError
+ from lib.text.sectioning import subsection
+-from minfx.generic import generic_minimise
+ from pipe_control import pipes
+ from pipe_control.mol_res_spin import exists_mol_res_spin_data, return_spin, 
+spin_loop
+ from specific_analyses.api_base import API_base
+@@ -1087,17 +1088,24 @@
+             # Initialise the function to minimise.
+             model = Dispersion(model=cdp.model, 
+num_params=self._param_num(spins=spins), num_spins=spin_num, 
+num_exp_curves=cdp.curve_count, num_times=cdp.num_time_pts, values=values, 
+errors=errors, cpmg_frqs=cdp.cpmg_frqs_list, 
+spin_lock_nu1=cdp.spin_lock_nu1_list, relax_times=cdp.relax_time_list, 
+scaling_matrix=scaling_matrix)
+ 
+-            # Setup the minimisation algorithm when constraints are present.
+-            if constraints and not match('^[Gg]rid', min_algor):
+-                algor = min_options[0]
++            # Grid search.
++            if search('^[Gg]rid', min_algor):
++                results = grid(func=model.func, args=(), num_incs=inc, 
+lower=lower, upper=upper, A=A, b=b, verbosity=verbosity)
++
++                # Unpack the results.
++                param_vector, chi2, iter_count, warning = results
++                f_count = iter_count
++                g_count = 0.0
++                h_count = 0.0
++
++            # Minimisation.
+             else:
+-                algor = min_algor
+-
+-            # Minimisation.
+-            results = generic_minimise(func=model.func, args=(), 
+x0=param_vector, min_algor=min_algor, min_options=min_options, 
+func_tol=func_tol, grad_tol=grad_tol, maxiter=max_iterations, A=A, b=b, 
+full_output=True, print_flag=verbosity)
+-            if results == None:
+-                return
+-            param_vector, chi2, iter_count, f_count, g_count, h_count, 
+warning = results
++                results = generic_minimise(func=model.func, args=(), 
+x0=param_vector, min_algor=min_algor, min_options=min_options, 
+func_tol=func_tol, grad_tol=grad_tol, maxiter=max_iterations, A=A, b=b, 
+full_output=True, print_flag=verbosity)
++
++                # Unpack the results.
++                if results == None:
++                    return
++                param_vector, chi2, iter_count, f_count, g_count, h_count, 
+warning = results
+ 
+             # Scaling.
+             if scaling:
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Apr 04 16:40:01 2013</div>  
+</body>
+</html>

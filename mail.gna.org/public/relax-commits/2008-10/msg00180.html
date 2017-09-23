@@ -1,0 +1,189 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r7651 &#45; /1.3/data/__init__.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Sun, 12 Oct 2008 17:05:21 +0200 -->
+<!--X-Message-Id: E1Kp2VV&#45;0006DK&#45;MP@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r7651 - /1.3/data/__init__.py -- October 12, 2008 - 17:05</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r7651 - /1.3/data/__init__.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00180" class="tabs">Index by Date</a> | <a href="threads.html#00180" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00179.html">Date Prev</a>] [<a href="msg00181.html">Date Next</a>] [<a href="msg00179.html">Thread Prev</a>] [<a href="msg00181.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Sun, 12 Oct 2008 15:05:21 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00180.html">E1Kp2VV-0006DK-MP@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on October 12, 2008 - 17:05:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Sun Oct 12 17:05:21 2008
+New Revision: 7651
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=7651&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=7651&amp;view=rev</a>
+Log:
+Fixes for the relax data store singleton 'add()', 'to_xml()', and 
+'from_xml()' methods.
+
+These were referring to the contents of the singleton as self, whereas in 
+reality with the current
+temporary implementation it is stored in self.instance.  Hence the singleton 
+wasn't operating on
+itself.
+
+
+Modified:
+    1.3/data/__init__.py
+
+Modified: 1.3/data/__init__.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/data/__init__.py?rev=7651&amp;r1=7650&amp;r2=7651&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/data/__init__.py?rev=7651&amp;r1=7650&amp;r2=7651&amp;view=diff</a>
+==============================================================================
+--- 1.3/data/__init__.py (original)
++++ 1.3/data/__init__.py Sun Oct 12 17:05:21 2008
+@@ -75,7 +75,7 @@
+         # The data pipes.
+         text = text + &quot;\n&quot;
+         text = text + &quot;Data pipes:\n&quot;
+-        pipes = self.keys()
++        pipes = self.instance.keys()
+         if pipes:
+             for pipe in pipes:
+                 text = text + &quot;  %s\n&quot; % `pipe`
+@@ -132,7 +132,7 @@
+             del self.__dict__[key]
+ 
+         # Remove all items from the dictionary.
+-        self.clear()
++        self.instance.clear()
+ 
+ 
+     def add(self, pipe_name, pipe_type):
+@@ -147,7 +147,7 @@
+         &quot;&quot;&quot;
+ 
+         # Test if the pipe already exists.
+-        if pipe_name in self.keys():
++        if pipe_name in self.instance.keys():
+             raise RelaxPipeError, pipe_name
+ 
+         # Create a new container.
+@@ -157,7 +157,7 @@
+         self[pipe_name].pipe_type = pipe_type
+ 
+         # Change the current data pipe.
+-        self.current_pipe = pipe_name
++        self.instance.current_pipe = pipe_name
+ 
+ 
+     def from_xml(self, file, dir=None, verbosity=1):
+@@ -182,7 +182,7 @@
+         relax_version = str(relax_node.getAttribute('version'))
+ 
+         # Fill the pipe.
+-        self[self.current_pipe].from_xml(relax_node, dir=dir)
++        self[self.instance.current_pipe].from_xml(relax_node, dir=dir)
+ 
+ 
+     def to_xml(self, file):
+@@ -197,29 +197,29 @@
+         &quot;&quot;&quot;
+ 
+         # Create the XML document object.
+-        self.xmldoc = xml.dom.minidom.Document()
++        xmldoc = xml.dom.minidom.Document()
+ 
+         # Create the top level element, including the relax URL.
+-        top_element = self.xmldoc.createElementNS('<a  rel="nofollow" href="http://nmr-relax.com">http://nmr-relax.com</a>', 
+'relax')
++        top_element = xmldoc.createElementNS('<a  rel="nofollow" href="http://nmr-relax.com">http://nmr-relax.com</a>', 'relax')
+ 
+         # Append the element.
+-        self.xmldoc.appendChild(top_element)
++        xmldoc.appendChild(top_element)
+ 
+         # Set the relax version number, and add a creation time.
+         top_element.setAttribute('version', version)
+         top_element.setAttribute('time', asctime())
+ 
+         # Create the pipe XML element and add it to the top level XML 
+element.
+-        pipe_element = self.xmldoc.createElement('pipe')
++        pipe_element = xmldoc.createElement('pipe')
+         top_element.appendChild(pipe_element)
+ 
+         # Set the data pipe attributes.
+         pipe_element.setAttribute('desc', 'The contents of a relax data 
+pipe')
+-        pipe_element.setAttribute('name', self.current_pipe)
+-        pipe_element.setAttribute('type', self[self.current_pipe].pipe_type)
++        pipe_element.setAttribute('name', self.instance.current_pipe)
++        pipe_element.setAttribute('type', 
+self[self.instance.current_pipe].pipe_type)
+ 
+         # Fill the data pipe XML element.
+-        self[self.current_pipe].to_xml(self.xmldoc, pipe_element)
++        self[self.instance.current_pipe].to_xml(xmldoc, pipe_element)
+ 
+         # Write out the XML file.
+-        file.write(self.xmldoc.toprettyxml(indent='    '))
++        file.write(xmldoc.toprettyxml(indent='    '))
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Sun Oct 12 17:20:03 2008</div>  
+</body>
+</html>

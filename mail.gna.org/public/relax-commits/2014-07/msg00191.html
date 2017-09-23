@@ -1,0 +1,426 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r24557 &#45; in /branches/zooming_grid_search/specific_analyses: api_common.py consistency_tests/api.py jw_mapping/api.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 17 Jul 2014 17:13:35 +0200 -->
+<!--X-Message-Id: E1X7nNH&#45;0001Te&#45;8x@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r24557 - in /branches/zooming_grid_search/specific_analyses: api_common.py consistency_tests/api.py jw_mapping/api.py -- July 17, 2014 - 17:13</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r24557 - in /branches/zooming_grid_search/specific_analyses: api_common.py consistency_tests/api.py jw_mapping/api.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00191" class="tabs">Index by Date</a> | <a href="threads.html#00191" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00190.html">Date Prev</a>] [<a href="msg00192.html">Date Next</a>] [<a href="msg00190.html">Thread Prev</a>] [<a href="msg00192.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 17 Jul 2014 15:13:35 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00191.html">E1X7nNH-0001Te-8x@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on July 17, 2014 - 17:13:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Jul 17 17:13:34 2014
+New Revision: 24557
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=24557&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=24557&amp;view=rev</a>
+Log:
+Updated all the specific analysis methods affected by the _model_info_spin() 
+API method change.
+
+This is for the change whereby the common API method now returns the spin ID 
+string as well
+(r24554).
+
+
+Modified:
+    branches/zooming_grid_search/specific_analyses/api_common.py
+    branches/zooming_grid_search/specific_analyses/consistency_tests/api.py
+    branches/zooming_grid_search/specific_analyses/jw_mapping/api.py
+
+Modified: branches/zooming_grid_search/specific_analyses/api_common.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/zooming_grid_search/specific_analyses/api_common.py?rev=24557&amp;r1=24556&amp;r2=24557&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/zooming_grid_search/specific_analyses/api_common.py?rev=24557&amp;r1=24556&amp;r2=24557&amp;view=diff</a>
+==============================================================================
+--- branches/zooming_grid_search/specific_analyses/api_common.py        
+(original)
++++ branches/zooming_grid_search/specific_analyses/api_common.py        Thu 
+Jul 17 17:13:34 2014
+@@ -90,23 +90,26 @@
+         &quot;&quot;&quot;
+ 
+ 
+-    def _data_init_spin(self, data_cont, sim=False):
++    def _data_init_spin(self, model_info, sim=False):
+         &quot;&quot;&quot;Initialise data structures (spin system specific).
+ 
+-        @param data_cont:   The spin container.
+-        @type data_cont:    SpinContainer instance
++        @param model_info:  The spin container and the spin ID string from 
+the _model_info_spin() method.
++        @type model_info:   SpinContainer instance, str
+         @keyword sim:       The Monte Carlo simulation flag, which if true 
+will initialise the simulation data structure.
+         @type sim:          bool
+         &quot;&quot;&quot;
++
++        # Unpack the data.
++        spin, spin_id = model_info
+ 
+         # Loop over the parameters.
+         for name in self._PARAMS.loop(set='params', scope='spin', 
+error_names=False, sim_names=sim):
+             # Not a parameter of the model.
+-            if name not in data_cont.params:
++            if name not in spin.params:
+                 continue
+ 
+             # The value already exists.
+-            if hasattr(data_cont, name):
++            if hasattr(spin, name):
+                 continue
+ 
+             # The default value.
+@@ -119,7 +122,7 @@
+                 value = None
+ 
+             # Set the value.
+-            setattr(data_cont, name, value)
++            setattr(spin, name, value)
+ 
+ 
+     def _deselect_global(self, model_info, sim_index=None):
+@@ -480,18 +483,16 @@
+     def _set_error_spin(self, model_info, index, error):
+         &quot;&quot;&quot;Set the parameter errors (spin system specific).
+ 
+-        @param model_info:  The spin container originating from model_loop().
+-        @type model_info:   unknown
++        @param model_info:  The spin container and the spin ID string from 
+the _model_info_spin() method.
++        @type model_info:   SpinContainer instance, str
+         @param index:       The index of the parameter to set the errors for.
+         @type index:        int
+         @param error:       The error value.
+         @type error:        float
+         &quot;&quot;&quot;
+ 
+-        # The spin container.
+-        if not isinstance(model_info, SpinContainer):
+-            raise RelaxError(&quot;The model information argument is not a spin 
+container.&quot;)
+-        spin = model_info
++        # Unpack the data.
++        spin, spin_id = model_info
+ 
+         # Parameter increment counter.
+         inc = 0
+@@ -613,16 +614,14 @@
+     def _set_selected_sim_spin(self, model_info, select_sim):
+         &quot;&quot;&quot;Set the simulation selection flag (spin system specific).
+ 
+-        @param model_info:  The model information originating from 
+model_loop().
+-        @type model_info:   unknown
++        @param model_info:  The spin container and the spin ID string from 
+the _model_info_spin() method.
++        @type model_info:   SpinContainer instance, str
+         @param select_sim:  The selection flag for the simulations.
+         @type select_sim:   bool
+         &quot;&quot;&quot;
+ 
+-        # The spin container.
+-        if not isinstance(model_info, SpinContainer):
+-            raise RelaxError(&quot;The model information argument is not a spin 
+container.&quot;)
+-        spin = model_info
++        # Unpack the data.
++        spin, spin_id = model_info
+ 
+         # Set the array.
+         spin.select_sim = deepcopy(select_sim)
+@@ -740,18 +739,16 @@
+     def _sim_return_chi2_spin(self, model_info, index=None):
+         &quot;&quot;&quot;Return the simulation chi-squared values (spin system specific).
+ 
+-        @param model_info:  The model information originating from 
+model_loop().
+-        @type model_info:   unknown
++        @param model_info:  The spin container and the spin ID string from 
+the _model_info_spin() method.
++        @type model_info:   SpinContainer instance, str
+         @keyword index:     The optional simulation index.
+         @type index:        int
+         @return:            The list of simulation chi-squared values.  If 
+the index is supplied, only a single value will be returned.
+         @rtype:             list of float or float
+         &quot;&quot;&quot;
+ 
+-        # The spin container.
+-        if not isinstance(model_info, SpinContainer):
+-            raise RelaxError(&quot;The model information argument is not a spin 
+container.&quot;)
+-        spin = model_info
++        # Unpack the data.
++        spin, spin_id = model_info
+ 
+         # Index.
+         if index != None:
+@@ -765,18 +762,16 @@
+     def _sim_return_param_spin(self, model_info, index):
+         &quot;&quot;&quot;Return the array of simulation parameter values (spin system 
+specific).
+ 
+-        @param model_info:  The model information originating from 
+model_loop().
+-        @type model_info:   unknown
++        @param model_info:  The spin container and the spin ID string from 
+the _model_info_spin() method.
++        @type model_info:   SpinContainer instance, str
+         @param index:       The index of the parameter to return the array 
+of values for.
+         @type index:        int
+         @return:            The array of simulation parameter values.
+         @rtype:             list of float
+         &quot;&quot;&quot;
+ 
+-        # The spin container.
+-        if not isinstance(model_info, SpinContainer):
+-            raise RelaxError(&quot;The model information argument is not a spin 
+container.&quot;)
+-        spin = model_info
++        # Unpack the data.
++        spin, spin_id = model_info
+ 
+         # Parameter increment counter.
+         inc = 0
+@@ -811,16 +806,14 @@
+     def _sim_return_selected_spin(self, model_info):
+         &quot;&quot;&quot;Return the array of selected simulation flags (spin system 
+specific).
+ 
+-        @param model_info:  The model information originating from 
+model_loop().
+-        @type model_info:   unknown
++        @param model_info:  The spin container and the spin ID string from 
+the _model_info_spin() method.
++        @type model_info:   SpinContainer instance, str
+         @return:            The array of selected simulation flags.
+         @rtype:             list of int
+         &quot;&quot;&quot;
+ 
+-        # The spin container.
+-        if not isinstance(model_info, SpinContainer):
+-            raise RelaxError(&quot;The model information argument is not a spin 
+container.&quot;)
+-        spin = model_info
++        # Unpack the data.
++        spin, spin_id = model_info
+ 
+         # Return the array.
+         return spin.select_sim
+
+Modified: 
+branches/zooming_grid_search/specific_analyses/consistency_tests/api.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/zooming_grid_search/specific_analyses/consistency_tests/api.py?rev=24557&amp;r1=24556&amp;r2=24557&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/zooming_grid_search/specific_analyses/consistency_tests/api.py?rev=24557&amp;r1=24556&amp;r2=24557&amp;view=diff</a>
+==============================================================================
+--- branches/zooming_grid_search/specific_analyses/consistency_tests/api.py   
+  (original)
++++ branches/zooming_grid_search/specific_analyses/consistency_tests/api.py   
+  Thu Jul 17 17:13:34 2014
+@@ -348,16 +348,16 @@
+     def set_error(self, model_info, index, error):
+         &quot;&quot;&quot;Set the parameter errors.
+ 
+-        @param model_info:  The spin container originating from model_loop().
+-        @type model_info:   SpinContainer instance
++        @param model_info:  The spin container and the spin ID string from 
+the _model_info_spin() method.
++        @type model_info:   SpinContainer instance, str
+         @param index:       The index of the parameter to set the errors for.
+         @type index:        int
+         @param error:       The error value.
+         @type error:        float
+         &quot;&quot;&quot;
+ 
+-        # Alias.
+-        spin = model_info
++        # Unpack the data.
++        spin, spin_id = model_info
+ 
+         # Return J(0) sim data.
+         if index == 0:
+@@ -375,16 +375,16 @@
+     def sim_return_param(self, model_info, index):
+         &quot;&quot;&quot;Return the array of simulation parameter values.
+ 
+-        @param model_info:  The spin container originating from model_loop().
+-        @type model_info:   SpinContainer instance
++        @param model_info:  The spin container and the spin ID string from 
+the _model_info_spin() method.
++        @type model_info:   SpinContainer instance, str
+         @param index:       The index of the parameter to return the array 
+of values for.
+         @type index:        int
+         @return:            The array of simulation parameter values.
+         @rtype:             list of float
+         &quot;&quot;&quot;
+ 
+-        # Alias.
+-        spin = model_info
++        # Unpack the data.
++        spin, spin_id = model_info
+ 
+         # Skip deselected spins.
+         if not spin.select:
+@@ -406,14 +406,14 @@
+     def sim_return_selected(self, model_info):
+         &quot;&quot;&quot;Return the array of selected simulation flags.
+ 
+-        @param model_info:  The spin container originating from model_loop().
+-        @type model_info:   SpinContainer instance
++        @param model_info:  The spin container and the spin ID string from 
+the _model_info_spin() method.
++        @type model_info:   SpinContainer instance, str
+         @return:            The array of selected simulation flags.
+         @rtype:             list of int
+         &quot;&quot;&quot;
+ 
+-        # Alias.
+-        spin = model_info
++        # Unpack the data.
++        spin, spin_id = model_info
+ 
+         # Multiple spins.
+         return spin.select_sim
+
+Modified: branches/zooming_grid_search/specific_analyses/jw_mapping/api.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/zooming_grid_search/specific_analyses/jw_mapping/api.py?rev=24557&amp;r1=24556&amp;r2=24557&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/zooming_grid_search/specific_analyses/jw_mapping/api.py?rev=24557&amp;r1=24556&amp;r2=24557&amp;view=diff</a>
+==============================================================================
+--- branches/zooming_grid_search/specific_analyses/jw_mapping/api.py    
+(original)
++++ branches/zooming_grid_search/specific_analyses/jw_mapping/api.py    Thu 
+Jul 17 17:13:34 2014
+@@ -339,16 +339,16 @@
+     def set_error(self, model_info, index, error):
+         &quot;&quot;&quot;Set the parameter errors.
+ 
+-        @param model_info:  The spin container originating from model_loop().
+-        @type model_info:   SpinContainer instance
++        @param model_info:  The spin container and the spin ID string from 
+the _model_info_spin() method.
++        @type model_info:   SpinContainer instance, str
+         @param index:       The index of the parameter to set the errors for.
+         @type index:        int
+         @param error:       The error value.
+         @type error:        float
+         &quot;&quot;&quot;
+ 
+-        # Alias.
+-        spin = model_info
++        # Unpack the data.
++        spin, spin_id = model_info
+ 
+         # Return J(0) sim data.
+         if index == 0:
+@@ -366,16 +366,16 @@
+     def sim_return_param(self, model_info, index):
+         &quot;&quot;&quot;Return the array of simulation parameter values.
+ 
+-        @param model_info:  The spin container originating from model_loop().
+-        @type model_info:   SpinContainer instance
++        @param model_info:  The spin container and the spin ID string from 
+the _model_info_spin() method.
++        @type model_info:   SpinContainer instance, str
+         @param index:       The index of the parameter to return the array 
+of values for.
+         @type index:        int
+         @return:            The array of simulation parameter values.
+         @rtype:             list of float
+         &quot;&quot;&quot;
+ 
+-        # Alias.
+-        spin = model_info
++        # Unpack the data.
++        spin, spin_id = model_info
+ 
+         # Skip deselected spins.
+         if not spin.select:
+@@ -397,14 +397,14 @@
+     def sim_return_selected(self, model_info):
+         &quot;&quot;&quot;Return the array of selected simulation flags.
+ 
+-        @param model_info:  The spin container originating from model_loop().
+-        @type model_info:   SpinContainer instance
++        @param model_info:  The spin container and the spin ID string from 
+the _model_info_spin() method.
++        @type model_info:   SpinContainer instance, str
+         @return:            The array of selected simulation flags.
+         @rtype:             list of int
+         &quot;&quot;&quot;
+ 
+-        # Alias.
+-        spin = model_info
++        # Unpack the data.
++        spin, spin_id = model_info
+ 
+         # Multiple spins.
+         return spin.select_sim
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Jul 17 17:40:02 2014</div>  
+</body>
+</html>

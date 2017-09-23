@@ -1,0 +1,175 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r27741 &#45; /trunk/test_suite/system_tests/pcs.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 03 Mar 2015 14:17:42 +0100 -->
+<!--X-Message-Id: E1YSmhi&#45;0000Ue&#45;IO@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r27741 - /trunk/test_suite/system_tests/pcs.py -- March 03, 2015 - 14:17</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r27741 - /trunk/test_suite/system_tests/pcs.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00019" class="tabs">Index by Date</a> | <a href="threads.html#00019" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00018.html">Date Prev</a>] [<a href="msg00020.html">Date Next</a>] [<a href="msg00018.html">Thread Prev</a>] [<a href="msg00020.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 03 Mar 2015 13:17:42 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00019.html">E1YSmhi-0000Ue-IO@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on March 03, 2015 - 14:17:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Mar  3 14:17:41 2015
+New Revision: 27741
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=27741&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=27741&amp;view=rev</a>
+Log:
+Created the Pcs.test_pcs_copy_different_spins system test.
+
+This will be used to show a limitation of the pcs.copy user function in that 
+it cannot copy data
+between two data pipes with different molecule, residue, and spin sequences.
+
+
+Modified:
+    trunk/test_suite/system_tests/pcs.py
+
+Modified: trunk/test_suite/system_tests/pcs.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/test_suite/system_tests/pcs.py?rev=27741&amp;r1=27740&amp;r2=27741&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/test_suite/system_tests/pcs.py?rev=27741&amp;r1=27740&amp;r2=27741&amp;view=diff</a>
+==============================================================================
+--- trunk/test_suite/system_tests/pcs.py        (original)
++++ trunk/test_suite/system_tests/pcs.py        Tue Mar  3 14:17:41 2015
+@@ -1,6 +1,6 @@
+ 
+###############################################################################
+ #                                                                            
+ #
+-# Copyright (C) 2011-2013 Edward d'Auvergne                                  
+ #
++# Copyright (C) 2011-2015 Edward d'Auvergne                                  
+ #
+ #                                                                            
+ #
+ # This file is part of the program relax (<a  rel="nofollow" href="http://www.nmr-relax.com">http://www.nmr-relax.com</a>).         
+ #
+ #                                                                            
+ #
+@@ -221,6 +221,51 @@
+         for spin in spin_loop():
+             self.assertEqual(pcs[i], spin.pcs['tb'])
+             i += 1
++
++
++    def test_pcs_copy_different_spins(self):
++        &quot;&quot;&quot;Test the operation of the pcs.copy user function for two data 
+pipes with different spin system.&quot;&quot;&quot;
++
++        # Data directory.
++        dir = status.install_path + 
+sep+'test_suite'+sep+'shared_data'+sep+'align_data'+sep
++
++        # Set up two data identical pipes.
++        pipes = ['orig', 'new']
++        delete = ['@C2', '@H17']
++        for i in range(2):
++            # Create a data pipe.
++            self.interpreter.pipe.create(pipes[i], 'N-state')
++
++            # Load the spins.
++            self.interpreter.sequence.read(file='pcs.txt', dir=dir, 
+spin_name_col=1)
++
++            # Delete the spin.
++            self.interpreter.spin.delete(delete[i])
++            self.interpreter.sequence.display()
++
++        # Load the PCSs into the first data pipe.
++        self.interpreter.pipe.switch('orig')
++        self.interpreter.pcs.read(align_id='tb', file='pcs.txt', dir=dir, 
+spin_name_col=1, data_col=2)
++
++        # Copy the PCSs into the second data pipe.
++        self.interpreter.pcs.copy(pipe_from='orig', pipe_to='new', 
+align_id='tb')
++
++        # Checks.
++        pcs = [
++            [0.004, 0.021, 0.029, 0.016, 0.010, 0.008, 0.003, 0.006, 0.003, 
+0.007, 0.005, 0.001, 0.070, None, 0.025, 0.098, 0.054, 0.075, 0.065, None, 
+0.070, 0.015, 0.098, 0.060, 0.120],
++            [0.004, 0.008, 0.021, 0.029, 0.016, 0.010, 0.008, 0.003, 0.006, 
+0.003, 0.007, 0.005, 0.001, 0.070, None, 0.025, 0.098, 0.054, 0.075, 0.065, 
+None, 0.070, 0.015, 0.098, 0.120]
++        ]
++        for i in range(2):
++            self.assertEqual(count_spins(), 26)
++            self.assertEqual(len(cdp.interatomic), 0)
++            i = 0
++            for spin in spin_loop():
++                # Atom C2 in the 'new' data pipe has no PCSs.
++                if i == 1 and j == 1:
++                    self.assert_(not hasattr(spin, 'pcs'))
++                else:
++                    self.assertAlmostEqual(pcs[i][j], spin.pcs['tb'])
++                i += 1
+ 
+ 
+     def test_pcs_load(self):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Mar 03 14:40:02 2015</div>  
+</body>
+</html>

@@ -1,0 +1,280 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r24820 &#45; /branches/frame_order_cleanup/auto_analyses/frame_order.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 30 Jul 2014 08:46:04 +0200 -->
+<!--X-Message-Id: E1XCNeG&#45;0006qJ&#45;CG@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r24820 - /branches/frame_order_cleanup/auto_analyses/frame_order.py -- July 30, 2014 - 08:46</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r24820 - /branches/frame_order_cleanup/auto_analyses/frame_order.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00454" class="tabs">Index by Date</a> | <a href="threads.html#00454" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00453.html">Date Prev</a>] [<a href="msg00455.html">Date Next</a>] [<a href="msg00453.html">Thread Prev</a>] [<a href="msg00455.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 30 Jul 2014 06:46:04 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00454.html">E1XCNeG-0006qJ-CG@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on July 30, 2014 - 08:46:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Jul 30 08:46:03 2014
+New Revision: 24820
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=24820&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=24820&amp;view=rev</a>
+Log:
+Updates and fixes for the frame order auto-analysis.
+
+The custom grid setup now works for the new reduced parameter set models and 
+the double rotor model
+is now also included.  The cone axis alpha angle to spherical angle 
+conversion has had a bug
+removed.  And some of the printouts are now more detailed.
+
+
+Modified:
+    branches/frame_order_cleanup/auto_analyses/frame_order.py
+
+Modified: branches/frame_order_cleanup/auto_analyses/frame_order.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/auto_analyses/frame_order.py?rev=24820&amp;r1=24819&amp;r2=24820&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/auto_analyses/frame_order.py?rev=24820&amp;r1=24819&amp;r2=24820&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/auto_analyses/frame_order.py   (original)
++++ branches/frame_order_cleanup/auto_analyses/frame_order.py   Wed Jul 30 
+08:46:03 2014
+@@ -223,41 +223,64 @@
+ 
+         # Initialise the structure.
+         incs = []
++
++        # The pivot parameters.
+         if hasattr(cdp, 'pivot_fixed') and not cdp.pivot_fixed:
++            # Optimise the pivot for the rotor model.
++            if model == MODEL_ROTOR:
++                incs += [self.grid_inc, self.grid_inc, self.grid_inc]
++
++            # Otherwise use preset values (copied from other models).
++            else:
++                incs += [None, None, None]
++
++        # The 2nd pivot point parameters - the minimum inter rotor axis 
+distance.
++        if model in [MODEL_DOUBLE_ROTOR]:
++            incs += [self.grid_inc]
++
++        # The average domain position parameters.
++        if model == MODEL_FREE_ROTOR:
++            incs += [self.grid_inc, self.grid_inc, self.grid_inc, 
+self.grid_inc, self.grid_inc]
++        elif model in [MODEL_ISO_CONE_FREE_ROTOR, 
+MODEL_PSEUDO_ELLIPSE_FREE_ROTOR]:
++            incs += [None, None, None, None, None]
++        else:
++            incs += [None, None, None, None, None, None]
++
++        # The motional eigenframe and order parameters - the rotor model.
++        if model == MODEL_ROTOR:
++            incs += [self.grid_inc, self.grid_inc]
++
++        # The motional eigenframe and order parameters - the free rotor 
+model.
++        if model == MODEL_FREE_ROTOR:
++            incs += [None]
++
++        # The motional eigenframe and order parameters - the torsionless 
+isotropic cone model.
++        if model == MODEL_ISO_CONE_TORSIONLESS:
+             incs += [None, None, None]
+-        incs += [None, None, None]
+-
+-        # The rotor model.
+-        if model == MODEL_ROTOR:
+-            incs += [None, None, None, self.grid_inc, self.grid_inc, 
+self.grid_inc]
+-
+-        # The free rotor model.
+-        if model == MODEL_FREE_ROTOR:
+-            incs += [self.grid_inc, self.grid_inc, self.grid_inc, 
+self.grid_inc]
+-
+-        # The torsionless isotropic cone model.
+-        if model == MODEL_ISO_CONE_TORSIONLESS:
+-            incs += [None, None, None, self.grid_inc, self.grid_inc, 
+self.grid_inc]
+-
+-        # The free rotor isotropic cone model.
++
++        # The motional eigenframe and order parameters - the free rotor 
+isotropic cone model.
+         if model == MODEL_ISO_CONE_FREE_ROTOR:
+-            incs += [None, None, None, None, self.grid_inc]
+-
+-        # The isotropic cone model.
++            incs += [None, None, None]
++
++        # The motional eigenframe and order parameters - the isotropic cone 
+model.
+         if model == MODEL_ISO_CONE:
+-            incs += [None, None, None, self.grid_inc, self.grid_inc, 
+self.grid_inc, None]
+-
+-        # The torsionless pseudo-elliptic cone model.
++            incs += [None, None, self.grid_inc, None]
++
++        # The motional eigenframe and order parameters - the torsionless 
+pseudo-elliptic cone model.
+         if model == MODEL_PSEUDO_ELLIPSE_TORSIONLESS:
+-            incs += [None, None, None, self.grid_inc, self.grid_inc, 
+self.grid_inc, self.grid_inc, None]
+-
+-        # The free rotor pseudo-elliptic cone model.
++            incs += [None, None, None, None, None]
++
++        # The motional eigenframe and order parameters - the free rotor 
+pseudo-elliptic cone model.
+         if model == MODEL_PSEUDO_ELLIPSE_FREE_ROTOR:
+-            incs += [None, None, None, self.grid_inc, self.grid_inc, 
+self.grid_inc, self.grid_inc, None]
+-
+-        # The pseudo-elliptic cone model.
++            incs += [None, None, None, None, None]
++
++        # The motional eigenframe and order parameters - the pseudo-elliptic 
+cone model.
+         if model == MODEL_PSEUDO_ELLIPSE:
+-            incs += [None, None, None, self.grid_inc, self.grid_inc, 
+self.grid_inc, self.grid_inc, None, None]
++            incs += [self.grid_inc, self.grid_inc, self.grid_inc, None, 
+self.grid_inc, None]
++
++        # The motional eigenframe and order parameters - the double rotor 
+model.
++        if model == MODEL_DOUBLE_ROTOR:
++            incs += [None, None, None, self.grid_inc, self.grid_inc]
+ 
+         # Return the increment list.
+         return incs
+@@ -273,7 +296,7 @@
+         # Skip the following models to allow for full optimisation.
+         if model in [MODEL_RIGID, MODEL_FREE_ROTOR]:
+             # Printout.
+-            print(&quot;No nesting of the average domain position parameters.&quot;)
++            print(&quot;No nesting of the average domain position parameters for 
+the '%s' model.&quot; % model)
+ 
+             # Exit.
+             return
+@@ -320,7 +343,7 @@
+         # Skip the following models to allow for full optimisation.
+         if model in [MODEL_ROTOR, MODEL_PSEUDO_ELLIPSE]:
+             # Printout.
+-            print(&quot;No nesting of the eigenframe parameters.&quot;)
++            print(&quot;No nesting of the eigenframe parameters for the '%s' 
+model.&quot; % model)
+ 
+             # Exit.
+             return
+@@ -339,7 +362,7 @@
+ 
+             # The cone axis from the axis alpha angle to spherical angles.
+             if model == MODEL_ISO_CONE:
+-                cdp.axis_theta, cdp_axis_phi = 
+convert_axis_alpha_to_spherical(alpha=pipe.axis_alpha, 
+pivot=generate_pivot(order=1, pipe_name=self.pipe_name_dict[MODEL_ROTOR]), 
+point=pipe_centre_of_mass(verbosity=0))
++                cdp.axis_theta, cdp.axis_phi = 
+convert_axis_alpha_to_spherical(alpha=pipe.axis_alpha, 
+pivot=generate_pivot(order=1, pipe_name=self.pipe_name_dict[MODEL_ROTOR]), 
+point=pipe_centre_of_mass(verbosity=0))
+ 
+         # The cone axis from the isotropic cone model.
+         elif model in [MODEL_ISO_CONE_FREE_ROTOR, 
+MODEL_ISO_CONE_TORSIONLESS]:
+@@ -377,7 +400,7 @@
+         # Skip the following models to allow for full optimisation.
+         if model in [MODEL_ROTOR, MODEL_DOUBLE_ROTOR]:
+             # Printout.
+-            print(&quot;No nesting of the order parameters.&quot;)
++            print(&quot;No nesting of the order parameters for the '%s' model.&quot; % 
+model)
+ 
+             # Exit.
+             return
+@@ -417,6 +440,9 @@
+ 
+         # The torsion from the rotor model.
+         if model in [MODEL_ISO_CONE, MODEL_PSEUDO_ELLIPSE]:
++            # Printout.
++            print(&quot;Obtaining the torsion angle from the rotor model.&quot;)
++
+             # Get the rotor data pipe.
+             pipe = get_pipe(self.pipe_name_dict[MODEL_ROTOR])
+ 
+@@ -434,7 +460,7 @@
+         # Skip the following models to allow for full optimisation.
+         if model in [MODEL_ROTOR]:
+             # Printout.
+-            print(&quot;No nesting of the pivot parameters.&quot;)
++            print(&quot;No nesting of the pivot parameters for the '%s' model.&quot; % 
+model)
+ 
+             # Exit.
+             return
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Jul 30 09:40:03 2014</div>  
+</body>
+</html>

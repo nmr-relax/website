@@ -1,0 +1,410 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r13313 &#45; in /branches/gui_testing/gui/analyses: auto_noe.py	auto_rx_base.py execute.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 29 Jun 2011 17:21:00 +0200 -->
+<!--X-Message-Id: E1QbwZY&#45;0006WW&#45;OW@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r13313 - in /branches/gui_testing/gui/analyses: auto_noe.py	auto_rx_base.py execute.py -- June 29, 2011 - 17:21</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r13313 - in /branches/gui_testing/gui/analyses: auto_noe.py	auto_rx_base.py execute.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00480" class="tabs">Index by Date</a> | <a href="threads.html#00480" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00479.html">Date Prev</a>] [<a href="msg00481.html">Date Next</a>] [<a href="msg00479.html">Thread Prev</a>] [<a href="msg00481.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 29 Jun 2011 15:21:00 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00480.html">E1QbwZY-0006WW-OW@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on June 29, 2011 - 17:21:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Jun 29 17:21:00 2011
+New Revision: 13313
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=13313&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=13313&amp;view=rev</a>
+Log:
+Modified the threading execution of the GUI analyses.
+
+The class gui.analyses.execute.Execute has been created to be a base class 
+for all the analysis
+threads.  The specific analyses then only need to derive from this by 
+providing the run() method.
+All of the threaded vs. non-threaded, exception handling, and other threaded 
+properties will then
+be handed by this class.
+
+
+Added:
+    branches/gui_testing/gui/analyses/execute.py
+Modified:
+    branches/gui_testing/gui/analyses/auto_noe.py
+    branches/gui_testing/gui/analyses/auto_rx_base.py
+
+Modified: branches/gui_testing/gui/analyses/auto_noe.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/gui_testing/gui/analyses/auto_noe.py?rev=13313&amp;r1=13312&amp;r2=13313&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/gui_testing/gui/analyses/auto_noe.py?rev=13313&amp;r1=13312&amp;r2=13313&amp;view=diff</a>
+==============================================================================
+--- branches/gui_testing/gui/analyses/auto_noe.py (original)
++++ branches/gui_testing/gui/analyses/auto_noe.py Wed Jun 29 17:21:00 2011
+@@ -29,7 +29,6 @@
+ from os.path import dirname
+ from string import replace
+ import sys
+-from threading import Thread
+ import time
+ import wx
+ 
+@@ -41,6 +40,7 @@
+ 
+ # relaxGUI module imports.
+ from gui.analyses.base import Base_frame
++from gui.analyses.execute import Execute
+ from gui.analyses.results_analysis import color_code_noe
+ from gui.base_classes import Container
+ from gui.controller import Redirect_text
+@@ -285,12 +285,14 @@
+         if not status.debug:
+             self.gui.controller.Show()
+ 
+-        # Start the thread (if not debugging).
++        # Threading flag.
++        thread = True
+         if status.debug:
+-            self.thread = Execute(self.gui, data, self.data_index)
+-        else:
+-            self.thread = Execute_thread(self.gui, data, self.data_index)
+-            self.thread.start()
++            thread = False
++
++        # Start the thread.
++        self.thread = Execute_noe(self.gui, data, self.data_index, 
+thread=thread)
++        self.thread.start()
+ 
+         # Terminate the event.
+         event.Skip()
+@@ -468,28 +470,8 @@
+ 
+ 
+ 
+-class Execute:
++class Execute_noe(Execute):
+     &quot;&quot;&quot;The NOE analysis execution object.&quot;&quot;&quot;
+-
+-    def __init__(self, gui, data, data_index):
+-        &quot;&quot;&quot;Set up the NOE analysis execution object.
+-
+-        @param gui:         The GUI object.
+-        @type gui:          wx object
+-        @param data:        The data container with all data for the 
+analysis.
+-        @type data:         class instance
+-        @param data_index:  The index of the analysis in the relax data 
+store.
+-        @type data_index:   int
+-        &quot;&quot;&quot;
+-
+-        # Store the args.
+-        self.gui = gui
+-        self.data = data
+-        self.data_index = data_index
+-
+-        # Execute.
+-        self.run()
+-
+ 
+     def run(self):
+         &quot;&quot;&quot;Execute the calculation.&quot;&quot;&quot;
+@@ -521,27 +503,3 @@
+ 
+             # Add the macro to the results list.
+             data.results_list.append(data.save_dir+sep+'noe.pml')
+-
+-
+-
+-class Execute_thread(Execute, Thread):
+-    &quot;&quot;&quot;The NOE analysis thread execution object.&quot;&quot;&quot;
+-
+-    def __init__(self, gui, data, data_index):
+-        &quot;&quot;&quot;Set up the NOE analysis thread execution object.
+-
+-        @param gui:         The GUI object.
+-        @type gui:          wx object
+-        @param data:        The data container with all data for the 
+analysis.
+-        @type data:         class instance
+-        @param data_index:  The index of the analysis in the relax data 
+store.
+-        @type data_index:   int
+-        &quot;&quot;&quot;
+-
+-        # Store the args.
+-        self.gui = gui
+-        self.data = data
+-        self.data_index = data_index
+-
+-        # Set up the thread object.
+-        Thread.__init__(self)
+
+Modified: branches/gui_testing/gui/analyses/auto_rx_base.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/gui_testing/gui/analyses/auto_rx_base.py?rev=13313&amp;r1=13312&amp;r2=13313&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/gui_testing/gui/analyses/auto_rx_base.py?rev=13313&amp;r1=13312&amp;r2=13313&amp;view=diff</a>
+==============================================================================
+--- branches/gui_testing/gui/analyses/auto_rx_base.py (original)
++++ branches/gui_testing/gui/analyses/auto_rx_base.py Wed Jun 29 17:21:00 2011
+@@ -28,7 +28,6 @@
+ from os import sep
+ from string import replace
+ import sys
+-from threading import Thread
+ import time
+ import wx
+ 
+@@ -40,6 +39,7 @@
+ 
+ # relaxGUI module imports.
+ from gui.analyses.base import Base_frame
++from gui.analyses.execute import Execute
+ from gui.base_classes import Container
+ from gui.components.spectrum import Peak_intensity
+ from gui.controller import Redirect_text
+@@ -268,11 +268,15 @@
+         if not status.debug:
+             self.gui.controller.Show()
+ 
++        # Threading flag.
++        thread = True
++        if status.debug:
++            thread = False
++
+         # Start the thread.
+-        if status.debug:
+-            self.thread = Execute(self.gui, data, self.data_index)
++            self.thread = Execute_rx(self.gui, data, self.data_index, 
+thread=False)
+         else:
+-            self.thread = Execute_thread(self.gui, data, self.data_index)
++            self.thread = Execute_rx(self.gui, data, self.data_index)
+             self.thread.start()
+ 
+ 
+@@ -364,28 +368,8 @@
+ 
+ 
+ 
+-class Execute:
++class Execute_rx(Execute):
+     &quot;&quot;&quot;The Rx analysis execution object.&quot;&quot;&quot;
+-
+-    def __init__(self, gui, data, data_index):
+-        &quot;&quot;&quot;Set up the Rx analysis execution object.
+-
+-        @param gui:         The GUI object.
+-        @type gui:          wx object
+-        @param data:        The data container with all data for the 
+analysis.
+-        @type data:         class instance
+-        @param data_index:  The index of the analysis in the relax data 
+store.
+-        @type data_index:   int
+-        &quot;&quot;&quot;
+-
+-        # Store the args.
+-        self.gui = gui
+-        self.data = data
+-        self.data_index = data_index
+-
+-        # Execute.
+-        self.run()
+-
+ 
+     def run(self):
+         &quot;&quot;&quot;Execute the calculation.&quot;&quot;&quot;
+@@ -410,27 +394,3 @@
+         # Add Rx grace plot to the results list.
+         
+data.results_list.append(data.save_dir+sep+'grace'+sep+self.filename+'.agr')
+         
+data.results_list.append(data.save_dir+sep+'grace'+sep+'intensities_norm.agr')
+-
+-
+-
+-class Execute_thread(Execute, Thread):
+-    &quot;&quot;&quot;The NOE analysis thread execution object.&quot;&quot;&quot;
+-
+-    def __init__(self, gui, data, data_index):
+-        &quot;&quot;&quot;Set up the NOE analysis thread execution object.
+-
+-        @param gui:         The GUI object.
+-        @type gui:          wx object
+-        @param data:        The data container with all data for the 
+analysis.
+-        @type data:         class instance
+-        @param data_index:  The index of the analysis in the relax data 
+store.
+-        @type data_index:   int
+-        &quot;&quot;&quot;
+-
+-        # Store the args.
+-        self.gui = gui
+-        self.data = data
+-        self.data_index = data_index
+-
+-        # Set up the thread object.
+-        Thread.__init__(self)
+
+Added: branches/gui_testing/gui/analyses/execute.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/gui_testing/gui/analyses/execute.py?rev=13313&amp;view=auto">http://svn.gna.org/viewcvs/relax/branches/gui_testing/gui/analyses/execute.py?rev=13313&amp;view=auto</a>
+==============================================================================
+--- branches/gui_testing/gui/analyses/execute.py (added)
++++ branches/gui_testing/gui/analyses/execute.py Wed Jun 29 17:21:00 2011
+@@ -1,0 +1,68 @@
++###############################################################################
++#                                                                            
+ #
++# Copyright (C) 2011 Edward d'Auvergne                                       
+ #
++#                                                                            
+ #
++# This file is part of the program relax.                                    
+ #
++#                                                                            
+ #
++# relax is free software; you can redistribute it and/or modify              
+ #
++# it under the terms of the GNU General Public License as published by       
+ #
++# the Free Software Foundation; either version 2 of the License, or          
+ #
++# (at your option) any later version.                                        
+ #
++#                                                                            
+ #
++# relax is distributed in the hope that it will be useful,                   
+ #
++# but WITHOUT ANY WARRANTY; without even the implied warranty of             
+ #
++# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the              
+ #
++# GNU General Public License for more details.                               
+ #
++#                                                                            
+ #
++# You should have received a copy of the GNU General Public License          
+ #
++# along with relax; if not, write to the Free Software                       
+ #
++# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA  
+ #
++#                                                                            
+ #
++###############################################################################
++
++# Module docstring.
++&quot;&quot;&quot;Module containing the class for threaded and non-threaded analysis 
+execution.&quot;&quot;&quot;
++
++
++# Python module imports.
++from threading import Thread
++
++
++
++class Execute(Thread):
++    &quot;&quot;&quot;The analysis execution object.&quot;&quot;&quot;
++
++    def __init__(self, gui, data, data_index, thread=True):
++        &quot;&quot;&quot;Set up the NOE analysis execution object.
++
++        @param gui:         The GUI object.
++        @type gui:          wx object
++        @param data:        The data container with all data for the 
+analysis.
++        @type data:         class instance
++        @param data_index:  The index of the analysis in the relax data 
+store.
++        @type data_index:   int
++        @keyword thread:    The flag for turning threading on and off.
++        @type thread:       bool
++        &quot;&quot;&quot;
++
++        # Store the args.
++        self.gui = gui
++        self.data = data
++        self.data_index = data_index
++
++        # Threaded execution.
++        if thread:
++            # Set up the thread object.
++            Thread.__init__(self)
++
++        # No treaded execution.
++        else:
++            # Alias the start method.
++            self.start = self._start
++
++
++    def _start(self):
++        &quot;&quot;&quot;Replacement start() method for when execution is not threaded.&quot;&quot;&quot;
++
++        # Execute the run() method.
++        self.run()
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Jun 29 17:40:03 2011</div>  
+</body>
+</html>

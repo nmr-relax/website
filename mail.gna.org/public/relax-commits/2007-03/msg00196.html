@@ -1,0 +1,260 @@
+<!-- MHonArc v2.6.10 -->
+<!--X-Subject: r3255 &#45; in /1.3: generic_fns/selection.py test_suite/unit_tests/generic_fns/test_selection.py -->
+<!--X-From-R13: p.n.znpenvyqNyrrqf.np.hx -->
+<!--X-Date: Fri, 30 Mar 2007 15:48:34 +0200 -->
+<!--X-Message-Id: E1HXHGW&#45;0003t6&#45;82@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r3255 - in /1.3: generic_fns/selection.py test_suite/unit_tests/generic_fns/test_selection.py -- March 30, 2007 - 15:48</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r3255 - in /1.3: generic_fns/selection.py test_suite/unit_tests/generic_fns/test_selection.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00196" class="tabs">Index by Date</a> | <a href="threads.html#00196" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00195.html">Date Prev</a>] [<a href="msg00197.html">Date Next</a>] [<a href="msg00195.html">Thread Prev</a>] [<a href="msg00197.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 30 Mar 2007 13:35:40 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00196.html">E1HXHGW-0003t6-82@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>c . a . macraild</strong> on March 30, 2007 - 15:48:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: macraild
+Date: Fri Mar 30 15:35:39 2007
+New Revision: 3255
+
+URL: <a  href="http://svn.gna.org/viewcvs/relax?rev=3255&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=3255&amp;view=rev</a>
+Log:
+Improvements and unit-tests for spin selection
+
+
+Modified:
+    1.3/generic_fns/selection.py
+    1.3/test_suite/unit_tests/generic_fns/test_selection.py
+
+Modified: 1.3/generic_fns/selection.py
+URL: 
+<a  href="http://svn.gna.org/viewcvs/relax/1.3/generic_fns/selection.py?rev=3255&amp;r1=3254&amp;r2=3255&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/generic_fns/selection.py?rev=3255&amp;r1=3254&amp;r2=3255&amp;view=diff</a>
+==============================================================================
+--- 1.3/generic_fns/selection.py (original)
++++ 1.3/generic_fns/selection.py Fri Mar 30 15:35:39 2007
+@@ -60,63 +60,62 @@
+ class Selection(object):
+     &quot;&quot;&quot;An object containing mol-res-spin selections&quot;&quot;&quot;
+ 
+-    def __init__(self, selectString):
++    def __init__(self, select_string):
+ 
+         self._union = None
+         self._intersect = None
+ 
+-        self.molecules = None
+-        self.residues = None
+-        self.spins = None
+-
+-        if not selectString:
++        self.molecules = []
++        self.residues = []
++        self.spins = []
++
++        if not select_string:
+             return
+         
+-        if '&amp;' in selectString:
+-            and_split = selectString.split('&amp;')
+-            Selection.__init__(self, and_split[0].strip())
+-            part1 = Selection(and_split[1].strip())
+-            self.intersection(part1)
+-
+-        elif '|' in selectString:
+-            and_split = selectString.split('|')
+-            Selection.__init__(self, and_split[0].strip())
+-            part1 = Selection(and_split[1].strip())
+-            self.union(part1)
++        if '&amp;' in select_string:
++            and_split = select_string.split('&amp;')
++            sel0 = Selection(and_split[0].strip())
++            sel1 = Selection(and_split[1].strip())
++            self.intersection(sel0, sel1)
++
++        elif '|' in select_string:
++            and_split = select_string.split('|')
++            sel0 = Selection(and_split[0].strip())
++            sel1 = Selection(and_split[1].strip())
++            self.union(sel0, sel1)
+ 
+         else:
+-            mol_token, res_token, spin_token = tokenise(selectString)
++            mol_token, res_token, spin_token = tokenise(select_string)
+             self.molecules = parse_token(mol_token)
+             self.residues = parse_token(res_token)
+             self.spins = parse_token(spin_token)
+ 
+     def __contains__(self, obj):
+-        
+-        in_self = False
+-        if isinstance(obj, MoleculeContainer) and obj.name in self.molecules:
+-            in_self = True
++
++        if self._union:
++            return (obj in self._union[0]) or (obj in self._union[1])
++        elif self._intersect:
++            return (obj in self._intersect[0]) and (obj in 
+self._intersect[1])
++        elif isinstance(obj, MoleculeContainer) and obj.name in 
+self.molecules:
++            return True
+         elif isinstance(obj, ResidueContainer) and obj.name in self.residues:
+-            in_self = True
++            return True
+         elif isinstance(obj, SpinContainer) and obj.name in self.spins:
+-            in_self = True
+-        if self._union:
+-            return in_self or (obj in self._union)
+-        if self._intersect:
+-            return in_self and (obj in self._union)
++            return True
+         else:
+-            return in_self
+-
+-    def intersection(self, selectObj):
++            return False
++
++    def intersection(self, select_obj0, select_obj1):
+         
+         if self._union or self._intersect:
+             raise RelaxError, &quot;Cannot define multiple Boolean relationships 
+between Selection objects&quot;
+-        self._intersect = selectObj
++        self._intersect = (select_obj0, select_obj1)
+    
+-    def union(self, selectObj):
++    def union(self, select_obj0, select_obj1):
+ 
+         if self._union or self._intersect:
+             raise RelaxError, &quot;Cannot define multiple Boolean relationships 
+between Selection objects&quot;
+-        self._union = selectObj
++        self._union = (select_obj0, select_obj1)
+ 
+ 
+ def desel_all(self, run=None):
+@@ -314,7 +313,7 @@
+ 
+     # No token.
+     if token == None:
+-        return None
++        return []
+ 
+     # Split by the ',' character.
+     elements = split(',', token)
+
+Modified: 1.3/test_suite/unit_tests/generic_fns/test_selection.py
+URL: 
+<a  href="http://svn.gna.org/viewcvs/relax/1.3/test_suite/unit_tests/generic_fns/test_selection.py?rev=3255&amp;r1=3254&amp;r2=3255&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/test_suite/unit_tests/generic_fns/test_selection.py?rev=3255&amp;r1=3254&amp;r2=3255&amp;view=diff</a>
+==============================================================================
+--- 1.3/test_suite/unit_tests/generic_fns/test_selection.py (original)
++++ 1.3/test_suite/unit_tests/generic_fns/test_selection.py Fri Mar 30 
+15:35:39 2007
+@@ -359,6 +359,11 @@
+             # Increment i.
+             i = i + 1
+ 
++    def test_boolean_selection1(self):
++        &quot;&quot;&quot;Test boolean mol-res-spin selections.&quot;&quot;&quot;
++
++        # The selection object:
++        sel = selection.Selection(&quot;#Ap4Aase | #RNA@N5&quot;)
+ 
+     def test_tokenise1(self):
+         &quot;&quot;&quot;Test the generic_fns.selection.tokenise() function on the string 
+'@1'.&quot;&quot;&quot;
+@@ -652,3 +657,31 @@
+ 
+         # Tokenise an invalid string.
+         self.assertRaises(RelaxError, selection.tokenise, '')
++   
++   
++    def test_boolean_or_selection(self):
++        &quot;&quot;&quot;Test boolean or in mol-res-spin selections.&quot;&quot;&quot;
++
++        self.assert_(list(selection.spin_loop(&quot;#Ap4Aase | #RNA@N5&quot;)) == 
+list(selection.spin_loop())
++   
++                
++    def test_boolean_and_selection(self):
++        &quot;&quot;&quot;Test boolean and in mol-res-spin selections.&quot;&quot;&quot;
++        
++        # The selection loop:
++        sel = selection.residue_loop(&quot;#Ap4Aase:4 &amp; :Pro&quot;)
++        
++        # Test:
++        for res in sel:
++            self.assert_(res.name == &quot;Pro&quot; and res.num == 4)
++       
++                
++    def test_boolean_complex_selection(self):
++        &quot;&quot;&quot;Test complex boolean mol-res-spin selections.&quot;&quot;&quot;
++        a syntax error
++        # The selection loops:
++        sel = selection.residue_loop(&quot;#Ap4Aase:4 &amp; :Pro | #RNA@N5&quot;)
++
++        # Test:
++        for res in sel:
++            self.assert_(res.num in [-5,-4,4])
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Mar 30 16:00:08 2007</div>  
+</body>
+</html>

@@ -1,0 +1,273 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r5178 &#45; in /1.3/specific_fns/model_free: mf_minimise.py model_free.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Sun, 23 Mar 2008 13:31:13 +0100 -->
+<!--X-Message-Id: E1JdPM0&#45;0008NX&#45;IW@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r5178 - in /1.3/specific_fns/model_free: mf_minimise.py model_free.py -- March 23, 2008 - 13:31</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r5178 - in /1.3/specific_fns/model_free: mf_minimise.py model_free.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00061" class="tabs">Index by Date</a> | <a href="threads.html#00061" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00060.html">Date Prev</a>] [<a href="msg00062.html">Date Next</a>] [<a href="msg00060.html">Thread Prev</a>] [<a href="msg00062.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Sun, 23 Mar 2008 12:31:12 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00061.html">E1JdPM0-0008NX-IW@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on March 23, 2008 - 13:31:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Sun Mar 23 13:31:02 2008
+New Revision: 5178
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=5178&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=5178&amp;view=rev</a>
+Log:
+Updated the model-free assemble_scaling_matrix() method to the new relax 
+design.
+
+
+Modified:
+    1.3/specific_fns/model_free/mf_minimise.py
+    1.3/specific_fns/model_free/model_free.py
+
+Modified: 1.3/specific_fns/model_free/mf_minimise.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/specific_fns/model_free/mf_minimise.py?rev=5178&amp;r1=5177&amp;r2=5178&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/specific_fns/model_free/mf_minimise.py?rev=5178&amp;r1=5177&amp;r2=5178&amp;view=diff</a>
+==============================================================================
+--- 1.3/specific_fns/model_free/mf_minimise.py (original)
++++ 1.3/specific_fns/model_free/mf_minimise.py Sun Mar 23 13:31:02 2008
+@@ -856,7 +856,7 @@
+                 param_vector = self.assemble_param_vector(spin=spin, 
+sim_index=sim_index)
+ 
+                 # Diagonal scaling.
+-                scaling_matrix = self.assemble_scaling_matrix(index=index, 
+scaling=scaling)
++                scaling_matrix = self.assemble_scaling_matrix(spin=spin, 
+scaling=scaling)
+                 if scaling_matrix:
+                     param_vector = dot(inv(scaling_matrix), param_vector)
+ 
+
+Modified: 1.3/specific_fns/model_free/model_free.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/specific_fns/model_free/model_free.py?rev=5178&amp;r1=5177&amp;r2=5178&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/specific_fns/model_free/model_free.py?rev=5178&amp;r1=5177&amp;r2=5178&amp;view=diff</a>
+==============================================================================
+--- 1.3/specific_fns/model_free/model_free.py (original)
++++ 1.3/specific_fns/model_free/model_free.py Sun Mar 23 13:31:02 2008
+@@ -317,19 +317,31 @@
+         return array(param_vector, float64)
+ 
+ 
+-    def assemble_scaling_matrix(self, index=None, scaling=1):
+-        &quot;&quot;&quot;Function for creating the scaling matrix.&quot;&quot;&quot;
++    def assemble_scaling_matrix(self, num_params=None, spin=None, 
+spin_id=None, scaling=True):
++        &quot;&quot;&quot;Create and return the scaling matrix.
++
++        If the spin argument is supplied, then the spin_id argument will be 
+ignored.
++
++        @keyword num_params:    The number of parameters in the model.
++        @type num_params:       int
++        @keyword spin:          The spin data container.
++        @type spin:             SpinContainer instance
++        @keyword spin_id:       The spin identification string.
++        @type spin_id:          str
++        @return:                An array of the parameter values of the 
+model-free model.
++        @rtype:                 numpy diagonal matrix
++        &quot;&quot;&quot;
+ 
+         # Initialise.
+-        if len(self.param_vector) == 0:
+-            self.scaling_matrix = zeros((0, 0), float64)
++        if num_params == 0:
++            scaling_matrix = zeros((0, 0), float64)
+         else:
+-            self.scaling_matrix = identity(len(self.param_vector), float64)
++            scaling_matrix = identity(num_params, float64)
+         i = 0
+ 
+-        # No diagonal scaling.
++        # No diagonal scaling, so return the identity matrix.
+         if not scaling:
+-            return
++            return scaling_matrix
+ 
+         # tm, te, tf, and ts (must all be the same for diagonal scaling!).
+         ti_scaling = 1e-12
+@@ -337,69 +349,74 @@
+         # Diffusion tensor parameters.
+         if self.param_set == 'diff' or self.param_set == 'all':
+             # Spherical diffusion.
+-            if relax_data_store.diff[self.run].type == 'sphere':
++            if cdp.diff_tensor.type == 'sphere':
+                 # tm.
+-                self.scaling_matrix[i, i] = ti_scaling
++                scaling_matrix[i, i] = ti_scaling
+ 
+                 # Increment i.
+                 i = i + 1
+ 
+             # Spheroidal diffusion.
+-            elif relax_data_store.diff[self.run].type == 'spheroid':
++            elif cdp.diff_tensor.type == 'spheroid':
+                 # tm, Da, theta, phi
+-                self.scaling_matrix[i, i] = ti_scaling
+-                self.scaling_matrix[i+1, i+1] = 1e7
+-                self.scaling_matrix[i+2, i+2] = 1.0
+-                self.scaling_matrix[i+3, i+3] = 1.0
++                scaling_matrix[i, i] = ti_scaling
++                scaling_matrix[i+1, i+1] = 1e7
++                scaling_matrix[i+2, i+2] = 1.0
++                scaling_matrix[i+3, i+3] = 1.0
+ 
+                 # Increment i.
+                 i = i + 4
+ 
+             # Ellipsoidal diffusion.
+-            elif relax_data_store.diff[self.run].type == 'ellipsoid':
++            elif cdp.diff_tensor.type == 'ellipsoid':
+                 # tm, Da, Dr, alpha, beta, gamma.
+-                self.scaling_matrix[i, i] = ti_scaling
+-                self.scaling_matrix[i+1, i+1] = 1e7
+-                self.scaling_matrix[i+2, i+2] = 1.0
+-                self.scaling_matrix[i+3, i+3] = 1.0
+-                self.scaling_matrix[i+4, i+4] = 1.0
+-                self.scaling_matrix[i+5, i+5] = 1.0
++                scaling_matrix[i, i] = ti_scaling
++                scaling_matrix[i+1, i+1] = 1e7
++                scaling_matrix[i+2, i+2] = 1.0
++                scaling_matrix[i+3, i+3] = 1.0
++                scaling_matrix[i+4, i+4] = 1.0
++                scaling_matrix[i+5, i+5] = 1.0
+ 
+                 # Increment i.
+                 i = i + 6
+ 
+         # Model-free parameters.
+         if self.param_set != 'diff':
+-            # Loop over all residues.
+-            for j in xrange(len(relax_data_store.res[self.run])):
+-                # Skip unselected residues.
+-                if not relax_data_store.res[self.run][j].select:
++            # The loop.
++            if spin:
++                loop = [spin]
++            else:
++                loop = spin_loop(spin_id)
++
++            # Loop over the spins.
++            for spin in loop:
++                # Skip unselected spins.
++                if not spin.select:
+                     continue
+ 
+-                # Only add parameters for a single residue if index has a 
+value.
+-                if index != None and j != index:
+-                    continue
+-
+                 # Loop over the model-free parameters.
+-                for k in 
+xrange(len(relax_data_store.res[self.run][j].params)):
++                for k in xrange(len(spin.params)):
+                     # Local tm, te, tf, and ts (must all be the same for 
+diagonal scaling!).
+-                    if relax_data_store.res[self.run][j].params[k] == 
+'local_tm' or search('^t', relax_data_store.res[self.run][j].params[k]):
+-                        self.scaling_matrix[i, i] = ti_scaling
++                    if spin.params[k] == 'local_tm' or search('^t', 
+spin.params[k]):
++                        scaling_matrix[i, i] = ti_scaling
+ 
+                     # Rex.
+-                    elif relax_data_store.res[self.run][j].params[k] == 
+'Rex':
+-                        self.scaling_matrix[i, i] = 1.0 / (2.0 * pi * 
+relax_data_store.res[self.run][j].frq[0]) ** 2
++                    elif spin.params[k] == 'Rex':
++                        scaling_matrix[i, i] = 1.0 / (2.0 * pi * 
+spin.frq[0]) ** 2
+ 
+                     # Bond length.
+-                    elif relax_data_store.res[self.run][j].params[k] == 'r':
+-                        self.scaling_matrix[i, i] = 1e-10
++                    elif spin.params[k] == 'r':
++                        scaling_matrix[i, i] = 1e-10
+ 
+                     # CSA.
+-                    elif relax_data_store.res[self.run][j].params[k] == 
+'CSA':
+-                        self.scaling_matrix[i, i] = 1e-4
++                    elif spin.params[k] == 'CSA':
++                        scaling_matrix[i, i] = 1e-4
+ 
+                     # Increment i.
+                     i = i + 1
++
++        # Return the scaling matrix.
++        return scaling_matrix
+ 
+ 
+     def create_mc_data(self, run, i):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Sun Mar 23 14:00:17 2008</div>  
+</body>
+</html>

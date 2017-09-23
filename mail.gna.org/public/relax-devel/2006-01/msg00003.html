@@ -1,0 +1,193 @@
+<!-- MHonArc v2.6.10 -->
+<!--X-Subject: [Relax&#45;devel] handling of relaxation data in results files -->
+<!--X-From-R13: Quevf [npDnvyq <p.n.znpenvyqNyrrqf.np.hx> -->
+<!--X-Date: Tue, 10 Jan 2006 17:53:22 +0100 -->
+<!--X-Message-Id: 1136915697.8207.160.camel@bmbpcu338.leeds.ac.uk -->
+<!--X-Content-Type: text/plain -->
+<!--X-Reference: 7f080ed10601082043y67df1186r@mail.gmail.com -->
+<!--X-Head-End-->
+<!doctype html public "-//W3C//DTD HTML//EN">
+<html>
+<head>
+<title>[Relax-devel] handling of relaxation data in results files -- January 10, 2006 - 17:53</title>
+<link rel="stylesheet" type="text/css" href="http://home.gna.org/admin/style.css"> 
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h1>[Relax-devel] handling of relaxation data in results files (January 10, 2006 - 17:53)</h1>
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00003" class="tabs">Index by Date</a> | <a href="threads.html#00003" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00002.html">Date Prev</a>] [<a href="msg00004.html">Date Next</a>] [<a href="msg00000.html">Thread Prev</a>] [<a href="msg00004.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<div class="boxtitle">Headers</div>
+<div class="boxitemalt">
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul>
+<li><em>To</em>: <a href="mailto:relax-devel@DOMAIN.HIDDEN">relax-devel@xxxxxxx</a></li>
+<li><em>Subject</em>: [Relax-devel] handling of relaxation data in results files</li>
+<li><em>From</em>: Chris MacRaild &lt;<a href="mailto:c.a.macraild@DOMAIN.HIDDEN">c.a.macraild@xxxxxxxxxxx</a>&gt;</li>
+<li><em>Date</em>: 10 Jan 2006 17:54:57 +0000</li>
+<li><em>Message-id</em>: &lt;<a href="msg00003.html">1136915697.8207.160.camel@bmbpcu338.leeds.ac.uk</a>&gt;</li>
+<li><em>Organization</em>: </li>
+<li><em>References</em>: &lt;<a href="msg00000.html">7f080ed10601082043y67df1186r@mail.gmail.com</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div>
+<p>&nbsp;</p>
+<div class="data">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre>Hi,
+
+For a while now I have been using relax with a dataset where not all
+residues have the same same number of relaxation values (I have data at
+3 fields, but the quality varies significantly, and some of the
+relaxation decay fits I am not happy with, so I have excluded the
+corresponding data). This has caused no obvious problems in most cases,
+except that results file io fails in some interesting ways. I've had a
+bit of a poke in the code to try and fix this, but it has raised a few
+issues that I thought I should run past you before I hack too hard.
+
+Of course when I load this data from the original data files, the
+relevant residue data structures all behave correctly -
+self.relax.data.res[runName][res].num_ri is correct for each residue, as
+are the residue specific remap_table, ri_labels, etc.
+
+When I do a results.write(), things change in the results file: all
+residues now have the same remap_table, etc, and missing Ri values and
+errors are given the value None. This in itself makes some sense in the
+context of the tabular file format, but is inconsistent with the way
+things are handled in the data structures above.
+
+Just in case I'm not being clear, an example. Lets say residue 1 has all
+9 data points, but residue 2 is missing the first data point, so only
+has 8. On initially loading the data files, I have:
+self.relax.data.res[runName][1].num_ri = 9
+self.relax.data.res[runName][1].remap_table = [0,1,2,0,1,2,0,1,2]
+self.relax.data.res[runName][1].relax_data = [1.214, 0.896, 0.6817,
+18.64, 20.48, 21.89, 0.769, 0.858, 0.893]
+
+self.relax.data.res[runName][2].num_ri = 8
+self.relax.data.res[runName][2].remap_table = [1,2,0,1,2,0,1,2]
+self.relax.data.res[runName][2].relax_data = [0.896, 0.6817, 18.64,
+20.48, 21.89, 0.769, 0.858, 0.893]
+
+But the results file looks like:
+Res  ...    remap_table   ...     relax_data
+1           [0,1,2,0,1,2,0,1,2]   [1.214, 0.896, 0.6817, 18.64, 20.48,
+21.89, 0.769, 0.858, 0.893]
+2           [0,1,2,0,1,2,0,1,2]   [None, 0.896, 0.6817, 18.64, 20.48,
+21.89, 0.769, 0.858, 0.893]
+
+
+This inconsistency comes back to haunt us on results.read(). The first
+problem is that Ri values and errors get read in as None. This causes
+subsequent minimisation to fail (by some wonder of python's implicit
+type conversions, None &lt; 0.0 evaluates as True so minimisation fails
+with negative errors!). The second problem relates to the fact that
+ri_labels, remap_table, etc are defined twice in the relax data
+structures, once at self.relax.data.res[runName][res].ri_labels, and
+again at self.relax.data.ri_labels[runName]. 
+
+read_columnar_relax_data() tries to set data.ri_labels[runName], etc.
+from the first line that is read from the results file. Then we have:
+
+    # Test if the relaxation data is consistent.
+    if self.ri_labels != eval(self.file_line[self.col['ri_labels']]) or
+self.remap_table != eval(self.file_line[self.col['remap_table']]) or
+self.frq_labels != eval(self.file_line[self.col['frq_labels']]) or
+self.frq != eval(self.file_line[self.col['frq']]):
+        raise RelaxError, &quot;The relaxation data is not consistent for all
+residues.&quot;
+
+This checks that the ri_labels, etc, for each line of the results file
+is the same as that from the first line read. This exception is never
+raised, because these values are always consistent in the results file,
+even if they weren't in the original data, as I've outlined above. It
+does, however, seem to be an attempt to stop me using data where not all
+residues have the same same number of relaxation values. It might be
+that I'm missing something, but I can see no good reason why I should be
+stopped, and indeed using this type of data has caused me no other
+problems that I can see.
+
+So, the 'big issues' for your consideration:
+ - Is there any good reason for having ri_labels, etc defined at both
+the level of the run (at data.ri_labels[runName]) and at the level of
+the residue (at data.res[runName][res].ri_labels)? We have seen other
+bugs associated with these duplications, and it does seem to be asking
+for trouble.
+ - A decision needs to be made about which of these parameters are
+expected to be constant across all residues in a run, and which are
+potentially allowed to vary. Ideally, it seems to me, those which are
+constant across the run will be defined only at
+data.param_name[runName], and those that might vary from one residue to
+another will be at data.res[runName][res].param_name (and only there).
+Again, in my opinion, what ever convention is adopted in the internal
+data structures of relax should also be reflected in the way the
+parameter values are output to the results file.
+
+Anyway, let me know what you think.  I'm happy to have a hack at
+resolving these issues which ever way you decide.
+
+
+Chris
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div>
+<ul><li><strong>Follow-Ups</strong>:
+<ul>
+<li><strong><a name="00004" href="msg00004.html">Re: [Relax-devel] handling of relaxation data in results files</a></strong>
+<ul><li><em>From:</em> Edward d'Auvergne</li></ul></li>
+</ul></li></ul>
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<ul><li><strong>References</strong>:
+<ul>
+<li><strong><a name="00000" href="msg00000.html">[Relax-devel] Creation of an unstable development fork from 1.0	called 1.1.</a></strong>
+<ul><li><em>From:</em> Edward d'Auvergne</li></ul></li>
+</ul></li></ul>
+<!--X-References-End-->
+<!--X-BotPNI-->
+<div class="boxtitle">Related Mails</div>
+<div class="boxitemalt">
+<ul>
+<li>Prev by Date:
+<strong><a href="msg00002.html">[Relax-devel] Re: python to c++</a></strong>
+</li>
+<li>Next by Date:
+<strong><a href="msg00004.html">Re: [Relax-devel] handling of relaxation data in results files</a></strong>
+</li>
+
+<li>Previous by thread:
+<strong><a href="msg00000.html">[Relax-devel] Creation of an unstable development fork from 1.0	called 1.1.</a></strong>
+</li>
+<li>Next by thread:
+<strong><a href="msg00004.html">Re: [Relax-devel] handling of relaxation data in results files</a></strong>
+</li>
+
+</ul>
+</div>
+<br /><br /><br />
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Jan 11 03:40:21 2006</div>  
+</body>
+</html>

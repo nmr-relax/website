@@ -1,0 +1,311 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r9103 &#45; /branches/frame_order/maths_fns/frame_order_models.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 19 Jun 2009 16:07:41 +0200 -->
+<!--X-Message-Id: E1MHekn&#45;0000Vn&#45;RX@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r9103 - /branches/frame_order/maths_fns/frame_order_models.py -- June 19, 2009 - 16:07</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r9103 - /branches/frame_order/maths_fns/frame_order_models.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00037" class="tabs">Index by Date</a> | <a href="threads.html#00037" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00036.html">Date Prev</a>] [<a href="msg00038.html">Date Next</a>] [<a href="msg00036.html">Thread Prev</a>] [<a href="msg00038.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 19 Jun 2009 14:07:41 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00037.html">E1MHekn-0000Vn-RX@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on June 19, 2009 - 16:07:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Jun 19 16:07:41 2009
+New Revision: 9103
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=9103&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=9103&amp;view=rev</a>
+Log:
+Preliminary support for optimisation against alignment tensors.
+
+Added the func_iso_cone() and __init_iso_cone() methods.
+
+
+Modified:
+    branches/frame_order/maths_fns/frame_order_models.py
+
+Modified: branches/frame_order/maths_fns/frame_order_models.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order/maths_fns/frame_order_models.py?rev=9103&amp;r1=9102&amp;r2=9103&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order/maths_fns/frame_order_models.py?rev=9103&amp;r1=9102&amp;r2=9103&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order/maths_fns/frame_order_models.py (original)
++++ branches/frame_order/maths_fns/frame_order_models.py Fri Jun 19 16:07:41 
+2009
+@@ -24,24 +24,35 @@
+ &quot;&quot;&quot;Module containing the target functions of the Frame Order theories.&quot;&quot;&quot;
+ 
+ # Python module imports.
+-from numpy import dot, float64, ones, transpose, zeros
++from copy import deepcopy
++from numpy import float64, ones, zeros
+ 
+ # relax module imports.
+ from maths_fns.chi2 import chi2
+-from maths_fns.frame_order_matrix_ops import populate_2nd_eigenframe_iso_cone
+-from maths_fns.kronecker_product import kron_prod, transpose_14
+-from maths_fns.rotation_matrix import R_euler_zyz
++from maths_fns.frame_order_matrix_ops import compile_2nd_matrix_iso_cone
+ from relax_errors import RelaxError
+ 
+ 
+ class Frame_order:
+     &quot;&quot;&quot;Class containing the target function of the optimisation of Frame 
+Order matrix components.&quot;&quot;&quot;
+ 
+-    def __init__(self, model=None, frame_order_2nd=None):
++    def __init__(self, model=None, init_params=None, full_tensors=None, 
+red_tensors=None, red_errors=None, frame_order_2nd=None):
+         &quot;&quot;&quot;Set up the target functions for the Frame Order theories.
+         
+         @keyword model:             The name of the Frame Order model.
+         @type model:                str
++        @keyword init_params:       The initial parameter values.
++        @type init_params:          numpy float64 array
++        @keyword full_tensors:      A list of the full alignment tensors in 
+5D, rank-1 form of {Sxx,
++                                    Syy, Sxy, Sxz, Syz} values.
++        @type full_tensors:         list of 5D, rank-1 arrays
++        @keyword red_tensors:       An array of the {Sxx, Syy, Sxy, Sxz, 
+Syz} values for all reduced
++                                    tensors.  The format is [Sxx1, Syy1, 
+Sxy1, Sxz1, Syz1, Sxx2,
++                                    Syy2, Sxy2, Sxz2, Syz2, ..., Sxxn, Syyn, 
+Sxyn, Sxzn, Syzn]
++        @type red_tensors:          numpy nx5D, rank-1 float64 array
++        @keyword red_errors:        An array of the {Sxx, Syy, Sxy, Sxz, 
+Syz} errors for all reduced
++                                    tensors.  The array format is the same 
+as for red_tensors.
++        @type red_errors:           numpy nx5D, rank-1 float64 array
+         @keyword frame_order_2nd:   The numerical values of the 2nd degree 
+Frame Order matrix.  If
+                                     supplied, the target functions will 
+optimise directly to these
+                                     values.
+@@ -52,11 +63,57 @@
+         if not model:
+             raise RelaxError, &quot;The type of Frame Order model must be 
+specified.&quot;
+ 
++        # Store the initial parameter (as a copy).
++        self.params = deepcopy(init_params)
++
+         # Isotropic cone model.
+         if model == 'iso cone':
++            # Mix up.
++            if full_tensors != None and frame_order_2nd != None:
++                raise RelaxError, &quot;Tensors and Frame Order matrices cannot 
+be supplied together.&quot;
++
++            # Tensor optimisation.
++            if full_tensors != None:
++                self.__init_iso_cone_elements(full_tensors, red_tensors, 
+red_errors)
++
+             # Optimisation to the 2nd degree Frame Order matrix components 
+directly.
+             if frame_order_2nd != None:
+                 self.__init_iso_cone_elements(frame_order_2nd)
++
++
++    def __init_iso_cone(self, full_tensors, red_tensors, red_errors):
++        &quot;&quot;&quot;Set up isotropic cone optimisation against the alignment tensor 
+data.
++
++        @keyword full_tensors:      A list of the full alignment tensors in 
+5D, rank-1 form of {Sxx,
++                                    Syy, Sxy, Sxz, Syz} values.
++        @type full_tensors:         list of 5D, rank-1 arrays
++        @keyword red_tensors:       An array of the {Sxx, Syy, Sxy, Sxz, 
+Syz} values for all reduced
++                                    tensors.  The format is [Sxx1, Syy1, 
+Sxy1, Sxz1, Syz1, Sxx2,
++                                    Syy2, Sxy2, Sxz2, Syz2, ..., Sxxn, Syyn, 
+Sxyn, Sxzn, Syzn]
++        @type red_tensors:          numpy nx5D, rank-1 float64 array
++        @keyword red_errors:        An array of the {Sxx, Syy, Sxy, Sxz, 
+Syz} errors for all reduced
++                                    tensors.  The array format is the same 
+as for red_tensors.
++        @type red_errors:           numpy nx5D, rank-1 float64 array
++        &quot;&quot;&quot;
++
++        # Checks.
++        if red_tensors != None:
++            raise RelaxError, &quot;The reduced tensors have not been supplied.&quot;
++
++        # Tensor set up.
++        self.full_tensors = array(full_tensors, float64)
++        self.num_tensors = len(self.full_tensors)
++        self.red_tensors = red_tensors
++        self.red_errors = red_errors
++
++        # The rotation to the Frame Order eigenframe.
++        self.rot = zeros((3, 3), float64)
++
++        # Initialise the Frame Order matrices.
++        self.frame_order_2nd = zeros((9, 9), float64)
++
++        # Alias the target function.
++        self.func = self.func_iso_cone
+ 
+ 
+     def __init_iso_cone_elements(self, frame_order_2nd):
+@@ -84,12 +141,12 @@
+         self.func = self.func_iso_cone_elements
+ 
+ 
+-    def func_iso_cone_elements(self, params):
+-        &quot;&quot;&quot;Target function for isotropic cone model optimisation using the 
+Frame Order matrix.
+-
+-        This function optimises by directly matching the elements of the 2nd 
+degree Frame Order
+-        super matrix.  The Frame Order eigenframe via the alpha, beta, and 
+gamma Euler angles, and
+-        the cone angle theta are the 4 parameters optimised in this model.
++    def func_iso_cone(self, params):
++        &quot;&quot;&quot;Target function for isotropic cone model optimisation using the 
+alignment tensors.
++
++        This function optimises against alignment tensors.  The Frame Order 
+eigenframe via the
++        alpha, beta, and gamma Euler angles, and the cone angle theta are 
+the 4 parameters optimised
++        in this model.
+ 
+         @param params:  The vector of parameter values {alpha, beta, gamma, 
+theta} where the first
+                         three are the Euler angles for the Frame Order 
+eigenframe and theta is the
+@@ -102,25 +159,38 @@
+         # Break up the parameters.
+         alpha, beta, gamma, theta = params
+ 
+-        # Populate the Frame Order matrix in the eigenframe.
+-        populate_2nd_eigenframe_iso_cone(self.frame_order_2nd, theta)
+-
+-        # Generate the rotation matrix.
+-        R_euler_zyz(self.rot, alpha, beta, gamma)
+-
+-        # The outer product of R.
+-        R_kron = kron_prod(self.rot, self.rot)
+-
+-        # Perform the T14 transpose to obtain the Kronecker product matrix!
+-        self.frame_order_2nd = transpose_14(self.frame_order_2nd)
+-
+-        # Rotate.
+-        self.frame_order_2nd = dot(R_kron, dot(self.frame_order_2nd, 
+transpose(R_kron)))
+-
+-        # Perform T14 again to return back.
+-        self.frame_order_2nd = transpose_14(self.frame_order_2nd)
+-
+-        # Make the Frame Order contiguous.
++        # Generate the 2nd degree Frame Order super matrix.
++        compile_2nd_matrix_iso_cone(self.frame_order_2nd, self.rot, alpha, 
+beta, gamma, theta)
++
++        # Get the chi-squared value.
++        val = chi2(self.data, self.frame_order_2nd, self.errors)
++
++        # Return the chi2 value.
++        return val
++
++
++    def func_iso_cone_elements(self, params):
++        &quot;&quot;&quot;Target function for isotropic cone model optimisation using the 
+Frame Order matrix.
++
++        This function optimises by directly matching the elements of the 2nd 
+degree Frame Order
++        super matrix.  The Frame Order eigenframe via the alpha, beta, and 
+gamma Euler angles, and
++        the cone angle theta are the 4 parameters optimised in this model.
++
++        @param params:  The vector of parameter values {alpha, beta, gamma, 
+theta} where the first
++                        three are the Euler angles for the Frame Order 
+eigenframe and theta is the
++                        isotropic cone angle.
++        @type params:   list of float
++        @return:        The chi-squared or SSE value.
++        @rtype:         float
++        &quot;&quot;&quot;
++
++        # Break up the parameters.
++        alpha, beta, gamma, theta = params
++
++        # Generate the 2nd degree Frame Order super matrix.
++        compile_2nd_matrix_iso_cone(self.frame_order_2nd, self.rot, alpha, 
+beta, gamma, theta)
++
++        # Make the Frame Order matrix contiguous.
+         self.frame_order_2nd = self.frame_order_2nd.copy()
+ 
+         # Reshape the numpy arrays for use in the chi2() function.
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Jun 19 16:20:02 2009</div>  
+</body>
+</html>

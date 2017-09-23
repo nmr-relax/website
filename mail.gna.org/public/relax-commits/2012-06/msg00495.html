@@ -1,0 +1,151 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r17050 &#45; /branches/interatomic/specific_fns/model_free/results.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 25 Jun 2012 12:43:53 +0200 -->
+<!--X-Message-Id: E1Sj6lt&#45;0002wJ&#45;4r@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r17050 - /branches/interatomic/specific_fns/model_free/results.py -- June 25, 2012 - 12:43</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r17050 - /branches/interatomic/specific_fns/model_free/results.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00495" class="tabs">Index by Date</a> | <a href="threads.html#00495" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00494.html">Date Prev</a>] [<a href="msg00496.html">Date Next</a>] [<a href="msg00494.html">Thread Prev</a>] [<a href="msg00496.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 25 Jun 2012 10:43:53 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00495.html">E1Sj6lt-0002wJ-4r@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on June 25, 2012 - 12:43:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Mon Jun 25 12:43:52 2012
+New Revision: 17050
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=17050&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=17050&amp;view=rev</a>
+Log:
+Fixes for the relax 1.2 model-free results reading code for the 
+return_interatom() changes.
+
+
+Modified:
+    branches/interatomic/specific_fns/model_free/results.py
+
+Modified: branches/interatomic/specific_fns/model_free/results.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/interatomic/specific_fns/model_free/results.py?rev=17050&amp;r1=17049&amp;r2=17050&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/interatomic/specific_fns/model_free/results.py?rev=17050&amp;r1=17049&amp;r2=17050&amp;view=diff</a>
+==============================================================================
+--- branches/interatomic/specific_fns/model_free/results.py (original)
++++ branches/interatomic/specific_fns/model_free/results.py Mon Jun 25 
+12:43:52 2012
+@@ -34,7 +34,7 @@
+ # relax module imports.
+ import generic_fns
+ from generic_fns import dipole_pair
+-from generic_fns.interatomic import return_interatom
++from generic_fns.interatomic import return_interatom, return_interatom_list
+ from generic_fns.mol_res_spin import create_spin, generate_spin_id, 
+return_spin, spin_loop
+ from generic_fns import pipes
+ from relax_errors import RelaxError, RelaxInvalidDataError
+@@ -230,7 +230,7 @@
+         model_type = spin_line[col['param_set']]
+ 
+         # Get the interatomic data container.
+-        interatom = return_interatom(spin_id)
++        interatom = return_interatom_list(spin_id)[0]
+ 
+         # Values.
+         if data_set == 'value':
+@@ -314,9 +314,9 @@
+ 
+             # Interatomic distances.
+             try:
+-                interatom[0].r = float(spin_line[col['r']]) * 1e-10
+-            except ValueError:
+-                interatom[0].r = None
++                interatom.r = float(spin_line[col['r']]) * 1e-10
++            except ValueError:
++                interatom.r = None
+ 
+         # Errors.
+         if data_set == 'error':
+@@ -1101,8 +1101,8 @@
+ 
+         # Get the interatomic data container.
+         interatom = return_interatom(spin_id1=spin_id1, spin_id2=spin_id2)
+-        if len(interatom) != 1:
+-            raise RelaxError(&quot;Only one interatomic interaction is allowed.&quot;)
++        if interatom == None:
++            raise RelaxError(&quot;No interatomic interaction between spins '%s' 
+and '%s' could be found.&quot; (spin_id1, spin_id2))
+ 
+         # The vector.
+         vector = eval(spin_line[col['xh_vect']])
+@@ -1114,7 +1114,7 @@
+                 raise RelaxError(&quot;The XH unit vector &quot; + 
+spin_line[col['xh_vect']] + &quot; is invalid.&quot;)
+ 
+             # Set the vector.
+-            interatom[0].vector = vector
++            interatom.vector = vector
+ 
+ 
+     def read_columnar_results(self, file_data, verbosity=1):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Jun 25 13:00:02 2012</div>  
+</body>
+</html>

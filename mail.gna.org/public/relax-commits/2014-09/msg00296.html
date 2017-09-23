@@ -1,0 +1,383 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r25790 &#45; in /branches/frame_order_cleanup: specific_analyses/frame_order/ user_functions/ -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 12 Sep 2014 15:05:08 +0200 -->
+<!--X-Message-Id: E1XSQXD&#45;0005Sk&#45;VX@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r25790 - in /branches/frame_order_cleanup: specific_analyses/frame_order/ user_functions/ -- September 12, 2014 - 15:05</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r25790 - in /branches/frame_order_cleanup: specific_analyses/frame_order/ user_functions/</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00296" class="tabs">Index by Date</a> | <a href="threads.html#00296" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00295.html">Date Prev</a>] [<a href="msg00297.html">Date Next</a>] [<a href="msg00295.html">Thread Prev</a>] [<a href="msg00297.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 12 Sep 2014 13:05:07 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00296.html">E1XSQXD-0005Sk-VX@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on September 12, 2014 - 15:05:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Sep 12 15:05:07 2014
+New Revision: 25790
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=25790&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=25790&amp;view=rev</a>
+Log:
+Added support for the model argument for the frame_order.pdb_model user 
+function.
+
+This argument is used to specify which of the models in an ensemble will be 
+used to represent the
+average domain position Monte Carlo simulations, as each simulation is 
+encoded as a model, as well
+as for the distribution of structures simulating the motion of the system.  
+The argument is
+therefore passed into the create_ave_pos() and create_distribution() 
+functions of the
+specific_analyses.frame_order.geometric module.
+
+To handle all models being used in the non Monte Carlo simulation PDB file 
+and only one in this
+file, the internal structural object is copied twice.  The second copy for 
+the MC sims has all but
+the chosen model deleted out of it.
+
+
+Modified:
+    branches/frame_order_cleanup/specific_analyses/frame_order/geometric.py
+    branches/frame_order_cleanup/specific_analyses/frame_order/uf.py
+    branches/frame_order_cleanup/user_functions/frame_order.py
+
+Modified: 
+branches/frame_order_cleanup/specific_analyses/frame_order/geometric.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/specific_analyses/frame_order/geometric.py?rev=25790&amp;r1=25789&amp;r2=25790&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/specific_analyses/frame_order/geometric.py?rev=25790&amp;r1=25789&amp;r2=25790&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/specific_analyses/frame_order/geometric.py   
+  (original)
++++ branches/frame_order_cleanup/specific_analyses/frame_order/geometric.py   
+  Fri Sep 12 15:05:07 2014
+@@ -545,7 +545,7 @@
+         rotor(structure=structure, rotor_angle=rotor_angle[i], axis=dot(T, 
+axis[i]), axis_pt=pivot[i], label=label[i], centre=com[i], span=span[i], 
+blade_length=5e-10, model_num=models[i], staggered=staggered[i], 
+half_rotor=half_rotor)
+ 
+ 
+-def create_ave_pos(format='PDB', file=None, dir=None, compress_type=0, 
+force=False):
++def create_ave_pos(format='PDB', file=None, dir=None, compress_type=0, 
+model=1, force=False):
+     &quot;&quot;&quot;Create a PDB file of the molecule with the moving domains shifted to 
+the average position.
+ 
+     @keyword format:        The format for outputting the geometric 
+representation.  Currently only the 'PDB' format is supported.
+@@ -556,6 +556,8 @@
+     @type dir:              str
+     @keyword compress_type: The compression type.  The integer values 
+correspond to the compression type: 0, no compression; 1, Bzip2 compression; 
+2, Gzip compression.
+     @type compress_type:    int
++    @keyword model:         Only one model from an analysed ensemble can be 
+used for the PDB representation of the Monte Carlo simulations, as these 
+consists of one model per simulation.
++    @type model:            int
+     @keyword force:         Flag which if set to True will cause any 
+pre-existing file to be overwritten.
+     @type force:            bool
+     &quot;&quot;&quot;
+@@ -568,6 +570,7 @@
+     sims = []
+     file_root = []
+     models = []
++    structures = []
+ 
+     # The real average position.
+     titles.append(&quot;real average position&quot;)
+@@ -582,21 +585,36 @@
+         file_root.append(&quot;%s_sim&quot; % file)
+         models.append([i+1 for i in range(cdp.sim_number)])
+ 
++    # Make a copy of the structural object (so as to preserve the original 
+structure).
++    structures.append(deepcopy(cdp.structure))
++    if hasattr(cdp, 'sim_number'):
++        structures.append(deepcopy(cdp.structure))
++
++    # Delete all but the chosen model for the simulations.
++    if hasattr(cdp, 'sim_number'):
++        # Determine the models to delete.
++        to_delete = []
++        for model_cont in structures[-1].model_loop():
++            if model_cont.num != model:
++                to_delete.append(model_cont.num)
++        to_delete.reverse()
++
++        # Delete them.
++        for num in to_delete:
++            structures[-1].structural_data.delete_model(model_num=num)
++
+     # Loop over each representation and add the contents.
+     for i in range(len(titles)):
+         # Printout.
+         subsubsection(file=sys.stdout, text=&quot;Creating the %s.&quot; % titles[i])
+ 
+-        # Make a copy of the structural object (so as to preserve the 
+original structure).
+-        structure = deepcopy(cdp.structure)
+-
+         # Loop over each model.
+         for j in range(len(models[i])):
+             # Create or set the models, if needed.
+             if models[i][j] == 1:
+-                structure.set_model(model_new=1)
++                structures[i].set_model(model_new=1)
+             elif models[i][j] != None:
+-                structure.add_model(model=models[i][j])
++                structures[i].add_model(model=models[i][j])
+ 
+         # Loop over each model.
+         for j in range(len(models[i])):
+@@ -613,23 +631,23 @@
+                 else:
+                     euler_to_R_zyz(0.0, cdp.ave_pos_beta, cdp.ave_pos_gamma, 
+R)
+             origin = pipe_centre_of_mass(atom_id=domain_moving(), 
+verbosity=0)
+-            structure.rotate(R=R, origin=origin, model=models[i][j], 
+atom_id=domain_moving())
++            structures[i].rotate(R=R, origin=origin, model=models[i][j], 
+atom_id=domain_moving())
+ 
+             # Then translate the moving domain.
+             if sims[i]:
+                 T = [cdp.ave_pos_x_sim[j], cdp.ave_pos_y_sim[j], 
+cdp.ave_pos_z_sim[j]]
+             else:
+                 T = [cdp.ave_pos_x, cdp.ave_pos_y, cdp.ave_pos_z]
+-            structure.translate(T=T, model=models[i][j], 
+atom_id=domain_moving())
++            structures[i].translate(T=T, model=models[i][j], 
+atom_id=domain_moving())
+ 
+         # Output to PDB format.
+         if format == 'PDB':
+             pdb_file = open_write_file(file_name=file_root[i]+'.pdb', 
+dir=dir, compress_type=compress_type, force=force)
+-            structure.write_pdb(file=pdb_file)
++            structures[i].write_pdb(file=pdb_file)
+             pdb_file.close()
+ 
+ 
+-def create_distribution(format='PDB', file=None, dir=None, compress_type=0, 
+force=False):
++def create_distribution(format='PDB', file=None, dir=None, compress_type=0, 
+model=1, force=False):
+     &quot;&quot;&quot;Create a PDB file of a distribution of positions coving the full 
+dynamics of the moving domain.
+ 
+     @keyword format:        The format for outputting the geometric 
+representation.  Currently only the 'PDB' format is supported.
+@@ -640,6 +658,8 @@
+     @type dir:              str
+     @keyword compress_type: The compression type.  The integer values 
+correspond to the compression type: 0, no compression; 1, Bzip2 compression; 
+2, Gzip compression.
+     @type compress_type:    int
++    @keyword model:         Only one model from an analysed ensemble can be 
+used for the PDB representation of the Monte Carlo simulations, as these 
+consists of one model per simulation.
++    @type model:            int
+     @keyword force:         Flag which if set to True will cause any 
+pre-existing file to be overwritten.
+     @type force:            bool
+     &quot;&quot;&quot;
+
+Modified: branches/frame_order_cleanup/specific_analyses/frame_order/uf.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/specific_analyses/frame_order/uf.py?rev=25790&amp;r1=25789&amp;r2=25790&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/specific_analyses/frame_order/uf.py?rev=25790&amp;r1=25789&amp;r2=25790&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/specific_analyses/frame_order/uf.py    
+(original)
++++ branches/frame_order_cleanup/specific_analyses/frame_order/uf.py    Fri 
+Sep 12 15:05:07 2014
+@@ -60,7 +60,7 @@
+     cdp.num_int_pts = num
+ 
+ 
+-def pdb_model(ave_pos=&quot;ave_pos&quot;, rep=&quot;frame_order&quot;, 
+dist=&quot;domain_distribution&quot;, dir=None, compress_type=0, size=30.0, inc=36, 
+force=False):
++def pdb_model(ave_pos=&quot;ave_pos&quot;, rep=&quot;frame_order&quot;, 
+dist=&quot;domain_distribution&quot;, dir=None, compress_type=0, size=30.0, inc=36, 
+model=1, force=False):
+     &quot;&quot;&quot;Create 3 different PDB files for representing the frame order 
+dynamics of the system.
+ 
+     @keyword ave_pos:       The file root for the average molecule structure.
+@@ -77,6 +77,8 @@
+     @type size:             float
+     @keyword inc:           The number of increments for the filling of the 
+cone objects.
+     @type inc:              int
++    @keyword model:      Only one model from an analysed ensemble can be 
+used for the PDB representation of the Monte Carlo simulations, as these 
+consists of one model per simulation.
++    @type model:         int
+     @keyword force:         Flag which if set to True will cause any 
+pre-existing file to be overwritten.
+     @type force:            bool
+     &quot;&quot;&quot;
+@@ -90,7 +92,7 @@
+ 
+     # Create the average position structure.
+     if ave_pos:
+-        create_ave_pos(file=ave_pos, dir=dir, compress_type=compress_type, 
+force=force)
++        create_ave_pos(file=ave_pos, dir=dir, compress_type=compress_type, 
+model=model, force=force)
+ 
+     # Nothing more to do for the rigid model.
+     if cdp.model == MODEL_RIGID:
+@@ -102,7 +104,7 @@
+ 
+     # Create the distribution.
+     if dist:
+-        create_distribution(file=dist, dir=dir, compress_type=compress_type, 
+force=force)
++        create_distribution(file=dist, dir=dir, compress_type=compress_type, 
+model=model, force=force)
+ 
+ 
+ def permute_axes(permutation='A'):
+
+Modified: branches/frame_order_cleanup/user_functions/frame_order.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/user_functions/frame_order.py?rev=25790&amp;r1=25789&amp;r2=25790&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/user_functions/frame_order.py?rev=25790&amp;r1=25789&amp;r2=25790&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/user_functions/frame_order.py  (original)
++++ branches/frame_order_cleanup/user_functions/frame_order.py  Fri Sep 12 
+15:05:07 2014
+@@ -112,6 +112,15 @@
+     wiz_element_type = &quot;spin&quot;
+ )
+ uf.add_keyarg(
++    name = &quot;model&quot;,
++    default = 1,
++    min = 1,
++    py_type = &quot;int&quot;,
++    desc_short = &quot;structural model&quot;,
++    desc = &quot;Only one model from an analysed ensemble can be used for the PDB 
+representation of the Monte Carlo simulations of the average domain position, 
+as these consists of one model per simulation, and also for the distribution 
+of structures.&quot;,
++    wiz_element_type = &quot;spin&quot;
++)
++uf.add_keyarg(
+     name = &quot;force&quot;,
+     default = False,
+     py_type = &quot;bool&quot;,
+@@ -124,10 +133,11 @@
+ uf.desc[-1].add_paragraph(&quot;The three files are specified via the file root 
+whereby the extensions '.pdb', '.pdb.gz', etc. should not be provided.  This 
+is important for the geometric representation whereby different files are 
+created for the positive and negative representations (due to symmetry in the 
+NMR data, these cannot be differentiated), and for the Monte Carlo 
+simulations.  For example if the file root is 'frame_order', the positive and 
+negative representations will be placed in the 'frame_order_pos.pdb.gz' and 
+'frame_order_neg.pdb.gz' files and the Monte Carlo simulations in the 
+'frame_order_sim_pos.pdb.gz' and 'frame_order_sim_neg.pdb.gz' files.  For 
+models where there is no difference in representation between the positive 
+and negative directions, the files 'frame_order.pdb.gz' and 
+'frame_order_sim.pdb.gz' will be produced.&quot;)
+ uf.desc[-1].add_paragraph(&quot;There are four different types of residue within 
+the PDB.  The pivot point is represented as as a single carbon atom of the 
+residue 'PIV'.  The cone consists of numerous H atoms of the residue 'CON'.  
+The cone axis vector is presented as the residue 'AXE' with one carbon atom 
+positioned at the pivot and the other x Angstroms away on the cone axis (set 
+by the geometric object size).  Finally, if Monte Carlo have been performed, 
+there will be multiple 'MCC' residues representing the cone for each 
+simulation, and multiple 'MCA' residues representing the multiple cone axes.&quot;)
+ uf.desc[-1].add_paragraph(&quot;To create the diffusion in a cone PDB 
+representation, a uniform distribution of vectors on a sphere is generated 
+using spherical coordinates with the polar angle defined by the cone axis.  
+By incrementing the polar angle using an arccos distribution, a radial array 
+of vectors representing latitude are created while incrementing the azimuthal 
+angle evenly creates the longitudinal vectors.  These are all placed into the 
+PDB file as H atoms and are all connected using PDB CONECT records.  Each H 
+atom is connected to its two neighbours on the both the longitude and 
+latitude.  This creates a geometric PDB object with longitudinal and 
+latitudinal lines representing the filled cone.&quot;)
++uf.desc[-1].add_paragraph(&quot;The PDB representation of the Monte Carlo 
+simulations consists of one model per simulation.  And the distribution of 
+structures consists of one model per motional simulation step.  Therefore if 
+an ensemble of structures has been analysed ,only one model from the ensemble 
+can be used for either representation.  This defaults to model number 1, but 
+this can be changed.&quot;)
+ uf.backend = pdb_model
+ uf.menu_text = &quot;pdb_&amp;model&quot;
+ uf.gui_icon = &quot;oxygen.actions.document-save&quot;
+-uf.wizard_height_desc = 400
++uf.wizard_height_desc = 370
+ uf.wizard_size = (1000, 750)
+ uf.wizard_image = WIZARD_IMAGE_PATH + 'frame_order.png'
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Sep 12 15:20:03 2014</div>  
+</body>
+</html>

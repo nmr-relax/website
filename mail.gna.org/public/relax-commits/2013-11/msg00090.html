@@ -1,0 +1,141 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r21432 &#45; /trunk/pipe_control/rdc.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 13 Nov 2013 17:52:23 +0100 -->
+<!--X-Message-Id: E1Vgdfy&#45;00071E&#45;UD@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r21432 - /trunk/pipe_control/rdc.py -- November 13, 2013 - 17:52</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r21432 - /trunk/pipe_control/rdc.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00090" class="tabs">Index by Date</a> | <a href="threads.html#00090" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00089.html">Date Prev</a>] [<a href="msg00091.html">Date Next</a>] [<a href="msg00089.html">Thread Prev</a>] [<a href="msg00091.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 13 Nov 2013 16:52:22 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00090.html">E1Vgdfy-00071E-UD@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on November 13, 2013 - 17:52:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Nov 13 17:52:22 2013
+New Revision: 21432
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=21432&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=21432&amp;view=rev</a>
+Log:
+The pipe_control.rdc.q_factors() function now properly handles pseudo-atoms.
+
+If pseudo-atoms are present, then 2Da^2(4 + 3R)/5 normalised Q factor is 
+skipped.
+
+
+Modified:
+    trunk/pipe_control/rdc.py
+
+Modified: trunk/pipe_control/rdc.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/pipe_control/rdc.py?rev=21432&amp;r1=21431&amp;r2=21432&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/pipe_control/rdc.py?rev=21432&amp;r1=21431&amp;r2=21432&amp;view=diff</a>
+==============================================================================
+--- trunk/pipe_control/rdc.py (original)
++++ trunk/pipe_control/rdc.py Wed Nov 13 17:52:22 2013
+@@ -41,7 +41,7 @@
+ from pipe_control import grace, pipes
+ from pipe_control.align_tensor import get_tensor_index
+ from pipe_control.interatomic import consistent_interatomic_data, 
+create_interatom, interatomic_loop, return_interatom
+-from pipe_control.mol_res_spin import exists_mol_res_spin_data, return_spin
++from pipe_control.mol_res_spin import exists_mol_res_spin_data, 
+is_pseudoatom, return_spin
+ 
+ 
+ def back_calc(align_id=None):
+@@ -509,13 +509,19 @@
+             g1 = return_gyromagnetic_ratio(spin1.isotope)
+             g2 = return_gyromagnetic_ratio(spin2.isotope)
+ 
++            # Skip the 2Da^2(4 + 3R)/5 normalised Q factor if pseudo-atoms 
+are present.
++            if  norm2_flag and (is_pseudoatom(spin1) or 
+is_pseudoatom(spin2)):
++                warn(RelaxWarning(&quot;Pseudo-atoms are present, skipping the Q 
+factor normalised with 2Da^2(4 + 3R)/5.&quot;))
++                norm2_flag = False
++
+             # Calculate the RDC dipolar constant (in Hertz, and the 3 comes 
+from the alignment tensor), and append it to the list.
+-            dj_new = 3.0/(2.0*pi) * dipolar_constant(g1, g2, interatom.r)
+-            if norm2_flag and dj != None and dj_new != dj:
+-                warn(RelaxWarning(&quot;The dipolar constant is not the same for 
+all RDCs, skipping the Q factor normalised with 2Da^2(4 + 3R)/5.&quot;))
+-                norm2_flag = False
+-            else:
+-                dj = dj_new
++            if norm2_flag:
++                dj_new = 3.0/(2.0*pi) * dipolar_constant(g1, g2, interatom.r)
++                if dj != None and dj_new != dj:
++                    warn(RelaxWarning(&quot;The dipolar constant is not the same 
+for all RDCs, skipping the Q factor normalised with 2Da^2(4 + 3R)/5.&quot;))
++                    norm2_flag = False
++                else:
++                    dj = dj_new
+ 
+             # Increment the number of data sets.
+             N = N + 1
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Nov 13 18:20:01 2013</div>  
+</body>
+</html>

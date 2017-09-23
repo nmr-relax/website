@@ -1,0 +1,351 @@
+<!-- MHonArc v2.6.19+ -->
+<!--X-Subject: r28204 &#45; in /trunk: lib/plotting/grace.py specific_analyses/relax_disp/api.py specific_analyses/relax_disp/optimisation.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 27 Apr 2016 11:13:49 +0200 -->
+<!--X-Message-Id: E1avLXZ&#45;0002Pq&#45;Gh@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r28204 - in /trunk: lib/plotting/grace.py specific_analyses/relax_disp/api.py specific_analyses/relax_disp/optimisation.py -- April 27, 2016 - 11:13</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r28204 - in /trunk: lib/plotting/grace.py specific_analyses/relax_disp/api.py specific_analyses/relax_disp/optimisation.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00037" class="tabs">Index by Date</a> | <a href="threads.html#00037" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00036.html">Date Prev</a>] [Date Next] [<a href="msg00036.html">Thread Prev</a>] [Thread Next]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 27 Apr 2016 09:13:49 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00037.html">E1avLXZ-0002Pq-Gh@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on April 27, 2016 - 11:13:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Apr 27 11:13:48 2016
+New Revision: 28204
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=28204&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=28204&amp;view=rev</a>
+Log:
+Fix for bug #24601.
+
+This is the failure of the optimisation of the 'R2eff' dispersion model when 
+peaks are missing from
+one spectrum, as reported by Petr Padrta at <a  rel="nofollow" href="https://gna.org/bugs/?24601">https://gna.org/bugs/?24601</a>.
+
+To handle the missing data, the peak intensity keys are now checked for in 
+the spin container
+peak_intensities data structure.  This is both for the R2eff model 
+optimisation as well as the data
+back-calculation.  A warning is given when the key is missing.  The 
+relaxation dispersion
+base_data_loop() method has been modified to now yield the spin ID string, as 
+this is used in the
+warnings.
+
+In addition, the Grace plotting code in the relax library was also modified.  
+When peak intensity
+keys are missing, some of the Grace plots will have no data.  The code will 
+now generate a plot for
+that data set, but detect the missing data and allow an empty plot to be 
+created.
+
+
+Modified:
+    trunk/lib/plotting/grace.py
+    trunk/specific_analyses/relax_disp/api.py
+    trunk/specific_analyses/relax_disp/optimisation.py
+
+Modified: trunk/lib/plotting/grace.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/lib/plotting/grace.py?rev=28204&amp;r1=28203&amp;r2=28204&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/lib/plotting/grace.py?rev=28204&amp;r1=28203&amp;r2=28204&amp;view=diff</a>
+==============================================================================
+--- trunk/lib/plotting/grace.py (original)
++++ trunk/lib/plotting/grace.py Wed Apr 27 11:13:48 2016
+@@ -1,6 +1,6 @@
+ 
+###############################################################################
+ #                                                                            
+ #
+-# Copyright (C) 2003-2015 Edward d'Auvergne                                  
+ #
++# Copyright (C) 2003-2016 Edward d'Auvergne                                  
+ #
+ # Copyright (C) 2013-2014 Troels E. Linnet                                   
+ #
+ #                                                                            
+ #
+ # This file is part of the program relax (<a  rel="nofollow" href="http://www.nmr-relax.com">http://www.nmr-relax.com</a>).         
+ #
+@@ -167,10 +167,16 @@
+             file.write(&quot;@target G%s.S%s\n&quot; % (gi, si))
+             file.write(&quot;@type %s\n&quot; % graph_type)
+ 
++            # Catch missing data sets.
++            if len(data[gi][si]) == 0:
++                file.write(&quot;&amp;\n&quot;)
++                continue
++
+             # Normalisation (to the first data point y value!).
+             norm_fact = 1.0
+             if norm[gi]:
+                 if norm_type == 'first':
++                    print `data[gi][si]`
+                     norm_fact = data[gi][si][0][1]
+                 elif norm_type == 'last':
+                     norm_fact = data[gi][si][-1][1]
+
+Modified: trunk/specific_analyses/relax_disp/api.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/relax_disp/api.py?rev=28204&amp;r1=28203&amp;r2=28204&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/relax_disp/api.py?rev=28204&amp;r1=28203&amp;r2=28204&amp;view=diff</a>
+==============================================================================
+--- trunk/specific_analyses/relax_disp/api.py   (original)
++++ trunk/specific_analyses/relax_disp/api.py   Wed Apr 27 11:13:48 2016
+@@ -1,6 +1,6 @@
+ 
+###############################################################################
+ #                                                                            
+ #
+-# Copyright (C) 2004-2014 Edward d'Auvergne                                  
+ #
++# Copyright (C) 2004-2016 Edward d'Auvergne                                  
+ #
+ # Copyright (C) 2009 Sebastien Morin                                         
+ #
+ # Copyright (C) 2013-2014 Troels E. Linnet                                   
+ #
+ #                                                                            
+ #
+@@ -86,7 +86,7 @@
+         # The R2eff model data (the base data is peak intensities).
+         if cdp.model_type == MODEL_R2EFF:
+             # Loop over the sequence.
+-            for spin in spin_loop():
++            for spin, spin_id in spin_loop(return_id=True):
+                 # Skip deselected spins.
+                 if not spin.select:
+                     continue
+@@ -97,7 +97,7 @@
+ 
+                 # Loop over each spectrometer frequency and dispersion point.
+                 for exp_type, frq, offset, point in 
+loop_exp_frq_offset_point():
+-                    yield spin, exp_type, frq, offset, point
++                    yield spin, spin_id, exp_type, frq, offset, point
+ 
+         # All other models (the base data is the R2eff/R1rho values).
+         else:
+@@ -318,10 +318,10 @@
+         # The R2eff model (with peak intensity base data).
+         if cdp.model_type == MODEL_R2EFF:
+             # Unpack the data.
+-            spin, exp_type, frq, offset, point = data_id
++            spin, spin_id, exp_type, frq, offset, point = data_id
+ 
+             # Back calculate the peak intensities.
+-            values = back_calc_peak_intensities(spin=spin, 
+exp_type=exp_type, frq=frq, offset=offset, point=point)
++            values = back_calc_peak_intensities(spin=spin, spin_id=spin_id, 
+exp_type=exp_type, frq=frq, offset=offset, point=point)
+ 
+         # All other models (with R2eff/R1rho base data).
+         else:
+@@ -982,7 +982,7 @@
+         # The R2eff model.
+         if cdp.model_type == MODEL_R2EFF:
+             # Unpack the data.
+-            spin, exp_type, frq, offset, point = data_id
++            spin, spin_id, exp_type, frq, offset, point = data_id
+ 
+             # Return the data.
+             return spin.peak_intensity
+@@ -1004,7 +1004,7 @@
+         # The R2eff model.
+         if cdp.model_type == MODEL_R2EFF:
+             # Unpack the data.
+-            spin, exp_type, frq, offset, point = data_id
++            spin, spin_id, exp_type, frq, offset, point = data_id
+ 
+             # Generate the data structure to return.
+             errors = []
+@@ -1440,7 +1440,7 @@
+         # The R2eff model (with peak intensity base data).
+         if cdp.model_type == MODEL_R2EFF:
+             # Unpack the data.
+-            spin, exp_type, frq, offset, point = data_id
++            spin, spin_id, exp_type, frq, offset, point = data_id
+ 
+             # Initialise the data structure if needed.
+             if not hasattr(spin, 'peak_intensity_sim'):
+
+Modified: trunk/specific_analyses/relax_disp/optimisation.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/relax_disp/optimisation.py?rev=28204&amp;r1=28203&amp;r2=28204&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/relax_disp/optimisation.py?rev=28204&amp;r1=28203&amp;r2=28204&amp;view=diff</a>
+==============================================================================
+--- trunk/specific_analyses/relax_disp/optimisation.py  (original)
++++ trunk/specific_analyses/relax_disp/optimisation.py  Wed Apr 27 11:13:48 
+2016
+@@ -1,6 +1,6 @@
+ 
+###############################################################################
+ #                                                                            
+ #
+-# Copyright (C) 2013-2015 Edward d'Auvergne                                  
+ #
++# Copyright (C) 2013-2016 Edward d'Auvergne                                  
+ #
+ # Copyright (C) 2014 Troels E. Linnet                                        
+ #
+ #                                                                            
+ #
+ # This file is part of the program relax (<a  rel="nofollow" href="http://www.nmr-relax.com">http://www.nmr-relax.com</a>).         
+ #
+@@ -49,11 +49,13 @@
+ from target_functions.relax_fit_wrapper import Relax_fit_opt
+ 
+ 
+-def back_calc_peak_intensities(spin=None, exp_type=None, frq=None, 
+offset=None, point=None):
++def back_calc_peak_intensities(spin=None, spin_id=None, exp_type=None, 
+frq=None, offset=None, point=None):
+     &quot;&quot;&quot;Back-calculation of peak intensity for the given relaxation time.
+ 
+     @keyword spin:      The specific spin data container.
+     @type spin:         SpinContainer instance
++    @keyword spin_id:   The optional spin ID string for use in warning 
+messages.
++    @type spin_id:      str or None
+     @keyword exp_type:  The experiment type.
+     @type exp_type:     str
+     @keyword frq:       The spectrometer frequency.
+@@ -81,6 +83,16 @@
+     errors = []
+     times = []
+     for time in loop_time(exp_type=exp_type, frq=frq, offset=offset, 
+point=point):
++        # Check the peak intensity keys.
++        int_keys = find_intensity_keys(exp_type=exp_type, frq=frq, 
+offset=offset, point=point, time=time)
++        for i in range(len(int_keys)):
++            if int_keys[i] not in spin.peak_intensity:
++                if spin_id:
++                    warn(RelaxWarning(&quot;The spin %s peak intensity key '%s' 
+is not present, skipping the back-calculation.&quot; % (spin_id, int_keys[i])))
++                else:
++                    warn(RelaxWarning(&quot;The peak intensity key '%s' is not 
+present, skipping the back-calculation.&quot; % int_keys[i]))
++                return
++
+         # The data.
+         values.append(average_intensity(spin=spin, exp_type=exp_type, 
+frq=frq, offset=offset, point=point, time=time))
+         errors.append(average_intensity(spin=spin, exp_type=exp_type, 
+frq=frq, offset=offset, point=point, time=time, error=True))
+@@ -381,16 +393,31 @@
+             values = []
+             errors = []
+             times = []
++            data_flag = True
+             for time in loop_time(exp_type=exp_type, frq=frq, offset=offset, 
+point=point):
+-                values.append(average_intensity(spin=spins[si], 
+exp_type=exp_type, frq=frq, offset=offset, point=point, time=time, 
+sim_index=sim_index))
+-                errors.append(average_intensity(spin=spins[si], 
+exp_type=exp_type, frq=frq, offset=offset, point=point, time=time, 
+error=True))
+-                times.append(time)
++                # Check the peak intensity keys.
++                int_keys = find_intensity_keys(exp_type=exp_type, frq=frq, 
+offset=offset, point=point, time=time)
++                peak_intensities = spins[si].peak_intensity
++                if sim_index != None:
++                    peak_intensities = spins[si].peak_intensity_sim
++                for i in range(len(int_keys)):
++                    if int_keys[i] not in peak_intensities:
++                        if verbosity:
++                            warn(RelaxWarning(&quot;The spin %s peak intensity 
+key '%s' is not present, skipping the optimisation.&quot; % (spin_ids[si], 
+int_keys[i])))
++                        data_flag = False
++                        break
++
++                if data_flag:
++                    values.append(average_intensity(spin=spins[si], 
+exp_type=exp_type, frq=frq, offset=offset, point=point, time=time, 
+sim_index=sim_index))
++                    errors.append(average_intensity(spin=spins[si], 
+exp_type=exp_type, frq=frq, offset=offset, point=point, time=time, 
+error=True))
++                    times.append(time)
++            if not data_flag:
++                continue
+ 
+             # Raise errors if number of time points is less than 2.
+             if len(times) &lt; 3:
+                 subsection(file=sys.stdout, text=&quot;Exponential curve fitting 
+error for point:&quot;, prespace=2)
+                 point_info = &quot;%s at %3.1f MHz, for offset=%3.3f ppm and 
+dispersion point %-5.1f, with %i time points.&quot; % (exp_type, frq/1E6, offset, 
+point, len(times))
+-                print(point_info)
+                 raise RelaxError(&quot;The data setup points to exponential curve 
+fitting, but only %i time points was found, where 3 time points is minimum.  
+If calculating R2eff values for fixed relaxation time period data, check that 
+a reference intensity has been specified for each offset value.&quot;%(len(times)))
+ 
+             # The scaling matrix in a diagonalised list form.
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Apr 27 11:20:14 2016</div>  
+</body>
+</html>

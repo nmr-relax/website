@@ -1,0 +1,225 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r27016 &#45; /branches/nmrglue/data_store/nmrglue.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 08 Dec 2014 16:04:49 +0100 -->
+<!--X-Message-Id: E1Xxzrl&#45;0006Cs&#45;Mj@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r27016 - /branches/nmrglue/data_store/nmrglue.py -- December 08, 2014 - 16:04</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r27016 - /branches/nmrglue/data_store/nmrglue.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00139" class="tabs">Index by Date</a> | <a href="threads.html#00139" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00138.html">Date Prev</a>] [<a href="msg00140.html">Date Next</a>] [<a href="msg00138.html">Thread Prev</a>] [<a href="msg00140.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 08 Dec 2014 15:04:49 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00139.html">E1Xxzrl-0006Cs-Mj@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on December 08, 2014 - 16:04:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Mon Dec  8 16:04:49 2014
+New Revision: 27016
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=27016&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=27016&amp;view=rev</a>
+Log:
+Created an initial data store object for handling the conversion of nmrglue 
+data to and from XML.
+
+This is the data_store.nmrglue.Nmrglue data container which inherits from
+data_store.data_classes.Element.  Custom to_xml() and from_xml() methods have 
+been added to
+specifically convert the numpy data element to and from Base64 format for 
+fast and efficient
+storage.
+
+
+Added:
+    branches/nmrglue/data_store/nmrglue.py
+
+Added: branches/nmrglue/data_store/nmrglue.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/nmrglue/data_store/nmrglue.py?rev=27016&amp;view=auto">http://svn.gna.org/viewcvs/relax/branches/nmrglue/data_store/nmrglue.py?rev=27016&amp;view=auto</a>
+==============================================================================
+--- branches/nmrglue/data_store/nmrglue.py      (added)
++++ branches/nmrglue/data_store/nmrglue.py      Mon Dec  8 16:04:49 2014
+@@ -0,0 +1,102 @@
++###############################################################################
++#                                                                            
+ #
++# Copyright (C) 2014 Edward d'Auvergne                                       
+ #
++#                                                                            
+ #
++# This file is part of the program relax (<a  rel="nofollow" href="http://www.nmr-relax.com">http://www.nmr-relax.com</a>).         
+ #
++#                                                                            
+ #
++# This program is free software: you can redistribute it and/or modify       
+ #
++# it under the terms of the GNU General Public License as published by       
+ #
++# the Free Software Foundation, either version 3 of the License, or          
+ #
++# (at your option) any later version.                                        
+ #
++#                                                                            
+ #
++# This program is distributed in the hope that it will be useful,            
+ #
++# but WITHOUT ANY WARRANTY; without even the implied warranty of             
+ #
++# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the              
+ #
++# GNU General Public License for more details.                               
+ #
++#                                                                            
+ #
++# You should have received a copy of the GNU General Public License          
+ #
++# along with this program.  If not, see &lt;<a  rel="nofollow" href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.      
+ #
++#                                                                            
+ #
++###############################################################################
++
++# Module docstring.
++&quot;&quot;&quot;Special relax data storage for nmrglue data.&quot;&quot;&quot;
++
++# Python module imports.
++from base64 import b64encode, decodestring
++from numpy import float32, frombuffer
++
++# relax module imports.
++from data_store.data_classes import Element
++from lib.xml import object_to_xml, xml_to_object
++
++
++class Nmrglue(Element):
++    &quot;&quot;&quot;Container for the global GUI data structures.&quot;&quot;&quot;
++
++    def __init__(self):
++        &quot;&quot;&quot;Initialise the container info.&quot;&quot;&quot;
++
++        # Execute the base class __init__() method.
++        super(Gui, self).__init__()
++
++        # Initialise the data.
++        self.dic = None
++        self.udic = None
++        self.data = None
++
++
++    def from_xml(self, nmrglue_node, file_version=1):
++        &quot;&quot;&quot;Recreate the nmrglue data structure from the XML gui node.
++
++        @param gui_node:        The gui XML node.
++        @type gui_node:         xml.dom.minicompat.Element instance
++        @keyword file_version:  The relax XML version of the XML file.
++        @type file_version:     int
++        &quot;&quot;&quot;
++
++        # Get the data node.
++        data_nodes = nmrglue_node.getElementsByTagName('data')
++
++        # Loop over the info nodes of the Python object.
++        for sub_node in node.childNodes:
++            # Get the value.
++            if sub_node.localName == 'value':
++                # Convert from Base64 to numpy.float32.
++                buffer = decodestring(sub_node.childNodes[0])
++                self.data = frombuffer(buffer, dtype=np.float32)
++
++                # The shape attribute.
++                shape = eval(node.getAttribute('shape'))
++
++                # Reshape the data.
++                self.data.reshape(shape)
++
++        # Recreate all the other data structures.
++        xml_to_object(gui_node, self, file_version=file_version, 
+blacklist=['data'])
++
++
++    def to_xml(self, doc, element):
++        &quot;&quot;&quot;Create an XML element for the container.
++
++        @param doc:     The XML document object.
++        @type doc:      xml.dom.minidom.Document instance
++        @param element: The element to add the data container XML element to.
++        @type element:  XML element object
++        &quot;&quot;&quot;
++
++        # Call the parent class method for all but the data variable.
++        self.blacklist.append('data')
++        super(Nmrglue, self).to_xml(doc, element)
++
++        # Convert the data into a Base64 string.
++        string = b64encode(self.data)
++
++        # Store the value as the string.
++        val_elem = doc.createElement('value')
++        element.appendChild(val_elem)
++        val_elem.appendChild(doc.createTextNode(string))
++
++        # Set the type and shape as attributes.
++        element.setAttribute('type', 'base64, numpy.float32')
++        element.setAttribute('shape', repr(self.data.shape))
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Dec 08 16:20:03 2014</div>  
+</body>
+</html>

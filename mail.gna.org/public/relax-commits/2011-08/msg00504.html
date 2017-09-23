@@ -1,0 +1,180 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r14524 &#45; /1.3/gui/wizard.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 30 Aug 2011 16:03:22 +0200 -->
+<!--X-Message-Id: E1QyOuQ&#45;0001fZ&#45;EW@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r14524 - /1.3/gui/wizard.py -- August 30, 2011 - 16:03</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r14524 - /1.3/gui/wizard.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00504" class="tabs">Index by Date</a> | <a href="threads.html#00504" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00503.html">Date Prev</a>] [<a href="msg00505.html">Date Next</a>] [<a href="msg00503.html">Thread Prev</a>] [<a href="msg00505.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 30 Aug 2011 14:03:22 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00504.html">E1QyOuQ-0001fZ-EW@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on August 30, 2011 - 16:03:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Aug 30 16:03:22 2011
+New Revision: 14524
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=14524&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=14524&amp;view=rev</a>
+Log:
+Added the ability to flush the GUI interpreter thread in the wizard prior to 
+changing to the next page.
+
+This will help in solving races when a series of user functions are strung 
+one after the other.
+
+
+Modified:
+    1.3/gui/wizard.py
+
+Modified: 1.3/gui/wizard.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/gui/wizard.py?rev=14524&amp;r1=14523&amp;r2=14524&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/gui/wizard.py?rev=14524&amp;r1=14523&amp;r2=14524&amp;view=diff</a>
+==============================================================================
+--- 1.3/gui/wizard.py (original)
++++ 1.3/gui/wizard.py Tue Aug 30 16:03:22 2011
+@@ -1071,6 +1071,7 @@
+         self._exec_on_next = []
+         self._exec_count = []
+         self._proceed_on_error = []
++        self._uf_flush = []
+         self._seq_fn_list = []
+         self._seq_next = []
+         self._seq_prev = []
+@@ -1115,6 +1116,9 @@
+ 
+             # Proceed to next page on errors by default.
+             self._proceed_on_error.append(True)
++
++            # No user function flushing of the GUI interpreter thread prior 
+to proceeding.
++            self._uf_flush.append(False)
+ 
+             # Page sequence initialisation.
+             self._seq_fn_list.append(self._next_fn)
+@@ -1291,6 +1295,10 @@
+             if self._exec_on_next[self._current_page]:
+                 self._pages[self._current_page]._apply(event)
+ 
++                # UF flush.
++                if self._uf_flush[self._current_page]:
++                    self.gui.interpreter.flush()
++
+                 # Check for execution errors.
+                 if not self._pages[self._current_page].exec_status:
+                     # Do not proceed.
+@@ -1343,6 +1351,10 @@
+                 # Execute the _apply method.
+                 self._pages[i]._apply(event)
+ 
++                # UF flush.
++                if self._uf_flush[self._current_page]:
++                    self.gui.interpreter.flush()
++
+                 # Increment the execution counter.
+                 self._exec_count[i] += 1
+ 
+@@ -1387,7 +1399,7 @@
+         self._go_next(None)
+ 
+ 
+-    def add_page(self, panel, apply_button=True, skip_button=False, 
+exec_on_next=True, proceed_on_error=True):
++    def add_page(self, panel, apply_button=True, skip_button=False, 
+exec_on_next=True, proceed_on_error=True, uf_flush=False):
+         &quot;&quot;&quot;Add a new page to the wizard.
+ 
+         @param panel:               The page to add to the wizard.
+@@ -1398,8 +1410,10 @@
+         @type skip_button:          bool
+         @keyword exec_on_next:      A flag which if true will run the 
+on_execute() method when clicking on the next button.
+         @type exec_on_next:         bool
+-        @keyword proceed_on_error:  A flag which if True will proceed to the 
+next page (or quit if there are no more pages) despite the occurrence of an 
+error in execution.  If False, the page will remain open.
++        @keyword proceed_on_error:  A flag which if True will proceed to the 
+next page (or quit if there are no more pages) despite the occurrence of an 
+error in execution.  If False, the page will remain open (the GUI interpreter 
+thread will be flushed first to synchronise).
+         @type proceed_on_error:     bool
++        @keyword uf_flush:          A flag which if True will cause the GUI 
+interpreter thread to be flushed to clear out all user function call prior to 
+proceeding.
++        @type uf_flush:             bool
+         @return:                    The index of the page in the wizard.
+         @rtype:                     int
+         &quot;&quot;&quot;
+@@ -1427,6 +1441,8 @@
+         self._button_skip_flag[index] = skip_button
+         self._exec_on_next[index] = exec_on_next
+         self._proceed_on_error[index] = proceed_on_error
++        if not proceed_on_error or uf_flush:
++            self._uf_flush[index] = True
+ 
+         # Store the index of the page.
+         panel.page_index = self._num_pages - 1
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Aug 30 16:20:02 2011</div>  
+</body>
+</html>

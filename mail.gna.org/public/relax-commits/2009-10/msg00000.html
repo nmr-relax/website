@@ -1,0 +1,221 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r9564 &#45; in /1.3/generic_fns: dasha.py palmer.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 05 Oct 2009 10:25:34 +0200 -->
+<!--X-Message-Id: E1Muisw&#45;0004cT&#45;JT@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r9564 - in /1.3/generic_fns: dasha.py palmer.py -- October 05, 2009 - 10:25</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r9564 - in /1.3/generic_fns: dasha.py palmer.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00000" class="tabs">Index by Date</a> | <a href="threads.html#00000" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[Date Prev] [<a href="msg00001.html">Date Next</a>] [Thread Prev] [<a href="msg00001.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 05 Oct 2009 08:25:34 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00000.html">E1Muisw-0004cT-JT@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on October 05, 2009 - 10:25:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Mon Oct  5 10:25:33 2009
+New Revision: 9564
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=9564&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=9564&amp;view=rev</a>
+Log:
+Bug fix:  Added the function __deselect_spins() to remove spins with too 
+little data.
+
+This fixes bug #14428 (<a  rel="nofollow" href="http://gna.org/bugs/?14428">http://gna.org/bugs/?14428</a>) reported by Pierre-Yves 
+Savard &lt;pierre-yves dott
+savard at bcm dot ulaval dot ca&gt;.
+
+The new function is almost identical to that used in the model-free analysis 
+performed by relax in
+that spins with no or too little data, or those which would be over-fit are 
+removed from the
+analysis.
+
+
+Modified:
+    1.3/generic_fns/dasha.py
+    1.3/generic_fns/palmer.py
+
+Modified: 1.3/generic_fns/dasha.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/generic_fns/dasha.py?rev=9564&amp;r1=9563&amp;r2=9564&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/generic_fns/dasha.py?rev=9564&amp;r1=9563&amp;r2=9564&amp;view=diff</a>
+==============================================================================
+--- 1.3/generic_fns/dasha.py (original)
++++ 1.3/generic_fns/dasha.py Mon Oct  5 10:25:33 2009
+@@ -37,9 +37,36 @@
+ from specific_fns.setup import model_free_obj
+ 
+ 
++def __deselect_spins():
++    &quot;&quot;&quot;Deselect spins with no or too little data, that are overfitting, 
+etc.&quot;&quot;&quot;
++
++    # Test if sequence data exists.
++    if not exists_mol_res_spin_data():
++        raise RelaxNoSequenceError
++
++    # Is structural data required?
++    need_vect = False
++    if hasattr(cdp, 'diff_tensor') and (cdp.diff_tensor.type == 'spheroid' 
+or cdp.diff_tensor.type == 'ellipsoid'):
++        need_vect = True
++
++    # Loop over the sequence.
++    for spin in spin_loop():
++        # Relaxation data must exist!
++        if not hasattr(spin, 'relax_data'):
++            spin.select = False
++
++        # Require 3 or more relaxation data points.
++        elif len(spin.relax_data) &lt; 3:
++            spin.select = False
++
++        # Require at least as many data points as params to prevent 
+over-fitting.
++        elif hasattr(spin, 'params') and spin.params and len(spin.params) &gt; 
+len(spin.relax_data):
++            spin.select = False
++
++
+ def create(algor='LM', dir=None, force=False):
+     &quot;&quot;&quot;Create the Dasha script file 'dasha_script' for controlling the 
+program.
+-    
++
+     @keyword algor: The optimisation algorithm to use.  This can be the 
+Levenberg-Marquardt
+                     algorithm 'LM' or the Newton-Raphson algorithm 'NR'.
+     @type algor:    str
+@@ -76,6 +103,9 @@
+         # Test the number of spins.
+         if len(residue.spin) &gt; 1:
+             raise RelaxError(&quot;More than one spin per residue is not 
+supported.&quot;)
++
++    # Deselect certain spins.
++    __deselect_spins()
+ 
+     # Directory creation.
+     if dir == None:
+
+Modified: 1.3/generic_fns/palmer.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/generic_fns/palmer.py?rev=9564&amp;r1=9563&amp;r2=9564&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/generic_fns/palmer.py?rev=9564&amp;r1=9563&amp;r2=9564&amp;view=diff</a>
+==============================================================================
+--- 1.3/generic_fns/palmer.py (original)
++++ 1.3/generic_fns/palmer.py Mon Oct  5 10:25:33 2009
+@@ -38,6 +38,33 @@
+ from relax_errors import RelaxDirError, RelaxFileError, RelaxNoModelError, 
+RelaxNoPdbError, RelaxNoSequenceError
+ from relax_io import mkdir_nofail, open_write_file, test_binary
+ from specific_fns.setup import model_free_obj
++
++
++def __deselect_spins():
++    &quot;&quot;&quot;Deselect spins with no or too little data, that are overfitting, 
+etc.&quot;&quot;&quot;
++
++    # Test if sequence data exists.
++    if not exists_mol_res_spin_data():
++        raise RelaxNoSequenceError
++
++    # Is structural data required?
++    need_vect = False
++    if hasattr(cdp, 'diff_tensor') and (cdp.diff_tensor.type == 'spheroid' 
+or cdp.diff_tensor.type == 'ellipsoid'):
++        need_vect = True
++
++    # Loop over the sequence.
++    for spin in spin_loop():
++        # Relaxation data must exist!
++        if not hasattr(spin, 'relax_data'):
++            spin.select = False
++
++        # Require 3 or more relaxation data points.
++        elif len(spin.relax_data) &lt; 3:
++            spin.select = False
++
++        # Require at least as many data points as params to prevent 
+over-fitting.
++        elif hasattr(spin, 'params') and spin.params and len(spin.params) &gt; 
+len(spin.relax_data):
++            spin.select = False
+ 
+ 
+ def create(dir=None, binary=None, diff_search=None, sims=None, 
+sim_type=None, trim=None, steps=None, heteronuc_type=None, atom1=None, 
+atom2=None, spin_id=None, force=False, constraints=True):
+@@ -97,6 +124,9 @@
+     if hasattr(cdp, 'diff_tensor') and not cdp.diff_tensor.type == 'sphere' 
+and not hasattr(cdp, 'structure'):
+         raise RelaxNoPdbError
+ 
++    # Deselect certain spins.
++    __deselect_spins()
++
+     # Directory creation.
+     if dir == None:
+         dir = pipes.cdp_name()
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Oct 05 10:40:02 2009</div>  
+</body>
+</html>

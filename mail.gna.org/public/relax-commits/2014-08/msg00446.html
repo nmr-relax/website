@@ -1,0 +1,191 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r25312 &#45; in /trunk/target_functions: relax_fit.c relax_fit.h -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 26 Aug 2014 19:04:09 +0200 -->
+<!--X-Message-Id: E1XMKAD&#45;0001h9&#45;Q3@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r25312 - in /trunk/target_functions: relax_fit.c relax_fit.h -- August 26, 2014 - 19:04</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r25312 - in /trunk/target_functions: relax_fit.c relax_fit.h</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00446" class="tabs">Index by Date</a> | <a href="threads.html#00446" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00445.html">Date Prev</a>] [<a href="msg00447.html">Date Next</a>] [<a href="msg00445.html">Thread Prev</a>] [<a href="msg00447.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 26 Aug 2014 17:04:09 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00446.html">E1XMKAD-0001h9-Q3@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on August 26, 2014 - 19:04:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Aug 26 19:04:09 2014
+New Revision: 25312
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=25312&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=25312&amp;view=rev</a>
+Log:
+Partly implemented the front end target_functions.relax_fit.d2func() C module 
+Python function.
+
+This is not fully implemented as the exponential curve double partial 
+derivatives are not
+implemented.
+
+
+Modified:
+    trunk/target_functions/relax_fit.c
+    trunk/target_functions/relax_fit.h
+
+Modified: trunk/target_functions/relax_fit.c
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/target_functions/relax_fit.c?rev=25312&amp;r1=25311&amp;r2=25312&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/target_functions/relax_fit.c?rev=25312&amp;r1=25311&amp;r2=25312&amp;view=diff</a>
+==============================================================================
+--- trunk/target_functions/relax_fit.c  (original)
++++ trunk/target_functions/relax_fit.c  Tue Aug 26 19:04:09 2014
+@@ -166,10 +166,50 @@
+ d2func(PyObject *self, PyObject *args) {
+     /* Target function for calculating and returning the chi-squared Hessian.
+      * 
+-     * This is currently unimplemented.
+      */
+ 
+-    return PyFloat_FromDouble(0.0);
++    /* Declarations. */
++    PyObject *params_arg;
++    int j, k;
++
++    /* Parse the function arguments, the only argument should be the 
+parameter array. */
++    if (!PyArg_ParseTuple(args, &quot;O&quot;, &amp;params_arg))
++        return NULL;
++
++    /* Convert the parameters Python list to a C array. */
++    param_to_c(params_arg);
++
++    /* Back calculated the peak intensities. */
++    exponential(params[index_I0], params[index_R], relax_times, back_calc, 
+num_times);
++
++    /* The partial derivatives. */
++    exponential_dR(params[index_I0], params[index_R], index_R, relax_times, 
+back_calc_grad, num_times);
++    exponential_dI0(params[index_I0], params[index_R], index_I0, 
+relax_times, back_calc_grad, num_times);
++
++    /* The second partial derivatives. */
++    /*
++    exponential_dR2(params[index_I0], params[index_R], index_R, relax_times, 
+back_calc_hess, num_times);
++    exponential_dI02(params[index_I0], params[index_R], index_I0, 
+relax_times, back_calc_hess, num_times);
++    exponential_dR2_dI02(params[index_I0], params[index_R], index_R, 
+index_I0, relax_times, back_calc_hess, num_times);
++    */
++
++    /* The chi-squared Hessian. */
++    d2chi2(d2chi2_vals, values, back_calc, back_calc_grad, back_calc_hess, 
+sd, num_times, num_params);
++
++    /* Convert to a Python list, and scale the values. */
++    PyObject *list = PyList_New(0);
++    Py_INCREF(list);
++    for (j = 0; j &lt; num_params; j++) {
++        PyObject *list2 = PyList_New(0);
++        Py_INCREF(list2);
++        for (k = 0; k &lt; num_params; k++) {
++            PyList_Append(list2, PyFloat_FromDouble(d2chi2_vals[j][k] * 
+scaling_matrix[j] * scaling_matrix[k]));
++        }
++        PyList_Append(list, list2);
++    }
++
++    /* Return the Hessian. */
++    return list;
+ }
+ 
+ 
+@@ -247,7 +287,7 @@
+         &quot;d2func&quot;,
+         d2func,
+         METH_VARARGS,
+-        &quot;Target function for calculating and returning the chi-squared 
+Hessian.\n\nThis is currently unimplemented.&quot;
++        &quot;Target function for calculating and returning the chi-squared 
+Hessian.&quot;
+     }, {
+         &quot;back_calc_I&quot;,
+         back_calc_I,
+
+Modified: trunk/target_functions/relax_fit.h
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/target_functions/relax_fit.h?rev=25312&amp;r1=25311&amp;r2=25312&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/target_functions/relax_fit.h?rev=25312&amp;r1=25311&amp;r2=25312&amp;view=diff</a>
+==============================================================================
+--- trunk/target_functions/relax_fit.h  (original)
++++ trunk/target_functions/relax_fit.h  Tue Aug 26 19:04:09 2014
+@@ -41,7 +41,9 @@
+ /* Variables used for storage during the function calls of optimisation. */
+ static double back_calc[MAX_DATA];
+ static double back_calc_grad[MAX_PARAMS][MAX_DATA];
++static double back_calc_hess[MAX_PARAMS][MAX_PARAMS][MAX_DATA];
+ static double dchi2_vals[MAX_PARAMS];
++static double d2chi2_vals[MAX_PARAMS][MAX_PARAMS];
+ static double params[MAX_PARAMS];
+ static double values[MAX_DATA];
+ static double sd[MAX_DATA];
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Aug 26 19:20:02 2014</div>  
+</body>
+</html>

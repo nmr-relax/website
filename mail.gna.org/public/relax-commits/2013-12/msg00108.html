@@ -1,0 +1,178 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r21830 &#45; /trunk/lib/spectrum/xeasy.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 06 Dec 2013 13:23:31 +0100 -->
+<!--X-Message-Id: E1VouRP&#45;0007oA&#45;7P@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r21830 - /trunk/lib/spectrum/xeasy.py -- December 06, 2013 - 13:23</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r21830 - /trunk/lib/spectrum/xeasy.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00108" class="tabs">Index by Date</a> | <a href="threads.html#00108" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00107.html">Date Prev</a>] [<a href="msg00109.html">Date Next</a>] [<a href="msg00107.html">Thread Prev</a>] [<a href="msg00109.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 06 Dec 2013 12:23:31 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00108.html">E1VouRP-0007oA-7P@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on December 06, 2013 - 13:23:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Fri Dec  6 13:23:30 2013
+New Revision: 21830
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=21830&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=21830&amp;view=rev</a>
+Log:
+Modified xeasy reading function to pass residue names back.
+
+Work in progress for Support Request #3044, 
+(<a  rel="nofollow" href="https://gna.org/support/index.php?3044">https://gna.org/support/index.php?3044</a>) - Load spins from SPARKY list.
+
+Modified:
+    trunk/lib/spectrum/xeasy.py
+
+Modified: trunk/lib/spectrum/xeasy.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/lib/spectrum/xeasy.py?rev=21830&amp;r1=21829&amp;r2=21830&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/lib/spectrum/xeasy.py?rev=21830&amp;r1=21829&amp;r2=21830&amp;view=diff</a>
+==============================================================================
+--- trunk/lib/spectrum/xeasy.py (original)
++++ trunk/lib/spectrum/xeasy.py Fri Dec  6 13:23:30 2013
+@@ -2,6 +2,7 @@
+ #                                                                            
+ #
+ # Copyright (C) 2004-2013 Edward d'Auvergne                                  
+ #
+ # Copyright (C) 2008 Sebastien Morin                                         
+ #
++# Copyright (C) 2013 Troels E. Linnet                                        
+ #
+ #                                                                            
+ #
+ # This file is part of the program relax (<a  rel="nofollow" href="http://www.nmr-relax.com">http://www.nmr-relax.com</a>).         
+ #
+ #                                                                            
+ #
+@@ -24,9 +25,13 @@
+ &quot;&quot;&quot;Module containing functions for handling XEasy files.&quot;&quot;&quot;
+ 
+ 
++# Python module imports.
++from warnings import warn
++
+ # relax module imports.
+ from lib.errors import RelaxError
+ from lib.io import strip
++from lib.warnings import RelaxWarning
+ 
+ 
+ def read_list(peak_list=None, file_data=None, int_col=None):
+@@ -46,6 +51,8 @@
+     w2_col = 2
+     ass_w1_col = 7
+     ass_w2_col = 4
++    res_name1_col = 9
++    res_name2_col = 5
+     if int_col == None:
+         int_col = 10
+ 
+@@ -75,15 +82,26 @@
+         if line[ass_w1_col] == 'inv.' or line[ass_w2_col] == 'inv.':
+             continue
+ 
+-        # The residue number.
++        # The residue number for dimension 1.
+         try:
+-            res_num = int(line[5])
++            res_num1 = int(line[8])
+         except:
+-            raise RelaxError(&quot;Improperly formatted XEasy file, cannot read 
+the line %s.&quot; % line)
++            raise RelaxError(&quot;Improperly formatted XEasy file, cannot 
+process the residue number for dimension 1 in assignment: %s.&quot; % line)
++
++        # The residue number for dimension 2.
++        try:
++            res_num2 = int(line[5])
++        except:
++            warn(RelaxWarning(&quot;Improperly formatted XEasy file, cannot 
+process the residue number for dimension 2 in assignment: %s. Setting residue 
+number to None.&quot; % line))
++            res_num2 = None
+ 
+         # Nuclei names.
+         name1 = line[ass_w1_col]
+         name2 = line[ass_w2_col]
++
++        # Residue names.
++        res_name1 = line[res_name1_col]
++        res_name2 = line[res_name2_col]
+ 
+         # Chemical shifts.
+         try:
+@@ -102,4 +120,4 @@
+             raise RelaxError(&quot;The peak intensity value from the line %s is 
+invalid.&quot; % line)
+ 
+         # Add the assignment to the peak list object.
+-        peak_list.add(res_nums=[res_num, res_num], spin_names=[name1, 
+name2], shifts=[w1, w2], intensity=intensity)
++        peak_list.add(res_nums=[res_num1, res_num2], res_names=[res_name1, 
+res_name2], spin_names=[name1, name2], shifts=[w1, w2], intensity=intensity)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Dec 06 14:20:01 2013</div>  
+</body>
+</html>

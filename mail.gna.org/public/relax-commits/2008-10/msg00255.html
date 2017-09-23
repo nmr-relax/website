@@ -1,0 +1,406 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r7726 &#45; in /branches/multi_processor_merge: multi/mpi4py_processor.py	multi/processor.py multi/uni_processor.py relax -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 15 Oct 2008 23:12:00 +0200 -->
+<!--X-Message-Id: E1KqDey&#45;00077Z&#45;GT@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r7726 - in /branches/multi_processor_merge: multi/mpi4py_processor.py	multi/processor.py multi/uni_processor.py relax -- October 15, 2008 - 23:12</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r7726 - in /branches/multi_processor_merge: multi/mpi4py_processor.py	multi/processor.py multi/uni_processor.py relax</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00255" class="tabs">Index by Date</a> | <a href="threads.html#00255" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00254.html">Date Prev</a>] [<a href="msg00256.html">Date Next</a>] [<a href="msg00254.html">Thread Prev</a>] [<a href="msg00256.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 15 Oct 2008 21:12:00 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00255.html">E1KqDey-00077Z-GT@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on October 15, 2008 - 23:12:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Oct 15 23:12:00 2008
+New Revision: 7726
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=7726&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=7726&amp;view=rev</a>
+Log:
+Manually ported r3253 from the multi_processor branch.
+
+The command used was:
+svn merge -r3252:3253 
+svn+ssh://bugman@xxxxxxxxxxx/svn/relax/branches/multi_processor .
+
+.....
+  r3253 | varioustoxins | 2007-03-30 10:58:03 +0200 (Fri, 30 Mar 2007) | 2 
+lines
+  Changed paths:
+     M /branches/multi_processor/multi/mpi4py_processor.py
+     M /branches/multi_processor/multi/processor.py
+     M /branches/multi_processor/multi/uni_processor.py
+     M /branches/multi_processor/relax
+
+  'classification' of Processor classes
+.....
+
+
+Modified:
+    branches/multi_processor_merge/multi/mpi4py_processor.py
+    branches/multi_processor_merge/multi/processor.py
+    branches/multi_processor_merge/multi/uni_processor.py
+    branches/multi_processor_merge/relax
+
+Modified: branches/multi_processor_merge/multi/mpi4py_processor.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/multi_processor_merge/multi/mpi4py_processor.py?rev=7726&amp;r1=7725&amp;r2=7726&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/multi_processor_merge/multi/mpi4py_processor.py?rev=7726&amp;r1=7725&amp;r2=7726&amp;view=diff</a>
+==============================================================================
+--- branches/multi_processor_merge/multi/mpi4py_processor.py (original)
++++ branches/multi_processor_merge/multi/mpi4py_processor.py Wed Oct 15 
+23:12:00 2008
+@@ -26,12 +26,12 @@
+ import sys
+ import os
+ import math
+-import time,datetime
+ import textwrap
+ 
+-from multi.processor import Memo,Slave_command
++from multi.processor import Processor,Memo,Slave_command
+ from multi.processor import Result,Result_command,Result_string
+ from multi.commands import Exit_command
++
+ 
+ 
+ 
+@@ -95,7 +95,7 @@
+ 
+ 
+ #FIXME do some inheritance
+-class Mpi4py_processor:
++class Mpi4py_processor(Processor):
+ 
+ 
+ 
+@@ -124,7 +124,7 @@
+          self.memo_map.clear()
+ 
+     def assert_on_master(self):
+-        if MPI.rank != 0:
++        if self.on_slave():
+             msg = 'running on slave when expected master with MPI.rank == 0, 
+rank was %d'% MPI.rank
+             raise Exception(msg)
+ 
+@@ -141,9 +141,7 @@
+ 
+ 
+ 
+-    def run_command_globally(self,command):
+-        queue = [command for i in range(1,MPI.size)]
+-        self.run_command_queue(queue)
++
+ 
+     def run_command_queue(self,queue):
+         self.assert_on_master()
+@@ -191,23 +189,19 @@
+                         raise Exception(message)
+ 
+ 
+-    def pre_run(self):
+-        self.start_time =  time.time()
+-
+-    def post_run(self):
+-        end_time = time.time()
+-        time_diff= end_time - start_time
+-        time_delta = datetime.timedelta(seconds=time_diff)
+-        time_delta_str = time_delta.__str__()
+-        (time_delta_str,millis) = time_delta_str.rsplit(sep='.',maxsplit=1)
+-        print 'overall runtime: ' + time_delta_str + '\n'
++
++    def on_master(self):
++        result = False
++        if MPI.rank ==0:
++            result = True
++        return result
+ 
+ 
+     def run(self):
+ 
+ 
+ 
+-        if MPI.rank ==0:
++        if self.on_master():
+             self.pre_run()
+             self.relax_instance.run()
+             self.post_run()
+
+Modified: branches/multi_processor_merge/multi/processor.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/multi_processor_merge/multi/processor.py?rev=7726&amp;r1=7725&amp;r2=7726&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/multi_processor_merge/multi/processor.py?rev=7726&amp;r1=7725&amp;r2=7726&amp;view=diff</a>
+==============================================================================
+--- branches/multi_processor_merge/multi/processor.py (original)
++++ branches/multi_processor_merge/multi/processor.py Wed Oct 15 23:12:00 2008
+@@ -21,6 +21,67 @@
+ # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA  
+  #
+ #                                                                            
+  #
+ 
+################################################################################
++
++#FIXME better  requirement of inherited commands
++import time,datetime
++
++
++
++def raise_unimplimented(method):
++    raise NotImplementedError(&quot;Attempt to invoke unimplemented abstract 
+method %s&quot;) % method.__name__
++
++#requires 2.4 decorators@abstract
++#def abstract(f):
++#    raise_unimplimented(f)
++#    return f
++
++class Processor(object):
++
++    def add_to_queue(self,command,memo=None):
++         raise_unimplimented(self.add_to_queue)
++
++    def run_queue(self):
++        raise_unimplimented(self.run_queue)
++
++    def run(self):
++        raise_unimplimented(self.run)
++
++    def return_object(self,result):
++        raise_unimplimented(self.return_object)
++
++    def get_name(self):
++        raise_unimplimented(self.get_name)
++
++    def exit(self):
++        raise_unimplimented(self.exit)
++
++    def on_master(self):
++        raise_unimplimented(self.on_master)
++
++    def on_slave(self):
++        return not self.on_master()
++
++    def run_command_globally(self,command):
++        queue = [command for i in range(1,MPI.size)]
++        self.run_command_queue(queue)
++
++    def pre_run(self):
++        if self.on_master():
++            self.start_time =  time.time()
++
++    def get_time_delta(self,start_time,end_time):
++
++        time_diff= end_time - start_time
++        time_delta = datetime.timedelta(seconds=time_diff)
++        time_delta_str = time_delta.__str__()
++        (time_delta_str,millis) = time_delta_str.split('.',1)
++        return time_delta_str
++
++    def post_run(self):
++        if self.on_master():
++            end_time = time.time()
++            time_delta_str = self.get_time_delta(self.start_time,end_time)
++            print 'overall runtime: ' + time_delta_str + '\n'
+ 
+ class Result(object):
+     def __init__(self,completed):
+
+Modified: branches/multi_processor_merge/multi/uni_processor.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/multi_processor_merge/multi/uni_processor.py?rev=7726&amp;r1=7725&amp;r2=7726&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/multi_processor_merge/multi/uni_processor.py?rev=7726&amp;r1=7725&amp;r2=7726&amp;view=diff</a>
+==============================================================================
+--- branches/multi_processor_merge/multi/uni_processor.py (original)
++++ branches/multi_processor_merge/multi/uni_processor.py Wed Oct 15 23:12:00 
+2008
+@@ -26,10 +26,50 @@
+ import multi
+ import time,datetime
+ 
+-from multi.processor import Result_command,Result_string
++from multi.processor import Processor,Result_command,Result_string
++#class Processor(object):
++#    def add_to_queue(self,command,memo=None):
++#        pass
++#    def run_queue(self):
++#        pass
++#    def run(self):
++#        pass
++#    def return_object(self,result):
++#        pass
++#    def get_name(self):
++#        pass
++#    def exit(self):
++#        pass
++#
++#    def on_master(self):
++#        pass
++#
++#    def on_slave(self):
++#        return not self.on_master()
++#
++#    def run_command_globally(self,command):
++#        queue = [command for i in range(1,MPI.size)]
++#        self.run_command_queue(queue)
++#
++#    def pre_run(self):
++#        if self.on_master():
++#            self.start_time =  time.time()
++#
++#    def get_time_delta(self,start_time,end_time):
++#        end_time = time.time()
++#        time_diff= end_time - self.start_time
++#        time_delta = datetime.timedelta(seconds=time_diff)
++#        time_delta_str = time_delta.__str__()
++#        (time_delta_str,millis) = time_delta_str.rsplit(sep='.',maxsplit=1)
++#        return time_delta
++#
++#    def post_run(self):
++#        if self.on_master():
++#
++#            print 'overall runtime: ' + time_delta_str + '\n'
+ 
+ #FIXME need to subclass
+-class Uni_processor(object):
++class Uni_processor(Processor):
+     def __init__(self,relax_instance):
+         self.relax_instance= relax_instance
+ 
+@@ -37,6 +77,8 @@
+         self.memo_map={}
+ 
+ 
++    def on_master(self):
++        return True
+ 
+     def add_to_queue(self,command,memo=None):
+         self.command_queue.append(command)
+@@ -46,26 +88,28 @@
+ 
+     def run_queue(self):
+         #FIXME: need a finally here to cleanup exceptions states
+-        for command in self.command_queue:
+-            print command
+ 
+ 
+-        self.run_command_queue()
++        for command in self.command_queue:
++            command.run(self)
++        #self.run_command_queue()
+         #TODO: add cheques for empty queuese and maps if now warn
+         del self.command_queue[:]
+         self.memo_map.clear()
+-
+-    def run_command_queue(self):
+-               for command in self.command_queue:
+-                       command.run(self)
++# FIXME: remove me
++#    def run_command_queue(self):
++#              for command in self.command_queue:
++#                      command.run(self)
+ 
+     def run(self):
+-        start_time =  time.clock()
++#        start_time =  time.clock()
++        self.pre_run()
+         self.relax_instance.run()
+-        end_time = time.clock()
+-        time_diff= end_time - start_time
+-        time_delta = datetime.timedelta(seconds=time_diff)
+-        print 'overall runtime: ' + time_delta.__str__() + '\n'
++        self.post_run()
++#        end_time = time.clock()
++#        time_diff= end_time - start_time
++#        time_delta = datetime.timedelta(seconds=time_diff)
++#        print 'overall runtime: ' + time_delta.__str__() + '\n'
+ 
+ 
+ 
+@@ -96,7 +140,4 @@
+ 
+ 
+ 
+-if __name__ == '__main__':
+-    test =Uni_processor(None)
+-    print test
+ 
+
+Modified: branches/multi_processor_merge/relax
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/multi_processor_merge/relax?rev=7726&amp;r1=7725&amp;r2=7726&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/multi_processor_merge/relax?rev=7726&amp;r1=7725&amp;r2=7726&amp;view=diff</a>
+==============================================================================
+--- branches/multi_processor_merge/relax (original)
++++ branches/multi_processor_merge/relax Wed Oct 15 23:12:00 2008
+@@ -486,6 +486,9 @@
+     return result
+ 
+ #FIXME: mode not required should be an instance variable of relax?
++#FIXME error checking for if module require not found
++#FIXME move module loading to processor
++#FIXME module loading code needs to be in a util module
+ def load_multiprocessor(relax_instance):
+ 
+     processor_name = relax_instance.multiprocessor_type + '_processor'
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Oct 15 23:20:03 2008</div>  
+</body>
+</html>

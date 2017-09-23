@@ -1,0 +1,206 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r11642 &#45; /branches/bmrb/generic_fns/diffusion_tensor.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 19 Oct 2010 20:05:32 +0200 -->
+<!--X-Message-Id: E1P8GZ2&#45;000819&#45;TD@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r11642 - /branches/bmrb/generic_fns/diffusion_tensor.py -- October 19, 2010 - 20:05</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r11642 - /branches/bmrb/generic_fns/diffusion_tensor.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00022" class="tabs">Index by Date</a> | <a href="threads.html#00022" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00021.html">Date Prev</a>] [<a href="msg00023.html">Date Next</a>] [<a href="msg00021.html">Thread Prev</a>] [<a href="msg00023.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 19 Oct 2010 18:05:32 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00022.html">E1P8GZ2-000819-TD@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on October 19, 2010 - 20:05:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Oct 19 20:05:32 2010
+New Revision: 11642
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=11642&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=11642&amp;view=rev</a>
+Log:
+The diffusion tensor saveframe is now being created in the BMRB submission 
+file.
+
+This saveframe is not complete and contains no tensor information, as bmrblib 
+does not support this
+yet.
+
+
+Modified:
+    branches/bmrb/generic_fns/diffusion_tensor.py
+
+Modified: branches/bmrb/generic_fns/diffusion_tensor.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/bmrb/generic_fns/diffusion_tensor.py?rev=11642&amp;r1=11641&amp;r2=11642&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/bmrb/generic_fns/diffusion_tensor.py?rev=11642&amp;r1=11641&amp;r2=11642&amp;view=diff</a>
+==============================================================================
+--- branches/bmrb/generic_fns/diffusion_tensor.py (original)
++++ branches/bmrb/generic_fns/diffusion_tensor.py Tue Oct 19 20:05:32 2010
+@@ -26,17 +26,92 @@
+ # Python module imports.
+ from copy import deepcopy
+ from math import cos, pi, sin
+-from numpy import cross, float64, transpose, zeros
++from numpy import cross, float64, int32, ones, transpose, zeros
+ from numpy.linalg import eig, norm
+ from re import search
++import string
+ 
+ # relax module imports.
+ from angles import wrap_angles
+ from data.diff_tensor import DiffTensorData
+ from generic_fns import pipes
+ from generic_fns.angles import fold_spherical_angles
++from generic_fns.mol_res_spin import get_molecule_names, spin_loop
+ from maths_fns.rotation_matrix import R_to_euler_zyz
++from physical_constants import element_from_isotope, number_from_isotope
+ from relax_errors import RelaxError, RelaxNoTensorError, RelaxStrError, 
+RelaxTensorError, RelaxUnknownParamCombError, RelaxUnknownParamError
++
++
++def bmrb_write(star):
++    &quot;&quot;&quot;Generate the diffusion tensor saveframes for the NMR-STAR dictionary 
+object.
++
++    @param star:    The NMR-STAR dictionary object.
++    @type star:     NMR_STAR instance
++    &quot;&quot;&quot;
++
++    # Get the current data pipe.
++    cdp = pipes.get_pipe()
++
++    # Initialise the spin specific data lists.
++    mol_name_list = []
++    res_num_list = []
++    res_name_list = []
++    atom_name_list = []
++    isotope_list = []
++    element_list = []
++    attached_atom_name_list = []
++    attached_isotope_list = []
++    attached_element_list = []
++
++    # Relax data labels.
++    labels = []
++    for i in range(cdp.num_ri):
++        labels.append(cdp.ri_labels[i] + '_' + 
+cdp.frq_labels[cdp.remap_table[i]])
++
++    # Store the spin specific data in lists for later use.
++    for spin, mol_name, res_num, res_name, spin_id in 
+spin_loop(full_info=True, return_id=True):
++        # Skip deselected spins.
++        if not spin.select:
++            continue
++
++        # Check the data for None (not allowed in BMRB!).
++        if res_num == None:
++            raise RelaxError(&quot;For the BMRB, the residue of spin '%s' must be 
+numbered.&quot; % spin_id)
++        if res_name == None:
++            raise RelaxError(&quot;For the BMRB, the residue of spin '%s' must be 
+named.&quot; % spin_id)
++        if spin.name == None:
++            raise RelaxError(&quot;For the BMRB, the spin '%s' must be named.&quot; % 
+spin_id)
++        if spin.heteronuc_type == None:
++            raise RelaxError(&quot;For the BMRB, the spin isotope type of '%s' 
+must be specified.&quot; % spin_id)
++
++        # The molecule/residue/spin info.
++        mol_name_list.append(mol_name)
++        res_num_list.append(str(res_num))
++        res_name_list.append(str(res_name))
++        atom_name_list.append(str(spin.name))
++
++        # The attached atom info.
++        if hasattr(spin, 'attached_atom'):
++            attached_atom_name_list.append(str(spin.attached_atom))
++        else:
++            attached_atom_name_list.append(str(spin.attached_proton))
++        attached_element_list.append(element_from_isotope(spin.proton_type))
++        
+attached_isotope_list.append(str(number_from_isotope(spin.proton_type)))
++
++        # Other info.
++        isotope_list.append(int(string.strip(spin.heteronuc_type, 
+string.ascii_letters)))
++        element_list.append(spin.element)
++
++    # Convert the molecule names into the entity IDs.
++    entity_ids = zeros(len(mol_name_list), int32)
++    mol_names = get_molecule_names()
++    for i in range(len(mol_name_list)):
++        for j in range(len(mol_names)):
++            if mol_name_list[i] == mol_names[j]:
++                entity_ids[i] = j+1
++
++    # Add the diffusion tensor.
++    star.tensor.add(entity_ids=entity_ids, res_nums=res_num_list, 
+res_names=res_name_list, atom_names=atom_name_list, atom_types=element_list, 
+isotope=isotope_list)
+ 
+ 
+ def copy(pipe_from=None, pipe_to=None):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Oct 20 20:20:04 2010</div>  
+</body>
+</html>

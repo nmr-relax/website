@@ -1,0 +1,270 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r15326 &#45; in /1.3: generic_fns/pcs.py generic_fns/rdc.py prompt/pcs.py	prompt/rdc.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 08 Feb 2012 15:33:34 +0100 -->
+<!--X-Message-Id: E1Rv8aU&#45;0007Aa&#45;Dk@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r15326 - in /1.3: generic_fns/pcs.py generic_fns/rdc.py prompt/pcs.py	prompt/rdc.py -- February 08, 2012 - 15:33</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r15326 - in /1.3: generic_fns/pcs.py generic_fns/rdc.py prompt/pcs.py	prompt/rdc.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00041" class="tabs">Index by Date</a> | <a href="threads.html#00041" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00040.html">Date Prev</a>] [<a href="msg00042.html">Date Next</a>] [<a href="msg00040.html">Thread Prev</a>] [<a href="msg00042.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 08 Feb 2012 14:33:34 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00041.html">E1Rv8aU-0007Aa-Dk@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on February 08, 2012 - 15:33:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Feb  8 15:33:34 2012
+New Revision: 15326
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=15326&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=15326&amp;view=rev</a>
+Log:
+Implemented the rdc.delete and pcs.delete user function backends.
+
+This code previously did not exist, although the front ends were exposed to 
+the user!
+
+
+Modified:
+    1.3/generic_fns/pcs.py
+    1.3/generic_fns/rdc.py
+    1.3/prompt/pcs.py
+    1.3/prompt/rdc.py
+
+Modified: 1.3/generic_fns/pcs.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/generic_fns/pcs.py?rev=15326&amp;r1=15325&amp;r2=15326&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/generic_fns/pcs.py?rev=15326&amp;r1=15325&amp;r2=15326&amp;view=diff</a>
+==============================================================================
+--- 1.3/generic_fns/pcs.py (original)
++++ 1.3/generic_fns/pcs.py Wed Feb  8 15:33:34 2012
+@@ -24,6 +24,7 @@
+ &quot;&quot;&quot;Module for the manipulation of pseudocontact shift data.&quot;&quot;&quot;
+ 
+ # Python module imports.
++from copy import deepcopy
+ from math import pi, sqrt
+ from numpy import array, float64, ones, zeros
+ from numpy.linalg import norm
+@@ -313,6 +314,54 @@
+ 
+         # The main data.
+         grace.write_xy_data(data=data, file=file, graph_type=graph_type)
++
++
++def delete(align_id=None):
++    &quot;&quot;&quot;Delete the PCS data corresponding to the alignment ID.
++
++    @keyword align_id:  The alignment tensor ID string.  If not specified, 
+all data will be deleted.
++    @type align_id:     str or None
++    &quot;&quot;&quot;
++
++    # Test if the current data pipe exists.
++    pipes.test()
++
++    # Test if sequence data exists.
++    if not exists_mol_res_spin_data():
++        raise RelaxNoSequenceError
++
++    # Check that the ID exists.
++    if align_id and not align_id in cdp.pcs_ids:
++        raise RelaxError(&quot;The PCS alignment id '%s' does not exist&quot; % 
+align_id)
++
++    # The IDs.
++    if not align_id:
++        ids = deepcopy(cdp.pcs_ids)
++    else:
++        ids = [align_id]
++
++    # Loop over the alignments, removing all the corresponding data.
++    for id in ids:
++        # The PCS ID.
++        cdp.pcs_ids.pop(cdp.pcs_ids.index(id))
++
++        # The data type.
++        if hasattr(cdp, 'pcs_data_types') and cdp.pcs_data_types.has_key(id):
++            cdp.pcs_data_types.pop(id)
++
++        # The spin data.
++        for spin in spin_loop():
++            # The data.
++            if hasattr(spin, 'pcs') and spin.pcs.has_key(id):
++                spin.pcs.pop(id)
++
++            # The error.
++            if hasattr(spin, 'pcs_err') and spin.pcs_err.has_key(id):
++                spin.pcs_err.pop(id)
++
++        # Clean the global data.
++        if not hasattr(cdp, 'rdc_ids') or id not in cdp.rdc_ids:
++            cdp.align_ids.pop(id)
+ 
+ 
+ def display(align_id=None, bc=False):
+
+Modified: 1.3/generic_fns/rdc.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/generic_fns/rdc.py?rev=15326&amp;r1=15325&amp;r2=15326&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/generic_fns/rdc.py?rev=15326&amp;r1=15325&amp;r2=15326&amp;view=diff</a>
+==============================================================================
+--- 1.3/generic_fns/rdc.py (original)
++++ 1.3/generic_fns/rdc.py Wed Feb  8 15:33:34 2012
+@@ -24,6 +24,7 @@
+ &quot;&quot;&quot;Module for the manipulation of RDC data.&quot;&quot;&quot;
+ 
+ # Python module imports.
++from copy import deepcopy
+ from math import pi, sqrt
+ from numpy import float64, ones, zeros
+ from numpy.linalg import norm
+@@ -240,6 +241,54 @@
+ 
+         # The main data.
+         grace.write_xy_data(data=data, file=file, graph_type=graph_type)
++
++
++def delete(align_id=None):
++    &quot;&quot;&quot;Delete the RDC data corresponding to the alignment ID.
++
++    @keyword align_id:  The alignment tensor ID string.  If not specified, 
+all data will be deleted.
++    @type align_id:     str or None
++    &quot;&quot;&quot;
++
++    # Test if the current data pipe exists.
++    pipes.test()
++
++    # Test if sequence data exists.
++    if not exists_mol_res_spin_data():
++        raise RelaxNoSequenceError
++
++    # Check that the ID exists.
++    if align_id and not align_id in cdp.rdc_ids:
++        raise RelaxError(&quot;The RDC alignment id '%s' does not exist&quot; % 
+align_id)
++
++    # The IDs.
++    if not align_id:
++        ids = deepcopy(cdp.rdc_ids)
++    else:
++        ids = [align_id]
++
++    # Loop over the alignments, removing all the corresponding data.
++    for id in ids:
++        # The RDC ID.
++        cdp.rdc_ids.pop(cdp.rdc_ids.index(id))
++
++        # The data type.
++        if hasattr(cdp, 'rdc_data_types') and cdp.rdc_data_types.has_key(id):
++            cdp.rdc_data_types.pop(id)
++
++        # The spin data.
++        for spin in spin_loop():
++            # The data.
++            if hasattr(spin, 'rdc') and spin.rdc.has_key(id):
++                spin.rdc.pop(id)
++
++            # The error.
++            if hasattr(spin, 'rdc_err') and spin.rdc_err.has_key(id):
++                spin.rdc_err.pop(id)
++
++        # Clean the global data.
++        if not hasattr(cdp, 'pcs_ids') or id not in cdp.pcs_ids:
++            cdp.align_ids.pop(id)
+ 
+ 
+ def display(align_id=None, bc=False):
+
+Modified: 1.3/prompt/pcs.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/prompt/pcs.py?rev=15326&amp;r1=15325&amp;r2=15326&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/prompt/pcs.py?rev=15326&amp;r1=15325&amp;r2=15326&amp;view=diff</a>
+==============================================================================
+--- 1.3/prompt/pcs.py (original)
++++ 1.3/prompt/pcs.py Wed Feb  8 15:33:34 2012
+@@ -231,7 +231,7 @@
+             print(text)
+ 
+         # The argument checks.
+-        arg_check.is_str(align_id, 'alignment ID string')
++        arg_check.is_str(align_id, 'alignment ID string', can_be_none=True)
+ 
+         # Execute the functional code.
+         pcs.delete(align_id=align_id)
+
+Modified: 1.3/prompt/rdc.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/prompt/rdc.py?rev=15326&amp;r1=15325&amp;r2=15326&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/prompt/rdc.py?rev=15326&amp;r1=15325&amp;r2=15326&amp;view=diff</a>
+==============================================================================
+--- 1.3/prompt/rdc.py (original)
++++ 1.3/prompt/rdc.py Wed Feb  8 15:33:34 2012
+@@ -231,7 +231,7 @@
+             print(text)
+ 
+         # The argument checks.
+-        arg_check.is_str(align_id, 'alignment ID string')
++        arg_check.is_str(align_id, 'alignment ID string', can_be_none=True)
+ 
+         # Execute the functional code.
+         rdc.delete(align_id=align_id)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Feb 08 15:40:01 2012</div>  
+</body>
+</html>

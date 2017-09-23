@@ -1,0 +1,205 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r20605 &#45; /branches/peak_intensities/lib/software/sparky.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 16 Aug 2013 18:31:40 +0200 -->
+<!--X-Message-Id: E1VAMw8&#45;0003nb&#45;Tq@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r20605 - /branches/peak_intensities/lib/software/sparky.py -- August 16, 2013 - 18:31</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r20605 - /branches/peak_intensities/lib/software/sparky.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00122" class="tabs">Index by Date</a> | <a href="threads.html#00122" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00121.html">Date Prev</a>] [<a href="msg00123.html">Date Next</a>] [<a href="msg00121.html">Thread Prev</a>] [<a href="msg00123.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 16 Aug 2013 16:31:40 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00122.html">E1VAMw8-0003nb-Tq@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on August 16, 2013 - 18:31:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Aug 16 18:31:40 2013
+New Revision: 20605
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=20605&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=20605&amp;view=rev</a>
+Log:
+The lib.software.sparky.read_list_intensity() function now operates on the 
+Peak_list object.
+
+
+Modified:
+    branches/peak_intensities/lib/software/sparky.py
+
+Modified: branches/peak_intensities/lib/software/sparky.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/peak_intensities/lib/software/sparky.py?rev=20605&amp;r1=20604&amp;r2=20605&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/peak_intensities/lib/software/sparky.py?rev=20605&amp;r1=20604&amp;r2=20605&amp;view=diff</a>
+==============================================================================
+--- branches/peak_intensities/lib/software/sparky.py (original)
++++ branches/peak_intensities/lib/software/sparky.py Fri Aug 16 18:31:40 2013
+@@ -32,19 +32,16 @@
+ from lib.io import open_write_file, strip
+ 
+ 
+-def read_list_intensity(file_data=None, int_col=None):
++def read_list_intensity(peak_list=None, file_data=None, int_col=3):
+     &quot;&quot;&quot;Return the peak intensity information from the Sparky peak intensity 
+file.
+ 
+-    The residue number, heteronucleus and proton names, and peak intensity 
+will be returned.
+-
+-
++    @keyword peak_list: The peak list object to place all data into.
++    @type peak_list:    lib.spectrum.objects.Peak_list instance
+     @keyword file_data: The data extracted from the file converted into a 
+list of lists.
+     @type file_data:    list of lists of str
+     @keyword int_col:   The column containing the peak intensity data (for a 
+non-standard formatted file).
+     @type int_col:      int
+     @raises RelaxError: When the expected peak intensity is not a float.
+-    @return:            The extracted data as a list of lists.  The first 
+dimension corresponds to the spin.  The second dimension consists of the 
+proton name, heteronucleus name, residue number, the intensity value, and the 
+original line of text.
+-    @rtype:             list of lists of str, str, int, float, str
+     &quot;&quot;&quot;
+ 
+     # The number of header lines.
+@@ -54,6 +51,10 @@
+     if file_data[1] == '':
+         num = num + 1
+     print(&quot;Number of header lines found: %s&quot; % num)
++
++    # Default intensity column.
++    if int_col == None:
++        int_col = 3
+ 
+     # Remove the header.
+     file_data = file_data[num:]
+@@ -66,9 +67,8 @@
+     for line in file_data:
+         # The Sparky assignment.
+         assignment = ''
+-        res_num = ''
+-        h_name = ''
+-        x_name = ''
++        name1 = ''
++        name2 = ''
+         intensity = ''
+ 
+         # Skip non-assigned peaks.
+@@ -76,37 +76,30 @@
+             continue
+ 
+         # First split by the 2D separator.
+-        x_assign, h_assign = split('-', line[0])
++        assign1, assign2 = split('-', line[0])
+ 
+-        # The proton info.
+-        h_row = split('([A-Z]+)', h_assign)
+-        h_name = h_row[-2] + h_row[-1]
++        # The assignment of the first dimension.
++        row1 = split('([A-Z]+)', assign1)
++        name1 = row1[-2] + row1[-1]
+ 
+-        # The heteronucleus info.
+-        x_row = split('([A-Z]+)', x_assign)
+-        x_name = x_row[-2] + x_row[-1]
++        # The assignment of the second dimension.
++        row2 = split('([A-Z]+)', assign2)
++        name2 = row2[-2] + row2[-1]
+ 
+         # The residue number.
+         try:
+-            res_num = int(x_row[-3])
++            res_num = int(row1[-3])
+         except:
+-            raise RelaxError(&quot;Improperly formatted Sparky file.&quot;)
+-
+-        # The peak intensity column.
+-        if int_col == None:
+-            int_col = 3
++            raise RelaxError(&quot;Improperly formatted Sparky file, cannot 
+process the assignment '%s'.&quot; % line[0])
+ 
+         # Intensity.
+         try:
+             intensity = float(line[int_col])
+         except ValueError:
+-            raise RelaxError(&quot;The peak intensity value &quot; + repr(intensity) + 
+&quot; from the line &quot; + repr(line) + &quot; is invalid.&quot;)
++            raise RelaxError(&quot;The peak intensity value %s from the line %s 
+is invalid.&quot; % (intensity, line))
+ 
+-        # Append the data.
+-        data.append([h_name, x_name, res_num, intensity, line])
+-
+-    # Return the data.
+-    return data
++        # Add the assignment to the peak list object.
++        peak_list.add(res_nums=[res_num, res_num], spin_names=[name1, 
+name2], intensity=intensity)
+ 
+ 
+ def write_list(file_prefix=None, dir=None, res_names=None, res_nums=None, 
+atom1_names=None, atom2_names=None, w1=None, w2=None, data_height=None, 
+force=True):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Aug 16 19:00:01 2013</div>  
+</body>
+</html>

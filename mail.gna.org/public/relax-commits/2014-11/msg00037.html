@@ -1,0 +1,200 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r26433 &#45; /branches/frame_order_cleanup/test_suite/shared_data/frame_order/sim_vs_pred_matrix/frame_order_simulate.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 07 Nov 2014 09:08:23 +0100 -->
+<!--X-Message-Id: E1Xmeal&#45;0002MB&#45;FU@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r26433 - /branches/frame_order_cleanup/test_suite/shared_data/frame_order/sim_vs_pred_matrix/frame_order_simulate.py -- November 07, 2014 - 09:08</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r26433 - /branches/frame_order_cleanup/test_suite/shared_data/frame_order/sim_vs_pred_matrix/frame_order_simulate.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00037" class="tabs">Index by Date</a> | <a href="threads.html#00037" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00036.html">Date Prev</a>] [<a href="msg00038.html">Date Next</a>] [<a href="msg00036.html">Thread Prev</a>] [<a href="msg00038.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 07 Nov 2014 08:08:23 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00037.html">E1Xmeal-0002MB-FU@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on November 07, 2014 - 09:08:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Nov  7 09:08:23 2014
+New Revision: 26433
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=26433&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=26433&amp;view=rev</a>
+Log:
+Simplifications for the inside_*() methods of the frame order matrix element 
+simulation script.
+
+The limit() method is now called only once outside of these methods and the 
+maximum cone half-angles
+passed into the inside_*() methods.  Although only slightly faster, this is 
+mainly to simplify the
+code.
+
+
+Modified:
+    
+branches/frame_order_cleanup/test_suite/shared_data/frame_order/sim_vs_pred_matrix/frame_order_simulate.py
+
+Modified: 
+branches/frame_order_cleanup/test_suite/shared_data/frame_order/sim_vs_pred_matrix/frame_order_simulate.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/test_suite/shared_data/frame_order/sim_vs_pred_matrix/frame_order_simulate.py?rev=26433&amp;r1=26432&amp;r2=26433&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/test_suite/shared_data/frame_order/sim_vs_pred_matrix/frame_order_simulate.py?rev=26433&amp;r1=26432&amp;r2=26433&amp;view=diff</a>
+==============================================================================
+--- 
+branches/frame_order_cleanup/test_suite/shared_data/frame_order/sim_vs_pred_matrix/frame_order_simulate.py
+  (original)
++++ 
+branches/frame_order_cleanup/test_suite/shared_data/frame_order/sim_vs_pred_matrix/frame_order_simulate.py
+  Fri Nov  7 09:08:23 2014
+@@ -128,8 +128,12 @@
+ 
+             # Loop over the angle incs.
+             for i in range(INC):
++                # The new limits.
++                max_theta_x, max_theta_y, max_theta_z = self.limits(i)
++
+                 # Inside the cone.
+-                if not self.full[i] and self.inside(i, theta, phi, sigma):
++                if not self.full[i] and self.inside(i=i, theta=theta, 
+phi=phi, sigma=sigma, max_theta_x=max_theta_x, max_theta_y=max_theta_y, 
+max_theta_z=max_theta_z):
++
+                     # Sum of rotations and cross products.
+                     self.first_frame_order[i] += self.rot
+                     self.second_frame_order[i] += Rx2
+@@ -180,58 +184,49 @@
+         self.z_axis = array([0, 0, 1], float64)
+ 
+ 
+-    def inside_pseudo_ellipse(self, i, theta, phi, sigma):
++    def inside_pseudo_ellipse(self, i=None, theta=None, phi=None, 
+sigma=None, max_theta_x=None, max_theta_y=None, max_theta_z=None):
+         &quot;&quot;&quot;Determine if the frame is inside the limits.&quot;&quot;&quot;
+ 
+-        # The new limits.
+-        theta_x, theta_y, theta_z = self.limits(i)
+-
+         # Check for a torsion angle violation.
+-        if sigma &lt; -theta_z or sigma &gt; theta_z:
++        if sigma &lt; -max_theta_z or sigma &gt; max_theta_z:
+             return False
+ 
+         # Check for a tilt angle violation.
+-        theta_max = 1.0 / sqrt(cos(phi)**2 / theta_x**2 + sin(phi)**2 / 
+theta_y**2)
+-        if theta &gt; theta_max:
++        max_theta = 1.0 / sqrt(cos(phi)**2 / max_theta_x**2 + sin(phi)**2 / 
+max_theta_y**2)
++        if theta &gt; max_theta:
+             return False
+ 
+         # Inside.
+         return True
+ 
+ 
+-    def inside_free_rotor(self, i, theta, phi, sigma):
++    def inside_free_rotor(self, i=None, theta=None, phi=None, sigma=None, 
+max_theta_x=None, max_theta_y=None, max_theta_z=None):
+         &quot;&quot;&quot;Determine if the frame is inside the limits, which for the free 
+rotor is always true.&quot;&quot;&quot;
+ 
+         # Inside.
+         return True
+ 
+ 
+-    def inside_iso_cone(self, i, theta, phi, sigma):
++    def inside_iso_cone(self, i=None, theta=None, phi=None, sigma=None, 
+max_theta_x=None, max_theta_y=None, max_theta_z=None):
+         &quot;&quot;&quot;Determine if the frame is inside the limits.&quot;&quot;&quot;
+ 
+-        # The new limits.
+-        theta_x, theta_y, theta_z = self.limits(i)
+-
+         # Check for a torsion angle violation.
+-        if sigma &lt; -theta_z or sigma &gt; theta_z:
++        if sigma &lt; -max_theta_z or sigma &gt; max_theta_z:
+             return False
+ 
+         # Check for a tilt angle violation.
+-        if theta &gt; theta_x:
++        if theta &gt; max_theta_x:
+             return False
+ 
+         # Inside.
+         return True
+ 
+ 
+-    def inside_rotor(self, i, theta, phi, sigma):
++    def inside_rotor(self, i=None, theta=None, phi=None, sigma=None, 
+max_theta_x=None, max_theta_y=None, max_theta_z=None):
+         &quot;&quot;&quot;Determine if the frame is inside the limits.&quot;&quot;&quot;
+ 
+-        # The new limits.
+-        theta_x, theta_y, theta_z = self.limits(i)
+-
+         # Check for a torsion angle violation.
+-        if sigma &lt; -theta_z or sigma &gt; theta_z:
++        if sigma &lt; -max_theta_z or sigma &gt; max_theta_z:
+             return False
+ 
+         # Inside.
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Nov 07 09:20:02 2014</div>  
+</body>
+</html>

@@ -1,0 +1,266 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r15053 &#45; in /branches/frame_order_testing/maths_fns: frame_order.py	frame_order_matrix_ops.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 08 Dec 2011 09:42:44 +0100 -->
+<!--X-Message-Id: E1RYZYx&#45;00072G&#45;UE@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r15053 - in /branches/frame_order_testing/maths_fns: frame_order.py	frame_order_matrix_ops.py -- December 08, 2011 - 09:42</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r15053 - in /branches/frame_order_testing/maths_fns: frame_order.py	frame_order_matrix_ops.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00040" class="tabs">Index by Date</a> | <a href="threads.html#00040" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00039.html">Date Prev</a>] [<a href="msg00041.html">Date Next</a>] [<a href="msg00039.html">Thread Prev</a>] [<a href="msg00041.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 08 Dec 2011 08:42:43 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00040.html">E1RYZYx-00072G-UE@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on December 08, 2011 - 09:42:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Dec  8 09:42:42 2011
+New Revision: 15053
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=15053&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=15053&amp;view=rev</a>
+Log:
+Shifted the rotation to the average position to outside of the numerical 
+integration.
+
+This now occurs once per function call, rather than hundreds of thousands of 
+times.
+
+
+Modified:
+    branches/frame_order_testing/maths_fns/frame_order.py
+    branches/frame_order_testing/maths_fns/frame_order_matrix_ops.py
+
+Modified: branches/frame_order_testing/maths_fns/frame_order.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_testing/maths_fns/frame_order.py?rev=15053&amp;r1=15052&amp;r2=15053&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_testing/maths_fns/frame_order.py?rev=15053&amp;r1=15052&amp;r2=15053&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_testing/maths_fns/frame_order.py (original)
++++ branches/frame_order_testing/maths_fns/frame_order.py Thu Dec  8 09:42:42 
+2011
+@@ -239,6 +239,7 @@
+             self.paramag_dist = zeros(self.num_pcs, float64)
+             self.pcs_const = zeros(self.num_align, float64)
+             self.r_pivot_atom = zeros((self.num_pcs, 3), float64)
++            self.r_pivot_atom_rev = zeros((self.num_pcs, 3), float64)
+             if self.paramag_centre == None:
+                 self.paramag_centre = zeros(3, float64)
+ 
+@@ -581,7 +582,7 @@
+         RT_ave = transpose(self.R_ave)
+ 
+         # Pre-calculate all the necessary vectors.
+-        self.calc_vectors(self._param_pivot)
++        self.calc_vectors(self._param_pivot, self.R_ave, RT_ave)
+ 
+         # Loop over each alignment.
+         for i in xrange(self.num_align):
+@@ -604,12 +605,12 @@
+                     if not self.missing_pcs[i, j]:
+                         # Forwards and reverse rotations.
+                         if self.full_in_ref_frame[i]:
+-                            R_ave = RT_ave
++                            r_pivot_atom = self.r_pivot_atom_rev[j]
+                         else:
+-                            R_ave = self.R_ave
++                            r_pivot_atom = self.r_pivot_atom[j]
+ 
+                         # The numerical integration.
+-                        self.pcs_theta[i, j] = 
+pcs_numeric_int_rotor(sigma_max=sigma_max, c=self.pcs_const[i], 
+r_pivot_atom=self.r_pivot_atom[j], r_ln_pivot=self.r_ln_pivot, 
+A=self.A_3D[i], R_ave=R_ave, R_eigen=self.R_eigen, RT_eigen=RT_eigen, 
+Ri_prime=self.Ri_prime)
++                        self.pcs_theta[i, j] = 
+pcs_numeric_int_rotor(sigma_max=sigma_max, c=self.pcs_const[i], 
+r_pivot_atom=r_pivot_atom, r_ln_pivot=self.r_ln_pivot, A=self.A_3D[i], 
+R_eigen=self.R_eigen, RT_eigen=RT_eigen, Ri_prime=self.Ri_prime)
+ 
+                 # Calculate and sum the single alignment chi-squared value 
+(for the PCS).
+                 chi2_sum = chi2_sum + chi2(self.pcs[i], self.pcs_theta[i], 
+self.pcs_error[i])
+@@ -618,11 +619,15 @@
+         return chi2_sum
+ 
+ 
+-    def calc_vectors(self, pivot):
++    def calc_vectors(self, pivot, R_ave, RT_ave):
+         &quot;&quot;&quot;Calculate the pivot to atom and lanthanide to pivot vectors for 
+the target functions.
+ 
+         @param pivot:   The pivot point.
+         @type pivot:    numpy rank-1, 3D array
++        @param R_ave:   The rotation matrix for rotating from the reference 
+frame to the average position.
++        @type R_ave:    numpy rank-2, 3D array
++        @param RT_ave:  The transpose of R_ave.
++        @type RT_ave:   numpy rank-2, 3D array
+         &quot;&quot;&quot;
+ 
+         # The lanthanide to pivot vector.
+@@ -630,8 +635,9 @@
+ 
+         # The pivot to atom vectors.
+         for j in xrange(self.num_pcs):
+-            # The vector.
+-            self.r_pivot_atom[j] = self.pcs_atoms[j] - pivot
++            # The rotated vectors.
++            self.r_pivot_atom[j] = dot(R_ave, self.pcs_atoms[j] - pivot)
++            self.r_pivot_atom_rev[j] = dot(RT_ave, self.pcs_atoms[j] - pivot)
+ 
+ 
+     def reduce_and_rot(self, ave_pos_alpha=None, ave_pos_beta=None, 
+ave_pos_gamma=None, daeg=None):
+
+Modified: branches/frame_order_testing/maths_fns/frame_order_matrix_ops.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_testing/maths_fns/frame_order_matrix_ops.py?rev=15053&amp;r1=15052&amp;r2=15053&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_testing/maths_fns/frame_order_matrix_ops.py?rev=15053&amp;r1=15052&amp;r2=15053&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_testing/maths_fns/frame_order_matrix_ops.py 
+(original)
++++ branches/frame_order_testing/maths_fns/frame_order_matrix_ops.py Thu Dec  
+8 09:42:42 2011
+@@ -1298,7 +1298,7 @@
+     return 2 - 2*cos(tmax)**3
+ 
+ 
+-def pcs_numeric_int_rotor(sigma_max=None, c=None, r_pivot_atom=None, 
+r_ln_pivot=None, A=None, R_ave=None, R_eigen=None, RT_eigen=None, 
+Ri_prime=None):
++def pcs_numeric_int_rotor(sigma_max=None, c=None, r_pivot_atom=None, 
+r_ln_pivot=None, A=None, R_eigen=None, RT_eigen=None, Ri_prime=None):
+     &quot;&quot;&quot;Determine the averaged PCS value via numerical integration.
+ 
+     @keyword sigma_max:     The maximum rotor angle.
+@@ -1311,8 +1311,6 @@
+     @type r_ln_pivot:       numpy rank-1, 3D array
+     @keyword A:             The full alignment tensor of the non-moving 
+domain.
+     @type A:                numpy rank-2, 3D array
+-    @keyword R_ave:         The rotation matrix for rotating from the 
+reference frame to the average position.
+-    @type R_ave:            numpy rank-2, 3D array
+     @keyword R_eigen:       The eigenframe rotation matrix.
+     @type R_eigen:          numpy rank-2, 3D array
+     @keyword RT_eigen:      The transpose of the eigenframe rotation matrix 
+(for faster calculations).
+@@ -1330,11 +1328,8 @@
+     Ri_prime[2, 1] = 0.0
+     Ri_prime[2, 2] = 1.0
+ 
+-    # Pre-calculate a dot product for speed ups in the integration.
+-    dot_RT_eigen_R_ave = dot(RT_eigen, R_ave)
+-
+     # Perform numerical integration.
+-    result = quad(pcs_pivot_motion_rotor, -sigma_max, sigma_max, args=(c, 
+r_pivot_atom, r_ln_pivot, A, R_ave, R_eigen, RT_eigen, Ri_prime, 
+dot_RT_eigen_R_ave))
++    result = quad(pcs_pivot_motion_rotor, -sigma_max, sigma_max, args=(c, 
+r_pivot_atom, r_ln_pivot, A, R_eigen, RT_eigen, Ri_prime))
+ 
+     # The surface area normalisation factor.
+     SA = 2.0 * sigma_max
+@@ -1343,7 +1338,7 @@
+     return result[0] / SA
+ 
+ 
+-def pcs_pivot_motion_rotor(sigma_i, c, r_pivot_atom, r_ln_pivot, A, R_ave, 
+R_eigen, RT_eigen, Ri_prime, dot_RT_eigen_R_ave):
++def pcs_pivot_motion_rotor(sigma_i, c, r_pivot_atom, r_ln_pivot, A, R_eigen, 
+RT_eigen, Ri_prime):
+     &quot;&quot;&quot;Calculate the PCS value after a pivoted motion for the rotor model.
+ 
+     @param sigma_i:             The rotor angle for state i.
+@@ -1356,16 +1351,12 @@
+     @type r_ln_pivot:           numpy rank-1, 3D array
+     @param A:                   The full alignment tensor of the non-moving 
+domain.
+     @type A:                    numpy rank-2, 3D array
+-    @param R_ave:               The rotation matrix for rotating from the 
+reference frame to the average position.
+-    @type R_ave:                numpy rank-2, 3D array
+     @param R_eigen:             The eigenframe rotation matrix.
+     @type R_eigen:              numpy rank-2, 3D array
+     @param RT_eigen:            The transpose of the eigenframe rotation 
+matrix (for faster calculations).
+     @type RT_eigen:             numpy rank-2, 3D array
+     @param Ri_prime:            The empty rotation matrix for the in-frame 
+rotor motion for state i.
+     @type Ri_prime:             numpy rank-2, 3D array
+-    @param dot_RT_eigen_R_ave:  The dot product of RT_eigen and R_ave to 
+speed up this calculation.
+-    @type dot_RT_eigen_R_ave:   numpy rank-2, 3D array
+     @return:                    The PCS value for the changed position.
+     @rtype:                     float
+     &quot;&quot;&quot;
+@@ -1379,7 +1370,7 @@
+     Ri_prime[1, 1] =  c_sigma
+ 
+     # The rotation.
+-    R_i = dot(R_eigen, dot(Ri_prime, dot_RT_eigen_R_ave))
++    R_i = dot(R_eigen, dot(Ri_prime, RT_eigen))
+ 
+     # Calculate the new vector.
+     vect = dot(R_i, r_pivot_atom) + r_ln_pivot
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Dec 08 10:00:02 2011</div>  
+</body>
+</html>

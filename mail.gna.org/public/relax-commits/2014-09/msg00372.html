@@ -1,0 +1,258 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r25866 &#45; /branches/frame_order_cleanup/target_functions/frame_order.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 17 Sep 2014 17:11:19 +0200 -->
+<!--X-Message-Id: E1XUGt4&#45;0004uA&#45;O4@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r25866 - /branches/frame_order_cleanup/target_functions/frame_order.py -- September 17, 2014 - 17:11</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r25866 - /branches/frame_order_cleanup/target_functions/frame_order.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00372" class="tabs">Index by Date</a> | <a href="threads.html#00372" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00371.html">Date Prev</a>] [<a href="msg00373.html">Date Next</a>] [<a href="msg00371.html">Thread Prev</a>] [<a href="msg00373.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 17 Sep 2014 15:11:18 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00372.html">E1XUGt4-0004uA-O4@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on September 17, 2014 - 17:11:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Sep 17 17:11:18 2014
+New Revision: 25866
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=25866&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=25866&amp;view=rev</a>
+Log:
+Implemented the Sobol' sequence oversampling in the frame order target 
+function class.
+
+Modified:
+    branches/frame_order_cleanup/target_functions/frame_order.py
+
+Modified: branches/frame_order_cleanup/target_functions/frame_order.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/target_functions/frame_order.py?rev=25866&amp;r1=25865&amp;r2=25866&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/target_functions/frame_order.py?rev=25866&amp;r1=25865&amp;r2=25866&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/target_functions/frame_order.py        
+(original)
++++ branches/frame_order_cleanup/target_functions/frame_order.py        Wed 
+Sep 17 17:11:18 2014
+@@ -58,7 +58,7 @@
+ class Frame_order:
+     &quot;&quot;&quot;Class containing the target function of the optimisation of Frame 
+Order matrix components.&quot;&quot;&quot;
+ 
+-    def __init__(self, model=None, init_params=None, full_tensors=None, 
+full_in_ref_frame=None, rdcs=None, rdc_errors=None, rdc_weights=None, 
+rdc_vect=None, dip_const=None, pcs=None, pcs_errors=None, pcs_weights=None, 
+atomic_pos=None, temp=None, frq=None, paramag_centre=zeros(3), 
+scaling_matrix=None, num_int_pts=500, com=None, ave_pos_pivot=zeros(3), 
+pivot=None, pivot_opt=False):
++    def __init__(self, model=None, init_params=None, full_tensors=None, 
+full_in_ref_frame=None, rdcs=None, rdc_errors=None, rdc_weights=None, 
+rdc_vect=None, dip_const=None, pcs=None, pcs_errors=None, pcs_weights=None, 
+atomic_pos=None, temp=None, frq=None, paramag_centre=zeros(3), 
+scaling_matrix=None, sobol_max_points=200, sobol_oversample=100, com=None, 
+ave_pos_pivot=zeros(3), pivot=None, pivot_opt=False):
+         &quot;&quot;&quot;Set up the target functions for the Frame Order theories.
+ 
+         @keyword model:             The name of the Frame Order model.
+@@ -95,8 +95,10 @@
+         @type paramag_centre:       numpy rank-1, 3D array or rank-2, Nx3 
+array
+         @keyword scaling_matrix:    The square and diagonal scaling matrix.
+         @type scaling_matrix:       numpy rank-2 array
+-        @keyword num_int_pts:       The number of points to use for the 
+numerical integration technique.
+-        @type num_int_pts:          int
++        @keyword sobol_max_points:  The maximum number of Sobol' points to 
+use for the numerical PCS integration technique.
++        @type sobol_max_points:     int
++        @keyword sobol_oversample:  The oversampling factor Ov used for the 
+total number of points N * Ov * 10**M, where N is the maximum number of 
+Sobol' points and M is the number of dimensions or torsion-tilt angles for 
+the system.
++        @type sobol_oversample:     int
+         @keyword com:               The centre of mass of the system.  This 
+is used for defining the rotor model systems.
+         @type com:                  numpy 3D rank-1 array
+         @keyword ave_pos_pivot:     The pivot point to rotate all atoms 
+about to the average domain position.  In most cases this will be the centre 
+of mass of the moving domain.  This pivot is shifted by the translation 
+vector.
+@@ -128,7 +130,8 @@
+         self.temp = temp
+         self.frq = frq
+         self.total_num_params = len(init_params)
+-        self.num_int_pts = num_int_pts
++        self.sobol_max_points = sobol_max_points
++        self.sobol_oversample = sobol_oversample
+         self.com = com
+         self.pivot_opt = pivot_opt
+ 
+@@ -300,33 +303,33 @@
+ 
+         # The Sobol' sequence data and target function aliases (quasi-random 
+integration).
+         if model == MODEL_PSEUDO_ELLIPSE:
+-            self.create_sobol_data(n=self.num_int_pts, dims=['theta', 'phi', 
+'sigma'])
++            self.create_sobol_data(dims=['theta', 'phi', 'sigma'])
+             self.func = self.func_pseudo_ellipse
+         elif model == MODEL_PSEUDO_ELLIPSE_TORSIONLESS:
+-            self.create_sobol_data(n=self.num_int_pts, dims=['theta', 'phi'])
++            self.create_sobol_data(dims=['theta', 'phi'])
+             self.func = self.func_pseudo_ellipse_torsionless
+         elif model == MODEL_PSEUDO_ELLIPSE_FREE_ROTOR:
+-            self.create_sobol_data(n=self.num_int_pts, dims=['theta', 'phi', 
+'sigma'])
++            self.create_sobol_data(dims=['theta', 'phi', 'sigma'])
+             self.func = self.func_pseudo_ellipse_free_rotor
+         elif model == MODEL_ISO_CONE:
+-            self.create_sobol_data(n=self.num_int_pts, dims=['theta', 'phi', 
+'sigma'])
++            self.create_sobol_data(dims=['theta', 'phi', 'sigma'])
+             self.func = self.func_iso_cone
+         elif model == MODEL_ISO_CONE_TORSIONLESS:
+-            self.create_sobol_data(n=self.num_int_pts, dims=['theta', 'phi'])
++            self.create_sobol_data(dims=['theta', 'phi'])
+             self.func = self.func_iso_cone_torsionless
+         elif model == MODEL_ISO_CONE_FREE_ROTOR:
+-            self.create_sobol_data(n=self.num_int_pts, dims=['theta', 'phi', 
+'sigma'])
++            self.create_sobol_data(dims=['theta', 'phi', 'sigma'])
+             self.func = self.func_iso_cone_free_rotor
+         elif model == MODEL_ROTOR:
+-            self.create_sobol_data(n=self.num_int_pts, dims=['sigma'])
++            self.create_sobol_data(dims=['sigma'])
+             self.func = self.func_rotor
+         elif model == MODEL_RIGID:
+             self.func = self.func_rigid
+         elif model == MODEL_FREE_ROTOR:
+-            self.create_sobol_data(n=self.num_int_pts, dims=['sigma'])
++            self.create_sobol_data(dims=['sigma'])
+             self.func = self.func_free_rotor
+         elif model == MODEL_DOUBLE_ROTOR:
+-            self.create_sobol_data(n=self.num_int_pts, dims=['sigma', 
+'sigma2'])
++            self.create_sobol_data(dims=['sigma', 'sigma2'])
+             self.func = self.func_double_rotor
+ 
+ 
+@@ -1185,31 +1188,35 @@
+             self.r_inter_pivot = pivot - pivot2
+ 
+ 
+-    def create_sobol_data(self, n=10000, dims=None):
++    def create_sobol_data(self, dims=None):
+         &quot;&quot;&quot;Create the Sobol' quasi-random data for numerical integration.
+ 
+         This uses the external sobol_lib module to create the data.  The 
+algorithm is that modified by Antonov and Saleev.
+ 
+ 
+-        @keyword n:         The number of points to generate.
+-        @type n:            int
+         @keyword dims:      The list of parameters.
+         @type dims:         list of str
+         &quot;&quot;&quot;
+ 
++        # Printout (useful to see how long this takes!).
++        print(&quot;Generating the torsion-tilt angle sampling via the Sobol' 
+sequence for numerical PCS integration.&quot;)
++
+         # The number of dimensions.
+         m = len(dims)
+ 
++        # The total number of points.
++        total_num = int(self.sobol_max_points * self.sobol_oversample * 
+10**m)
++
+         # Initialise.
+-        self.sobol_angles = zeros((n, m), float64)
+-        self.Ri_prime = zeros((n, 3, 3), float64)
+-        self.Ri2_prime = zeros((n, 3, 3), float64)
++        self.sobol_angles = zeros((total_num, m), float64)
++        self.Ri_prime = zeros((total_num, 3, 3), float64)
++        self.Ri2_prime = zeros((total_num, 3, 3), float64)
+ 
+         # The Sobol' points.
+-        points = i4_sobol_generate(m, n, 0)
++        points = i4_sobol_generate(m, total_num, 0)
+ 
+         # Loop over the points.
+-        for i in range(n):
++        for i in range(total_num):
+             # Loop over the dimensions, converting the points to angles.
+             theta = None
+             phi = None
+@@ -1287,6 +1294,9 @@
+                 self.Ri_prime[i, 1, 1] =  c_sigma
+                 self.Ri_prime[i, 2, 2] = 1.0
+ 
++        # Printout (useful to see how long this takes!).
++        print(&quot;   Oversampled to %s points.&quot; % total_num)
++
+ 
+     def reduce_and_rot(self, ave_pos_alpha=None, ave_pos_beta=None, 
+ave_pos_gamma=None, daeg=None):
+         &quot;&quot;&quot;Reduce and rotate the alignments tensors using the frame order 
+matrix and Euler angles.
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Sep 17 17:20:03 2014</div>  
+</body>
+</html>

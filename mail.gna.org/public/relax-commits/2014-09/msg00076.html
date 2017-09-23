@@ -1,0 +1,192 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r25570 &#45; /branches/est_par_error/target_functions/relax_disp.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 02 Sep 2014 20:06:19 +0200 -->
+<!--X-Message-Id: E1XOsTD&#45;0002eL&#45;4k@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r25570 - /branches/est_par_error/target_functions/relax_disp.py -- September 02, 2014 - 20:06</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r25570 - /branches/est_par_error/target_functions/relax_disp.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00076" class="tabs">Index by Date</a> | <a href="threads.html#00076" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00075.html">Date Prev</a>] [<a href="msg00077.html">Date Next</a>] [<a href="msg00075.html">Thread Prev</a>] [<a href="msg00077.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 02 Sep 2014 18:06:19 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00076.html">E1XOsTD-0002eL-4k@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on September 02, 2014 - 20:06:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Tue Sep  2 20:06:18 2014
+New Revision: 25570
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=25570&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=25570&amp;view=rev</a>
+Log:
+Added the Jacobian function for CR72 in target function.
+
+task #7824(<a  rel="nofollow" href="https://gna.org/task/index.php?7824">https://gna.org/task/index.php?7824</a>): Model parameter ERROR 
+estimation from Jacobian and Co-variance matrix of dispersion models.
+
+Modified:
+    branches/est_par_error/target_functions/relax_disp.py
+
+Modified: branches/est_par_error/target_functions/relax_disp.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/est_par_error/target_functions/relax_disp.py?rev=25570&amp;r1=25569&amp;r2=25570&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/est_par_error/target_functions/relax_disp.py?rev=25570&amp;r1=25569&amp;r2=25570&amp;view=diff</a>
+==============================================================================
+--- branches/est_par_error/target_functions/relax_disp.py       (original)
++++ branches/est_par_error/target_functions/relax_disp.py       Tue Sep  2 
+20:06:18 2014
+@@ -31,7 +31,7 @@
+ 
+ # relax module imports.
+ from lib.dispersion.b14 import r2eff_B14
+-from lib.dispersion.cr72 import r2eff_CR72
++from lib.dispersion.cr72 import r2eff_CR72, simple_r2eff_CR72_jacobian
+ from lib.dispersion.dpl94 import r1rho_DPL94
+ from lib.dispersion.it99 import r2eff_IT99
+ from lib.dispersion.lm63 import r2eff_LM63
+@@ -534,6 +534,7 @@
+             self.func = self.func_CR72_full
+         if model == MODEL_CR72:
+             self.func = self.func_CR72
++            self.func_jacobian = self.func_CR72_jacobian
+         if model == MODEL_IT99:
+             self.func = self.func_IT99
+         if model == MODEL_TSMFK01:
+@@ -1223,6 +1224,61 @@
+         return self.calc_CR72_chi2(R20A=R20, R20B=R20, dw=dw, pA=pA, kex=kex)
+ 
+ 
++    def func_CR72_jacobian(self, params):
++        &quot;&quot;&quot;Jacobian function for the the reduced Carver and Richards (1972) 
+2-site exchange model on all time scales.
++
++        This assumes that pA &gt; pB, and hence this must be implemented as a 
+constraint.  For this model, the simplification R20A = R20B is assumed.
++
++        @param params:  The vector of parameter values.
++        @type params:   numpy rank-1 float array
++        @return:        The chi-squared value.
++        @rtype:         float
++        &quot;&quot;&quot;
++
++        # Scaling.
++        if self.scaling_flag:
++            params = dot(params, self.scaling_matrix)
++
++        # Unpack the parameter values.
++        R20 = params[:self.end_index[0]]
++        dw = params[self.end_index[0]:self.end_index[1]]
++        pA = params[self.end_index[1]]
++        kex = params[self.end_index[1]+1]
++
++        # Convert dw from ppm to rad/s. Use the out argument, to pass 
+directly to structure.
++        multiply( multiply.outer( dw.reshape(1, self.NS), self.nm_no_nd_ones 
+), self.frqs, out=self.dw_struct_jac )
++
++        # Reshape R20A to per experiment, spin and frequency.
++        self.r20a_struct_jac[:] = multiply.outer( R20.reshape(self.NE, 
+self.NS, self.NM), self.no_nd_ones )
++
++        # Get the Jacobian as list of derivatives.
++        simple_d_f_d_r20a, simple_d_f_d_pA, simple_d_f_d_dw, 
+simple_d_f_d_kex = simple_r2eff_CR72_jacobian(r20a=self.r20a_struct_jac, 
+pA=pA, dw=self.dw_struct_jac, kex=kex, cpmg_frqs=self.cpmg_frqs)
++
++        # Convert it to normal representation, where each column is the 
+derivative.
++        jacobian = transpose(array( [simple_d_f_d_r20a, simple_d_f_d_pA, 
+simple_d_f_d_dw, simple_d_f_d_kex] ) )
++
++        # If get_jacobian is set to True, calculate a scale back matrix for 
+the Jacobian from rad/s to corresponding units in relax, and then store in 
+class.
++        # This adds a overhead for the function.
++        if self.get_jacobian:
++                # Store in class, which will be extracted from function.
++                self.jacobian =  jacobian
++
++                # Define scaling matrix, which will convert the units.
++                simple_d_f_d_r20a_scale = ones(simple_d_f_d_r20a.shape)
++                simple_d_f_d_pA_scale = ones(simple_d_f_d_pA.shape)
++
++                # Scale from rad/s to ppm.
++                simple_d_f_d_dw_scale = divide(ones(simple_d_f_d_dw.shape), 
+self.frqs)
++
++                simple_d_f_d_kex_scale = ones(simple_d_f_d_kex.shape)
++
++                # Collect the scaling matrix.
++                self.jacobian_scale_mat =  transpose(array( 
+[simple_d_f_d_r20a_scale, simple_d_f_d_pA_scale, simple_d_f_d_dw_scale, 
+simple_d_f_d_kex_scale] ) )
++
++        # Return the Jacobian.
++        return jacobian
++
++
+     def func_CR72_full(self, params):
+         &quot;&quot;&quot;Target function for the full Carver and Richards (1972) 2-site 
+exchange model on all time scales.
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Sep 02 20:20:02 2014</div>  
+</body>
+</html>

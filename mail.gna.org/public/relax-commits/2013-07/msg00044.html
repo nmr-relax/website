@@ -1,0 +1,322 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r20302 &#45; in /branches/relax_disp: lib/dispersion/ns_2site_star.py	target_functions/relax_disp.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 15 Jul 2013 18:13:22 +0200 -->
+<!--X-Message-Id: E1UylOs&#45;0005lS&#45;6Y@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r20302 - in /branches/relax_disp: lib/dispersion/ns_2site_star.py	target_functions/relax_disp.py -- July 15, 2013 - 18:13</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r20302 - in /branches/relax_disp: lib/dispersion/ns_2site_star.py	target_functions/relax_disp.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00044" class="tabs">Index by Date</a> | <a href="threads.html#00044" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00043.html">Date Prev</a>] [<a href="msg00045.html">Date Next</a>] [<a href="msg00043.html">Thread Prev</a>] [<a href="msg00045.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 15 Jul 2013 16:13:22 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00044.html">E1UylOs-0005lS-6Y@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on July 15, 2013 - 18:13:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Mon Jul 15 18:13:21 2013
+New Revision: 20302
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=20302&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=20302&amp;view=rev</a>
+Log:
+Speed ups of the 'NS 2-site star' dispersion model optimisation.
+
+The relaxation and magnitisation data structures are now initialised with the 
+target function
+initialisation, rather than being created at each target function call.  The 
+Rex and M0 matrices are
+now updated at the base of the target function rather than in the 
+lib.dispersion.ns_2site_star
+module to minimise the number of mathematical operations per target function 
+call.  And the M0
+matrix has changed shape and a dot product is used in 
+lib.dispersion.ns_2site_star to create Moft
+instead.
+
+
+Modified:
+    branches/relax_disp/lib/dispersion/ns_2site_star.py
+    branches/relax_disp/target_functions/relax_disp.py
+
+Modified: branches/relax_disp/lib/dispersion/ns_2site_star.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/lib/dispersion/ns_2site_star.py?rev=20302&amp;r1=20301&amp;r2=20302&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_disp/lib/dispersion/ns_2site_star.py?rev=20302&amp;r1=20301&amp;r2=20302&amp;view=diff</a>
+==============================================================================
+--- branches/relax_disp/lib/dispersion/ns_2site_star.py (original)
++++ branches/relax_disp/lib/dispersion/ns_2site_star.py Mon Jul 15 18:13:21 
+2013
+@@ -33,7 +33,7 @@
+ 
+ # Python module imports.
+ from math import log
+-from numpy import complex, conj, dot, matrix
++from numpy import add, complex, conj, dot
+ if dep_check.scipy_module:
+     from scipy.linalg import expm
+ 
+@@ -41,28 +41,22 @@
+ from lib.linear_algebra.matrix_power import square_matrix_power
+ 
+ 
+-def r2eff_ns_2site_star(r20a=None, r20b=None, fA=None, pA=None, pB=None, 
+kex=None, k_AB=None, k_BA=None, tcpmg=None, cpmg_frqs=None, back_calc=None, 
+num_points=None):
++def r2eff_ns_2site_star(Rr=None, Rex=None, RCS=None, R=None, M0=None, 
+r20a=None, r20b=None, fA=None, pB=None, tcpmg=None, cpmg_frqs=None, 
+back_calc=None, num_points=None):
+     &quot;&quot;&quot;The 2-site numerical solution to the Bloch-McConnell equation using 
+complex conjugate matrices.
+ 
+     This function calculates and stores the R2eff values.
+ 
+ 
++    @keyword R:             The matrix that contains all the contributions 
+to the evolution, i.e. relaxation, exchange and chemical shift evolution.
++    @type R:                numpy complex64, rank-2, 2D array
+     @keyword r20a:          The R2 value for state A in the absence of 
+exchange.
+     @type r20a:             float
+     @keyword r20b:          The R2 value for state A in the absence of 
+exchange.
+     @type r20b:             float
+     @keyword fA:            The frequency of state A.
+     @type fA:               float
+-    @keyword pA:            The population of state A.
+-    @type pA:               float
+     @keyword pB:            The population of state B.
+     @type pB:               float
+-    @keyword kex:           The kex parameter value (the exchange rate in 
+rad/s).
+-    @type kex:              float
+-    @keyword k_AB:          The forward exchange rate from state A to state 
+B.
+-    @type k_AB:             float
+-    @keyword k_BA:          The reverse exchange rate from state B to state 
+A.
+-    @type k_BA:             float
+     @keyword tcpmg:         Total duration of the CPMG element (in seconds).
+     @type tcpmg:            float
+     @keyword cpmg_frqs:     The CPMG nu1 frequencies.
+@@ -74,22 +68,18 @@
+     &quot;&quot;&quot;
+ 
+     # The matrix that contains only the R2 relaxation terms (&quot;Redfield 
+relaxation&quot;, i.e. non-exchange broadening).
+-    Rr  = -1.0 * matrix([[r20a, 0.0], [0.0, r20b]])
+-
+-    # The matrix that contains the exchange terms between the two states A 
+and B.
+-    Rex = -1.0 * matrix([[k_AB, -k_BA], [-k_AB, k_BA]])
++    Rr[0, 0] = -r20a
++    Rr[1, 1] = -r20b
+ 
+     # The matrix that contains the chemical shift evolution.  It works here 
+only with X magnetization, and the complex notation allows to evolve in the 
+transverse plane (x, y).
+-    RCS = matrix([[0.0, 0.0], [0.0, complex(0.0, -fA)]], dtype=complex)
++    RCS[1, 1] = complex(0.0, -fA)
+ 
+-    # The matrix that contains all the contributions to the evolution, i.e. 
+relaxation, exchange and chemical shift evolution.
+-    R = Rr + Rex + RCS
++    # The matrix R that contains all the contributions to the evolution, 
+i.e. relaxation, exchange and chemical shift evolution.
++    add(Rr, Rex, out=R)
++    add(R, RCS, out=R)
+ 
+     # This is the complex conjugate of the above.  It allows the chemical 
+shift to run in the other direction, i.e. it is used to evolve the shift 
+after a 180 deg pulse.  The factor of 2 is to minimise the number of 
+multiplications for the prop_2 matrix calculation.
+     cR2 = conj(R) * 2.0
+-
+-    # This is a vector that contains the initial magnetizations 
+corresponding to the A and B state transverse magnetizations.
+-    M0 = matrix([[pA], [pB]])
+ 
+     # Replicated calculations for faster operation.
+     inv_tcpmg = 1.0 / tcpmg
+@@ -114,7 +104,7 @@
+         prop_total = square_matrix_power(prop_2, cpmg_frqs[i]*tcpmg)
+ 
+         # Now we apply the above propagator to the initial magnetization 
+vector - resulting in the magnetization that remains after the full CPMG 
+pulse train.  It is called M of t (t is the time after the CPMG train).
+-        Moft = prop_total * M0
++        Moft = dot(prop_total, M0)
+ 
+         # The next lines calculate the R2eff using a two-point 
+approximation, i.e. assuming that the decay is mono-exponential.
+         Mgx = Moft[0].real / M0[0]
+
+Modified: branches/relax_disp/target_functions/relax_disp.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/target_functions/relax_disp.py?rev=20302&amp;r1=20301&amp;r2=20302&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_disp/target_functions/relax_disp.py?rev=20302&amp;r1=20301&amp;r2=20302&amp;view=diff</a>
+==============================================================================
+--- branches/relax_disp/target_functions/relax_disp.py (original)
++++ branches/relax_disp/target_functions/relax_disp.py Mon Jul 15 18:13:21 
+2013
+@@ -24,7 +24,7 @@
+ &quot;&quot;&quot;Target functions for relaxation dispersion.&quot;&quot;&quot;
+ 
+ # Python module imports.
+-from numpy import dot, float64, zeros
++from numpy import complex64, dot, float64, zeros
+ 
+ # relax module imports.
+ from lib.dispersion.cr72 import r2eff_CR72
+@@ -134,6 +134,23 @@
+         if model == MODEL_IT99:
+             self.end_index.append(self.end_index[-1] + self.num_spins)
+ 
++        # Set up the matrices for the numerical solutions.
++        if model in [MODEL_NS_2SITE_STAR]:
++            # The matrix that contains only the R2 relaxation terms 
+(&quot;Redfield relaxation&quot;, i.e. non-exchange broadening).
++            self.Rr = zeros((2, 2), complex64)
++
++            # The matrix that contains the exchange terms between the two 
+states A and B.
++            self.Rex = zeros((2, 2), complex64)
++
++            # The matrix that contains the chemical shift evolution.  It 
+works here only with X magnetization, and the complex notation allows to 
+evolve in the transverse plane (x, y).
++            self.RCS = zeros((2, 2), complex64)
++
++            # The matrix that contains all the contributions to the 
+evolution, i.e. relaxation, exchange and chemical shift evolution.
++            self.R = zeros((2, 2), complex64)
++
++            # This is a vector that contains the initial magnetizations 
+corresponding to the A and B state transverse magnetizations.
++            self.M0 = zeros(2, float64)
++
+         # Set up the model.
+         if model == MODEL_NOREX:
+             self.func = self.func_NOREX
+@@ -503,7 +520,17 @@
+         k_AB = pA * kex
+         k_BA = pB * kex
+ 
+-        # Initialise.
++        # Set up the matrix that contains the exchange terms between the two 
+states A and B.
++        self.Rex[0, 0] = -k_AB
++        self.Rex[0, 1] = k_BA
++        self.Rex[1, 0] = k_AB
++        self.Rex[1, 1] = -k_BA
++
++        # This is a vector that contains the initial magnetizations 
+corresponding to the A and B state transverse magnetizations.
++        self.M0[0] = pA
++        self.M0[1] = pB
++
++        # Chi-squared initialisation.
+         chi2_sum = 0.0
+ 
+         # Loop over the spins.
+@@ -517,15 +544,15 @@
+                 dw_frq = dw[spin_index] * self.frqs[spin_index, frq_index]
+ 
+                 # Back calculate the R2eff values.
+-                r2eff_ns_2site_star(r20a=R20A[r20_index], 
+r20b=R20B[r20_index], pA=pA, pB=pB, fA=dw_frq, kex=kex, k_AB=k_AB, k_BA=k_BA, 
+tcpmg=self.relax_time, cpmg_frqs=self.cpmg_frqs, 
+back_calc=self.back_calc[spin_index, frq_index], 
+num_points=self.num_disp_points)
+-
+-                # For all missing data points, set the back-calculated value 
+to the measured values so that it has no effect on the chi-squared value.
+-                for point_index in range(self.num_disp_points):
+-                    if self.missing[spin_index, frq_index, point_index]:
+-                        self.back_calc[spin_index, frq_index, point_index] = 
+self.values[spin_index, frq_index, point_index]
+-
+-                # Calculate and return the chi-squared value.
+-                chi2_sum += chi2(self.values[spin_index, frq_index], 
+self.back_calc[spin_index, frq_index], self.errors[spin_index, frq_index])
+-
+-        # Return the total chi-squared value.
+-        return chi2_sum
++                r2eff_ns_2site_star(Rr=self.Rr, Rex=self.Rex, RCS=self.RCS, 
+R=self.R, M0=self.M0, r20a=R20A[r20_index], r20b=R20B[r20_index], pB=pB, 
+fA=dw_frq, tcpmg=self.relax_time, cpmg_frqs=self.cpmg_frqs, 
+back_calc=self.back_calc[spin_index, frq_index], 
+num_points=self.num_disp_points)
++
++                # For all missing data points, set the back-calculated value 
+to the measured values so that it has no effect on the chi-squared value.
++                for point_index in range(self.num_disp_points):
++                    if self.missing[spin_index, frq_index, point_index]:
++                        self.back_calc[spin_index, frq_index, point_index] = 
+self.values[spin_index, frq_index, point_index]
++
++                # Calculate and return the chi-squared value.
++                chi2_sum += chi2(self.values[spin_index, frq_index], 
+self.back_calc[spin_index, frq_index], self.errors[spin_index, frq_index])
++
++        # Return the total chi-squared value.
++        return chi2_sum
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Jul 15 18:20:01 2013</div>  
+</body>
+</html>

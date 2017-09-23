@@ -1,0 +1,247 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r18506 &#45; /trunk/generic_fns/structure/internal.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 19 Feb 2013 22:03:42 +0100 -->
+<!--X-Message-Id: E1U7uLl&#45;00060a&#45;Vi@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r18506 - /trunk/generic_fns/structure/internal.py -- February 19, 2013 - 22:03</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r18506 - /trunk/generic_fns/structure/internal.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00178" class="tabs">Index by Date</a> | <a href="threads.html#00178" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00177.html">Date Prev</a>] [<a href="msg00179.html">Date Next</a>] [<a href="msg00177.html">Thread Prev</a>] [<a href="msg00179.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 19 Feb 2013 21:03:41 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00178.html">E1U7uLl-00060a-Vi@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on February 19, 2013 - 22:03:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Feb 19 22:03:41 2013
+New Revision: 18506
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=18506&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=18506&amp;view=rev</a>
+Log:
+Faster PDB parsing by the removal of the use of the re.search() function.
+
+Now line slices are directly compared instead.
+
+
+Modified:
+    trunk/generic_fns/structure/internal.py
+
+Modified: trunk/generic_fns/structure/internal.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/generic_fns/structure/internal.py?rev=18506&amp;r1=18505&amp;r2=18506&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/generic_fns/structure/internal.py?rev=18506&amp;r1=18505&amp;r2=18506&amp;view=diff</a>
+==============================================================================
+--- trunk/generic_fns/structure/internal.py (original)
++++ trunk/generic_fns/structure/internal.py Tue Feb 19 22:03:41 2013
+@@ -26,7 +26,6 @@
+ from numpy import array, dot, float64, linalg, zeros
+ import os
+ from os import F_OK, access
+-from re import search
+ from string import digits
+ from warnings import warn
+ 
+@@ -277,7 +276,7 @@
+         # Loop over the lines.
+         for i in range(len(lines)):
+             # No match, therefore assume to be out of the connectivity 
+annotation section.
+-            if lines[i][0: 6] not in records:
++            if lines[i][:6] not in records:
+                 break
+         
+         # Return the remaining lines.
+@@ -303,18 +302,18 @@
+         # Loop over the data.
+         for i in range(len(lines)):
+             # A new model record.
+-            if search('^MODEL', lines[i]):
++            if lines[i][:5] == 'MODEL':
+                 try:
+                     model = int(lines[i].split()[1])
+                 except:
+                     raise RelaxError(&quot;The MODEL record &quot; + repr(lines[i]) + 
+&quot; is corrupt, cannot read the PDB file.&quot;)
+ 
+             # Skip all records prior to the first ATOM or HETATM record.
+-            if not (search('^ATOM', lines[i]) or search('^HETATM', 
+lines[i])) and not len(records):
++            if not (lines[i][:4] == 'ATOM' or lines[i][:6] == 'HETATM') and 
+not len(records):
+                 continue
+ 
+             # End of the model.
+-            if search('^ENDMDL', lines[i]):
++            if lines[i][:6] == 'ENDMDL':
+                 # Yield the info.
+                 yield model, records
+ 
+@@ -355,7 +354,7 @@
+         # Loop over the lines.
+         for i in range(len(lines)):
+             # No match, therefore assume to be out of the hetrogen section.
+-            if lines[i][0: 6] not in records:
++            if lines[i][:6] not in records:
+                 break
+         
+         # Return the remaining lines.
+@@ -382,7 +381,7 @@
+         # Loop over the lines.
+         for i in range(len(lines)):
+             # No match, therefore assume to be out of the miscellaneous 
+section.
+-            if lines[i][0: 6] not in records:
++            if lines[i][:6] not in records:
+                 break
+         
+         # Return the remaining lines.
+@@ -414,7 +413,7 @@
+         # Loop over the lines.
+         for i in range(len(lines)):
+             # No match, therefore assume to be out of the primary structure 
+section.
+-            if lines[i][0: 6] not in records:
++            if lines[i][:6] not in records:
+                 break
+         
+         # Return the remaining lines.
+@@ -443,7 +442,7 @@
+         # Loop over the lines.
+         for i in range(len(lines)):
+             # No match, therefore assume to be out of the secondary 
+structure section.
+-            if lines[i][0: 6] not in records:
++            if lines[i][:6] not in records:
+                 break
+         
+         # Return the remaining lines.
+@@ -485,7 +484,7 @@
+         # Loop over the lines.
+         for i in range(len(lines)):
+             # No match, therefore assume to be out of the title section.
+-            if lines[i][0: 6] not in records:
++            if lines[i][:6] not in records:
+                 break
+         
+         # Return the remaining lines.
+@@ -599,19 +598,19 @@
+         # Loop over the data.
+         for i in range(len(records)):
+             # A PDB termination record.
+-            if search('^END', records[i]):
++            if records[i][:3] == 'END':
+                 break
+ 
+             # A model termination record.
+-            if search('^ENDMDL', records[i]):
++            if records[i][:6] == 'ENDMDL':
+                 end = True
+ 
+             # A molecule termination record with no trailing HETATM.
+-            elif i &lt; len(records)-1 and search('^TER', records[i]) and not 
+search('^HETATM', records[i+1]):
++            elif i &lt; len(records)-1 and records[i][:3] == 'TER' and not 
+records[i+1][:6] == 'HETATM':
+                 end = True
+ 
+             # A HETATM followed by an ATOM record.
+-            elif i &lt; len(records)-1 and search('^HETATM', records[i]) and 
+search('^ATOM', records[i+1]):
++            elif i &lt; len(records)-1 and records[i][:6] == 'HETATM' and 
+records[i+1][:4] == 'ATOM':
+                 end = True
+ 
+             # End.
+@@ -2187,11 +2186,11 @@
+                 continue
+ 
+             # Add the atom.
+-            if search('^ATOM', record) or search('^HETATM', record):
++            if record[:4] == 'ATOM' or record[:6] == 'HETATM':
+                 # Parse the record.
+-                if search('^ATOM', record):
++                if record[:4] == 'ATOM':
+                     record_type, serial, name, alt_loc, res_name, chain_id, 
+res_seq, icode, x, y, z, occupancy, temp_factor, element, charge = 
+pdb_read.atom(record)
+-                if search('^HETATM', record):
++                if record[:6] == 'HETATM':
+                     record_type, serial, name, alt_loc, res_name, chain_id, 
+res_seq, icode, x, y, z, occupancy, temp_factor, element, charge = 
+pdb_read.hetatm(record)
+ 
+                 # Handle the alternate locations.
+@@ -2212,7 +2211,7 @@
+                 self.atom_add(pdb_record=record_type, atom_num=serial, 
+atom_name=name, res_name=res_name, chain_id=chain_id, res_num=res_seq, 
+pos=[x, y, z], element=element)
+ 
+             # Connect atoms.
+-            if search('^CONECT', record):
++            if record[:6] == 'CONECT':
+                 # Parse the record.
+                 record_type, serial, bonded1, bonded2, bonded3, bonded4 = 
+pdb_read.conect(record)
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Feb 19 22:20:02 2013</div>  
+</body>
+</html>

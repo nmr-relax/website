@@ -1,0 +1,308 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r23943 &#45; in /branches/frame_order_cleanup: lib/frame_order/ target_functions/ -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 13 Jun 2014 17:43:51 +0200 -->
+<!--X-Message-Id: E1WvTdu&#45;0006Dk&#45;UD@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r23943 - in /branches/frame_order_cleanup: lib/frame_order/ target_functions/ -- June 13, 2014 - 17:43</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r23943 - in /branches/frame_order_cleanup: lib/frame_order/ target_functions/</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00330" class="tabs">Index by Date</a> | <a href="threads.html#00330" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00329.html">Date Prev</a>] [<a href="msg00331.html">Date Next</a>] [<a href="msg00329.html">Thread Prev</a>] [<a href="msg00331.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 13 Jun 2014 15:43:50 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00330.html">E1WvTdu-0006Dk-UD@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on June 13, 2014 - 17:43:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Jun 13 17:43:50 2014
+New Revision: 23943
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=23943&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=23943&amp;view=rev</a>
+Log:
+Small speed up for all of the frame order models.
+
+The PCS averaging in the quasi-random numerical integration functions now 
+uses the multiply() and
+divide() numpy methods to eliminate a loop over the alignments.  For this, a 
+new dimension over the
+spins was added to the PCS constant calculated in the target function 
+__init__() method.  In one
+test of the pseudo-ellipse, the time dropped from 191 seconds to 172.
+
+
+Modified:
+    branches/frame_order_cleanup/lib/frame_order/double_rotor.py
+    branches/frame_order_cleanup/lib/frame_order/iso_cone.py
+    branches/frame_order_cleanup/lib/frame_order/iso_cone_torsionless.py
+    branches/frame_order_cleanup/lib/frame_order/pseudo_ellipse.py
+    branches/frame_order_cleanup/lib/frame_order/pseudo_ellipse_torsionless.py
+    branches/frame_order_cleanup/lib/frame_order/rotor.py
+    branches/frame_order_cleanup/target_functions/frame_order.py
+
+Modified: branches/frame_order_cleanup/lib/frame_order/double_rotor.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/frame_order/double_rotor.py?rev=23943&amp;r1=23942&amp;r2=23943&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/frame_order/double_rotor.py?rev=23943&amp;r1=23942&amp;r2=23943&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/lib/frame_order/double_rotor.py        
+(original)
++++ branches/frame_order_cleanup/lib/frame_order/double_rotor.py        Fri 
+Jun 13 17:43:50 2014
+@@ -24,7 +24,7 @@
+ 
+ # Python module imports.
+ from math import pi, sqrt
+-from numpy import dot, inner, sinc, transpose
++from numpy import divide, dot, inner, multiply, sinc, transpose
+ 
+ # relax module imports.
+ from lib.frame_order.matrix_ops import rotate_daeg
+@@ -135,8 +135,8 @@
+ 
+     # Average the PCS.
+     else:
+-        for i in range(len(pcs_theta)):
+-            pcs_theta[i] = c[i] * pcs_theta[i] / float(num)
++        multiply(c, pcs_theta, pcs_theta)
++        divide(pcs_theta, float(num), pcs_theta)
+ 
+ 
+ def pcs_pivot_motion_double_rotor(full_in_ref_frame=None, r_pivot_atom=None, 
+r_pivot_atom_rev=None, r_ln_pivot=None, A=None, R_eigen=None, RT_eigen=None, 
+Ri_prime=None, pcs_theta=None, pcs_theta_err=None, missing_pcs=None):
+
+Modified: branches/frame_order_cleanup/lib/frame_order/iso_cone.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/frame_order/iso_cone.py?rev=23943&amp;r1=23942&amp;r2=23943&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/frame_order/iso_cone.py?rev=23943&amp;r1=23942&amp;r2=23943&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/lib/frame_order/iso_cone.py    (original)
++++ branches/frame_order_cleanup/lib/frame_order/iso_cone.py    Fri Jun 13 
+17:43:50 2014
+@@ -24,7 +24,7 @@
+ 
+ # Python module imports.
+ from math import cos, pi, sqrt
+-from numpy import sinc
++from numpy import divide, multiply, sinc
+ 
+ # relax module imports.
+ from lib.frame_order.matrix_ops import pcs_pivot_motion_full_qrint, 
+rotate_daeg
+@@ -115,8 +115,8 @@
+ 
+     # Average the PCS.
+     else:
+-        for i in range(len(pcs_theta)):
+-            pcs_theta[i] = c[i] * pcs_theta[i] / float(num)
++        multiply(c, pcs_theta, pcs_theta)
++        divide(pcs_theta, float(num), pcs_theta)
+ 
+ 
+ def populate_1st_eigenframe_iso_cone(matrix, angle):
+
+Modified: branches/frame_order_cleanup/lib/frame_order/iso_cone_torsionless.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/frame_order/iso_cone_torsionless.py?rev=23943&amp;r1=23942&amp;r2=23943&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/frame_order/iso_cone_torsionless.py?rev=23943&amp;r1=23942&amp;r2=23943&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/lib/frame_order/iso_cone_torsionless.py      
+  (original)
++++ branches/frame_order_cleanup/lib/frame_order/iso_cone_torsionless.py      
+  Fri Jun 13 17:43:50 2014
+@@ -24,6 +24,7 @@
+ 
+ # Python module imports.
+ from math import cos, sqrt
++from numpy import divide, multiply
+ 
+ # relax module imports.
+ from lib.frame_order.matrix_ops import pcs_pivot_motion_torsionless_qrint, 
+rotate_daeg
+@@ -134,5 +135,5 @@
+ 
+     # Average the PCS.
+     else:
+-        for i in range(len(pcs_theta)):
+-            pcs_theta[i] = c[i] * pcs_theta[i] / float(num)
++        multiply(c, pcs_theta, pcs_theta)
++        divide(pcs_theta, float(num), pcs_theta)
+
+Modified: branches/frame_order_cleanup/lib/frame_order/pseudo_ellipse.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/frame_order/pseudo_ellipse.py?rev=23943&amp;r1=23942&amp;r2=23943&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/frame_order/pseudo_ellipse.py?rev=23943&amp;r1=23942&amp;r2=23943&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/lib/frame_order/pseudo_ellipse.py      
+(original)
++++ branches/frame_order_cleanup/lib/frame_order/pseudo_ellipse.py      Fri 
+Jun 13 17:43:50 2014
+@@ -24,7 +24,7 @@
+ 
+ # Python module imports.
+ from math import cos, pi, sin, sqrt
+-from numpy import sinc
++from numpy import divide, multiply, repeat, sinc, tile
+ try:
+     from scipy.integrate import quad
+ except ImportError:
+@@ -659,8 +659,8 @@
+ 
+     # Average the PCS.
+     else:
+-        for i in range(len(pcs_theta)):
+-            pcs_theta[i] = c[i] * pcs_theta[i] / float(num)
++        multiply(c, pcs_theta, pcs_theta)
++        divide(pcs_theta, float(num), pcs_theta)
+ 
+ 
+ def tmax_pseudo_ellipse(phi, theta_x, theta_y):
+
+Modified: 
+branches/frame_order_cleanup/lib/frame_order/pseudo_ellipse_torsionless.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/frame_order/pseudo_ellipse_torsionless.py?rev=23943&amp;r1=23942&amp;r2=23943&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/frame_order/pseudo_ellipse_torsionless.py?rev=23943&amp;r1=23942&amp;r2=23943&amp;view=diff</a>
+==============================================================================
+--- 
+branches/frame_order_cleanup/lib/frame_order/pseudo_ellipse_torsionless.py  
+(original)
++++ 
+branches/frame_order_cleanup/lib/frame_order/pseudo_ellipse_torsionless.py  
+Fri Jun 13 17:43:50 2014
+@@ -24,6 +24,7 @@
+ 
+ # Python module imports.
+ from math import cos, pi, sin, sqrt
++from numpy import divide, multiply
+ try:
+     from scipy.integrate import quad
+ except ImportError:
+@@ -320,5 +321,5 @@
+ 
+     # Average the PCS.
+     else:
+-        for i in range(len(pcs_theta)):
+-            pcs_theta[i] = c[i] * pcs_theta[i] / float(num)
++        multiply(c, pcs_theta, pcs_theta)
++        divide(pcs_theta, float(num), pcs_theta)
+
+Modified: branches/frame_order_cleanup/lib/frame_order/rotor.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/frame_order/rotor.py?rev=23943&amp;r1=23942&amp;r2=23943&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/frame_order/rotor.py?rev=23943&amp;r1=23942&amp;r2=23943&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/lib/frame_order/rotor.py       (original)
++++ branches/frame_order_cleanup/lib/frame_order/rotor.py       Fri Jun 13 
+17:43:50 2014
+@@ -24,7 +24,7 @@
+ 
+ # Python module imports.
+ from math import pi, sqrt
+-from numpy import dot, inner, sinc, transpose
++from numpy import divide, dot, inner, multiply, sinc, transpose
+ from numpy.linalg import norm
+ try:
+     from scipy.integrate import quad
+@@ -136,8 +136,8 @@
+ 
+     # Average the PCS.
+     else:
+-        for i in range(len(pcs_theta)):
+-            pcs_theta[i] = c[i] * pcs_theta[i] / float(num)
++        multiply(c, pcs_theta, pcs_theta)
++        divide(pcs_theta, float(num), pcs_theta)
+ 
+ 
+ def pcs_pivot_motion_rotor_qrint(full_in_ref_frame=None, r_pivot_atom=None, 
+r_pivot_atom_rev=None, r_ln_pivot=None, A=None, R_eigen=None, RT_eigen=None, 
+Ri_prime=None, pcs_theta=None, pcs_theta_err=None, missing_pcs=None):
+
+Modified: branches/frame_order_cleanup/target_functions/frame_order.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/target_functions/frame_order.py?rev=23943&amp;r1=23942&amp;r2=23943&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/target_functions/frame_order.py?rev=23943&amp;r1=23942&amp;r2=23943&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/target_functions/frame_order.py        
+(original)
++++ branches/frame_order_cleanup/target_functions/frame_order.py        Fri 
+Jun 13 17:43:50 2014
+@@ -270,7 +270,7 @@
+             # Initialise the data structures.
+             self.paramag_unit_vect = zeros(atomic_pos.shape, float64)
+             self.paramag_dist = zeros(self.num_spins, float64)
+-            self.pcs_const = zeros(self.num_align, float64)
++            self.pcs_const = zeros((self.num_align, self.num_spins), float64)
+             self.r_pivot_atom = zeros((self.num_spins, 3), float32)
+             self.r_pivot_atom_rev = zeros((self.num_spins, 3), float32)
+             self.r_ln_pivot = self.pivot - self.paramag_centre
+@@ -1045,7 +1045,7 @@
+                         # The PCS calculation.
+                         vect = self.r_ln_pivot[0] + r_pivot_atom
+                         length = norm(vect)
+-                        self.pcs_theta[align_index, j] = 
+pcs_tensor(self.pcs_const[align_index] / length**5, vect, 
+self.A_3D[align_index])
++                        self.pcs_theta[align_index, j] = 
+pcs_tensor(self.pcs_const[align_index, j] / length**5, vect, 
+self.A_3D[align_index])
+ 
+                 # Calculate and sum the single alignment chi-squared value 
+(for the PCS).
+                 chi2_sum = chi2_sum + chi2(self.pcs[align_index], 
+self.pcs_theta[align_index], self.pcs_error[align_index])
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Jun 13 18:00:02 2014</div>  
+</body>
+</html>

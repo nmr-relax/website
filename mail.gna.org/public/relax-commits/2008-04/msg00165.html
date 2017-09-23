@@ -1,0 +1,189 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r5407 &#45; /1.3/generic_fns/pymol.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 08 Apr 2008 10:47:52 +0200 -->
+<!--X-Message-Id: E1Jj9Ue&#45;0006ad&#45;Gy@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r5407 - /1.3/generic_fns/pymol.py -- April 08, 2008 - 10:47</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r5407 - /1.3/generic_fns/pymol.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00165" class="tabs">Index by Date</a> | <a href="threads.html#00165" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00164.html">Date Prev</a>] [<a href="msg00166.html">Date Next</a>] [<a href="msg00164.html">Thread Prev</a>] [<a href="msg00166.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 08 Apr 2008 08:47:52 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00165.html">E1Jj9Ue-0006ad-Gy@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on April 08, 2008 - 10:47:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Apr  8 10:47:51 2008
+New Revision: 5407
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=5407&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=5407&amp;view=rev</a>
+Log:
+Updated the write() function to the new relax design.
+
+
+Modified:
+    1.3/generic_fns/pymol.py
+
+Modified: 1.3/generic_fns/pymol.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/generic_fns/pymol.py?rev=5407&amp;r1=5406&amp;r2=5407&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/generic_fns/pymol.py?rev=5407&amp;r1=5406&amp;r2=5407&amp;view=diff</a>
+==============================================================================
+--- 1.3/generic_fns/pymol.py (original)
++++ 1.3/generic_fns/pymol.py Tue Apr  8 10:47:51 2008
+@@ -26,8 +26,9 @@
+ 
+ # relax module imports.
+ from data import Data as relax_data_store
++from generic_fns.selection import exists_mol_res_spin_data
+ from relax_errors import RelaxError, RelaxImplementError, RelaxNoPipeError, 
+RelaxNoSequenceError
+-from relax_io import file_root, test_binary
++from relax_io import file_root, open_write_file, test_binary
+ from specific_fns.setup import get_specific_fn
+ 
+ 
+@@ -329,40 +330,49 @@
+         pymol.pipe_open()
+ 
+ 
+-def write(run=None, data_type=None, style=&quot;classic&quot;, colour_start=None, 
+colour_end=None, colour_list=None, file=None, dir=None, force=0):
+-    &quot;&quot;&quot;Function for creating a PyMOL macro.&quot;&quot;&quot;
+-
+-    # Arguments.
+-    self.run = run
+-    self.data_type = data_type
+-    self.style = style
+-    self.colour_start = colour_start
+-    self.colour_end = colour_end
+-    self.colour_list = colour_list
+-
+-    # No coded yet.
+-    raise RelaxImplementError
+-
+-    # Test if the run exists.
+-    if not self.run in relax_data_store.run_names:
+-        raise RelaxNoPipeError, self.run
+-
+-    # Test if the sequence data is loaded.
+-    if not relax_data_store.res.has_key(self.run):
+-        raise RelaxNoSequenceError, self.run
++def write(data_type=None, style=&quot;classic&quot;, colour_start=None, 
+colour_end=None, colour_list=None, file=None, dir=None, force=False):
++    &quot;&quot;&quot;Create a PyMOL macro file.
++
++    @keyword data_type:     The data type ot map to the structure.
++    @type data_type:        str
++    @keyword style:         The style of the macro.
++    @type style:            str
++    @keyword colour_start:  The starting colour of the linear gradient.
++    @type colour_start:     str or RBG colour array (len 3 with vals from 0 
+to 1)
++    @keyword colour_end:    The ending colour of the linear gradient.
++    @type colour_end:       str or RBG colour array (len 3 with vals from 0 
+to 1)
++    @keyword colour_list:   The colour list to search for the colour names.  
+Can be either 'molmol'
++                            or 'x11'.
++    @type colour_list:      str or None
++    @keyword file:          The name of the macro file to create.
++    @type file:             str
++    @keyword dir:           The name of the directory to place the macro 
+file into.
++    @type dir:              str
++    @keyword force:         Flag which if set to True will cause any 
+pre-existing file to be
++                            overwritten.
++    @type force:            bool
++    &quot;&quot;&quot;
++
++    # Test if the current data pipe exists.
++    if not relax_data_store.current_pipe:
++        raise RelaxNoPipeError
++
++    # Test if sequence data exists.
++    if not exists_mol_res_spin_data():
++        raise RelaxNoSequenceError
+ 
+     # Create the macro.
+-    self.create_macro()
++    commands = create_macro(data_type=data_type, style=style, 
+colour_start=colour_start, colour_end=colour_end, colour_list=colour_list)
+ 
+     # File name.
+     if file == None:
+         file = data_type + '.mac'
+ 
+     # Open the file for writing.
+-    file = self.relax.IO.open_write_file(file, dir, force)
++    file = open_write_file(file, dir, force)
+ 
+     # Loop over the commands and write them.
+-    for command in self.commands:
++    for command in commands:
+         file.write(command + &quot;\n&quot;)
+ 
+     # Close the file.
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Apr 08 11:00:07 2008</div>  
+</body>
+</html>

@@ -1,0 +1,309 @@
+<!-- MHonArc v2.6.10 -->
+<!--X-Subject: Re: Proposed solution to bug #6503. -->
+<!--X-From-R13: "Unel E. Fubzcfba" <tnelgNozo.yrrqf.np.hx> -->
+<!--X-Date: Wed, 09 Aug 2006 13:38:17 +0200 -->
+<!--X-Message-Id: 44D9C902.2080900@bmb.leeds.ac.uk -->
+<!--X-Content-Type: text/plain -->
+<!--X-Reference: 7f080ed10608082240r114cf35an60af62836fcc81bf@mail.gmail.com -->
+<!--X-Reference: 1155116086.28764.393.camel@fbsdpcu021 -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>Re: Proposed solution to bug #6503. -- August 09, 2006 - 13:38</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />Re: Proposed solution to bug #6503.</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00035" class="tabs">Index by Date</a> | <a href="threads.html#00035" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00034.html">Date Prev</a>] [<a href="msg00036.html">Date Next</a>] [<a href="msg00049.html">Thread Prev</a>] [<a href="msg00040.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: Chris MacRaild &lt;c.a.macraild@xxxxxxxxxxx&gt;, relax-devel@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 09 Aug 2006 12:37:38 +0100</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00035.html">44D9C902.2080900@bmb.leeds.ac.uk</a>&gt;</li>
+<li class="menuitem">
+<em>References</em>: &lt;<a href="msg00029.html">7f080ed10608082240r114cf35an60af62836fcc81bf@mail.gmail.com</a>&gt;	&lt;<a href="msg00031.html">1155116086.28764.393.camel@fbsdpcu021</a>&gt;</li>
+<li class="menuitem">
+<em>User-agent</em>: Mozilla Thunderbird 1.0 (X11/20041206)</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>Gary S. Thompson</strong> on August 09, 2006 - 13:38:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Chris MacRaild wrote:</pre><br>
+<blockquote class="blockquote"><tt>On Wed, 2006-08-09 at 15:40 +1000, Edward d'Auvergne wrote:<br>
+ </tt><br>
+<br>
+<blockquote class="blockquote"><pre style="margin: 0em;">Here is my proposed solution to bug #6503
+(<a  href="https://gna.org/bugs/?func=detailitem&amp;item_id=6503">https://gna.org/bugs/?func=detailitem&amp;item_id=6503</a>).  I have used the
+current 1.2 line as a reference and presented the diffs.  Feel free to
+propose better solutions.</pre><br>
+<pre style="margin: 0em;">The first thing is the catching of the NaN and Inf after the grid
+search and minimisation.  I propose to do the test within the
+'self.minimise()' function of 'specific_fns/model_free.py' rather than
+in the 'maths_fns/' or 'minimise/' code.  Here is the diff:
+===================================================================
+--- specific_fns/model_free.py  (revision 2527)
++++ specific_fns/model_free.py  (working copy)
+@@ -2374,6 +2374,14 @@
+            self.g_count = self.g_count + gc
+            self.h_count = self.h_count + hc</pre><br>
+<pre style="margin: 0em;">+            # Catch infinite chi-squared values.
++            if self.func == float('inf'):
++                raise RelaxInfError
++
++            # Catch chi-squared values of NaN.
++            if isnan(self.func):
++                raise RelaxNaNError
++
+            # Scaling.
+            if scaling:
+                self.param_vector =
+matrixmultiply(self.scaling_matrix, self.param_vector)
+===================================================================</pre><br>
+<tt>As the function 'self.grid_search()' executes 'self.minimise()' this<br>
+single change will cover both the grid search and minimisation.  The<br>
+function 'isnan()' currently non-existent but could be implemented as<br>
+Gary previously mentioned by checking the hex bit pattern of NaN.<br>
+   </tt><br>
+<br>
+</blockquote><tt><br>If isnan() is to be implimented in this way, then a similar isinf() is<br>
+by far the best way to go. float('inf') is platform dependent, and<br>
+certainly will not work under Windows (I think I'm right in saying<br>
+windows has no valid string representation of inf or nan that would work<br>
+in that context). 
+ </tt><br>
+<br>
+</blockquote><tt>Yep I am pretty leary of this as well. All that is guarunteed is the bit 
+patterns (and remember the function has to look at the endianness of the 
+system)</tt><br>
+<br>
+<tt>n.b. I wouldn't trust anything that requires other bit patterns (e.g. a 
+vax or very old mips) as this implies that they are not ieee 754 
+compliant and propgation of nan and other floating point behaviour will 
+be different from expected</tt><br>
+<br>
+<blockquote class="blockquote"><blockquote class="blockquote"><tt>This avoids fpconst.py and the switch from Numeric to Numpy.  The<br>
+question is whether to use the RelaxErrors or set some warning?  Would<br>
+this be alleviated by Gary's proposal of saving the program state just<br>
+prior to throwing the error?  For example using the function<br>
+'self.save()' within 'generic_fns/state.py', printing the error<br>
+message, then quitting.<br>
+   </tt><br>
+<br>
+</blockquote><tt><br>Saving state as part of the exception handling is a nice idea, but has<br>
+its limitations. Because the error could be thrown before, during or<br>
+after some change to the program state, the state which is saved will be<br>
+undefined and possibly inconsistent. As such a saved state may be of<br>
+limited use to most users. It would be a very valuable tool for<br>
+debugging, though.<br>
+ </tt><br>
+<br>
+</blockquote><tt><br>yep I  am afraid that is true unless we update the state of the program 
+in an atomic manner</tt><br>
+<br>
+<tt>e.g. do all calculations and save the results in local variables and 
+then update the state in one shot when  the calculation is complete</tt><br>
+<br>
+<blockquote class="blockquote"><tt> </tt><br>
+<br>
+<blockquote class="blockquote"><pre style="margin: 0em;">The next change is the addition of new RelaxErrors:
+===================================================================
+--- errors.py   (revision 2527)
++++ errors.py   (working copy)
+@@ -462,3 +462,17 @@
+    class RelaxInvalidColourError(BaseError):
+        def __init__(self, colour):
+            self.text = &quot;The colour &quot; + `colour` + &quot; is invalid.&quot;
++
++
++    # Value errors.
++    ###############
++
++    # Infinity.
++    class RelaxInfError(BaseError):
++        def __init__(self, name):
++            self.text = &quot;The invalid &quot; + name + &quot; floating point
+value of infinity has occurred.&quot;
++
++    # NaN (Not a Number).
++    class RelaxNaNError(BaseError):
++        def __init__(self, name):
++            self.text = &quot;The invalid &quot; + name + &quot; floating point
+value of NaN (Not a Number) has occurred.&quot;
+===================================================================</pre><br>
+<pre style="margin: 0em;">And as a preventative measure, the catching of zero length XH bond vectors:
+===================================================================
+--- generic_fns/pdb.py  (revision 2527)
++++ generic_fns/pdb.py  (working copy)
+@@ -156,7 +156,11 @@
+                    print &quot;The PDB file &quot; + `self.file_path` + &quot;
+cannot be found, no structures will be loaded.&quot;
+                return</pre><br>
+<pre style="margin: 0em;">+        # Test that the nuclei have been correctly set.
++        if self.heteronuc == self.proton:
++            raise RelaxError, &quot;The proton and heteronucleus are set
+to the same atom.&quot;</pre><br>
+<pre style="margin: 0em;">+
+        # Data creation.
+        ################</pre><br>
+<pre style="margin: 0em;">@@ -256,10 +260,19 @@
+                    # Get the heteronucleus position.
+                    posX = pdb_res.atoms[self.heteronuc].position.array</pre><br>
+<pre style="margin: 0em;">-                    # Calculate the normalised vector.
++                    # Calculate the XH bond vector.
+                    vector = posH - posX
+-
+self.relax.data.res[self.run][j].xh_vect.append(vector /
+sqrt(dot(vector, vector)))</pre><br>
+<pre style="margin: 0em;">+                    # Normalisation factor.
++                    norm_factor = sqrt(dot(vector, vector))
++
++                    # Test for zero length.
++                    if norm_factor == 0.0:
++                        raise RelaxError, &quot;The XH bond vector for
+residue &quot; + `self.relax.data.res[self.run][j].num` + &quot; is of zero
+length.&quot;
++
++                    # Calculate the normalised vector.
++
+self.relax.data.res[self.run][j].xh_vect.append(vector / norm_factor)
++
+        # Print out.
+        if self.print_flag:
+            if num_str &gt; 1:
+===================================================================</pre><br>
+<pre style="margin: 0em;">Finally, forcing termination of the backtracking line search (to break
+the infinite loop):
+===================================================================
+--- minimise/line_search/backtrack.py   (revision 2527)
++++ minimise/line_search/backtrack.py   (working copy)
+@@ -23,7 +23,7 @@</pre><br>
+<pre style="margin: 0em;">from Numeric import dot</pre><br>
+<pre style="margin: 0em;">-def backtrack(func, args, x, f, g, p, a_init=1.0, rho=0.5, c=1e-4):
++def backtrack(func, args, x, f, g, p, a_init=1.0, rho=0.5, c=1e-4,
+max_iter=500):
+    &quot;&quot;&quot;Backtracking line search.</pre><br>
+<pre style="margin: 0em;">    Procedure 3.1, page 41, from 'Numerical Optimization' by Jorge
+Nocedal and Stephen J. Wright,
+@@ -63,8 +63,9 @@
+    # Initialise values.
+    a = a_init
+    f_count = 0
++    i = 0</pre><br>
+<pre style="margin: 0em;">-    while 1:
++    while i &lt;= max_iter:
+        fk = apply(func, (x + a*p,)+args)
+        f_count = f_count + 1</pre><br>
+<pre style="margin: 0em;">@@ -73,3 +74,6 @@
+            return a, f_count
+        else:
+            a = rho*a
++
++        # Increment the counter.
++        i = i + 1
+===================================================================</pre><br>
+<tt>What do you think?  I think I covered most of the issues.  I've made a<br>
+branch of the 1.2 line located at<br>
+svn://svn.gna.org/svn/relax/branches/nan_catch_test which has all<br>
+these changes.  Feel free to play around and modify this branch.<br>
+   </tt><br>
+<br>
+</blockquote><pre style="margin: 0em;"><br>I'll have a bit more of a look, but it seems like a good fix.</pre><br>
+<pre style="margin: 0em;">Chris</pre><br>
+<tt> </tt><br>
+<br>
+<blockquote class="blockquote"><pre style="margin: 0em;">Edward</pre><br>
+<pre style="margin: 0em;">_______________________________________________
+relax (<a  href="http://nmr-relax.com">http://nmr-relax.com</a>)</pre><br>
+<pre style="margin: 0em;">This is the relax-devel mailing list
+relax-devel@xxxxxxx</pre><br>
+<pre style="margin: 0em;">To unsubscribe from this list, get a password
+reminder, or change your subscription options,
+visit the list information page at
+<a  href="https://mail.gna.org/listinfo/relax-devel">https://mail.gna.org/listinfo/relax-devel</a></pre><br>
+<tt>   </tt><br>
+<br>
+</blockquote><pre style="margin: 0em;"><br></pre><br>
+<pre style="margin: 0em;">_______________________________________________
+relax (<a  href="http://nmr-relax.com">http://nmr-relax.com</a>)</pre><br>
+<pre style="margin: 0em;">This is the relax-devel mailing list
+relax-devel@xxxxxxx</pre><br>
+<pre style="margin: 0em;">To unsubscribe from this list, get a password
+reminder, or change your subscription options,
+visit the list information page at
+<a  href="https://mail.gna.org/listinfo/relax-devel">https://mail.gna.org/listinfo/relax-devel</a></pre><br>
+<pre style="margin: 0em;">.</pre><br>
+<tt> </tt><br>
+<br>
+</blockquote><pre style="margin: 0em;"><br>otherwise it all looks good</pre><br>
+<pre style="margin: 0em;">--
+-------------------------------------------------------------------
+Dr Gary Thompson
+Astbury Centre for Structural Molecular Biology,
+University of Leeds, Astbury Building,
+Leeds, LS2 9JT, West-Yorkshire, UK             Tel. +44-113-3433024
+email: garyt@xxxxxxxxxxxxxxx                   Fax  +44-113-2331407
+-------------------------------------------------------------------</pre><br>
+<pre style="margin: 0em;"><br></pre><br>
+<br>
+
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<ul><li><strong>Follow-Ups</strong>:
+<ul>
+<li><strong><a name="00040" href="msg00040.html">Re: Proposed solution to bug #6503.</a></strong>
+<ul><li><em>From:</em> Edward d'Auvergne</li></ul></li>
+</ul></li></ul>
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<ul><li><strong>References</strong>:
+<ul>
+<li><strong><a name="00029" href="msg00029.html">Proposed solution to bug #6503.</a></strong>
+<ul><li><em>From:</em> Edward d'Auvergne</li></ul></li>
+<li><strong><a name="00031" href="msg00031.html">Re: Proposed solution to bug #6503.</a></strong>
+<ul><li><em>From:</em> Chris MacRaild</li></ul></li>
+</ul></li></ul>
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Aug 09 18:40:30 2006</div>  
+</body>
+</html>

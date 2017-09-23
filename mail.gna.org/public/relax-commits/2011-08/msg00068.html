@@ -1,0 +1,265 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r14088 &#45; /branches/gui_testing/gui/controller.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 03 Aug 2011 18:03:37 +0200 -->
+<!--X-Message-Id: E1Qoduz&#45;0006hj&#45;Ow@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r14088 - /branches/gui_testing/gui/controller.py -- August 03, 2011 - 18:03</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r14088 - /branches/gui_testing/gui/controller.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00068" class="tabs">Index by Date</a> | <a href="threads.html#00068" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00067.html">Date Prev</a>] [<a href="msg00069.html">Date Next</a>] [<a href="msg00067.html">Thread Prev</a>] [<a href="msg00069.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 03 Aug 2011 16:03:37 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00068.html">E1Qoduz-0006hj-Ow@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on August 03, 2011 - 18:03:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Aug  3 18:03:36 2011
+New Revision: 14088
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=14088&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=14088&amp;view=rev</a>
+Log:
+Redirect_text is now placing all messages onto a log queue and the LogCtrl is 
+reading from this queue.
+
+The log_queue Queue object is now used to store messages so that not every 
+write() event to STDOUT
+and STDERR results in the relax controller log window updating.  This allows 
+the controller and the
+GUI to remain responsive as masses of messages are produced.
+
+
+Modified:
+    branches/gui_testing/gui/controller.py
+
+Modified: branches/gui_testing/gui/controller.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/gui_testing/gui/controller.py?rev=14088&amp;r1=14087&amp;r2=14088&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/gui_testing/gui/controller.py?rev=14088&amp;r1=14087&amp;r2=14088&amp;view=diff</a>
+==============================================================================
+--- branches/gui_testing/gui/controller.py (original)
++++ branches/gui_testing/gui/controller.py Wed Aug  3 18:03:36 2011
+@@ -25,6 +25,7 @@
+ &quot;&quot;&quot;Log window of relax GUI controlling all calculations.&quot;&quot;&quot;
+ 
+ # Python module imports.
++from Queue import Queue
+ import sys
+ import wx
+ import wx.stc
+@@ -86,12 +87,16 @@
+         # Add the main execution gauge.
+         self.main_gauge = self.add_gauge(self, sizer, &quot;Execution status:&quot;)
+ 
++        # Initialise a queue for log messages.
++        self.log_queue = Queue()
++
+         # Add the log panel.
+-        self.add_log(sizer)
++        self.log_panel = LogCtrl(self, log_queue=self.log_queue, id=-1)
++        sizer.Add(self.log_panel, 1, wx.EXPAND|wx.ALL, 0)
+ 
+         # IO redirection.
+         if not status.debug and not status.test_mode:
+-            redir = Redirect_text(self.log_panel)
++            redir = Redirect_text(self.log_panel, self.log_queue)
+             sys.stdout = redir
+             sys.stderr = redir
+ 
+@@ -145,20 +150,6 @@
+         return gauge
+ 
+ 
+-    def add_log(self, sizer):
+-        &quot;&quot;&quot;Add the log panel to the sizer.
+-
+-        @param sizer:   The sizer element to pack the log panel into.
+-        @type sizer:    wx.Sizer instance
+-        &quot;&quot;&quot;
+-
+-        # Log panel.
+-        self.log_panel = LogCtrl(self, -1)
+-
+-        # Add to the sizer.
+-        sizer.Add(self.log_panel, 1, wx.EXPAND|wx.ALL, 0)
+-
+-
+     def add_relax_logo(self, sizer):
+         &quot;&quot;&quot;Add the relax logo to the sizer.
+ 
+@@ -478,11 +469,13 @@
+ class LogCtrl(wx.stc.StyledTextCtrl):
+     &quot;&quot;&quot;A special control designed to display relax output messages.&quot;&quot;&quot;
+ 
+-    def __init__(self, parent, id=wx.ID_ANY, pos=wx.DefaultPosition, 
+size=wx.DefaultSize, style=wx.BORDER_SUNKEN, name=wx.stc.STCNameStr):
++    def __init__(self, parent, log_queue=None, id=wx.ID_ANY, 
+pos=wx.DefaultPosition, size=wx.DefaultSize, style=wx.BORDER_SUNKEN, 
+name=wx.stc.STCNameStr):
+         &quot;&quot;&quot;Set up the log control.
+ 
+         @param parent:          The parent wx window object.
+         @type parent:           Window
++        @keyword log_queue:     The queue of log messages.
++        @type log_queue:        Queue.Queue instance
+         @keyword id:            The wx ID.
+         @type id:               int
+         @keyword pos:           The window position.
+@@ -495,6 +488,9 @@
+         @type name:             str
+         &quot;&quot;&quot;
+ 
++        # Store the args.
++        self.log_queue = log_queue
++
+         # Initialise the base class.
+         super(LogCtrl, self).__init__(parent, id=id, pos=pos, size=size, 
+style=style, name=name)
+ 
+@@ -515,6 +511,29 @@
+         # Allow Ctrl+C events.
+         if event.ControlDown() and event.GetKeyCode() == 67:
+             event.Skip()
++
++
++    def get_text(self):
++        &quot;&quot;&quot;Concatenate all of the text from the log queue and return it as a 
+string.
++
++        @return:    The text from the log queue.
++        @rtype:     str
++        &quot;&quot;&quot;
++
++        # Init the text.
++        string = ''
++
++        # Loop until the queue is empty.
++        while 1:
++            # End condition.
++            if self.log_queue.empty():
++                break
++
++            # Add the text.
++            string = string + self.log_queue.get()
++
++        # Return the concatenated text.
++        return string
+ 
+ 
+     def limit_scrollback(self, prune=20):
+@@ -549,12 +568,15 @@
+         self.LineScroll(0, prune)
+ 
+ 
+-    def write(self, string):
+-        &quot;&quot;&quot;Write the text to the log control.
+-
+-        @param string:  The text to add.
+-        @type string:   str
+-        &quot;&quot;&quot;
++    def write(self):
++        &quot;&quot;&quot;Write the text in the log queue to the log control.&quot;&quot;&quot;
++
++        # Get the text.
++        string = self.get_text()
++
++        # Nothing to do.
++        if string == '':
++            return
+ 
+         # At the end?
+         at_end = False
+@@ -576,15 +598,18 @@
+ class Redirect_text(object):
+     &quot;&quot;&quot;The IO redirection to text control object.&quot;&quot;&quot;
+ 
+-    def __init__(self, control):
++    def __init__(self, control, log_queue):
+         &quot;&quot;&quot;Set up the text redirection object.
+ 
+         @param control:         The text control object to redirect IO to.
+         @type control:          wx.TextCtrl instance
++        @param log_queue:       The queue of log messages.
++        @type log_queue:        Queue.Queue instance
+         &quot;&quot;&quot;
+ 
+         # Store the args.
+         self.control = control
++        self.log_queue = log_queue
+ 
+ 
+     def write(self, string):
+@@ -594,6 +619,9 @@
+         @type string:   str
+         &quot;&quot;&quot;
+ 
+-        # Append the text to the controller asynchronously, with limited 
+scroll back.
++        # Add the text to the queue.
++        self.log_queue.put(string)
++
++        # Call the log control write method one the GUI is responsive.
+         sys.__stdout__.write(string)
+-        wx.CallAfter(self.control.write, string)
++        wx.CallAfter(self.control.write)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Aug 03 18:40:02 2011</div>  
+</body>
+</html>

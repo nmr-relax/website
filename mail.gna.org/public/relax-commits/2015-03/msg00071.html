@@ -1,0 +1,356 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r27793 &#45; /trunk/lib/sequence.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 10 Mar 2015 09:47:20 +0100 -->
+<!--X-Message-Id: E1YVFou&#45;0007mF&#45;0n@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r27793 - /trunk/lib/sequence.py -- March 10, 2015 - 09:47</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r27793 - /trunk/lib/sequence.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00071" class="tabs">Index by Date</a> | <a href="threads.html#00071" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00070.html">Date Prev</a>] [<a href="msg00072.html">Date Next</a>] [<a href="msg00070.html">Thread Prev</a>] [<a href="msg00072.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 10 Mar 2015 08:47:19 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00071.html">E1YVFou-0007mF-0n@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on March 10, 2015 - 09:47:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Mar 10 09:47:19 2015
+New Revision: 27793
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=27793&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=27793&amp;view=rev</a>
+Log:
+Converted the lib.sequence.validate_sequence() to the checking function 
+design.
+
+This is the checking function design documented at
+<a  rel="nofollow" href="http://wiki.nmr-relax.com/Relax_source_design#The_check_.2A.28.29_functions">http://wiki.nmr-relax.com/Relax_source_design#The_check_.2A.28.29_functions</a>.  
+The
+validate_sequence() function has been renamed to check_sequence_func() and 
+the checking object is
+called check_sequence.  It removes the string processing hack to convert 
+RelaxErrors to
+RelaxWarnings in the lib.sequence.read_spin_data() function, avoiding strange 
+messages such at
+&quot;RelaxWarning: ror: The sequence data in the line...&quot; as seen in the
+Sequence.test_bug_23372_read_csv system test.
+
+
+Modified:
+    trunk/lib/sequence.py
+
+Modified: trunk/lib/sequence.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/lib/sequence.py?rev=27793&amp;r1=27792&amp;r2=27793&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/lib/sequence.py?rev=27793&amp;r1=27792&amp;r2=27793&amp;view=diff</a>
+==============================================================================
+--- trunk/lib/sequence.py       (original)
++++ trunk/lib/sequence.py       Tue Mar 10 09:47:19 2015
+@@ -28,6 +28,7 @@
+ from warnings import warn
+ 
+ # relax module imports.
++from lib.checks import Check
+ from lib.check_types import is_float
+ from lib.errors import RelaxError, RelaxInvalidSeqError
+ from lib.io import extract_data, open_write_file, strip, write_data
+@@ -81,6 +82,90 @@
+ 
+     # No code.
+     return '*'
++
++
++def check_sequence_func(data, spin_id_col=None, mol_name_col=None, 
+res_num_col=None, res_name_col=None, spin_num_col=None, spin_name_col=None, 
+data_col=None, error_col=None):
++    &quot;&quot;&quot;Test if the sequence data is valid.
++
++    The only function this performs is to raise a RelaxError if the data is 
+invalid.
++
++
++    @param data:            The sequence data.
++    @type data:             list of lists.
++    @keyword spin_id_col:   The column containing the spin ID strings.
++    @type spin_id_col:      int or None
++    @param mol_name_col:    The column containing the molecule name 
+information.
++    @type mol_name_col:     int or None
++    @param res_name_col:    The column containing the residue name 
+information.
++    @type res_name_col:     int or None
++    @param res_num_col:     The column containing the residue number 
+information.
++    @type res_num_col:      int or None
++    @param spin_name_col:   The column containing the spin name information.
++    @type spin_name_col:    int or None
++    @param spin_num_col:    The column containing the spin number 
+information.
++    @type spin_num_col:     int or None
++    &quot;&quot;&quot;
++
++    # Spin ID.
++    if spin_id_col:
++        if len(data) &lt; spin_id_col:
++            return RelaxInvalidSeqError(data, &quot;the Spin ID data is missing&quot;)
++
++    # Molecule name data.
++    if mol_name_col:
++        if len(data) &lt; mol_name_col:
++            return RelaxInvalidSeqError(data, &quot;the molecule name data is 
+missing&quot;)
++
++    # Residue number data.
++    if res_num_col:
++        # No data in column.
++        if len(data) &lt; res_num_col:
++            return RelaxInvalidSeqError(data, &quot;the residue number data is 
+missing&quot;)
++
++        # Bad data in column.
++        try:
++            res_num = eval(data[res_num_col-1])
++            if not (res_num == None or isinstance(res_num, int)):
++                return RelaxInvalidSeqError(data, &quot;the residue number data 
+'%s' is invalid&quot; % data[res_num_col-1])
++        except:
++            return RelaxInvalidSeqError(data, &quot;the residue number data '%s' 
+is invalid&quot; % data[res_num_col-1])
++
++    # Residue name data.
++    if res_name_col:
++        if len(data) &lt; res_name_col:
++            return RelaxInvalidSeqError(data, &quot;the residue name data is 
+missing&quot;)
++
++    # Spin number data.
++    if spin_num_col:
++        # No data in column.
++        if len(data) &lt; spin_num_col:
++            return RelaxInvalidSeqError(data, &quot;the spin number data is 
+missing&quot;)
++
++        # Bad data in column.
++        try:
++            res_num = eval(data[res_num_col-1])
++            if not (res_num == None or isinstance(res_num, int)):
++                return RelaxInvalidSeqError(data, &quot;the spin number data '%s' 
+is invalid&quot; % data[res_num_col-1])
++        except:
++            return RelaxInvalidSeqError(data, &quot;the spin number data '%s' is 
+invalid&quot; % data[res_num_col-1])
++
++    # Spin name data.
++    if spin_name_col:
++        if len(data) &lt; spin_name_col:
++            return RelaxInvalidSeqError(data, &quot;the spin name data is 
+missing&quot;)
++
++    # Data.
++    if data_col:
++        if len(data) &lt; data_col:
++            return RelaxInvalidSeqError(data, &quot;the data is missing&quot;)
++
++    # Errors
++    if error_col:
++        if len(data) &lt; error_col:
++            return RelaxInvalidSeqError(data, &quot;the error data is missing&quot;)
++
++# Create the checking object.
++check_sequence = Check(check_sequence_func)
+ 
+ 
+ def read_spin_data(file=None, dir=None, file_data=None, spin_id_col=None, 
+mol_name_col=None, res_num_col=None, res_name_col=None, spin_num_col=None, 
+spin_name_col=None, data_col=None, error_col=None, sep=None, spin_id=None):
+@@ -159,17 +244,7 @@
+ 
+         # Convert.
+         # Validate the sequence.
+-        try:
+-            validate_sequence(line, spin_id_col=spin_id_col, 
+mol_name_col=mol_name_col, res_num_col=res_num_col, 
+res_name_col=res_name_col, spin_num_col=spin_num_col, 
+spin_name_col=spin_name_col, data_col=data_col, error_col=error_col)
+-        except RelaxInvalidSeqError:
+-            # Extract the message string, without the RelaxError bit.
+-            msg = sys.exc_info()[1]
+-            string = msg.__str__()[12:-1]
+-
+-            # Give a warning.
+-            warn(RelaxWarning(string))
+-
+-            # Skip the line.
++        if not check_sequence(line, spin_id_col=spin_id_col, 
+mol_name_col=mol_name_col, res_num_col=res_num_col, 
+res_name_col=res_name_col, spin_num_col=spin_num_col, 
+spin_name_col=spin_name_col, data_col=data_col, error_col=error_col, 
+escalate=1):
+             continue
+ 
+         # Get the spin data from the ID.
+@@ -272,87 +347,6 @@
+     # Hmmm, no data!
+     if missing_data:
+         raise RelaxError(&quot;No corresponding data could be found within the 
+file.&quot;)
+-
+-
+-def validate_sequence(data, spin_id_col=None, mol_name_col=None, 
+res_num_col=None, res_name_col=None, spin_num_col=None, spin_name_col=None, 
+data_col=None, error_col=None):
+-    &quot;&quot;&quot;Test if the sequence data is valid.
+-
+-    The only function this performs is to raise a RelaxError if the data is 
+invalid.
+-
+-
+-    @param data:            The sequence data.
+-    @type data:             list of lists.
+-    @keyword spin_id_col:   The column containing the spin ID strings.
+-    @type spin_id_col:      int or None
+-    @param mol_name_col:    The column containing the molecule name 
+information.
+-    @type mol_name_col:     int or None
+-    @param res_name_col:    The column containing the residue name 
+information.
+-    @type res_name_col:     int or None
+-    @param res_num_col:     The column containing the residue number 
+information.
+-    @type res_num_col:      int or None
+-    @param spin_name_col:   The column containing the spin name information.
+-    @type spin_name_col:    int or None
+-    @param spin_num_col:    The column containing the spin number 
+information.
+-    @type spin_num_col:     int or None
+-    &quot;&quot;&quot;
+-
+-    # Spin ID.
+-    if spin_id_col:
+-        if len(data) &lt; spin_id_col:
+-            raise RelaxInvalidSeqError(data, &quot;the Spin ID data is missing&quot;)
+-
+-    # Molecule name data.
+-    if mol_name_col:
+-        if len(data) &lt; mol_name_col:
+-            raise RelaxInvalidSeqError(data, &quot;the molecule name data is 
+missing&quot;)
+-
+-    # Residue number data.
+-    if res_num_col:
+-        # No data in column.
+-        if len(data) &lt; res_num_col:
+-            raise RelaxInvalidSeqError(data, &quot;the residue number data is 
+missing&quot;)
+-
+-        # Bad data in column.
+-        try:
+-            res_num = eval(data[res_num_col-1])
+-            if not (res_num == None or isinstance(res_num, int)):
+-                raise ValueError
+-        except:
+-            raise RelaxInvalidSeqError(data, &quot;the residue number data '%s' 
+is invalid&quot; % data[res_num_col-1])
+-
+-    # Residue name data.
+-    if res_name_col:
+-        if len(data) &lt; res_name_col:
+-            raise RelaxInvalidSeqError(data, &quot;the residue name data is 
+missing&quot;)
+-
+-    # Spin number data.
+-    if spin_num_col:
+-        # No data in column.
+-        if len(data) &lt; spin_num_col:
+-            raise RelaxInvalidSeqError(data, &quot;the spin number data is 
+missing&quot;)
+-
+-        # Bad data in column.
+-        try:
+-            res_num = eval(data[res_num_col-1])
+-            if not (res_num == None or isinstance(res_num, int)):
+-                raise ValueError
+-        except:
+-            raise RelaxInvalidSeqError(data, &quot;the spin number data '%s' is 
+invalid&quot; % data[res_num_col-1])
+-
+-    # Spin name data.
+-    if spin_name_col:
+-        if len(data) &lt; spin_name_col:
+-            raise RelaxInvalidSeqError(data, &quot;the spin name data is missing&quot;)
+-
+-    # Data.
+-    if data_col:
+-        if len(data) &lt; data_col:
+-            raise RelaxInvalidSeqError(data, &quot;the data is missing&quot;)
+-
+-    # Errors
+-    if error_col:
+-        if len(data) &lt; error_col:
+-            raise RelaxInvalidSeqError(data, &quot;the error data is missing&quot;)
+ 
+ 
+ def write_spin_data(file, dir=None, sep=None, spin_ids=None, mol_names=None, 
+res_nums=None, res_names=None, spin_nums=None, spin_names=None, force=False, 
+data=None, data_name=None, error=None, error_name=None, 
+float_format=&quot;%20.15g&quot;):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Mar 10 10:00:02 2015</div>  
+</body>
+</html>

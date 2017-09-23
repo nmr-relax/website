@@ -1,0 +1,226 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r11395 &#45; /1.3/maths_fns/frame_order_matrix_ops.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 03 Aug 2010 22:48:06 +0200 -->
+<!--X-Message-Id: E1OgOP8&#45;0005Zt&#45;Hm@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r11395 - /1.3/maths_fns/frame_order_matrix_ops.py -- August 03, 2010 - 22:48</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r11395 - /1.3/maths_fns/frame_order_matrix_ops.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00009" class="tabs">Index by Date</a> | <a href="threads.html#00009" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00008.html">Date Prev</a>] [<a href="msg00010.html">Date Next</a>] [<a href="msg00008.html">Thread Prev</a>] [<a href="msg00010.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 03 Aug 2010 20:48:06 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00009.html">E1OgOP8-0005Zt-Hm@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on August 03, 2010 - 22:48:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Aug  3 22:48:06 2010
+New Revision: 11395
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=11395&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=11395&amp;view=rev</a>
+Log:
+Abstracted the common code in compile_2nd_matrix_*() into rotate_daeg().
+
+This will significantly simplify the addition of all of the 12 models.
+
+
+Modified:
+    1.3/maths_fns/frame_order_matrix_ops.py
+
+Modified: 1.3/maths_fns/frame_order_matrix_ops.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/maths_fns/frame_order_matrix_ops.py?rev=11395&amp;r1=11394&amp;r2=11395&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/maths_fns/frame_order_matrix_ops.py?rev=11395&amp;r1=11394&amp;r2=11395&amp;view=diff</a>
+==============================================================================
+--- 1.3/maths_fns/frame_order_matrix_ops.py (original)
++++ 1.3/maths_fns/frame_order_matrix_ops.py Tue Aug  3 22:48:06 2010
+@@ -154,23 +154,8 @@
+     matrix[2, 6] = matrix[6, 2] = fact * 
+quad(part_int_daeg2_pseudo_ellipse_26, -pi, pi, args=(theta_x, theta_y, 
+sigma_max), full_output=1)[0]
+     matrix[5, 7] = matrix[7, 5] = fact * 
+quad(part_int_daeg2_pseudo_ellipse_57, -pi, pi, args=(theta_x, theta_y, 
+sigma_max), full_output=1)[0]
+ 
+-    # Average position rotation.
+-    euler_to_R_zyz(eigen_alpha, eigen_beta, eigen_gamma, R)
+-
+-    # The outer product of R.
+-    R_kron = kron_prod(R, R)
+-
+-    # Perform the T23 transpose to obtain the Kronecker product matrix!
+-    transpose_23(matrix)
+-
+-    # Rotate.
+-    matrix = dot(R_kron, dot(matrix, transpose(R_kron)))
+-
+-    # Perform T23 again to return back.
+-    transpose_23(matrix)
+-
+-    # Return the matrix.
+-    return matrix
++    # Rotate and return the frame order matrix.
++    return rotate_daeg(matrix, R, eigen_alpha, eigen_beta, eigen_gamma)
+ 
+ 
+ def compile_2nd_matrix_pseudo_ellipse_free_rotor(matrix, R, eigen_alpha, 
+eigen_beta, eigen_gamma, theta_x, theta_y):
+@@ -209,23 +194,8 @@
+     # Off diagonal set 2.
+     matrix[1, 3] = matrix[3, 1] = -matrix[1, 1]
+ 
+-    # Average position rotation.
+-    euler_to_R_zyz(eigen_alpha, eigen_beta, eigen_gamma, R)
+-
+-    # The outer product of R.
+-    R_kron = kron_prod(R, R)
+-
+-    # Perform the T23 transpose to obtain the Kronecker product matrix!
+-    transpose_23(matrix)
+-
+-    # Rotate.
+-    matrix = dot(R_kron, dot(matrix, transpose(R_kron)))
+-
+-    # Perform T23 again to return back.
+-    transpose_23(matrix)
+-
+-    # Return the matrix.
+-    return matrix
++    # Rotate and return the frame order matrix.
++    return rotate_daeg(matrix, R, eigen_alpha, eigen_beta, eigen_gamma)
+ 
+ 
+ def compile_2nd_matrix_pseudo_ellipse_torsionless(matrix, R, eigen_alpha, 
+eigen_beta, eigen_gamma, theta_x, theta_y):
+@@ -271,23 +241,8 @@
+     matrix[2, 6] = matrix[6, 2] = fact * 
+quad(part_int_daeg2_pseudo_ellipse_torsionless_26, -pi, pi, args=(theta_x, 
+theta_y), full_output=1)[0]
+     matrix[5, 7] = matrix[7, 5] = fact * 
+quad(part_int_daeg2_pseudo_ellipse_torsionless_57, -pi, pi, args=(theta_x, 
+theta_y), full_output=1)[0]
+ 
+-    # Average position rotation.
+-    euler_to_R_zyz(eigen_alpha, eigen_beta, eigen_gamma, R)
+-
+-    # The outer product of R.
+-    R_kron = kron_prod(R, R)
+-
+-    # Perform the T23 transpose to obtain the Kronecker product matrix!
+-    transpose_23(matrix)
+-
+-    # Rotate.
+-    matrix = dot(R_kron, dot(matrix, transpose(R_kron)))
+-
+-    # Perform T23 again to return back.
+-    transpose_23(matrix)
+-
+-    # Return the matrix.
+-    return matrix
++    # Rotate and return the frame order matrix.
++    return rotate_daeg(matrix, R, eigen_alpha, eigen_beta, eigen_gamma)
+ 
+ 
+ def daeg_to_rotational_superoperator(daeg, Rsuper):
+@@ -1359,6 +1314,40 @@
+     red_tensor[4] = red_tensor[4] + (D[4, 8] + D[5, 7])*A[4]
+ 
+ 
++def rotate_daeg(matrix, R, eigen_alpha, eigen_beta, eigen_gamma):
++    &quot;&quot;&quot;Rotate the given frame order matrix.
++
++    @param matrix:      The Frame Order matrix, 2nd degree to be populated.
++    @type matrix:       numpy 9D, rank-2 array
++    @param R:           The rotation matrix to be populated.
++    @type R:            numpy 3D, rank-2 array
++    @param eigen_alpha: The eigenframe rotation alpha Euler angle.
++    @type eigen_alpha:  float
++    @param eigen_beta:  The eigenframe rotation beta Euler angle.
++    @type eigen_beta:   float
++    @param eigen_gamma: The eigenframe rotation gamma Euler angle.
++    @type eigen_gamma:  float
++    &quot;&quot;&quot;
++
++    # Average position rotation.
++    euler_to_R_zyz(eigen_alpha, eigen_beta, eigen_gamma, R)
++
++    # The outer product of R.
++    R_kron = kron_prod(R, R)
++
++    # Perform the T23 transpose to obtain the Kronecker product matrix!
++    transpose_23(matrix)
++
++    # Rotate.
++    matrix_rot = dot(R_kron, dot(matrix, transpose(R_kron)))
++
++    # Perform T23 again to return back.
++    transpose_23(matrix_rot)
++
++    # Return the matrix.
++    return matrix_rot
++
++
+ def tmax_pseudo_ellipse(phi, theta_x, theta_y):
+     &quot;&quot;&quot;The pseudo-ellipse tilt-torsion polar angle.
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Aug 03 23:20:02 2010</div>  
+</body>
+</html>

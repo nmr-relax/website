@@ -1,0 +1,151 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r4738 &#45; /branches/N_state_model/specific_fns/n_state_model.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 15 Jan 2008 14:03:15 +0100 -->
+<!--X-Message-Id: E1JElRj&#45;0007OA&#45;C1@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r4738 - /branches/N_state_model/specific_fns/n_state_model.py -- January 15, 2008 - 14:03</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r4738 - /branches/N_state_model/specific_fns/n_state_model.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00497" class="tabs">Index by Date</a> | <a href="threads.html#00497" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00496.html">Date Prev</a>] [<a href="msg00498.html">Date Next</a>] [<a href="msg00496.html">Thread Prev</a>] [<a href="msg00498.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 15 Jan 2008 13:03:15 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00497.html">E1JElRj-0007OA-C1@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on January 15, 2008 - 14:03:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Jan 15 14:03:14 2008
+New Revision: 4738
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=4738&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=4738&amp;view=rev</a>
+Log:
+The aligment tensor errors are now properly packed into a numpy array.
+
+The errors are all 1 if there are no loaded errors (to convert the chi2 func 
+to the SSE func).
+
+
+Modified:
+    branches/N_state_model/specific_fns/n_state_model.py
+
+Modified: branches/N_state_model/specific_fns/n_state_model.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/N_state_model/specific_fns/n_state_model.py?rev=4738&amp;r1=4737&amp;r2=4738&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/N_state_model/specific_fns/n_state_model.py?rev=4738&amp;r1=4737&amp;r2=4738&amp;view=diff</a>
+==============================================================================
+--- branches/N_state_model/specific_fns/n_state_model.py (original)
++++ branches/N_state_model/specific_fns/n_state_model.py Tue Jan 15 14:03:14 
+2008
+@@ -191,8 +191,9 @@
+         if constraints:
+             A, b = self.linear_constraints()
+ 
+-        # Create a list of all the reduced alignment tensor elements (for 
+the chi-squared function).
++        # Create a list of all the reduced alignment tensor elements and 
+their errors (for the chi-squared function).
+         red_tensor_elem = []
++        red_tensor_err = []
+         for tensor in cdp.align_tensors:
+             # Ignore the full tensors.
+             if not tensor.red:
+@@ -205,13 +206,27 @@
+             red_tensor_elem.append(tensor.Sxz)
+             red_tensor_elem.append(tensor.Syz)
+ 
+-        # Convert the reduced alignment tensor element list to a numpy array 
+(for the chi-squared function maths).
++            # Append the 5 unique error elements (if they exist).
++            if hasattr(tensor, 'Sxx_err'):
++                red_tensor_err.append(tensor.Sxx_err)
++                red_tensor_err.append(tensor.Syy_err)
++                red_tensor_err.append(tensor.Sxy_err)
++                red_tensor_err.append(tensor.Sxz_err)
++                red_tensor_err.append(tensor.Syz_err)
++
++            # Otherwise append errors of 1.0 to convert the chi-squared 
+equation to the SSE equation (for the tensors without errors).
++            else:
++                red_tensor_err = red_tensor_err + [1.0, 1.0, 1.0, 1.0, 1.0]
++
++        # Convert the reduced alignment tensor element lists into numpy 
+arrays (for the chi-squared function maths).
+         red_tensor_elem = array(red_tensor_elem, float64)
+-
+-        # The aligment tensor errors, if they exist.
+-        tensor_err = None
+-        if hasattr(cdp, 'align_tensor_errors'):
+-            tensor_err = cdp.align_tensor_errors
++        red_tensor_err = array(red_tensor_err, float64)
++
++        # Create a list of all the reduced alignment tensor element errors 
+(for the chi-squared function).
++        for tensor in cdp.align_tensors:
++            # Ignore the full tensors.
++            if not tensor.red:
++                continue
+ 
+         # Set up the class instance containing the target function.
+         model = N_state_opt(init_params=param_vector, data=cdp.align_tensor, 
+errors=tensor_err)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Jan 15 14:20:07 2008</div>  
+</body>
+</html>

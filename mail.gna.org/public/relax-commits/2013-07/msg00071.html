@@ -1,0 +1,216 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r20329 &#45; /branches/relax_disp/auto_analyses/relax_disp.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 16 Jul 2013 12:11:53 +0200 -->
+<!--X-Message-Id: E1Uz2Eb&#45;0004jd&#45;Fp@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r20329 - /branches/relax_disp/auto_analyses/relax_disp.py -- July 16, 2013 - 12:11</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r20329 - /branches/relax_disp/auto_analyses/relax_disp.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00071" class="tabs">Index by Date</a> | <a href="threads.html#00071" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00070.html">Date Prev</a>] [<a href="msg00072.html">Date Next</a>] [<a href="msg00070.html">Thread Prev</a>] [<a href="msg00072.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 16 Jul 2013 10:11:53 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00071.html">E1Uz2Eb-0004jd-Fp@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on July 16, 2013 - 12:11:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Jul 16 12:11:53 2013
+New Revision: 20329
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=20329&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=20329&amp;view=rev</a>
+Log:
+Added support for model nesting in the relaxation dispersion auto-analysis.
+
+This involves copying the parameters from the simpler nested model rather 
+than performing a full
+grid search.  This is currently used to handle all models with R20A and R20B 
+parameters where a
+simpler model with the single R20 parameter is optimised first.
+
+
+Modified:
+    branches/relax_disp/auto_analyses/relax_disp.py
+
+Modified: branches/relax_disp/auto_analyses/relax_disp.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/auto_analyses/relax_disp.py?rev=20329&amp;r1=20328&amp;r2=20329&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_disp/auto_analyses/relax_disp.py?rev=20329&amp;r1=20328&amp;r2=20329&amp;view=diff</a>
+==============================================================================
+--- branches/relax_disp/auto_analyses/relax_disp.py (original)
++++ branches/relax_disp/auto_analyses/relax_disp.py Tue Jul 16 12:11:53 2013
+@@ -23,6 +23,7 @@
+ &quot;&quot;&quot;The automatic relaxation dispersion protocol.&quot;&quot;&quot;
+ 
+ # Python module imports.
++from copy import deepcopy
+ from os import getcwd, sep
+ import sys
+ from warnings import warn
+@@ -31,10 +32,11 @@
+ from lib.list import unique_elements
+ from lib.text.sectioning import title, subtitle
+ from lib.warnings import RelaxWarning
++from pipe_control.mol_res_spin import return_spin, spin_loop
+ from pipe_control.pipes import has_pipe
+ from prompt.interpreter import Interpreter
+ from specific_analyses.relax_disp.disp_data import loop_frq
+-from specific_analyses.relax_disp.variables import CPMG_EXP, FIXED_TIME_EXP, 
+MODEL_CR72, MODEL_DPL94, MODEL_IT99, MODEL_LIST_CPMG, MODEL_LIST_R1RHO, 
+MODEL_LM63, MODEL_M61, MODEL_M61B, MODEL_R2EFF
++from specific_analyses.relax_disp.variables import CPMG_EXP, FIXED_TIME_EXP, 
+MODEL_CR72, MODEL_CR72_RED, MODEL_DPL94, MODEL_IT99, MODEL_LIST_CPMG, 
+MODEL_LIST_R1RHO, MODEL_LM63, MODEL_M61, MODEL_M61B, MODEL_NS_2SITE_STAR, 
+MODEL_NS_2SITE_STAR_RED, MODEL_R2EFF
+ from status import Status; status = Status()
+ 
+ 
+@@ -138,11 +140,68 @@
+             self.interpreter.spectrum.error_analysis(subset=ids)
+ 
+ 
+-    def optimise(self):
+-        &quot;&quot;&quot;Optimise the model.&quot;&quot;&quot;
++    def nesting(self, model=None):
++        &quot;&quot;&quot;Support for model nesting.
++
++        If model nesting is detected, the optimised parameters from the 
+simpler model will be used for the more complex model.  The method will then 
+signal if the nesting condition is met for the model, allowing the grid 
+search to be skipped.
++
++
++        @keyword model: The model to be optimised.
++        @type model:    str
++        @return:        True if the model is the more complex model in a 
+nested pair and the parameters of the simpler model have been copied.  False 
+otherwise.
++        @rtype:         bool
++        &quot;&quot;&quot;
++
++        # The simpler model.
++        nested_pipe = None
++        if model == MODEL_CR72:
++            nested_pipe = MODEL_CR72_RED
++        if model == MODEL_NS_2SITE_STAR:
++            nested_pipe = MODEL_NS_2SITE_STAR_RED
++
++        # The more complex of nested models.
++        if nested_pipe:
++            # Printout.
++            print(&quot;Model nesting detected, copying the optimised parameters 
+from the '%s' model rather than performing a grid search.&quot; % nested_pipe)
++
++            # Loop over the spins to copy the parameters.
++            for spin, spin_id in spin_loop(return_id=True):
++                # Get the nested spin.
++                nested_spin = return_spin(spin_id=spin_id, pipe=nested_pipe)
++
++                # The R20 parameters.
++                if hasattr(nested_spin, 'r2'):
++                    setattr(spin, 'r2a', deepcopy(nested_spin.r2))
++                    setattr(spin, 'r2b', deepcopy(nested_spin.r2))
++
++                # All other spin parameters.
++                for param in spin.params:
++                    if param in ['r2', 'r2a', 'r2b']:
++                        continue
++
++                    # Copy the parameter.
++                    setattr(spin, param, deepcopy(getattr(nested_spin, 
+param)))
++
++            # Nesting.
++            return True
++
++        # No nesting.
++        return False
++
++
++    def optimise(self, model=None):
++        &quot;&quot;&quot;Optimise the model, taking model nesting into account.
++
++        @keyword model: The model to be optimised.
++        @type model:    str
++        &quot;&quot;&quot;
++
++        # Nested model simplification.
++        nested = self.nesting(model=model)
+ 
+         # Grid search.
+-        self.interpreter.grid_search(inc=self.grid_inc)
++        if not nested:
++            self.interpreter.grid_search(inc=self.grid_inc)
+ 
+         # Minimise.
+         self.interpreter.minimise('simplex', func_tol=self.opt_func_tol, 
+max_iter=self.opt_max_iterations, constraints=True)
+@@ -189,7 +248,7 @@
+ 
+             # Optimise the model.
+             else:
+-                self.optimise()
++                self.optimise(model=model)
+ 
+             # Write out the results.
+             self.write_results(path=self.results_dir+sep+model, model=model)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Jul 16 14:00:01 2013</div>  
+</body>
+</html>

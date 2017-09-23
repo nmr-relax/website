@@ -1,0 +1,160 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r20702 &#45;	/branches/relax_disp/specific_analyses/relax_disp/disp_data.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 28 Aug 2013 10:53:57 +0200 -->
+<!--X-Message-Id: E1VEbVl&#45;0006aK&#45;0u@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r20702 -	/branches/relax_disp/specific_analyses/relax_disp/disp_data.py -- August 28, 2013 - 10:53</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r20702 -	/branches/relax_disp/specific_analyses/relax_disp/disp_data.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00219" class="tabs">Index by Date</a> | <a href="threads.html#00219" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00218.html">Date Prev</a>] [<a href="msg00220.html">Date Next</a>] [<a href="msg00218.html">Thread Prev</a>] [<a href="msg00220.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 28 Aug 2013 08:53:56 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00219.html">E1VEbVl-0006aK-0u@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on August 28, 2013 - 10:53:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Aug 28 10:53:56 2013
+New Revision: 20702
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=20702&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=20702&amp;view=rev</a>
+Log:
+Fix to allow R1 data to be randomised for Monte Carlo simulations for 
+off-resonance R1rho data.
+
+This is a temporary kludge for the dispersion analysis and needs to be 
+replaced by a cleaner
+solution via the base_data_loop() method.
+
+
+Modified:
+    branches/relax_disp/specific_analyses/relax_disp/disp_data.py
+
+Modified: branches/relax_disp/specific_analyses/relax_disp/disp_data.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp/disp_data.py?rev=20702&amp;r1=20701&amp;r2=20702&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp/disp_data.py?rev=20702&amp;r1=20701&amp;r2=20702&amp;view=diff</a>
+==============================================================================
+--- branches/relax_disp/specific_analyses/relax_disp/disp_data.py (original)
++++ branches/relax_disp/specific_analyses/relax_disp/disp_data.py Wed Aug 28 
+10:53:56 2013
+@@ -35,6 +35,7 @@
+ # Python module imports.
+ from math import atan, pi, sqrt
+ from numpy import float64, int32, ones, zeros
++from random import gauss
+ 
+ # relax module imports.
+ from lib.errors import RelaxError, RelaxNoSpectraError, RelaxSpinTypeError
+@@ -620,6 +621,31 @@
+     add_result_file(type='grace', label='Grace', file=file_path)
+ 
+ 
++def randomise_R1(spin=None, ri_id=None, N=None):
++    &quot;&quot;&quot;Randomise the R1 data for the given spin for use in the Monte Carlo 
+simulations.
++
++    @keyword spin:      The spin container to randomise the data for.
++    @type spin:         SpinContainer instance
++    @keyword ri_id:     The relaxation data ID string.
++    @type ri_id:        str
++    @keyword N:         The number of randomisations to perform.
++    @type N:            int
++    &quot;&quot;&quot;
++
++    # The data already exists.
++    if hasattr(spin, 'ri_data_sim') and ri_id in spin.ri_data_sim:
++        return
++
++    # Initialise the structure.
++    if not hasattr(spin, 'ri_data_sim'):
++        spin.ri_data_sim = {}
++    spin.ri_data_sim[ri_id] = []
++
++    # Randomise.
++    for i in range(N):
++        spin.ri_data_sim[ri_id].append(gauss(spin.ri_data[ri_id], 
+spin.ri_data_err[ri_id]))
++
++
+ def relax_time(time=0.0, spectrum_id=None):
+     &quot;&quot;&quot;Set the relaxation time period associated with a given spectrum.
+ 
+@@ -955,6 +981,11 @@
+ 
+         # Spin loop.
+         for spin_index in range(spin_num):
++            # FIXME:  This is a kludge - the data randomisation needs to be 
+incorporated into the dispersion base_data_loop() method and the standard 
+Monte Carlo simulation pathway used.
++            # Randomise the R1 data, when required.
++            if sim_index != None and (not hasattr(spins[spin_index], 
+'ri_data_sim') or ri_id not in spins[spin_index].ri_data_sim):
++                randomise_R1(spin=spins[spin_index], ri_id=ri_id, 
+N=cdp.sim_number)
++
+             # Store the data.
+             if sim_index != None:
+                 r1[spin_index, frq_index] = 
+spins[spin_index].ri_data_sim[ri_id][sim_index]
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Aug 28 14:20:02 2013</div>  
+</body>
+</html>

@@ -1,0 +1,189 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r5572 &#45; /1.3/generic_fns/results.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 10 Apr 2008 17:49:26 +0200 -->
+<!--X-Message-Id: E1Jjz1h&#45;000227&#45;Rs@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r5572 - /1.3/generic_fns/results.py -- April 10, 2008 - 17:49</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r5572 - /1.3/generic_fns/results.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00330" class="tabs">Index by Date</a> | <a href="threads.html#00330" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00329.html">Date Prev</a>] [<a href="msg00331.html">Date Next</a>] [<a href="msg00329.html">Thread Prev</a>] [<a href="msg00331.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 10 Apr 2008 15:49:25 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00330.html">E1Jjz1h-000227-Rs@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on April 10, 2008 - 17:49:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Apr 10 17:49:25 2008
+New Revision: 5572
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=5572&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=5572&amp;view=rev</a>
+Log:
+Converted the read() function to the new relax design.
+
+
+Modified:
+    1.3/generic_fns/results.py
+
+Modified: 1.3/generic_fns/results.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/generic_fns/results.py?rev=5572&amp;r1=5571&amp;r2=5572&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/generic_fns/results.py?rev=5572&amp;r1=5571&amp;r2=5572&amp;view=diff</a>
+==============================================================================
+--- 1.3/generic_fns/results.py (original)
++++ 1.3/generic_fns/results.py Thu Apr 10 17:49:25 2008
+@@ -26,7 +26,7 @@
+ # relax module imports.
+ from data import Data as relax_data_store
+ from relax_errors import RelaxError, RelaxFileEmptyError, RelaxNoPipeError
+-from relax_io import open_write_file
++from relax_io import extract_data, open_write_file, strip
+ from specific_fns.setup import get_specific_fn, get_string
+ 
+ 
+@@ -78,58 +78,42 @@
+     self.write_function(sys.stdout, run)
+ 
+ 
+-def read(run=None, file='results', directory=None, file_data=None, 
+format='columnar', verbosity=1):
++def read(file='results', directory=None, file_data=None, format='columnar', 
+verbosity=1):
+     &quot;&quot;&quot;Function for reading the data out of a file.&quot;&quot;&quot;
+ 
+-    # Test if the run exists.
+-    if not run in relax_data_store.run_names:
+-        raise RelaxNoPipeError, run
++    # Test if the current data pipe exists.
++    if not relax_data_store.current_pipe:
++        raise RelaxNoPipeError
+ 
+-    # Function type.
+-    function_type = 
+relax_data_store.run_types[relax_data_store.run_names.index(run)]
+-
+-    # Equation type specific function setup.
++    # Specific results writing function.
+     if format == 'xml':
+         format = 'XML'
+-        self.read_function = 
+self.relax.specific_setup.setup('read_xml_results', function_type)
++        read_function = get_specific_fn('read_xml_results', 
+relax_data_store[relax_data_store.current_pipe].pipe_type, raise_error=False)
+     elif format == 'columnar':
+-        self.read_function = 
+self.relax.specific_setup.setup('read_columnar_results', function_type)
++        read_function = get_specific_fn('read_columnar_results', 
+relax_data_store[relax_data_store.current_pipe].pipe_type, raise_error=False)
+     else:
+         raise RelaxError, &quot;Unknown format &quot; + `format` + &quot;.&quot;
+ 
+     # No function.
+-    if not self.read_function:
++    if not read_function:
+         raise RelaxError, &quot;The &quot; + format + &quot; format is not currently 
+supported for &quot; + self.relax.specific_setup.get_string(function_type) + &quot;.&quot;
+ 
+-    # The directory.
+-    if directory == 'run':
+-        directory = run
+-
+-    # Make sure that there are no data structures corresponding to the run.
+-    for data_name in dir(relax_data_store):
+-        # Get the object.
+-        data = getattr(relax_data_store, data_name)
+-
+-        # Skip the data if it is not a dictionary (or equivalent).
+-        if not hasattr(data, 'has_key'):
+-            continue
+-
+-        # Skip the data if it doesn't contain the key 'old_run'.
+-        if data.has_key(run):
+-            raise RelaxError, &quot;Data corresponding to the run &quot; + `run` + &quot; 
+exists.&quot;
++    # Make sure that the data pipe is empty.
++    if not relax_data_store[relax_data_store.current_pipe].is_empty():
++        raise RelaxError, &quot;The current data pipe is not empty.&quot;
+ 
+     # Extract the data from the file.
+-    file_data = self.relax.IO.extract_data(file_name=file, dir=directory, 
+file_data=file_data)
++    file_data = extract_data(file_name=file, dir=directory, 
+file_data=file_data)
+ 
+     # Strip data.
+-    file_data = self.relax.IO.strip(file_data)
++    file_data = strip(file_data)
+ 
+     # Do nothing if the file does not exist.
+     if not file_data:
+         raise RelaxFileEmptyError
+ 
+     # Read the results.
+-    self.read_function(run, file_data, verbosity)
++    read_function(file_data, verbosity)
+ 
+ 
+ def write(file=&quot;results&quot;, directory=None, force=False, format='columnar', 
+compress_type=1, verbosity=1):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Apr 10 18:00:22 2008</div>  
+</body>
+</html>

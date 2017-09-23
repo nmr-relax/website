@@ -1,0 +1,194 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r18874 &#45; in /trunk/generic_fns/structure: internal.py pdb_write.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 19 Mar 2013 13:48:36 +0100 -->
+<!--X-Message-Id: E1UHvy0&#45;0002IX&#45;2w@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r18874 - in /trunk/generic_fns/structure: internal.py pdb_write.py -- March 19, 2013 - 13:48</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r18874 - in /trunk/generic_fns/structure: internal.py pdb_write.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00292" class="tabs">Index by Date</a> | <a href="threads.html#00292" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00291.html">Date Prev</a>] [<a href="msg00293.html">Date Next</a>] [<a href="msg00291.html">Thread Prev</a>] [<a href="msg00293.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 19 Mar 2013 12:48:35 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00292.html">E1UHvy0-0002IX-2w@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on March 19, 2013 - 13:48:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Mar 19 13:48:34 2013
+New Revision: 18874
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=18874&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=18874&amp;view=rev</a>
+Log:
+HELIX PDB records are now read, stored, and written out by the internal 
+structural object.
+
+This affects the structure.read_pdb and structure.write_pdb user functions.  
+The helix is stored as
+a metadata type object - its elements do not correspond to the atoms in the 
+structural object.
+
+
+Modified:
+    trunk/generic_fns/structure/internal.py
+    trunk/generic_fns/structure/pdb_write.py
+
+Modified: trunk/generic_fns/structure/internal.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/generic_fns/structure/internal.py?rev=18874&amp;r1=18873&amp;r2=18874&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/generic_fns/structure/internal.py?rev=18874&amp;r1=18873&amp;r2=18874&amp;view=diff</a>
+==============================================================================
+--- trunk/generic_fns/structure/internal.py (original)
++++ trunk/generic_fns/structure/internal.py Tue Mar 19 13:48:34 2013
+@@ -444,6 +444,16 @@
+             # No match, therefore assume to be out of the secondary 
+structure section.
+             if lines[i][:6] not in records:
+                 break
++
++            # A helix.
++            if lines[i][:5] == 'HELIX':
++                # Parse the record.
++                record_type, ser_num, helix_id, init_res_name, 
+init_chain_id, init_seq_num, init_icode, end_res_name, end_chain_id, 
+end_seq_num, end_icode, helix_class, comment, length = 
+pdb_read.helix(lines[i])
++
++                # Store the data.
++                if not hasattr(self, 'helices'):
++                    self.helices = []
++                self.helices.append([helix_id, init_chain_id, init_res_name, 
+init_seq_num, end_chain_id, end_res_name, end_seq_num, helix_class, length])
+ 
+         # Return the remaining lines.
+         return lines[i:]
+@@ -1851,6 +1861,23 @@
+             pdb_write.formul(file, comp_num=i+1, het_id=het[1], text=formula)
+ 
+ 
++        ###############################
++        # Secondary structure section #
++        ###############################
++
++        # The HELIX records.
++        ####################
++
++        # Printout.
++        print(&quot;HELIX&quot;)
++
++        # Loop over and unpack the helix data.
++        index = 1
++        for helix_id, init_chain_id, init_res_name, init_seq_num, 
+end_chain_id, end_res_name, end_seq_num, helix_class, length in self.helices:
++            pdb_write.helix(file, ser_num=index, helix_id=helix_id, 
+init_chain_id=init_chain_id, init_res_name=init_res_name, 
+init_seq_num=init_seq_num, end_chain_id=end_chain_id, 
+end_res_name=end_res_name, end_seq_num=end_seq_num, helix_class=helix_class, 
+length=length)
++            index += 1
++
++
+         ######################
+         # Coordinate section #
+         ######################
+
+Modified: trunk/generic_fns/structure/pdb_write.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/generic_fns/structure/pdb_write.py?rev=18874&amp;r1=18873&amp;r2=18874&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/generic_fns/structure/pdb_write.py?rev=18874&amp;r1=18873&amp;r2=18874&amp;view=diff</a>
+==============================================================================
+--- trunk/generic_fns/structure/pdb_write.py (original)
++++ trunk/generic_fns/structure/pdb_write.py Tue Mar 19 13:48:34 2013
+@@ -686,7 +686,7 @@
+     file.write('\n')
+ 
+ 
+-def helix(file, ser_num='', helix_id='', init_res_name='', init_chain_id='', 
+init_seq_id='', init_icode='', end_res_name='', end_chain_id='', 
+end_seq_num='', end_icode='', helix_class='', comment='', length=''):
++def helix(file, ser_num='', helix_id='', init_res_name='', init_chain_id='', 
+init_seq_num='', init_icode='', end_res_name='', end_chain_id='', 
+end_seq_num='', end_icode='', helix_class='', comment='', length=''):
+     &quot;&quot;&quot;Generate the HELIX record.
+ 
+     The following is the PDB v3.3 documentation 
+U{<a  rel="nofollow" href="http://www.wwpdb.org/documentation/format33/sect5.html#HELIX}">http://www.wwpdb.org/documentation/format33/sect5.html#HELIX}</a>.
+@@ -788,8 +788,8 @@
+     @type init_res_name:    str
+     @keyword init_chain_id: The chain identifier
+     @type init_chain_id:    str
+-    @keyword init_seq_id:   The sequence number of the initial residue
+-    @type init_seq_id:      int
++    @keyword init_seq_num:  The sequence number of the initial residue
++    @type init_seq_num:     int
+     @keyword init_icode:    The insertion code of the initial residue
+     @type init_icode:       str
+     @keyword end_res_name:  The name of the terminal residue
+@@ -815,7 +815,7 @@
+         _handle_none(helix_id),
+         _handle_none(init_res_name),
+         _handle_none(init_chain_id),
+-        _handle_none(init_seq_id),
++        _handle_none(init_seq_num),
+         _handle_none(init_icode),
+         _handle_none(end_res_name),
+         _handle_none(end_chain_id),
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Mar 19 14:00:02 2013</div>  
+</body>
+</html>

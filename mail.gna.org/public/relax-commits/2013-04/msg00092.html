@@ -1,0 +1,214 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r19373 &#45; /branches/relax_disp/specific_analyses/relax_disp.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 04 Apr 2013 22:22:43 +0200 -->
+<!--X-Message-Id: E1UNqgF&#45;0007aL&#45;Pq@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r19373 - /branches/relax_disp/specific_analyses/relax_disp.py -- April 04, 2013 - 22:22</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r19373 - /branches/relax_disp/specific_analyses/relax_disp.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00092" class="tabs">Index by Date</a> | <a href="threads.html#00092" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00091.html">Date Prev</a>] [<a href="msg00093.html">Date Next</a>] [<a href="msg00091.html">Thread Prev</a>] [<a href="msg00093.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 04 Apr 2013 20:22:43 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00092.html">E1UNqgF-0007aL-Pq@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on April 04, 2013 - 22:22:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Apr  4 22:22:43 2013
+New Revision: 19373
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=19373&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=19373&amp;view=rev</a>
+Log:
+The relaxation dispersion specific _disassemble_param_vector() method is now 
+functional.
+
+This should allow the minimise user function to complete.
+
+
+Modified:
+    branches/relax_disp/specific_analyses/relax_disp.py
+
+Modified: branches/relax_disp/specific_analyses/relax_disp.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp.py?rev=19373&amp;r1=19372&amp;r2=19373&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp.py?rev=19373&amp;r1=19372&amp;r2=19373&amp;view=diff</a>
+==============================================================================
+--- branches/relax_disp/specific_analyses/relax_disp.py (original)
++++ branches/relax_disp/specific_analyses/relax_disp.py Thu Apr  4 22:22:43 
+2013
+@@ -417,45 +417,82 @@
+         @type sim_index:        int
+         &quot;&quot;&quot;
+ 
+-        # Monte Carlo simulations.
+-        if sim_index != None:
++        # Initialise.
++        param_index = 0
++
++        # First add the spin specific parameters.
++        for spin_index in range(len(spins)):
++            # Alias the spin.
++            spin = spins[spin_index]
++
++            # Loop over each exponential curve.
++            for exp_index, key in self._exp_curve_loop():
++                index = spin_index * 2 * cdp.curve_count + exp_index * 
+cdp.curve_count
++                param_index += 2
++
++                # Loop over the model parameters.
++                for i in range(len(spin.params)):
++                    # Effective transversal relaxation rate.
++                    if spin.params[i] == 'R2eff':
++                        if sim_index != None:
++                            spin.r2eff_sim[key][sim_index] = 
+param_vector[index]
++                        else:
++                            spin.r2eff[key] = param_vector[index]
++
++                    # Initial intensity.
++                    elif spin.params[i] == 'I0':
++                        if sim_index != None:
++                            spin.i0_sim[key][sim_index] = 
+param_vector[index+1]
++                        else:
++                            spin.i0[key] = param_vector[index+1]
++
++        # Then the spin block specific parameters, taking the values from 
+the first spin.
++        spin = spins[0]
++        for i in range(len(spin.params)):
+             # Transversal relaxation rate.
+-            spin.r2_sim[sim_index] = param_vector[0]
++            if spin.params[i] == 'R2':
++                if sim_index != None:
++                    spin.r2_sim[sim_index] = param_vector[param_index]
++                else:
++                    spin.r2 = param_vector[param_index]
+ 
+             # Chemical exchange contribution to 'R2'.
+-            spin.rex_sim[sim_index] = param_vector[1]
++            if spin.params[i] == 'Rex':
++                if sim_index != None:
++                    spin.rex_sim[sim_index] = param_vector[param_index]
++                else:
++                    spin.rex = param_vector[param_index]
+ 
+             # Exchange rate.
+-            spin.kex_sim[sim_index] = param_vector[2]
++            elif spin.params[i] == 'kex':
++                if sim_index != None:
++                    spin.kex_sim[sim_index] = param_vector[param_index]
++                else:
++                    spin.kex = param_vector[param_index]
+ 
+             # Transversal relaxation rate for state A.
+-            spin.r2a_sim[sim_index] = param_vector[3]
++            if spin.params[i] == 'R2A':
++                if sim_index != None:
++                    spin.r2a_sim[sim_index] = param_vector[param_index]
++                else:
++                    spin.r2a = param_vector[param_index]
+ 
+             # Exchange rate from state A to state B.
+-            spin.ka_sim[sim_index] = param_vector[4]
++            if spin.params[i] == 'kA':
++                if sim_index != None:
++                    spin.ka_sim[sim_index] = param_vector[param_index]
++                else:
++                    spin.ka = param_vector[param_index]
+ 
+             # Chemical shift difference between states A and B.
+-            spin.dw_sim[sim_index] = param_vector[5]
+-
+-        # Parameter values.
+-        else:
+-            # Transversal relaxation rate.
+-            spin.r2 = param_vector[0]
+-
+-            # Chemical exchange contribution to 'R2'.
+-            spin.rex = param_vector[1]
+-
+-            # Exchange rate.
+-            spin.kex = param_vector[2]
+-
+-            # Transversal relaxation rate for state A.
+-            spin.r2a = param_vector[3]
+-
+-            # Exchange rate from state A to state B.
+-            spin.ka = param_vector[4]
+-
+-            # Chemical shift difference between states A and B.
+-            spin.dw = param_vector[5]
++            if spin.params[i] == 'dw':
++                if sim_index != None:
++                    spin.dw_sim[sim_index] = param_vector[param_index]
++                else:
++                    spin.dw = param_vector[param_index]
++
++            # Increment the parameter index.
++            param_index = param_index + 1
+ 
+ 
+     def _exp_curve_loop(self):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Apr 04 22:40:02 2013</div>  
+</body>
+</html>

@@ -1,0 +1,212 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r7464 &#45; /branches/pipe_refs/generic_fns/relax_data.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 30 Sep 2008 18:01:10 +0200 -->
+<!--X-Message-Id: E1Kkhew&#45;0008HZ&#45;EV@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r7464 - /branches/pipe_refs/generic_fns/relax_data.py -- September 30, 2008 - 18:01</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r7464 - /branches/pipe_refs/generic_fns/relax_data.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00236" class="tabs">Index by Date</a> | <a href="threads.html#00236" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00235.html">Date Prev</a>] [<a href="msg00237.html">Date Next</a>] [<a href="msg00235.html">Thread Prev</a>] [<a href="msg00237.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 30 Sep 2008 16:01:10 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00236.html">E1Kkhew-0008HZ-EV@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on September 30, 2008 - 18:01:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Sep 30 18:01:09 2008
+New Revision: 7464
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=7464&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=7464&amp;view=rev</a>
+Log:
+Converted the back_calc() function to the new relax design.
+
+
+Modified:
+    branches/pipe_refs/generic_fns/relax_data.py
+
+Modified: branches/pipe_refs/generic_fns/relax_data.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/pipe_refs/generic_fns/relax_data.py?rev=7464&amp;r1=7463&amp;r2=7464&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/pipe_refs/generic_fns/relax_data.py?rev=7464&amp;r1=7463&amp;r2=7464&amp;view=diff</a>
+==============================================================================
+--- branches/pipe_refs/generic_fns/relax_data.py (original)
++++ branches/pipe_refs/generic_fns/relax_data.py Tue Sep 30 18:01:09 2008
+@@ -33,6 +33,7 @@
+ from generic_fns import pipes
+ from relax_errors import RelaxError, RelaxNoRiError, RelaxNoSequenceError, 
+RelaxNoSpinError, RelaxRiError
+ from relax_io import extract_data, strip
++from specific_fns.setup import get_specific_fn
+ 
+ 
+ def add_data_to_spin(spin=None, ri_labels=None, remap_table=None, 
+frq_labels=None, frq=None, values=None, errors=None, sim=False):
+@@ -140,71 +141,67 @@
+ 
+ 
+ def back_calc(ri_label=None, frq_label=None, frq=None):
+-    &quot;&quot;&quot;Function for back calculating relaxation data.&quot;&quot;&quot;
++    &quot;&quot;&quot;Back calculate the relaxation data.
++
++    @param ri_label:    The relaxation data type, ie 'R1', 'R2', or 'NOE'.
++    @type ri_label:     str
++    @param frq_label:   The field strength label.
++    @type frq_label:    str
++    @param frq:         The spectrometer proton frequency in Hz.
++    @type frq:          float
++    &quot;&quot;&quot;
+ 
+     # Test if the current pipe exists.
+     pipes.test()
++
++    # Get the current data pipe.
++    cdp = pipes.get_pipe()
+ 
+     # Test if sequence data is loaded.
+     if not exists_mol_res_spin_data():
+         raise RelaxNoSequenceError
+ 
+-    # Test if relaxation data corresponding to 'self.ri_label' and 
+'self.frq_label' already exists.
+-    if self.test_labels():
+-        raise RelaxRiError, (self.ri_label, self.frq_label)
++    # Test if relaxation data corresponding to 'ri_label' and 'frq_label' 
+already exists.
++    if test_labels():
++        raise RelaxRiError, (ri_label, frq_label)
+ 
+ 
+     # Global (non-residue specific) data.
+     #####################################
+ 
+     # Global data flag.
+-    self.global_flag = 1
++    global_flag = 1
+ 
+     # Initialise the global data if necessary.
+-    self.data_init(ds)
++    data_init(cdp)
+ 
+     # Update the global data.
+-    self.update_data_structures_pipe(ri_label, frq_label, frq)
++    update_data_structures_pipe(ri_label, frq_label, frq)
+ 
+ 
+     # Residue specific data.
+     ########################
+ 
+     # Global data flag.
+-    self.global_flag = 0
+-
+-    # Function type.
+-    function_type = ds.run_types[ds.run_names.index(self.run)]
++    global_flag = 0
+ 
+     # Specific back-calculate function setup.
+-    back_calculate = self.relax.specific_setup.setup('back_calc', 
+function_type)
+-
+-    # Loop over the sequence.
+-    for i in xrange(len(ds.res[self.run])):
+-        # Remap the data structure 'ds.res[self.run][i]'.
+-        data = ds.res[self.run][i]
+-
+-        # Skip deselected residues.
+-        if not data.select:
++    back_calculate = get_specific_fn('back_calc', pipes.get_type())
++
++    # Loop over the spins.
++    for spin in spin_loop():
++        # Skip deselected spins.
++        if not spin.select:
+             continue
+ 
+-        # Store a copy of all the data in 'ds.res[self.run][i]' for backing 
+up if the back_calculation function fails.
+-        back_up = deepcopy(data)
+-
+         # Initialise all data structures.
+-        self.update_data_structures_spin(data, ri_label, frq_label, frq)
++        update_data_structures_spin(spin, ri_label, frq_label, frq)
+ 
+         # Back-calculate the relaxation value.
+-        try:
+-            value = back_calculate(run=self.run, index=i, 
+ri_label=self.ri_label, frq_label=frq_label, frq=self.frq)
+-        except:
+-            # Restore the data.
+-            ds.res[self.run][i] = deepcopy(back_up)
+-            del back_up
+-            raise
++        value = back_calculate(spin=spin, ri_label=ri_label, 
+frq_label=frq_label, frq=frq)
+ 
+         # Update all data structures.
+-        self.update_data_structures_spin(data, ri_label, frq_label, frq, 
+value)
++        update_data_structures_spin(spin, ri_label, frq_label, frq, value)
+ 
+ 
+ def copy(pipe_from=None, pipe_to=None, ri_label=None, frq_label=None):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Sep 30 18:20:05 2008</div>  
+</body>
+</html>

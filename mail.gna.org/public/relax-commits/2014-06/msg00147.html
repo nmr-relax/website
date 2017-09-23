@@ -1,0 +1,171 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r23760 &#45; /branches/disp_spin_speed/target_functions/relax_disp.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 10 Jun 2014 01:01:49 +0200 -->
+<!--X-Message-Id: E1Wu8ZZ&#45;0004Mo&#45;Jv@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r23760 - /branches/disp_spin_speed/target_functions/relax_disp.py -- June 10, 2014 - 01:01</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r23760 - /branches/disp_spin_speed/target_functions/relax_disp.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00147" class="tabs">Index by Date</a> | <a href="threads.html#00147" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00146.html">Date Prev</a>] [<a href="msg00148.html">Date Next</a>] [<a href="msg00146.html">Thread Prev</a>] [<a href="msg00148.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 09 Jun 2014 23:01:49 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00147.html">E1Wu8ZZ-0004Mo-Jv@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on June 10, 2014 - 01:01:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Tue Jun 10 01:01:49 2014
+New Revision: 23760
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=23760&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=23760&amp;view=rev</a>
+Log:
+Moved the calculation of pA and kex out off all loopes.
+
+This was done by having two special 1/0 spin structure arrays.
+
+Task #7807 (<a  rel="nofollow" href="https://gna.org/task/index.php?7807">https://gna.org/task/index.php?7807</a>): Speed-up of dispersion 
+models for Clustered analysis.
+
+Modified:
+    branches/disp_spin_speed/target_functions/relax_disp.py
+
+Modified: branches/disp_spin_speed/target_functions/relax_disp.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/disp_spin_speed/target_functions/relax_disp.py?rev=23760&amp;r1=23759&amp;r2=23760&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/disp_spin_speed/target_functions/relax_disp.py?rev=23760&amp;r1=23759&amp;r2=23760&amp;view=diff</a>
+==============================================================================
+--- branches/disp_spin_speed/target_functions/relax_disp.py     (original)
++++ branches/disp_spin_speed/target_functions/relax_disp.py     Tue Jun 10 
+01:01:49 2014
+@@ -419,9 +419,7 @@
+             # The number of disp point can change per spectrometer, so we 
+make the maximum size.
+             self.R20A_a = deepcopy(self.ones_a)
+             self.R20B_a = deepcopy(self.ones_a)
+-            self.pA_a = deepcopy(self.zeros_a)
+             self.dw_frq_a = deepcopy(self.ones_a)
+-            self.kex_a = deepcopy(self.ones_a)
+             self.cpmg_frqs_a = deepcopy(self.ones_a)
+             self.num_disp_points_a = deepcopy(self.ones_a)
+             self.back_calc_a = deepcopy(self.ones_a)
+@@ -430,6 +428,7 @@
+             self.has_missing = False
+             self.frqs_a = deepcopy(self.zeros_a)
+             self.spins_a = deepcopy(self.zeros_a)
++            self.not_spins_a = deepcopy(self.ones_a)
+ 
+ 
+             # Loop over the experiment types.
+@@ -456,6 +455,7 @@
+                             
+                             # Make a spin 1/0 file.
+                             self.spins_a[ei][si][mi][oi][:num_disp_points] = 
+ones(num_disp_points)
++                            
+self.not_spins_a[ei][si][mi][oi][:num_disp_points] = zeros(num_disp_points)
+ 
+                             for di in 
+range(self.num_disp_points[ei][si][mi][oi]):
+                                 if self.missing[ei][si][mi][oi][di]:
+@@ -546,15 +546,15 @@
+         # Convert dw from ppm to rad/s.
+         self.dw_frq_a = dw_axis*self.spins_a*self.frqs_a
+ 
++        # Calculate pA and kex per frequency.
++        pA_arr = pA*self.spins_a
++        kex_arr = kex*self.spins_a + self.not_spins_a
++
+         # Loop over the spectrometer frequencies.
+         for mi in range(self.num_frq):
+             # Extract number of dispersion points. Always the same per sin.
+             num_disp_points = self.num_disp_points[0][0][mi][0]
+ 
+-            # Calculate pA and kex per frequency.
+-            pA_arr = array( [pA] * num_disp_points, float64)
+-            kex_arr =  array( [kex] * num_disp_points, float64)
+-
+             # Loop over the spins.
+             for si in range(self.num_spins):
+                 # The R20 index.
+@@ -564,12 +564,8 @@
+                 self.R20A_a[0][si][mi][0][:num_disp_points] = array( 
+[R20A[r20_index]] * num_disp_points, float64)
+                 self.R20B_a[0][si][mi][0][:num_disp_points]  = array( 
+[R20B[r20_index]] * num_disp_points, float64)
+ 
+-                # Store pA and kex per disp point.
+-                self.pA_a[0][si][mi][0][:num_disp_points] = pA_arr
+-                self.kex_a[0][si][mi][0][:num_disp_points] = kex_arr
+-
+         ## Back calculate the R2eff values.
+-        r2eff_CR72(r20a=self.R20A_a, r20b=self.R20B_a, pA=self.pA_a, 
+dw=self.dw_frq_a, kex=self.kex_a, cpmg_frqs=self.cpmg_frqs_a, 
+back_calc=self.back_calc_a, num_points=self.num_disp_points_a)
++        r2eff_CR72(r20a=self.R20A_a, r20b=self.R20B_a, pA=pA_arr, 
+dw=self.dw_frq_a, kex=kex_arr, cpmg_frqs=self.cpmg_frqs_a, 
+back_calc=self.back_calc_a, num_points=self.num_disp_points_a)
+ 
+         ## For all missing data points, set the back-calculated value to the 
+measured values so that it has no effect on the chi-squared value.
+         if self.has_missing:
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Jun 10 01:20:02 2014</div>  
+</body>
+</html>

@@ -1,0 +1,225 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r14198 &#45; /branches/gui_testing/generic_fns/pipes.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Sat, 06 Aug 2011 15:20:32 +0200 -->
+<!--X-Message-Id: E1Qpgnn&#45;0003oN&#45;WC@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r14198 - /branches/gui_testing/generic_fns/pipes.py -- August 06, 2011 - 15:20</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r14198 - /branches/gui_testing/generic_fns/pipes.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00178" class="tabs">Index by Date</a> | <a href="threads.html#00178" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00177.html">Date Prev</a>] [<a href="msg00179.html">Date Next</a>] [<a href="msg00177.html">Thread Prev</a>] [<a href="msg00179.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Sat, 06 Aug 2011 13:20:31 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00178.html">E1Qpgnn-0003oN-WC@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on August 06, 2011 - 15:20:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Sat Aug  6 15:20:31 2011
+New Revision: 14198
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=14198&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=14198&amp;view=rev</a>
+Log:
+Most of the data pipe functions are now using the data pipe locking object 
+status.pipe_lock.
+
+The functions which acquire the lock object and which modify the pipe state 
+include:
+    copy()
+    create()
+    delete()
+    switch()
+
+The functions which acquire the lock object to prevent changes while they 
+execute include:
+    display()
+    pipe_loop()
+
+
+Modified:
+    branches/gui_testing/generic_fns/pipes.py
+
+Modified: branches/gui_testing/generic_fns/pipes.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/gui_testing/generic_fns/pipes.py?rev=14198&amp;r1=14197&amp;r2=14198&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/gui_testing/generic_fns/pipes.py?rev=14198&amp;r1=14197&amp;r2=14198&amp;view=diff</a>
+==============================================================================
+--- branches/gui_testing/generic_fns/pipes.py (original)
++++ branches/gui_testing/generic_fns/pipes.py Sat Aug  6 15:20:31 2011
+@@ -54,12 +54,18 @@
+     if pipe_to in list(ds.keys()):
+         raise RelaxPipeError(pipe_to)
+ 
++    # Acquire the pipe lock.
++    status.pipe_lock.acquire()
++
+     # The current data pipe.
+     if pipe_from == None:
+         pipe_from = cdp_name()
+ 
+     # Copy the data.
+     ds[pipe_to] = ds[pipe_from].__clone__()
++
++    # Release the lock.
++    status.pipe_lock.release()
+ 
+     # Notify observers that a pipe change has occurred.
+     status.observers.pipe_alteration.notify()
+@@ -100,8 +106,14 @@
+     if pipe_type == 'frame order' and not scipy_module:
+         raise RelaxError(&quot;The frame order analysis is not available.  Please 
+install the scipy Python package.&quot;)
+ 
++    # Acquire the pipe lock.
++    status.pipe_lock.acquire()
++
+     # Add the data pipe.
+     ds.add(pipe_name=pipe_name, pipe_type=pipe_type, switch=switch)
++
++    # Release the lock.
++    status.pipe_lock.release()
+ 
+ 
+ def cdp_name():
+@@ -121,6 +133,9 @@
+     @type pipe_name:    str
+     &quot;&quot;&quot;
+ 
++    # Acquire the pipe lock.
++    status.pipe_lock.acquire()
++
+     # Pipe name is supplied.
+     if pipe_name != None:
+         # Test if the data pipe exists.
+@@ -143,12 +158,18 @@
+             ds.current_pipe = None
+             __builtin__.cdp = None
+ 
++    # Release the lock.
++    status.pipe_lock.release()
++
+     # Notify observers that the switch has occurred.
+     status.observers.pipe_alteration.notify()
+ 
+ 
+ def display():
+     &quot;&quot;&quot;Print the details of all the data pipes.&quot;&quot;&quot;
++
++    # Acquire the pipe lock.
++    status.pipe_lock.acquire()
+ 
+     # Heading.
+     print((&quot;%-20s%-20s%-20s&quot; % (&quot;Data pipe name&quot;, &quot;Data pipe type&quot;, 
+&quot;Current&quot;)))
+@@ -163,6 +184,9 @@
+         # Print out.
+         print(&quot;%-20s%-20s%-20s&quot; % (&quot;'&quot;+pipe_name+&quot;'&quot;, get_type(pipe_name), 
+current))
+ 
++    # Release the lock.
++    status.pipe_lock.release()
++
+ 
+ def get_pipe(name=None):
+     &quot;&quot;&quot;Return a data pipe.
+@@ -228,6 +252,9 @@
+     @rtype:         PipeContainer instance or tuple of PipeContainer 
+instance and str if name=True
+     &quot;&quot;&quot;
+ 
++    # Acquire the pipe lock.
++    status.pipe_lock.acquire()
++
+     # Loop over the keys.
+     for key in list(ds.keys()):
+         # Return the pipe and name.
+@@ -238,6 +265,9 @@
+         else:
+             yield ds[key]
+ 
++    # Release the lock.
++    status.pipe_lock.release()
++
+ 
+ def pipe_names():
+     &quot;&quot;&quot;Return the list of all data pipes.
+@@ -255,6 +285,9 @@
+     @param pipe_name:   The name of the data pipe to switch to.
+     @type pipe_name:    str
+     &quot;&quot;&quot;
++
++    # Acquire the pipe lock.
++    status.pipe_lock.acquire()
+ 
+     # Test if the data pipe exists.
+     test(pipe_name)
+@@ -262,6 +295,9 @@
+     # Switch the current data pipe.
+     ds.current_pipe = pipe_name
+     __builtin__.cdp = get_pipe()
++
++    # Release the lock.
++    status.pipe_lock.release()
+ 
+     # Notify observers that the switch has occurred.
+     status.observers.pipe_alteration.notify()
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Sat Aug 06 16:20:02 2011</div>  
+</body>
+</html>

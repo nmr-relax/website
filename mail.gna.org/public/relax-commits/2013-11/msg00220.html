@@ -1,0 +1,220 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r21562 &#45; in /branches/relax_disp/specific_analyses/relax_disp: api.py	disp_data.py parameters.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 20 Nov 2013 20:05:54 +0100 -->
+<!--X-Message-Id: E1VjD62&#45;0005SO&#45;5Q@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r21562 - in /branches/relax_disp/specific_analyses/relax_disp: api.py	disp_data.py parameters.py -- November 20, 2013 - 20:05</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r21562 - in /branches/relax_disp/specific_analyses/relax_disp: api.py	disp_data.py parameters.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00220" class="tabs">Index by Date</a> | <a href="threads.html#00220" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00219.html">Date Prev</a>] [<a href="msg00221.html">Date Next</a>] [<a href="msg00219.html">Thread Prev</a>] [<a href="msg00221.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 20 Nov 2013 19:05:54 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00220.html">E1VjD62-0005SO-5Q@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on November 20, 2013 - 20:05:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Nov 20 20:05:52 2013
+New Revision: 21562
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=21562&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=21562&amp;view=rev</a>
+Log:
+Bug fixes for the model_loop() method no longer skipping deselected spins.
+
+This is needed for model selection when the spins from all data pipes are 
+deselected.
+
+
+Modified:
+    branches/relax_disp/specific_analyses/relax_disp/api.py
+    branches/relax_disp/specific_analyses/relax_disp/disp_data.py
+    branches/relax_disp/specific_analyses/relax_disp/parameters.py
+
+Modified: branches/relax_disp/specific_analyses/relax_disp/api.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp/api.py?rev=21562&amp;r1=21561&amp;r2=21562&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp/api.py?rev=21562&amp;r1=21561&amp;r2=21562&amp;view=diff</a>
+==============================================================================
+--- branches/relax_disp/specific_analyses/relax_disp/api.py (original)
++++ branches/relax_disp/specific_analyses/relax_disp/api.py Wed Nov 20 
+20:05:52 2013
+@@ -1069,11 +1069,19 @@
+         # The number of points from all spins.
+         n = 0
+         for spin in spins:
++            # Skip deselected spins.
++            if not spin.select:
++                continue
++
+             n += len(spin.r2eff)
+ 
+         # Take the chi-squared from the first spin of the cluster (which has 
+a value).
+         chi2 = None
+         for spin in spins:
++            # Skip deselected spins.
++            if not spin.select:
++                continue
++
+             if hasattr(spin, 'chi2'):
+                 chi2 = spin.chi2
+                 break
+
+Modified: branches/relax_disp/specific_analyses/relax_disp/disp_data.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp/disp_data.py?rev=21562&amp;r1=21561&amp;r2=21562&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp/disp_data.py?rev=21562&amp;r1=21561&amp;r2=21562&amp;view=diff</a>
+==============================================================================
+--- branches/relax_disp/specific_analyses/relax_disp/disp_data.py (original)
++++ branches/relax_disp/specific_analyses/relax_disp/disp_data.py Wed Nov 20 
+20:05:52 2013
+@@ -609,7 +609,7 @@
+     if not hasattr(cdp, 'clustering'):
+         for spin, spin_id in spin_loop(return_id=True, 
+skip_desel=skip_desel):
+             # Skip protons for MMQ data.
+-            if spin.model in MODEL_LIST_MMQ and spin.isotope == '1H':
++            if hasattr(spin, 'model') and spin.model in MODEL_LIST_MMQ and 
+spin.isotope == '1H':
+                 continue
+ 
+             # Return the spin ID as a list.
+@@ -632,7 +632,7 @@
+                     continue
+ 
+                 # Skip protons for MMQ data.
+-                if spin.model in MODEL_LIST_MMQ and spin.isotope == '1H':
++                if hasattr(spin, 'model') and spin.model in MODEL_LIST_MMQ 
+and spin.isotope == '1H':
+                     continue
+ 
+                 # Add the spin ID.
+@@ -649,7 +649,7 @@
+                 continue
+ 
+             # Skip protons for MMQ data.
+-            if spin.model in MODEL_LIST_MMQ and spin.isotope == '1H':
++            if hasattr(spin, 'model') and spin.model in MODEL_LIST_MMQ and 
+spin.isotope == '1H':
+                 continue
+ 
+             # Yield each spin individually.
+
+Modified: branches/relax_disp/specific_analyses/relax_disp/parameters.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp/parameters.py?rev=21562&amp;r1=21561&amp;r2=21562&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp/parameters.py?rev=21562&amp;r1=21561&amp;r2=21562&amp;view=diff</a>
+==============================================================================
+--- branches/relax_disp/specific_analyses/relax_disp/parameters.py (original)
++++ branches/relax_disp/specific_analyses/relax_disp/parameters.py Wed Nov 20 
+20:05:52 2013
+@@ -778,12 +778,20 @@
+ 
+     # Check the spin cluster.
+     for spin in spins:
++        # Skip deselected spins.
++        if not spin.select:
++            continue
++
+         if len(spin.params) != len(spins[0].params):
+             raise RelaxError(&quot;The number of parameters for each spin in the 
+cluster are not the same.&quot;)
+ 
+     # Count the number of R20 parameters.
+     r20_params = ['r2', 'r2a', 'r2b']
+     for spin in spins:
++        # Skip deselected spins.
++        if not spin.select:
++            continue
++
+         for i in range(len(spin.params)):
+             if spin.params[i] in r20_params:
+                 for exp_type, frq in loop_exp_frq():
+@@ -792,15 +800,25 @@
+     # Count the number of spin specific parameters for all spins.
+     spin_params = ['phi_ex', 'phi_ex_B', 'phi_ex_C', 'padw2', 'dw', 'dwH']
+     for spin in spins:
++        # Skip deselected spins.
++        if not spin.select:
++            continue
++
+         for i in range(len(spin.params)):
+             if spin.params[i] in spin_params:
+                 num += 1
+ 
+     # Count all other parameters, but only for a single spin.
+     all_params = r20_params + spin_params
+-    for i in range(len(spins[0].params)):
+-        if not spins[0].params[i] in all_params:
+-            num += 1
++    for spin in spins:
++        # Skip deselected spins.
++        if not spin.select:
++            continue
++
++        for i in range(len(spin.params)):
++            if not spin.params[i] in all_params:
++                num += 1
++        break
+ 
+     # Return the number.
+     return num
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Nov 20 20:40:02 2013</div>  
+</body>
+</html>

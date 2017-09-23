@@ -1,0 +1,213 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r7192 &#45; /branches/rdc_analysis/specific_fns/n_state_model.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 14 Aug 2008 11:31:16 +0200 -->
+<!--X-Message-Id: E1KTZAp&#45;0005YC&#45;O3@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r7192 - /branches/rdc_analysis/specific_fns/n_state_model.py -- August 14, 2008 - 11:31</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r7192 - /branches/rdc_analysis/specific_fns/n_state_model.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00151" class="tabs">Index by Date</a> | <a href="threads.html#00151" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00150.html">Date Prev</a>] [<a href="msg00152.html">Date Next</a>] [<a href="msg00150.html">Thread Prev</a>] [<a href="msg00152.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 14 Aug 2008 09:31:14 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00151.html">E1KTZAp-0005YC-O3@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on August 14, 2008 - 11:31:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Aug 14 11:31:10 2008
+New Revision: 7192
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=7192&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=7192&amp;view=rev</a>
+Log:
+Bug fixes and expansion of the __linear_constraints() method.
+
+The bug fix is that the b array was not being scaled!  This is essential when 
+diagonal scaling is
+active.
+
+The added feature is that the pN weight of state N, which is not a parameter 
+of the model, is now
+constrained to be between 0 and 1.  This is because the value is equal to 1 
+minus the sum of all
+other probabilities, hence linear constraints can be created.
+
+
+Modified:
+    branches/rdc_analysis/specific_fns/n_state_model.py
+
+Modified: branches/rdc_analysis/specific_fns/n_state_model.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/rdc_analysis/specific_fns/n_state_model.py?rev=7192&amp;r1=7191&amp;r2=7192&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/rdc_analysis/specific_fns/n_state_model.py?rev=7192&amp;r1=7191&amp;r2=7192&amp;view=diff</a>
+==============================================================================
+--- branches/rdc_analysis/specific_fns/n_state_model.py (original)
++++ branches/rdc_analysis/specific_fns/n_state_model.py Thu Aug 14 11:31:10 
+2008
+@@ -26,7 +26,7 @@
+ # Python module imports.
+ from math import acos, cos, pi
+ from minfx.generic import generic_minimise
+-from numpy import array, dot, float64, identity, zeros
++from numpy import array, dot, float64, identity, ones, zeros
+ from numpy.linalg import inv, norm
+ from re import search
+ from warnings import warn
+@@ -277,7 +277,7 @@
+         Standard notation
+         =================
+ 
+-        The N-state model constraints are:
++        The N-state model constraints are::
+ 
+             0 &lt;= pc &lt;= 1,
+ 
+@@ -288,24 +288,44 @@
+         ===============
+ 
+         In the notation A.x &gt;= b, where A is an matrix of coefficients, x is 
+an array of parameter
+-        values, and b is a vector of scalars, these inequality constraints 
+are:
++        values, and b is a vector of scalars, these inequality constraints 
+are::
+ 
+             | 1  0  0 |                   |    0    |
+             |         |                   |         |
+             |-1  0  0 |                   |   -1    |
++            |         |                   |         |
++            | 0  1  0 |                   |    0    |
+             |         |     |  p0  |      |         |
+-            | 0  1  0 |     |      |      |    0    |
++            | 0 -1  0 |     |      |      |   -1    |
+             |         |  .  |  p1  |  &gt;=  |         |
+-            | 0 -1  0 |     |      |      |   -1    |
++            | 0  0  1 |     |      |      |    0    |
+             |         |     |  p2  |      |         |
+-            | 0  0  1 |                   |    0    |
++            | 0  0 -1 |                   |   -1    |
+             |         |                   |         |
+-            | 0  0 -1 |                   |   -1    |
++            |-1 -1 -1 |                   |   -1    |
++            |         |                   |         |
++            | 1  1  1 |                   |    0    |
+ 
+         This example is for a 4-state model, the last probability pn is not 
+included as this
+         parameter does not exist (because the sum of pc is equal to 1).  The 
+Euler angle parameters
+         have been excluded here but will be included in the returned A and b 
+objects.  These
+-        parameters simply add columns of zero to the A matrix and have no 
+effect on b.
++        parameters simply add columns of zero to the A matrix and have no 
+effect on b.  The last two
++        rows correspond to the inequality::
++
++            0 &lt;= pN &lt;= 1.
++
++        As::
++                    N-1
++                    \ 
++            pN = 1 - &gt;  pc,
++                    /__
++                    c=1
++
++        then::
++
++            -p1 - p2 - ... - p(N-1) &gt;= -1,
++
++             p1 + p2 + ... + p(N-1) &gt;= 0.
+ 
+ 
+         @keyword data_types:        The base data types used in the 
+optimisation.  This list can
+@@ -341,17 +361,26 @@
+             A[j][i] = 1.0
+             A[j+1][i] = -1.0
+             b.append(0.0)
+-            b.append(-1.0)
++            b.append(-1.0 / scaling_matrix[i, i])
+             j = j + 2
+ 
+             # Increment i.
+             i = i + 1
++
++        # Add the inequalities for pN.
++        A.append(zero_array * 0.0)
++        A.append(zero_array * 0.0)
++        for i in xrange(pop_start, self.param_num()):
++            A[-2][i] = -1.0
++            A[-1][i] = 1.0
++        b.append(-1.0 / scaling_matrix[i, i])
++        b.append(0.0)
+ 
+         # Convert to numpy data structures.
+         A = array(A, float64)
+         b = array(b, float64)
+ 
+-        # Return the contraint objects.
++        # Return the constraint objects.
+         return A, b
+ 
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Aug 14 14:40:21 2008</div>  
+</body>
+</html>

@@ -1,0 +1,200 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r23244 &#45; /branches/frame_order_cleanup/test_suite/shared_data/frame_order/cam/generate_base.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 19 May 2014 18:11:13 +0200 -->
+<!--X-Message-Id: E1WmQ9h&#45;0000AM&#45;7P@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r23244 - /branches/frame_order_cleanup/test_suite/shared_data/frame_order/cam/generate_base.py -- May 19, 2014 - 18:11</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r23244 - /branches/frame_order_cleanup/test_suite/shared_data/frame_order/cam/generate_base.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00347" class="tabs">Index by Date</a> | <a href="threads.html#00347" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00346.html">Date Prev</a>] [<a href="msg00348.html">Date Next</a>] [<a href="msg00346.html">Thread Prev</a>] [<a href="msg00348.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 19 May 2014 16:11:13 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00347.html">E1WmQ9h-0000AM-7P@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on May 19, 2014 - 18:11:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Mon May 19 18:11:12 2014
+New Revision: 23244
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=23244&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=23244&amp;view=rev</a>
+Log:
+Huge speed up of the CaM frame order test data generation base script.
+
+By using multidimensional numpy arrays to store the atomic positions and XH 
+unit vectors of all
+spins, and performing the rotations on these structures using 
+numpy.tensordot(), the calculations
+are now a factor of 10 times faster.  The progress meter had to be changed to 
+show every 1000 rather
+than 100 iterations.
+
+The rotations of the positions and vectors are now performed sequentially, 
+accidentally fixing a bug
+with the double motion models (i.e. the 'double rotor' model).
+
+Modified:
+    
+branches/frame_order_cleanup/test_suite/shared_data/frame_order/cam/generate_base.py
+
+Modified: 
+branches/frame_order_cleanup/test_suite/shared_data/frame_order/cam/generate_base.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/test_suite/shared_data/frame_order/cam/generate_base.py?rev=23244&amp;r1=23243&amp;r2=23244&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/test_suite/shared_data/frame_order/cam/generate_base.py?rev=23244&amp;r1=23243&amp;r2=23244&amp;view=diff</a>
+==============================================================================
+--- 
+branches/frame_order_cleanup/test_suite/shared_data/frame_order/cam/generate_base.py
+        (original)
++++ 
+branches/frame_order_cleanup/test_suite/shared_data/frame_order/cam/generate_base.py
+        Mon May 19 18:11:12 2014
+@@ -24,7 +24,7 @@
+ 
+ # Python module imports.
+ from math import pi
+-from numpy import array, cross, dot, eye, float64, transpose, zeros
++from numpy import array, cross, dot, eye, float64, tensordot, transpose, 
+zeros
+ from numpy.linalg import norm
+ from os import getcwd, sep
+ import sys
+@@ -204,6 +204,24 @@
+         # Turn off the relax interpreter echoing to allow the progress meter 
+to be shown correctly.
+         self.interpreter.off()
+ 
++        # Set up some data structures for faster calculations.
++        spins = []
++        spin_pos = []
++        for spin in spin_loop():
++            if hasattr(spin, 'pos'):
++                spins.append(spin)
++                spin_pos.append(spin.orig_pos[0])
++        spin_pos = array(spin_pos, float64)
++        num_spins = len(spin_pos)
++        interatoms = []
++        vectors = []
++        for interatom in interatomic_loop():
++            if hasattr(interatom, 'vector'):
++                interatoms.append(interatom)
++                vectors.append(interatom.orig_vect)
++        vectors = array(vectors, float64)
++        num_interatoms = len(vectors)
++
+         # Loop over each position.
+         for global_index, mode_indices in self._state_loop():
+             # The progress meter.
+@@ -213,19 +231,17 @@
+             total_R = eye(3)
+ 
+             # Loop over each motional mode.
++            new_pos = spin_pos
++            new_vect = vectors
+             for motion_index in range(self.MODES):
+                 # Generate the distribution specific rotation.
+                 self.rotation(mode_indices[motion_index], 
+motion_index=motion_index)
+ 
+-                # Rotate the atomic position.
+-                for spin in spin_loop():
+-                    if hasattr(spin, 'pos'):
+-                        spin.pos[global_index] = dot(self.R, 
+(spin.orig_pos[0] - self.PIVOT[motion_index])) + self.PIVOT[motion_index]
++                # Rotate the atomic positions.
++                new_pos = transpose(tensordot(self.R, transpose(new_pos - 
+self.PIVOT[motion_index]), axes=1)) + self.PIVOT[motion_index]
+ 
+                 # Rotate the NH vector.
+-                for interatom in interatomic_loop():
+-                    if hasattr(interatom, 'vector'):
+-                        interatom.vector[global_index] = dot(self.R, 
+interatom.orig_vect)
++                new_vect = transpose(dot(self.R, transpose(new_vect)))
+ 
+                 # Decompose the rotation into Euler angles and store them.
+                 if self.ROT_FILE:
+@@ -238,6 +254,12 @@
+ 
+                 # Contribution to the total rotation.
+                 total_R = dot(self.R, total_R)
++
++            # Pack the positional and vector data.
++            for i in range(num_spins):
++                spins[i].pos[global_index] = new_pos[i]
++            for i in range(num_interatoms):
++                interatoms[i].vector[global_index] = new_vect[i]
+ 
+             # The frame order matrix component.
+             self.daeg += kron_prod(total_R, total_R)
+@@ -317,7 +339,7 @@
+             self.axes = [self.axes]
+ 
+ 
+-    def _progress(self, i, a=5, b=100):
++    def _progress(self, i, a=5, b=1000):
+         &quot;&quot;&quot;A simple progress write out (which goes to the terminal 
+STDERR).&quot;&quot;&quot;
+ 
+         # The spinner characters.
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon May 19 20:20:02 2014</div>  
+</body>
+</html>

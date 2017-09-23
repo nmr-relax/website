@@ -1,0 +1,151 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r11282 &#45; /1.3/generic_fns/rdc.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 02 Jul 2010 13:31:53 +0200 -->
+<!--X-Message-Id: E1OUeTJ&#45;0008Gi&#45;5z@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r11282 - /1.3/generic_fns/rdc.py -- July 02, 2010 - 13:31</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r11282 - /1.3/generic_fns/rdc.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00013" class="tabs">Index by Date</a> | <a href="threads.html#00013" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00012.html">Date Prev</a>] [<a href="msg00014.html">Date Next</a>] [<a href="msg00012.html">Thread Prev</a>] [<a href="msg00014.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 02 Jul 2010 11:31:53 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00013.html">E1OUeTJ-0008Gi-5z@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on July 02, 2010 - 13:31:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Jul  2 13:31:52 2010
+New Revision: 11282
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=11282&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=11282&amp;view=rev</a>
+Log:
+Bug fix for the RDC back_calc() function - the align_id arg was being ignored.
+
+The RDCs were being calculated for all tensors, and then assigned to the 
+align_id key.  The results
+was that the back-calculated RDCs were for the last tensor, not for align_id.
+
+
+Modified:
+    1.3/generic_fns/rdc.py
+
+Modified: 1.3/generic_fns/rdc.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/generic_fns/rdc.py?rev=11282&amp;r1=11281&amp;r2=11282&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/generic_fns/rdc.py?rev=11282&amp;r1=11281&amp;r2=11282&amp;view=diff</a>
+==============================================================================
+--- 1.3/generic_fns/rdc.py (original)
++++ 1.3/generic_fns/rdc.py Fri Jul  2 13:31:52 2010
+@@ -32,6 +32,7 @@
+ 
+ # relax module imports.
+ from generic_fns import grace, pipes
++from generic_fns.align_tensor import get_tensor_index
+ from generic_fns.mol_res_spin import exists_mol_res_spin_data, return_spin, 
+spin_loop
+ from maths_fns.rdc import ave_rdc_tensor
+ from physical_constants import dipolar_constant, return_gyromagnetic_ratio
+@@ -73,23 +74,21 @@
+         if type(vectors[0]) in [float, float64]:
+             vectors = [vectors]
+ 
+-        # Loop over each alignment.
+-        for i in range(len(cdp.align_tensors)):
+-            # Gyromagnetic ratios.
+-            gx = return_gyromagnetic_ratio(spin.heteronuc_type)
+-            gh = return_gyromagnetic_ratio(spin.proton_type)
+-
+-            # Calculate the RDC dipolar constant (in Hertz, and the 3 comes 
+from the alignment tensor), and append it to the list.
+-            dj = 3.0/(2.0*pi) * dipolar_constant(gx, gh, spin.r)
+-
+-            # Unit vectors.
+-            for c in range(cdp.N):
+-                unit_vect[c] = vectors[c] / norm(vectors[c])
+-
+-            # Calculate the RDC.
+-            if not hasattr(spin, 'rdc_bc'):
+-                spin.rdc_bc = {}
+-            spin.rdc_bc[align_id] = ave_rdc_tensor(dj, unit_vect, cdp.N, 
+cdp.align_tensors[i].A, weights=weights)
++        # Gyromagnetic ratios.
++        gx = return_gyromagnetic_ratio(spin.heteronuc_type)
++        gh = return_gyromagnetic_ratio(spin.proton_type)
++
++        # Calculate the RDC dipolar constant (in Hertz, and the 3 comes from 
+the alignment tensor), and append it to the list.
++        dj = 3.0/(2.0*pi) * dipolar_constant(gx, gh, spin.r)
++
++        # Unit vectors.
++        for c in range(cdp.N):
++            unit_vect[c] = vectors[c] / norm(vectors[c])
++
++        # Calculate the RDC.
++        if not hasattr(spin, 'rdc_bc'):
++            spin.rdc_bc = {}
++        spin.rdc_bc[align_id] = ave_rdc_tensor(dj, unit_vect, cdp.N, 
+cdp.align_tensors[get_tensor_index(align_id)].A, weights=weights)
+ 
+ 
+ def corr_plot(format=None, file=None, dir=None, force=False):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Jul 02 17:40:01 2010</div>  
+</body>
+</html>

@@ -1,0 +1,396 @@
+<!-- MHonArc v2.6.10 -->
+<!--X-Subject: r3230 &#45; in /1.3: generic_fns/ test_suite/unit_tests/generic_fns/ -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 19 Mar 2007 06:25:36 +0100 -->
+<!--X-Message-Id: E1HTAMj&#45;0004G7&#45;V6@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r3230 - in /1.3: generic_fns/ test_suite/unit_tests/generic_fns/ -- March 19, 2007 - 06:25</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r3230 - in /1.3: generic_fns/ test_suite/unit_tests/generic_fns/</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00171" class="tabs">Index by Date</a> | <a href="threads.html#00171" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00170.html">Date Prev</a>] [<a href="msg00172.html">Date Next</a>] [<a href="msg00170.html">Thread Prev</a>] [<a href="msg00172.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 19 Mar 2007 05:25:05 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00171.html">E1HTAMj-0004G7-V6@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on March 19, 2007 - 06:25:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Mon Mar 19 06:25:03 2007
+New Revision: 3230
+
+URL: <a  href="http://svn.gna.org/viewcvs/relax?rev=3230&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=3230&amp;view=rev</a>
+Log:
+Wrote the generic_fns.selection.parse_token() function and 13 unit tests 
+covering the function!
+
+The unit tests attempt to cover all proper and improper combinations of the 
+supplied token including
+numbers (integers), names, and number ranges.
+
+Modified:
+    1.3/generic_fns/selection.py
+    1.3/test_suite/unit_tests/generic_fns/test_residue.py
+    1.3/test_suite/unit_tests/generic_fns/test_selection.py
+
+Modified: 1.3/generic_fns/selection.py
+URL: 
+<a  href="http://svn.gna.org/viewcvs/relax/1.3/generic_fns/selection.py?rev=3230&amp;r1=3229&amp;r2=3230&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/generic_fns/selection.py?rev=3230&amp;r1=3229&amp;r2=3230&amp;view=diff</a>
+==============================================================================
+--- 1.3/generic_fns/selection.py (original)
++++ 1.3/generic_fns/selection.py Mon Mar 19 06:25:03 2007
+@@ -23,6 +23,7 @@
+ # Python module imports.
+ from os import F_OK, access
+ from re import compile, match, split
++from string import strip
+ 
+ # relax module imports.
+ from data import Data as relax_data_store
+@@ -212,7 +213,76 @@
+ 
+ 
+ def parse_token(token):
+-    return []
++    &quot;&quot;&quot;Parse the token string and return a list of identifying numbers and 
+names.
++
++    Firstly the token is split by the ',' character into its individual 
+elements and all whitespace
++    stripped from the elements.  Numbers are converted to integers, names 
+are left as strings, and
++    ranges are converted into the full list of integers.
++
++    @param token:   The identification string, the elements of which are 
+separated by commas.  Each
++        element can be either a single number, a range of numbers (two 
+numbers separated by '-'), or
++        a name.
++    @type token:    str
++    @return:        A list of identifying numbers and names.
++    @rtype:         list of int and str
++    &quot;&quot;&quot;
++
++    # No token.
++    if token == None:
++        return None
++
++    # Split by the ',' character.
++    elements = split(',', token)
++
++    # Loop over the elements.
++    list = []
++    for element in elements:
++        # Strip all leading and trailing whitespace.
++        element = strip(element)
++
++        # Find all '-' characters (ignoring the first character, i.e. a 
+negative number).
++        indecies= []
++        for i in xrange(1,len(element)):
++            if element[i] == '-':
++                indecies.append(i)
++
++        # Range.
++        if indecies:
++            # Invalid range element, only one range char '-' and one 
+negative sign is allowed.
++            if len(indecies) &gt; 2:
++                raise RelaxError, &quot;The range element &quot; + `element` + &quot; is 
+invalid.&quot;
++
++            # Convert the two numbers to integers.
++            try:
++                start = int(element[:indecies[0]])
++                end = int(element[indecies[0]+1:])
++            except ValueError:
++                raise RelaxError, &quot;The range element &quot; + `element` + &quot; is 
+invalid as either the start or end of the range are not integers.&quot;
++
++            # Test that the starting number is less than the end.
++            if start &gt;= end:
++                raise RelaxError, &quot;The starting number of the range element 
+&quot; + `element` + &quot; needs to be less than the end number.&quot;
++
++            # Create the range and append it to the list.
++            for i in range(start, end+1):
++                list.append(i)
++
++        # Number or name.
++        else:
++            # Try converting the element into an integer.
++            try:
++                element = int(element)
++            except ValueError:
++                pass
++
++            # Append the element.
++            list.append(element)
++
++    # Sort the list.
++    list.sort()
++
++    # Return the identifying list.
++    return list
+ 
+ 
+ def residue_loop(selection=None):
+
+Modified: 1.3/test_suite/unit_tests/generic_fns/test_residue.py
+URL: 
+<a  href="http://svn.gna.org/viewcvs/relax/1.3/test_suite/unit_tests/generic_fns/test_residue.py?rev=3230&amp;r1=3229&amp;r2=3230&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/test_suite/unit_tests/generic_fns/test_residue.py?rev=3230&amp;r1=3229&amp;r2=3230&amp;view=diff</a>
+==============================================================================
+--- 1.3/test_suite/unit_tests/generic_fns/test_residue.py (original)
++++ 1.3/test_suite/unit_tests/generic_fns/test_residue.py Mon Mar 19 06:25:03 
+2007
+@@ -182,7 +182,7 @@
+         relax_data_store['orig'].mol[0].res[3].spin[0].num = 111
+         relax_data_store['orig'].mol[0].res[3].spin[0].x = 1
+ 
+-        # Delete the first and third residues.
++        # Delete all residues.
+         residue.delete(res_id=':1-4')
+ 
+         # Test that the first residue defaults back to the empty residue.
+
+Modified: 1.3/test_suite/unit_tests/generic_fns/test_selection.py
+URL: 
+<a  href="http://svn.gna.org/viewcvs/relax/1.3/test_suite/unit_tests/generic_fns/test_selection.py?rev=3230&amp;r1=3229&amp;r2=3230&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/test_suite/unit_tests/generic_fns/test_selection.py?rev=3230&amp;r1=3229&amp;r2=3230&amp;view=diff</a>
+==============================================================================
+--- 1.3/test_suite/unit_tests/generic_fns/test_selection.py (original)
++++ 1.3/test_suite/unit_tests/generic_fns/test_selection.py Mon Mar 19 
+06:25:03 2007
+@@ -105,6 +105,159 @@
+             i = i + 1
+ 
+ 
++    def test_parse_token_single_element_num(self):
++        &quot;&quot;&quot;Test the generic_fns.selection.parse_token() function on the 
+string '1'.&quot;&quot;&quot;
++
++        # Parse the token.
++        list = selection.parse_token('1')
++
++        # Check the list elements.
++        self.assertEqual(len(list), 1)
++        self.assertEqual(list[0], 1)
++
++
++    def test_parse_token_single_element_neg_num(self):
++        &quot;&quot;&quot;Test the generic_fns.selection.parse_token() function on the 
+string '-4'.&quot;&quot;&quot;
++
++        # Parse the token.
++        list = selection.parse_token('-4')
++
++        # Check the list elements.
++        self.assertEqual(len(list), 1)
++        self.assertEqual(list[0], -4)
++
++
++    def test_parse_token_single_element_name(self):
++        &quot;&quot;&quot;Test the generic_fns.selection.parse_token() function on the 
+string 'G'.&quot;&quot;&quot;
++
++        # Parse the token.
++        list = selection.parse_token('G')
++
++        # Check the list elements.
++        self.assertEqual(len(list), 1)
++        self.assertEqual(list[0], 'G')
++
++
++    def test_parse_token_single_element_range(self):
++        &quot;&quot;&quot;Test the generic_fns.selection.parse_token() function on the 
+string '1-10'.&quot;&quot;&quot;
++
++        # Parse the token.
++        list = selection.parse_token('1-10')
++
++        # Check the list elements.
++        self.assertEqual(len(list), 10)
++        for i in range(1, 11):
++            self.assertEqual(list[i-1], i)
++
++
++    def test_parse_token_single_element_neg_range(self):
++        &quot;&quot;&quot;Test the generic_fns.selection.parse_token() function on the 
+string '-10--1'.&quot;&quot;&quot;
++
++        # Parse the token.
++        list = selection.parse_token('-10--1')
++
++        # Check the list elements.
++        self.assertEqual(len(list), 10)
++        j = 0
++        for i in range(-10, -2):
++            self.assertEqual(list[j], i)
++            j = j + 1
++
++
++    def test_parse_token_multi_element_num(self):
++        &quot;&quot;&quot;Test the generic_fns.selection.parse_token() function on the 
+string '-2, 1'.&quot;&quot;&quot;
++
++        # Parse the token.
++        list = selection.parse_token('-2, 1')
++
++        # Check the list elements.
++        self.assertEqual(len(list), 2)
++        self.assertEqual(list[0], -2)
++        self.assertEqual(list[1], 1)
++
++
++    def test_parse_token_multi_element_name(self):
++        &quot;&quot;&quot;Test the generic_fns.selection.parse_token() function on the 
+string 'N,CA'.&quot;&quot;&quot;
++
++        # Parse the token.
++        list = selection.parse_token('N,CA')
++
++        # Check the list elements.
++        self.assertEqual(len(list), 2)
++        self.assertEqual(list[0], 'CA')
++        self.assertEqual(list[1], 'N')
++
++
++    def test_parse_token_multi_element_num_name(self):
++        &quot;&quot;&quot;Test the generic_fns.selection.parse_token() function on the 
+string '76,Ala'.&quot;&quot;&quot;
++
++        # Parse the token.
++        list = selection.parse_token('76,Ala')
++
++        # Check the list elements.
++        self.assertEqual(len(list), 2)
++        self.assertEqual(list[0], 76)
++        self.assertEqual(list[1], 'Ala')
++
++
++    def test_parse_token_multi_element_num_range(self):
++        &quot;&quot;&quot;Test the generic_fns.selection.parse_token() function on the 
+string '1,3-5'.&quot;&quot;&quot;
++
++        # Parse the token.
++        list = selection.parse_token('1,3-5')
++
++        # Check the list elements.
++        self.assertEqual(len(list), 4)
++        self.assertEqual(list[0], 1)
++        self.assertEqual(list[1], 3)
++        self.assertEqual(list[2], 4)
++        self.assertEqual(list[3], 5)
++
++
++    def test_parse_token_multi_element_range_name(self):
++        &quot;&quot;&quot;Test the generic_fns.selection.parse_token() function on the 
+string '3-5,NH'.&quot;&quot;&quot;
++
++        # Parse the token.
++        list = selection.parse_token('3-5,NH')
++
++        # Check the list elements.
++        self.assertEqual(len(list), 4)
++        self.assertEqual(list[0], 3)
++        self.assertEqual(list[1], 4)
++        self.assertEqual(list[2], 5)
++        self.assertEqual(list[3], 'NH')
++
++
++    def test_parse_token_multi_element_range_num_name(self):
++        &quot;&quot;&quot;Test the generic_fns.selection.parse_token() function on the 
+string '3-6, 8, Gly'.&quot;&quot;&quot;
++
++        # Parse the token.
++        list = selection.parse_token('3-6, 8, Gly')
++
++        # Check the list elements.
++        self.assertEqual(len(list), 6)
++        self.assertEqual(list[0], 3)
++        self.assertEqual(list[1], 4)
++        self.assertEqual(list[2], 5)
++        self.assertEqual(list[3], 6)
++        self.assertEqual(list[4], 8)
++        self.assertEqual(list[5], 'Gly')
++
++
++    def test_parse_token_range_fail1(self):
++        &quot;&quot;&quot;Failure of the generic_fns.selection.parse_token() function on 
+the string '1-5-7'.&quot;&quot;&quot;
++
++        # Parse the invalid token.
++        self.assertRaises(RelaxError, selection.parse_token, '1-5-7')
++
++
++    def test_parse_token_range_fail2(self):
++        &quot;&quot;&quot;Failure of the generic_fns.selection.parse_token() function on 
+the string '1--3'.&quot;&quot;&quot;
++
++        # Parse the invalid token.
++        self.assertRaises(RelaxError, selection.parse_token, '1--3')
++
++
+     def test_residue_loop(self):
+         &quot;&quot;&quot;Test the proper operation of the residue loop with residue 
+selection.
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Mar 19 06:40:17 2007</div>  
+</body>
+</html>

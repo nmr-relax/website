@@ -1,0 +1,161 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r20601 &#45; /branches/peak_intensities/pipe_control/spectrum.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 16 Aug 2013 17:49:45 +0200 -->
+<!--X-Message-Id: E1VAMHZ&#45;00057z&#45;TC@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r20601 - /branches/peak_intensities/pipe_control/spectrum.py -- August 16, 2013 - 17:49</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r20601 - /branches/peak_intensities/pipe_control/spectrum.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00118" class="tabs">Index by Date</a> | <a href="threads.html#00118" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00117.html">Date Prev</a>] [<a href="msg00119.html">Date Next</a>] [<a href="msg00117.html">Thread Prev</a>] [<a href="msg00119.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 16 Aug 2013 15:49:45 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00118.html">E1VAMHZ-00057z-TC@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on August 16, 2013 - 17:49:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Aug 16 17:49:45 2013
+New Revision: 20601
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=20601&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=20601&amp;view=rev</a>
+Log:
+The pipe_control.spectrum.read_intensities() function now works with the 
+Peak_list object.
+
+
+Modified:
+    branches/peak_intensities/pipe_control/spectrum.py
+
+Modified: branches/peak_intensities/pipe_control/spectrum.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/peak_intensities/pipe_control/spectrum.py?rev=20601&amp;r1=20600&amp;r2=20601&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/peak_intensities/pipe_control/spectrum.py?rev=20601&amp;r1=20600&amp;r2=20601&amp;view=diff</a>
+==============================================================================
+--- branches/peak_intensities/pipe_control/spectrum.py (original)
++++ branches/peak_intensities/pipe_control/spectrum.py Fri Aug 16 17:49:45 
+2013
+@@ -520,26 +520,17 @@
+     cdp.int_method = int_method
+ 
+     # Read the peak list data.
+-    x = read_peak_list(file=file, dir=dir, int_col=int_col, 
+spin_id_col=spin_id_col, mol_name_col=mol_name_col, res_num_col=res_num_col, 
+res_name_col=res_name_col, spin_num_col=spin_num_col, 
+spin_name_col=spin_name_col, sep=sep, spin_id=spin_id)
+-    print x
+-
+-    # Convert the residue number to a spin ID.
+-    for i in range(len(intensity_data)):
+-        # Generate the spin_id.
+-        spin_id = generate_spin_id_unique(res_num=intensity_data[i][2], 
+spin_name=intensity_data[i][1])
+-
+-        # Replace the data.
+-        intensity_data[i][2] = spin_id
+-
+-    # Loop over the peak intensity data.
++    peak_list = read_peak_list(file=file, dir=dir, int_col=int_col, 
+spin_id_col=spin_id_col, mol_name_col=mol_name_col, res_num_col=res_num_col, 
+res_name_col=res_name_col, spin_num_col=spin_num_col, 
+spin_name_col=spin_name_col, sep=sep, spin_id=spin_id)
++
++    # Loop over the assignments.
+     data = []
+     data_flag = False
+-
+-    for i in range(len(intensity_data)):
+-        # Extract the data.
+-        H_name, X_name, spin_id, intensity, line = intensity_data[i]
++    for assign in peak_list:
++        # Generate the spin_id.
++        spin_id = generate_spin_id_unique(res_num=assign.res_num[dim], 
+spin_name=assign.spin_name[dim])
+ 
+         # Convert the intensity data and spectrum IDs to lists if needed.
++        intensity = assign.intensity
+         if not isinstance(intensity, list):
+             intensity = [intensity]
+         if not isinstance(spectrum_id, list):
+@@ -549,16 +540,11 @@
+         if len(spectrum_id) != len(intensity):
+             raise RelaxError(&quot;The spectrum ID list %s has a different number 
+of elements to the intensity column list %s.&quot; % (spectrum_id, nr_int_col))
+ 
+-        # Loop over the data.
++        # Loop over the intensity data.
+         for i in range(len(intensity)):
+             # Sanity check.
+             if intensity[i] == 0.0:
+                 warn(RelaxWarning(&quot;A peak intensity of zero has been 
+encountered for the spin '%s' - this could be fatal later on.&quot; % spin_id))
+-
+-            # Skip data.
+-            if (X_name and X_name != heteronuc) or (H_name and H_name != 
+proton):
+-                warn(RelaxWarning(&quot;Proton and heteronucleus names do not 
+match, skipping the data %s.&quot; % line))
+-                continue
+ 
+             # Get the spin container.
+             spin = return_spin(spin_id)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Aug 16 18:00:01 2013</div>  
+</body>
+</html>

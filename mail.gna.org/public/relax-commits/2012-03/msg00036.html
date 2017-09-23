@@ -1,0 +1,209 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r15451 &#45; in /branches/frame_order_testing/maths_fns: frame_order.py	frame_order_matrix_ops.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 07 Mar 2012 11:54:57 +0100 -->
+<!--X-Message-Id: E1S5EWH&#45;0002Ah&#45;Mt@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r15451 - in /branches/frame_order_testing/maths_fns: frame_order.py	frame_order_matrix_ops.py -- March 07, 2012 - 11:54</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r15451 - in /branches/frame_order_testing/maths_fns: frame_order.py	frame_order_matrix_ops.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00036" class="tabs">Index by Date</a> | <a href="threads.html#00036" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00035.html">Date Prev</a>] [<a href="msg00037.html">Date Next</a>] [<a href="msg00035.html">Thread Prev</a>] [<a href="msg00037.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 07 Mar 2012 10:54:57 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00036.html">E1S5EWH-0002Ah-Mt@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on March 07, 2012 - 11:54:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Mar  7 11:54:57 2012
+New Revision: 15451
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=15451&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=15451&amp;view=rev</a>
+Log:
+Shifted the Sobol' point subdivision from the target function to the 
+__init__() method.
+
+This should speed up the target function.  The data transfer to the slave 
+also occurs at the
+__init__() method level, reducing data transfers per function call.
+
+
+Modified:
+    branches/frame_order_testing/maths_fns/frame_order.py
+    branches/frame_order_testing/maths_fns/frame_order_matrix_ops.py
+
+Modified: branches/frame_order_testing/maths_fns/frame_order.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_testing/maths_fns/frame_order.py?rev=15451&amp;r1=15450&amp;r2=15451&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_testing/maths_fns/frame_order.py?rev=15451&amp;r1=15450&amp;r2=15451&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_testing/maths_fns/frame_order.py (original)
++++ branches/frame_order_testing/maths_fns/frame_order.py Wed Mar  7 11:54:57 
+2012
+@@ -314,10 +314,15 @@
+                 self.create_sobol_data(n=self.num_int_pts, dims=['sigma'])
+                 self.func = self.func_free_rotor_qrint
+ 
++            # Subdivide the Sobol' data points for the slave processors.
++            blocks = []
++            for block in self.subdivide(self.sobol_angles, 
+self.processor.processor_size()):
++                blocks.append(block)
++
+             # Set up the slave processors.
+             self.slaves = []
+             for i in range(self.processor.processor_size()):
+-                self.slaves.append(Slave_command_pcs_pseudo_ellipse_qrint())
++                
+self.slaves.append(Slave_command_pcs_pseudo_ellipse_qrint(blocks[i]))
+ 
+         # The target function aliases (Scipy numerical integration).
+         else:
+@@ -1173,19 +1178,15 @@
+             data.pcs_theta = self.pcs_theta
+ 
+             # Subdivide the points.
+-            i = 0
+-            for block in self.subdivide(self.sobol_angles, 
+self.processor.processor_size()):
++            for i in range(self.processor.processor_size()):
+                 # Initialise the slave command and memo.
+-                self.slaves[i].load_data(points=block, theta_x=cone_theta_x, 
+theta_y=cone_theta_x, sigma_max=cone_sigma_max, 
+full_in_ref_frame=self.full_in_ref_frame, r_pivot_atom=self.r_pivot_atom, 
+r_pivot_atom_rev=self.r_pivot_atom_rev, r_ln_pivot=self.r_ln_pivot, 
+A=self.A_3D, R_eigen=self.R_eigen, RT_eigen=RT_eigen, Ri_prime=self.Ri_prime, 
+pcs_theta=deepcopy(self.pcs_theta), pcs_theta_err=self.pcs_theta_err, 
+missing_pcs=self.missing_pcs)
++                self.slaves[i].load_data(theta_x=cone_theta_x, 
+theta_y=cone_theta_x, sigma_max=cone_sigma_max, 
+full_in_ref_frame=self.full_in_ref_frame, r_pivot_atom=self.r_pivot_atom, 
+r_pivot_atom_rev=self.r_pivot_atom_rev, r_ln_pivot=self.r_ln_pivot, 
+A=self.A_3D, R_eigen=self.R_eigen, RT_eigen=RT_eigen, Ri_prime=self.Ri_prime, 
+pcs_theta=deepcopy(self.pcs_theta), pcs_theta_err=self.pcs_theta_err, 
+missing_pcs=self.missing_pcs)
+ 
+                 # Initialise the memo.
+                 memo = Memo_pcs_pseudo_ellipse_qrint(data)
+ 
+                 # Queue the block.
+                 self.processor.add_to_queue(self.slaves[i], memo)
+-
+-                # Increment the slave count.
+-                i += 1
+ 
+             # Wait for completion.
+             self.processor.run_queue()
+
+Modified: branches/frame_order_testing/maths_fns/frame_order_matrix_ops.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_testing/maths_fns/frame_order_matrix_ops.py?rev=15451&amp;r1=15450&amp;r2=15451&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_testing/maths_fns/frame_order_matrix_ops.py?rev=15451&amp;r1=15450&amp;r2=15451&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_testing/maths_fns/frame_order_matrix_ops.py 
+(original)
++++ branches/frame_order_testing/maths_fns/frame_order_matrix_ops.py Wed Mar  
+7 11:54:57 2012
+@@ -2416,11 +2416,20 @@
+ class Slave_command_pcs_pseudo_ellipse_qrint(Slave_command):
+     &quot;&quot;&quot;The slave command for the quasi-random pseudo-ellipse PCS numerical 
+integration.&quot;&quot;&quot;
+ 
+-    def load_data(self, points=None, theta_x=None, theta_y=None, 
+sigma_max=None, full_in_ref_frame=None, r_pivot_atom=None, 
+r_pivot_atom_rev=None, r_ln_pivot=None, A=None, R_eigen=None, RT_eigen=None, 
+Ri_prime=None, pcs_theta=None, pcs_theta_err=None, missing_pcs=None):
+-        &quot;&quot;&quot;Set up the slave command, storing the integration points.
++    def __init__(self, points=None):
++        &quot;&quot;&quot;Store the pre-target function invariable data.
+ 
+         @keyword points:            The subdivision of points to process on 
+the slave processor.
+         @type points:               numpy rank-2, 3D array
++        &quot;&quot;&quot;
++
++        # Store the arguments.
++        self.points = points
++
++
++    def load_data(self, theta_x=None, theta_y=None, sigma_max=None, 
+full_in_ref_frame=None, r_pivot_atom=None, r_pivot_atom_rev=None, 
+r_ln_pivot=None, A=None, R_eigen=None, RT_eigen=None, Ri_prime=None, 
+pcs_theta=None, pcs_theta_err=None, missing_pcs=None):
++        &quot;&quot;&quot;Store the target function level variable data.
++
+         @keyword theta_x:           The x-axis half cone angle.
+         @type theta_x:              float
+         @keyword theta_y:           The y-axis half cone angle.
+@@ -2449,10 +2458,9 @@
+         @type pcs_theta_err:        numpy rank-2 array
+         @keyword missing_pcs:       A structure used to indicate which PCS 
+values are missing.
+         @type missing_pcs:          numpy rank-2 array
+-         &quot;&quot;&quot;
++        &quot;&quot;&quot;
+ 
+         # Store the arguments.
+-        self.points = points
+         self.theta_x = theta_x
+         self.theta_y = theta_y
+         self.sigma_max = sigma_max
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Mar 07 12:40:02 2012</div>  
+</body>
+</html>

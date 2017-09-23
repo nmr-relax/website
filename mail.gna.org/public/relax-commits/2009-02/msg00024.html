@@ -1,0 +1,164 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r8728 &#45; /1.3/generic_fns/structure/scientific.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 04 Feb 2009 15:55:50 +0100 -->
+<!--X-Message-Id: E1LUjAM&#45;0005n0&#45;3s@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r8728 - /1.3/generic_fns/structure/scientific.py -- February 04, 2009 - 15:55</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r8728 - /1.3/generic_fns/structure/scientific.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00024" class="tabs">Index by Date</a> | <a href="threads.html#00024" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00023.html">Date Prev</a>] [<a href="msg00025.html">Date Next</a>] [<a href="msg00023.html">Thread Prev</a>] [<a href="msg00025.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 04 Feb 2009 14:55:50 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00024.html">E1LUjAM-0005n0-3s@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on February 04, 2009 - 15:55:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Feb  4 15:55:49 2009
+New Revision: 8728
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=8728&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=8728&amp;view=rev</a>
+Log:
+Fixes for the load_pdb() method.
+
+Previously loaded structures were not being taken into account.
+
+
+Modified:
+    1.3/generic_fns/structure/scientific.py
+
+Modified: 1.3/generic_fns/structure/scientific.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/generic_fns/structure/scientific.py?rev=8728&amp;r1=8727&amp;r2=8728&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/generic_fns/structure/scientific.py?rev=8728&amp;r1=8727&amp;r2=8728&amp;view=diff</a>
+==============================================================================
+--- 1.3/generic_fns/structure/scientific.py (original)
++++ 1.3/generic_fns/structure/scientific.py Wed Feb  4 15:55:49 2009
+@@ -41,6 +41,7 @@
+ from generic_fns import pipes, relax_re
+ from generic_fns.mol_res_spin import Selection, parse_token, tokenise
+ from relax_errors import RelaxError, RelaxPdbLoadError
++from relax_io import file_root
+ from relax_warnings import RelaxWarning, RelaxNoAtomWarning, 
+RelaxNoPDBFileWarning, RelaxZeroVectorWarning
+ 
+ 
+@@ -557,6 +558,17 @@
+             mol_index = 0
+             new_mol_name = []
+ 
++            # Set the target molecule number offset.
++            if set_mol_name:
++                mol_offset = [set_mol_name[mol_index]]
++            else:
++                # Number of structures already present for the model.
++                mol_offset = 0
++                for i in range(len(self.structural_data)):
++                    model_index = model_num - 1
++                    if not set_model_num or (model_index &lt;= 
+len(set_model_num) and set_model_num[model_index] == 
+self.structural_data[i].num):
++                        mol_offset = len(self.structural_data[i].mol)
++
+             # Store the original model number.
+             orig_model_num.append(model_num)
+ 
+@@ -571,7 +583,7 @@
+                     mol_conts[-1].append(MolContainer())
+                     mol_conts[-1][-1].data = mol
+                     mol_conts[-1][-1].mol_type = 'protein'
+-                    self.target_mol_name(set=set_mol_name, 
+target=new_mol_name, index=mol_index, mol_num=mol_index+1, file=file)
++                    self.target_mol_name(set=set_mol_name, 
+target=new_mol_name, index=mol_index, mol_num=mol_index+1+mol_offset, 
+file=file)
+                     mol_index = mol_index + 1
+ 
+             # Then the nucleotide chains (generating the molecule names and 
+incrementing the molecule index).
+@@ -580,7 +592,7 @@
+                     mol_conts[-1].append(MolContainer())
+                     mol_conts[-1][-1].data = mol
+                     mol_conts[-1][-1].mol_type = 'nucleic acid'
+-                    self.target_mol_name(set=set_mol_name, 
+target=new_mol_name, index=mol_index, mol_num=mol_index+1, file=file)
++                    self.target_mol_name(set=set_mol_name, 
+target=new_mol_name, index=mol_index, mol_num=mol_index+1+mol_offset, 
+file=file)
+                     mol_index = mol_index + 1
+ 
+             # Finally all other molecules (generating the molecule names and 
+incrementing the molecule index).
+@@ -596,7 +608,7 @@
+                         mol_conts[-1][-1].data.append(mol)
+ 
+                     # Update structures.
+-                    self.target_mol_name(set=set_mol_name, 
+target=new_mol_name, index=mol_index, mol_num=mol_index+1, file=file)
++                    self.target_mol_name(set=set_mol_name, 
+target=new_mol_name, index=mol_index, mol_num=mol_index+1+mol_offset, 
+file=file)
+                     mol_index = mol_index + 1
+ 
+             # Increment the model counter.
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Feb 04 16:20:02 2009</div>  
+</body>
+</html>

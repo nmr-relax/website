@@ -1,0 +1,266 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r9511 &#45; in /1.3: data/__init__.py generic_fns/results.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 11 Sep 2009 11:12:31 +0200 -->
+<!--X-Message-Id: E1Mm2BD&#45;0000Et&#45;0p@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r9511 - in /1.3: data/__init__.py generic_fns/results.py -- September 11, 2009 - 11:12</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r9511 - in /1.3: data/__init__.py generic_fns/results.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00075" class="tabs">Index by Date</a> | <a href="threads.html#00075" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00074.html">Date Prev</a>] [<a href="msg00076.html">Date Next</a>] [<a href="msg00074.html">Thread Prev</a>] [<a href="msg00076.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 11 Sep 2009 09:12:30 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00075.html">E1Mm2BD-0000Et-0p@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on September 11, 2009 - 11:12:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Sep 11 11:12:30 2009
+New Revision: 9511
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=9511&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=9511&amp;view=rev</a>
+Log:
+Updated the relax data store from_xml() method for support of the loading of 
+the XML state file.
+
+
+Modified:
+    1.3/data/__init__.py
+    1.3/generic_fns/results.py
+
+Modified: 1.3/data/__init__.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/data/__init__.py?rev=9511&amp;r1=9510&amp;r2=9511&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/data/__init__.py?rev=9511&amp;r1=9510&amp;r2=9511&amp;view=diff</a>
+==============================================================================
+--- 1.3/data/__init__.py (original)
++++ 1.3/data/__init__.py Fri Sep 11 11:12:30 2009
+@@ -28,12 +28,14 @@
+ import __builtin__
+ from re import search
+ from string import split
++from sys import stderr
+ from time import asctime
+ import xml.dom.minidom
+ 
+ # relax module imports.
+ from pipe_container import PipeContainer
+-from relax_errors import RelaxPipeError
++import generic_fns
++from relax_errors import RelaxError, RelaxPipeError, RelaxNoPipeError
+ from version import version
+ 
+ 
+@@ -175,6 +177,7 @@
+ 
+         # No pipes should exist.
+         if not self.keys() == []:
++            stderr.write(&quot;The relax data store contains the data pipes 
+%s.\n&quot; % self.keys())
+             return False
+ 
+         # An object has been added to the data store.
+@@ -192,22 +195,36 @@
+                 continue
+ 
+             # An object has been added.
++            stderr.write(&quot;The relax data store contains the object %s.\n&quot; % 
+name)
+             return False
+ 
+         # The data store is empty.
+         return True
+ 
+ 
+-    def from_xml(self, file, dir=None, verbosity=1):
++    def from_xml(self, file, dir=None, pipe_to=None, verbosity=1):
+         &quot;&quot;&quot;Parse a XML document representation of a data pipe, and load it 
+into the relax data store.
+ 
+-        @param file:        The open file object.
+-        @type file:         file
+-        @keyword dir:       The name of the directory containing the results 
+file.
+-        @type dir:          str
+-        @keyword verbosity: A flag specifying the amount of information to 
+print.  The higher the value,
+-                            the greater the verbosity.
+-        @type verbosity:    int
++        @param file:                The open file object.
++        @type file:                 file
++        @keyword dir:               The name of the directory containing the 
+results file (needed
++                                    for loading external files).
++        @type dir:                  str
++        @keyword pipe_to:           The data pipe to load the XML data pipe 
+into (the file must only
++                                    contain one data pipe).
++        @type pipe_to:              str
++        @keyword verbosity:         A flag specifying the amount of 
+information to print.  The
++                                    higher the value, the greater the 
+verbosity.
++        @type verbosity:            int
++        @raises RelaxError:         If pipe_to is given and the file 
+contains multiple pipe
++                                    elements;  or if the data pipes in the 
+XML file already exist in
++                                    the relax data store;  or if the data 
+pipe type is invalid;  or
++                                    if the target data pipe is not empty.
++        @raises RelaxNoPipeError:   If pipe_to is given but the data pipe 
+does not exist.
++        @raises RelaxError:         If the data pipes in the XML file 
+already exist in the relax
++                                    data store, or if the data pipe type is 
+invalid.
++        @raises RelaxPipeError:     If the data pipes of the XML file are 
+already present in the
++                                    relax data store.
+         &quot;&quot;&quot;
+ 
+         # Create the XML document from the file.
+@@ -219,8 +236,60 @@
+         # Get the relax version of the XML file.
+         relax_version = str(relax_node.getAttribute('version'))
+ 
+-        # Fill the pipe.
+-        self[self.instance.current_pipe].from_xml(relax_node, dir=dir)
++        # Get the pipe nodes.
++        pipe_nodes = relax_node.getElementsByTagName('pipe')
++
++        # Target loading to a specific pipe (for pipe results reading).
++        if pipe_to:
++            # Check if there are multiple pipes in the XML file.
++            if len(pipe_nodes) &gt; 1:
++                raise RelaxError(&quot;The pipe_to target pipe argument '%s' 
+cannot be given as the file contains multiple pipe elements.&quot; % pipe_to)
++
++            # The pipe type.
++            pipe_type = pipe_nodes[0].getAttribute('type')
++
++            # Check that the pipe already exists.
++            if not pipe_to in self:
++                raise RelaxNoPipeError(pipe_to)
++
++            # Check if the pipe type matches.
++            if pipe_type != self[pipe_to].pipe_type:
++                raise RelaxError(&quot;The XML file pipe type '%s' does not match 
+the pipe type '%s'&quot; % (pipe_type, self[pipe_to].pipe_type))
++
++            # Check if the pipe is empty.
++            if not self[pipe_to].is_empty():
++                raise RelaxError(&quot;The data pipe '%s' is not empty.&quot; % 
+pipe_to)
++
++            # Load the data.
++            self[pipe_to].from_xml(pipe_nodes[0], dir=dir)
++
++        # Load the state.
++        else:
++            # Checks.
++            for pipe_node in pipe_nodes:
++                # The pipe name and type.
++                pipe_name = pipe_node.getAttribute('name')
++                pipe_type = pipe_node.getAttribute('type')
++
++                # Existence check.
++                if pipe_name in self:
++                    raise RelaxPipeError(pipe_name)
++
++                # Valid type check.
++                if not pipe_type in generic_fns.pipes.VALID_TYPES:
++                    raise RelaxError(&quot;The data pipe type '%s' is invalid and 
+must be one of the strings in the list %s.&quot; % (pipe_type, 
+generic_fns.pipes.VALID_TYPES))
++
++            # Load the data pipes.
++            for pipe_node in pipe_nodes:
++                # The pipe name and type.
++                pipe_name = pipe_node.getAttribute('name')
++                pipe_type = pipe_node.getAttribute('type')
++
++                # Add the data pipe.
++                self.add(pipe_name, pipe_type)
++
++                # Fill the pipe.
++                self[pipe_name].from_xml(pipe_node, dir=dir)
+ 
+ 
+     def to_xml(self, file, pipes=None):
+
+Modified: 1.3/generic_fns/results.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/generic_fns/results.py?rev=9511&amp;r1=9510&amp;r2=9511&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/generic_fns/results.py?rev=9511&amp;r1=9510&amp;r2=9511&amp;view=diff</a>
+==============================================================================
+--- 1.3/generic_fns/results.py (original)
++++ 1.3/generic_fns/results.py Fri Sep 11 11:12:30 2009
+@@ -93,7 +93,7 @@
+ 
+     # XML results.
+     if format == 'xml':
+-        read_function = ds.from_xml(file, dir=dirname(file_path))
++        ds.from_xml(file, dir=dirname(file_path), pipe_to=pipes.cdp_name())
+ 
+     # Columnar results.
+     elif format == 'columnar':
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Sep 11 11:40:02 2009</div>  
+</body>
+</html>

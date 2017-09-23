@@ -1,0 +1,255 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r9094 &#45; /branches/frame_order/specific_fns/frame_order.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 19 Jun 2009 11:44:58 +0200 -->
+<!--X-Message-Id: E1MHaeX&#45;0008MX&#45;V8@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r9094 - /branches/frame_order/specific_fns/frame_order.py -- June 19, 2009 - 11:44</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r9094 - /branches/frame_order/specific_fns/frame_order.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00028" class="tabs">Index by Date</a> | <a href="threads.html#00028" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00027.html">Date Prev</a>] [<a href="msg00029.html">Date Next</a>] [<a href="msg00027.html">Thread Prev</a>] [<a href="msg00029.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 19 Jun 2009 09:44:57 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00028.html">E1MHaeX-0008MX-V8@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on June 19, 2009 - 11:44:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Jun 19 11:44:57 2009
+New Revision: 9094
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=9094&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=9094&amp;view=rev</a>
+Log:
+Wrote the minimise() and __unpack_opt_results() methods.
+
+The minimise() method is rudimentary and will not work.
+
+
+Modified:
+    branches/frame_order/specific_fns/frame_order.py
+
+Modified: branches/frame_order/specific_fns/frame_order.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order/specific_fns/frame_order.py?rev=9094&amp;r1=9093&amp;r2=9094&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order/specific_fns/frame_order.py?rev=9094&amp;r1=9093&amp;r2=9094&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order/specific_fns/frame_order.py (original)
++++ branches/frame_order/specific_fns/frame_order.py Fri Jun 19 11:44:57 2009
+@@ -25,10 +25,14 @@
+ 
+ # Python module imports.
+ from math import pi
++from minfx.generic import generic_minimise
++from numpy import array, float64
+ 
+ # relax module imports.
++from float import isNaN, isInf
+ from generic_fns import pipes
+-from relax_errors import RelaxNoModelError
++from maths_fns import frame_order_models
++from relax_errors import RelaxInfError, RelaxNaNError, RelaxNoModelError
+ from specific_fns.base_class import Common_functions
+ 
+ 
+@@ -59,6 +63,71 @@
+             cdp.beta = None
+             cdp.gamma = None
+             cdp.theta = None
++
++
++    def __unpack_opt_results(self, results):
++        &quot;&quot;&quot;Unpack and store the Frame Order optimisation results.
++
++        @param results: The results tuple returned by the minfx 
+generic_minimise() function.
++        @type results:  tuple
++        &quot;&quot;&quot;
++
++        # Alias the current data pipe.
++        cdp = pipes.get_pipe()
++
++        # Disassemble the results.
++        param_vector, chi2[i], iter_count, f_count, g_count, h_count, 
+warning = results
++
++        # Catch infinite chi-squared values.
++        if isInf(func):
++            raise RelaxInfError, 'chi-squared'
++
++        # Catch chi-squared values of NaN.
++        if isNaN(func):
++            raise RelaxNaNError, 'chi-squared'
++
++        # Isotropic cone model.
++        if cdp.model == 'iso cone':
++            # Disassemble the parameter vector.
++            alpha, beta, gamma, theta = param_vector
++
++            # Wrap the cone angle to be between 0 and pi.
++            if theta &lt; 0.0:
++                theta = -theta
++            if theta &gt; pi:
++                theta = 2.0*pi - theta
++
++            # Monte Carlo simulation data structures.
++            if sim_index != None:
++                # Model parameters.
++                cdp.alpha_sim[sim_index] = alpha
++                cdp.beta_sim[sim_index] = beta
++                cdp.gamma_sim[sim_index] = gamma
++                cdp.theta_sim[sim_index] = theta
++
++                # Optimisation info.
++                cdp.chi2_sim[sim_index] = func
++                cdp.iter_sim[sim_index] = iter_count
++                cdp.f_count_sim[sim_index] = f_count
++                cdp.g_count_sim[sim_index] = g_count
++                cdp.h_count_sim[sim_index] = h_count
++                cdp.warning_sim[sim_index] = warning
++
++            # Normal data structures.
++            else:
++                # Model parameters.
++                cdp.alpha = alpha
++                cdp.beta = beta
++                cdp.gamma = gamma
++                cdp.theta = theta
++
++                # Optimisation info.
++                cdp.chi2 = func
++                cdp.iter = iter_count
++                cdp.f_count = f_count
++                cdp.g_count = g_count
++                cdp.h_count = h_count
++                cdp.warning = warning
+ 
+ 
+     def grid_search(self, lower, upper, inc, constraints=False, verbosity=0, 
+sim_index=None):
+@@ -126,6 +195,52 @@
+         self.minimise(min_algor='grid', min_options=grid_ops, 
+constraints=constraints, verbosity=verbosity, sim_index=sim_index)
+ 
+ 
++    def minimise(self, min_algor=None, min_options=None, func_tol=None, 
+grad_tol=None, max_iterations=None, constraints=False, scaling=True, 
+verbosity=0, sim_index=None):
++        &quot;&quot;&quot;Minimisation function.
++
++        @param min_algor:       The minimisation algorithm to use.
++        @type min_algor:        str
++        @param min_options:     An array of options to be used by the 
+minimisation algorithm.
++        @type min_options:      array of str
++        @param func_tol:        The function tolerance which, when reached, 
+terminates optimisation.
++                                Setting this to None turns of the check.
++        @type func_tol:         None or float
++        @param grad_tol:        The gradient tolerance which, when reached, 
+terminates optimisation.
++                                Setting this to None turns of the check.
++        @type grad_tol:         None or float
++        @param max_iterations:  The maximum number of iterations for the 
+algorithm.
++        @type max_iterations:   int
++        @param constraints:     If True, constraints are used during 
+optimisation.
++        @type constraints:      bool
++        @param scaling:         If True, diagonal scaling is enabled during 
+optimisation to allow
++                                the problem to be better conditioned.
++        @type scaling:          bool
++        @param verbosity:       A flag specifying the amount of information 
+to print.  The higher
++                                the value, the greater the verbosity.
++        @type verbosity:        int
++        @param sim_index:       The index of the simulation to optimise.  
+This should be None if
++                                normal optimisation is desired.
++        @type sim_index:        None or int
++        &quot;&quot;&quot;
++
++        # Alias the current data pipe.
++        cdp = pipes.get_pipe()
++
++        # Isotropic cone model.
++        if cdp.model == 'iso cone':
++            # The initial parameter vector (the Euler angles and the cone 
+angle).
++            param_vector = array([cdp.alpha, cdp.beta, cdp.gamma, 
+cdp.theta], float64)
++
++            # Set up the optimisation function.
++            model = frame_order_models.Frame_order()
++
++        # Minimisation.
++        results = generic_minimise(func=model.func, args=(), 
+x0=param_vector, min_algor=MIN_ALGOR, full_output=1, print_flag=1)
++
++        # Unpack the results.
++        self.__unpack_opt_results(results)
++
++
+     def select_model(self, model=None):
+         &quot;&quot;&quot;Select the Frame Order model.
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Jun 19 12:00:05 2009</div>  
+</body>
+</html>

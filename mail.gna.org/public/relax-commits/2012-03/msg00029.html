@@ -1,0 +1,158 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r15444 &#45; /1.3/info.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 06 Mar 2012 17:11:02 +0100 -->
+<!--X-Message-Id: E1S4wyc&#45;0001qZ&#45;Kv@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r15444 - /1.3/info.py -- March 06, 2012 - 17:11</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r15444 - /1.3/info.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00029" class="tabs">Index by Date</a> | <a href="threads.html#00029" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00028.html">Date Prev</a>] [<a href="msg00030.html">Date Next</a>] [<a href="msg00028.html">Thread Prev</a>] [<a href="msg00030.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 06 Mar 2012 16:11:02 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00029.html">E1S4wyc-0001qZ-Kv@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on March 06, 2012 - 17:11:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Mar  6 17:11:02 2012
+New Revision: 15444
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=15444&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=15444&amp;view=rev</a>
+Log:
+Added support for the memory size on MS Windows to the relax info print out.
+
+
+Modified:
+    1.3/info.py
+
+Modified: 1.3/info.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/info.py?rev=15444&amp;r1=15443&amp;r2=15444&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/info.py?rev=15444&amp;r1=15443&amp;r2=15444&amp;view=diff</a>
+==============================================================================
+--- 1.3/info.py (original)
++++ 1.3/info.py Tue Mar  6 17:11:02 2012
+@@ -24,6 +24,9 @@
+ &quot;&quot;&quot;Module containing the introductory text container.&quot;&quot;&quot;
+ 
+ # Python module imports.
++import ctypes
++if hasattr(ctypes, 'windll'):
++    import ctypes.wintypes
+ import numpy
+ from os import popen3
+ import platform
+@@ -332,6 +335,17 @@
+                 # The swap size.
+                 if row[0] == 'Swap:':
+                     text += format % (&quot;Total swap size: &quot;, row[1], &quot;Mb&quot;)
++
++        # Windows systems (supported by ctypes.windll).
++        if not text and hasattr(ctypes, 'windll'):
++            # Initialise the memory info class.
++            mem = MemoryStatusEx()
++
++            # The RAM size.
++            text += format % (&quot;Total RAM size: &quot;, mem.ullTotalPhys / 
+1024.**2, &quot;Mb&quot;)
++
++            # The swap size.
++            text += format % (&quot;Total swap size: &quot;, mem.ullTotalVirtual / 
+1024.**2, &quot;Mb&quot;)
+ 
+         # Unknown.
+         if not text:
+@@ -423,6 +437,32 @@
+ 
+ 
+ 
++class MemoryStatusEx(ctypes.Structure):
++    &quot;&quot;&quot;Special object for obtaining hardware info in MS Windows.&quot;&quot;&quot;
++
++    if hasattr(ctypes, 'windll'):
++        _fields_ = [
++            ('dwLength', ctypes.wintypes.DWORD),
++            ('dwMemoryLoad', ctypes.wintypes.DWORD),
++            ('ullTotalPhys', ctypes.c_ulonglong),
++            ('ullAvailPhys', ctypes.c_ulonglong),
++            ('ullTotalPageFile', ctypes.c_ulonglong),
++            ('ullAvailPageFile', ctypes.c_ulonglong),
++            ('ullTotalVirtual', ctypes.c_ulonglong),
++            ('ullAvailVirtual', ctypes.c_ulonglong),
++            ('ullExtendedVirtual', ctypes.c_ulonglong),
++        ]
++
++    def __init__(self):
++        &quot;&quot;&quot;Set up the information and handle non MS Windows systems.&quot;&quot;&quot;
++
++        # Get the required info (for MS Windows only).
++        if hasattr(ctypes, 'windll'):
++            self.dwLength = ctypes.sizeof(self)
++            ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(self))
++
++
++
+ class Ref:
+     &quot;&quot;&quot;Reference base class.&quot;&quot;&quot;
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Mar 06 18:40:01 2012</div>  
+</body>
+</html>

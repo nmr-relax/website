@@ -1,0 +1,208 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r6212 &#45; /1.3/generic_fns/monte_carlo.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 21 May 2008 23:18:13 +0200 -->
+<!--X-Message-Id: E1JyvYe&#45;0005v2&#45;Sv@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r6212 - /1.3/generic_fns/monte_carlo.py -- May 21, 2008 - 23:18</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r6212 - /1.3/generic_fns/monte_carlo.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00198" class="tabs">Index by Date</a> | <a href="threads.html#00198" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00197.html">Date Prev</a>] [<a href="msg00199.html">Date Next</a>] [<a href="msg00197.html">Thread Prev</a>] [<a href="msg00199.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 21 May 2008 21:09:12 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00198.html">E1JyvYe-0005v2-Sv@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on May 21, 2008 - 23:18:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed May 21 23:09:11 2008
+New Revision: 6212
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=6212&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=6212&amp;view=rev</a>
+Log:
+Updated the create_data() function to the new design.
+
+
+Modified:
+    1.3/generic_fns/monte_carlo.py
+
+Modified: 1.3/generic_fns/monte_carlo.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/generic_fns/monte_carlo.py?rev=6212&amp;r1=6211&amp;r2=6212&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/generic_fns/monte_carlo.py?rev=6212&amp;r1=6211&amp;r2=6212&amp;view=diff</a>
+==============================================================================
+--- 1.3/generic_fns/monte_carlo.py (original)
++++ 1.3/generic_fns/monte_carlo.py Wed May 21 23:09:11 2008
+@@ -31,64 +31,64 @@
+ 
+ # relax module imports.
+ from data import Data as relax_data_store
++from generic_fns.mol_res_spin import exists_mol_res_spin_data
+ from relax_errors import RelaxError, RelaxNoPipeError, RelaxNoSequenceError
+-
+-
+-def create_data(run=None, method=None):
++from specific_fns.setup import get_specific_fn
++
++
++def create_data(method=None):
+     &quot;&quot;&quot;Function for creating simulation data.
+ 
+-    It is assumed that all data types are residue specific.
++    @keyword method:    The type of Monte Carlo simulation to perform.
++    @type method:       str
+     &quot;&quot;&quot;
+ 
+-    # Arguments.
+-    self.run = run
+-
+-    # Test if the run exists.
+-    if not self.run in relax_data_store.run_names:
+-        raise RelaxNoPipeError, self.run
+-
+-    # Test if simulations have been set up.
+-    if not hasattr(relax_data_store, 'sim_state'):
+-        raise RelaxError, &quot;Monte Carlo simulations for the run &quot; + 
+`self.run` + &quot; have not been set up.&quot;
+-
+-    # Test if sequence data is loaded.
+-    if not relax_data_store.res.has_key(self.run):
+-        raise RelaxNoSequenceError, self.run
++    # Test if the current data pipe exists.
++    if not relax_data_store.current_pipe:
++        raise RelaxNoPipeError
++
++    # Alias the current data pipe.
++    cdp = relax_data_store[relax_data_store.current_pipe]
++
++    # Test if simulations have been set up.
++    if not hasattr(cdp, 'sim_state'):
++        raise RelaxError, &quot;Monte Carlo simulations have not been set up.&quot;
++
++    # Test if sequence data exists.
++    if not exists_mol_res_spin_data():
++        raise RelaxNoSequenceError
+ 
+     # Test the method argument.
+     valid_methods = ['back_calc', 'direct']
+     if method not in valid_methods:
+         raise RelaxError, &quot;The simulation creation method &quot; + `method` + &quot; 
+is not valid.&quot;
+ 
+-    # Function type.
+-    function_type = 
+relax_data_store.run_types[relax_data_store.run_names.index(self.run)]
+-
+     # Specific Monte Carlo data creation, data return, and error return 
+function setup.
+-    create_mc_data = self.relax.specific_setup.setup('create_mc_data', 
+function_type)
+-    return_data = self.relax.specific_setup.setup('return_data', 
+function_type)
+-    return_error = self.relax.specific_setup.setup('return_error', 
+function_type)
+-    pack_sim_data = self.relax.specific_setup.setup('pack_sim_data', 
+function_type)
++    create_mc_data = get_specific_fn('create_mc_data', cdp.pipe_type)
++    return_data = get_specific_fn('return_data', cdp.pipe_type)
++    return_error = get_specific_fn('return_error', cdp.pipe_type)
++    pack_sim_data = get_specific_fn('pack_sim_data', cdp.pipe_type)
+ 
+     # Loop over the sequence.
+-    for i in xrange(len(relax_data_store.res[self.run])):
++    for spin in spin_loop():
+         # Skip deselected residues.
+-        if not relax_data_store.res[self.run][i].select:
++        if not spin.select:
+             continue
+ 
+         # Create the Monte Carlo data.
+         if method == 'back_calc':
+-            data = create_mc_data(self.run, i)
++            data = create_mc_data(spin)
+ 
+         # Get the original data.
+         else:
+-            data = return_data(self.run, i)
++            data = return_data(spin)
+ 
+         # Get the errors.
+-        error = return_error(self.run, i)
++        error = return_error(spin)
+ 
+         # Loop over the Monte Carlo simulations.
+         random = []
+-        for j in xrange(relax_data_store.sim_number[self.run]):
++        for j in xrange(cdp.sim_number):
+             # Randomise the data.
+             random.append([])
+             for k in xrange(len(data)):
+@@ -101,7 +101,7 @@
+                 random[j].append(gauss(data[k], error[k]))
+ 
+         # Pack the simulation data.
+-        pack_sim_data(self.run, i, random)
++        pack_sim_data(spin, random)
+ 
+ 
+ def error_analysis(run=None, prune=0.0):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed May 21 23:20:12 2008</div>  
+</body>
+</html>

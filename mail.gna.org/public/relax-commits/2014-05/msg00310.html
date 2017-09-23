@@ -1,0 +1,494 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r23207 &#45; in /branches/frame_order_cleanup: ./ lib/structure/ pipe_control/structure/ user_functions/ -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 16 May 2014 16:32:45 +0200 -->
+<!--X-Message-Id: E1WlJBl&#45;0003p8&#45;5n@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r23207 - in /branches/frame_order_cleanup: ./ lib/structure/ pipe_control/structure/ user_functions/ -- May 16, 2014 - 16:32</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r23207 - in /branches/frame_order_cleanup: ./ lib/structure/ pipe_control/structure/ user_functions/</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00310" class="tabs">Index by Date</a> | <a href="threads.html#00310" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00309.html">Date Prev</a>] [<a href="msg00311.html">Date Next</a>] [<a href="msg00309.html">Thread Prev</a>] [<a href="msg00311.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 16 May 2014 14:32:45 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00310.html">E1WlJBl-0003p8-5n@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on May 16, 2014 - 16:32:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri May 16 16:32:44 2014
+New Revision: 23207
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=23207&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=23207&amp;view=rev</a>
+Log:
+Merged revisions 23206 via svnmerge from 
+svn+ssh://bugman@xxxxxxxxxxx/svn/relax/trunk
+
+........
+  r23206 | bugman | 2014-05-16 16:32:03 +0200 (Fri, 16 May 2014) | 5 lines
+  
+  Added the 'centre_type' argument to the structure.superimpose user function.
+  
+  This allows the default 'centroid' superimposition to be replaced by a 
+centre of mass (CoM)
+  superimposition instead.  As the CoM and centroid position do not match, 
+the translation vector and
+  Euler rotation angles will be different.
+........
+
+Modified:
+    branches/frame_order_cleanup/   (props changed)
+    branches/frame_order_cleanup/lib/structure/superimpose.py
+    branches/frame_order_cleanup/pipe_control/structure/main.py
+    branches/frame_order_cleanup/user_functions/structure.py
+
+Propchange: branches/frame_order_cleanup/
+------------------------------------------------------------------------------
+--- svnmerge-integrated (original)
++++ svnmerge-integrated Fri May 16 16:32:44 2014
+@@ -1 +1 @@
+-/trunk:1-23194
++/trunk:1-23206
+
+Modified: branches/frame_order_cleanup/lib/structure/superimpose.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/structure/superimpose.py?rev=23207&amp;r1=23206&amp;r2=23207&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/structure/superimpose.py?rev=23207&amp;r1=23206&amp;r2=23207&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/lib/structure/superimpose.py   (original)
++++ branches/frame_order_cleanup/lib/structure/superimpose.py   Fri May 16 
+16:32:44 2014
+@@ -1,6 +1,6 @@
+ 
+###############################################################################
+ #                                                                            
+ #
+-# Copyright (C) 2011-2013 Edward d'Auvergne                                  
+ #
++# Copyright (C) 2011-2014 Edward d'Auvergne                                  
+ #
+ #                                                                            
+ #
+ # This file is part of the program relax (<a  rel="nofollow" href="http://www.nmr-relax.com">http://www.nmr-relax.com</a>).         
+ #
+ #                                                                            
+ #
+@@ -29,6 +29,7 @@
+ from numpy.linalg import det, norm, svd
+ 
+ # relax module import.
++from lib.structure.mass import centre_of_mass
+ from lib.structure.statistics import calc_mean_structure
+ from lib.geometry.rotations import R_to_axis_angle, R_to_euler_zyz
+ 
+@@ -49,17 +50,21 @@
+     return centroid
+ 
+ 
+-def fit_to_first(models=None, coord=None, centroid=None):
++def fit_to_first(models=None, coord=None, centre_type=&quot;centroid&quot;, 
+elements=None, centroid=None):
+     &quot;&quot;&quot;Superimpose a set of structural models using the fit to first 
+algorithm.
+ 
+-    @keyword models:    The list of models to superimpose.
+-    @type models:       list of int
+-    @keyword coord:     The list of coordinates of all models to 
+superimpose.  The first index is the models, the second is the atomic 
+positions, and the third is the xyz coordinates.
+-    @type coord:        list of numpy rank-2, Nx3 arrays
+-    @keyword centroid:  An alternative position of the centroid to allow for 
+different superpositions, for example of pivot point motions.
+-    @type centroid:     list of float or numpy rank-1, 3D array
+-    @return:            The lists of translation vectors, rotation matrices, 
+and rotation pivots.
+-    @rtype:             list of numpy rank-1 3D arrays, list of numpy rank-2 
+3D arrays, list of numpy rank-1 3D arrays
++    @keyword models:        The list of models to superimpose.
++    @type models:           list of int
++    @keyword coord:         The list of coordinates of all models to 
+superimpose.  The first index is the models, the second is the atomic 
+positions, and the third is the xyz coordinates.
++    @type coord:            list of numpy rank-2, Nx3 arrays
++    @keyword centroid:      An alternative position of the centroid to allow 
+for different superpositions, for example of pivot point motions.
++    @type centroid:         list of float or numpy rank-1, 3D array
++    @keyword centre_type:   The type of centre to superimpose over.  This 
+can either be the standard centroid superimposition or the CoM could be used 
+instead.
++    @type centre_type:      str
++    @keyword elements:      The list of elements corresponding to the atoms.
++    @type elements:         list of str
++    @return:                The lists of translation vectors, rotation 
+matrices, and rotation pivots.
++    @rtype:                 list of numpy rank-1 3D arrays, list of numpy 
+rank-2 3D arrays, list of numpy rank-1 3D arrays
+     &quot;&quot;&quot;
+ 
+     # Print out.
+@@ -73,7 +78,7 @@
+     # Loop over the ending models.
+     for i in range(1, len(models)):
+         # Calculate the displacements (Kabsch algorithm).
+-        trans_vect, trans_dist, R, axis, angle, pivot = 
+kabsch(name_from='model %s'%models[0], name_to='model %s'%models[i], 
+coord_from=coord[i], coord_to=coord[0], centroid=centroid)
++        trans_vect, trans_dist, R, axis, angle, pivot = 
+kabsch(name_from='model %s'%models[0], name_to='model %s'%models[i], 
+coord_from=coord[i], coord_to=coord[0], centre_type=centre_type, 
+elements=elements, centroid=centroid)
+ 
+         # Store the transforms.
+         T_list.append(trans_vect)
+@@ -84,19 +89,23 @@
+     return T_list, R_list, pivot_list
+ 
+ 
+-def fit_to_mean(models=None, coord=None, centroid=None, verbosity=1):
++def fit_to_mean(models=None, coord=None, centre_type=&quot;centroid&quot;, 
+elements=None, centroid=None, verbosity=1):
+     &quot;&quot;&quot;Superimpose a set of structural models using the fit to first 
+algorithm.
+ 
+-    @keyword models:    The list of models to superimpose.
+-    @type models:       list of int
+-    @keyword coord:     The list of coordinates of all models to 
+superimpose.  The first index is the models, the second is the atomic 
+positions, and the third is the xyz coordinates.
+-    @type coord:        list of numpy rank-2, Nx3 arrays
+-    @keyword centroid:  An alternative position of the centroid to allow for 
+different superpositions, for example of pivot point motions.
+-    @type centroid:     list of float or numpy rank-1, 3D array
+-    @keyword verbosity: The amount of information to print out.  If 0, 
+nothing will be printed.
+-    @type verbosity:    int
+-    @return:            The lists of translation vectors, rotation matrices, 
+and rotation pivots.
+-    @rtype:             list of numpy rank-1 3D arrays, list of numpy rank-2 
+3D arrays, list of numpy rank-1 3D arrays
++    @keyword models:        The list of models to superimpose.
++    @type models:           list of int
++    @keyword coord:         The list of coordinates of all models to 
+superimpose.  The first index is the models, the second is the atomic 
+positions, and the third is the xyz coordinates.
++    @type coord:            list of numpy rank-2, Nx3 arrays
++    @keyword centre_type:   The type of centre to superimpose over.  This 
+can either be the standard centroid superimposition or the CoM could be used 
+instead.
++    @type centre_type:      str
++    @keyword elements:      The list of elements corresponding to the atoms.
++    @type elements:         list of str
++    @keyword centroid:      An alternative position of the centroid to allow 
+for different superpositions, for example of pivot point motions.
++    @type centroid:         list of float or numpy rank-1, 3D array
++    @keyword verbosity:     The amount of information to print out.  If 0, 
+nothing will be printed.
++    @type verbosity:        int
++    @return:                The lists of translation vectors, rotation 
+matrices, and rotation pivots.
++    @rtype:                 list of numpy rank-1 3D arrays, list of numpy 
+rank-2 3D arrays, list of numpy rank-1 3D arrays
+     &quot;&quot;&quot;
+ 
+     # Print out.
+@@ -131,7 +140,7 @@
+         converged = True
+         for i in range(len(models)):
+             # Calculate the displacements (Kabsch algorithm).
+-            trans_vect, trans_dist, R, axis, angle, pivot = 
+kabsch(name_from='model %s'%models[0], name_to='mean', coord_from=coord[i], 
+coord_to=mean, centroid=centroid, verbosity=0)
++            trans_vect, trans_dist, R, axis, angle, pivot = 
+kabsch(name_from='model %s'%models[0], name_to='mean', coord_from=coord[i], 
+coord_to=mean, centre_type=centre_type, elements=elements, centroid=centroid, 
+verbosity=0)
+ 
+             # Table printout.
+             if verbosity:
+@@ -161,7 +170,7 @@
+     # Perform the fit once from the original coordinates to obtain the full 
+transforms.
+     for i in range(len(models)):
+         # Calculate the displacements (Kabsch algorithm).
+-        trans_vect, trans_dist, R, axis, angle, pivot = 
+kabsch(name_from='model %s'%models[i], name_to='the mean structure', 
+coord_from=orig_coord[i], coord_to=mean, centroid=centroid, verbosity=0)
++        trans_vect, trans_dist, R, axis, angle, pivot = 
+kabsch(name_from='model %s'%models[i], name_to='the mean structure', 
+coord_from=orig_coord[i], coord_to=mean, centre_type=centre_type, 
+elements=elements, centroid=centroid, verbosity=0)
+ 
+         # Store the transforms.
+         T_list.append(trans_vect)
+@@ -172,7 +181,7 @@
+     return T_list, R_list, pivot_list
+ 
+ 
+-def kabsch(name_from=None, name_to=None, coord_from=None, coord_to=None, 
+centroid=None, verbosity=1):
++def kabsch(name_from=None, name_to=None, coord_from=None, coord_to=None, 
+centre_type=&quot;centroid&quot;, elements=None, centroid=None, verbosity=1):
+     &quot;&quot;&quot;Calculate the rotational and translational displacements between the 
+two given coordinate sets.
+ 
+     This uses the U{Kabsch 
+algorithm&lt;<a  rel="nofollow" href="http://en.wikipedia.org/wiki/Kabsch_algorithm">http://en.wikipedia.org/wiki/Kabsch_algorithm</a>&gt;}.
+@@ -186,6 +195,10 @@
+     @type coord_from:       numpy rank-2, Nx3 array
+     @keyword coord_to:      The list of atomic coordinates for the ending 
+structure.
+     @type coord_to:         numpy rank-2, Nx3 array
++    @keyword centre_type:   The type of centre to superimpose over.  This 
+can either be the standard centroid superimposition or the CoM could be used 
+instead.
++    @type centre_type:      str
++    @keyword elements:      The list of elements corresponding to the atoms.
++    @type elements:         list of str
+     @keyword centroid:      An alternative position of the centroid, used 
+for studying pivoted systems.
+     @type centroid:         list of float or numpy rank-1, 3D array
+     @return:                The translation vector T, translation distance 
+d, rotation matrix R, rotation axis r, rotation angle theta, and the 
+rotational pivot defined as the centroid of the ending structure.
+@@ -196,9 +209,12 @@
+     if centroid != None:
+         centroid_from = centroid
+         centroid_to = centroid
+-    else:
++    elif centre_type == 'centroid':
+         centroid_from = find_centroid(coord_from)
+         centroid_to = find_centroid(coord_to)
++    else:
++        centroid_from, mass_from = centre_of_mass(pos=coord_from, 
+elements=elements)
++        centroid_to, mass_to = centre_of_mass(pos=coord_to, 
+elements=elements)
+ 
+     # The translation.
+     trans_vect = centroid_to - centroid_from
+@@ -212,8 +228,12 @@
+     # Print out.
+     if verbosity &gt;= 1:
+         print(&quot;\n\nCalculating the rotational and translational 
+displacements from %s to %s using the Kabsch algorithm.\n&quot; % (name_from, 
+name_to))
+-        print(&quot;Start centroid:          [%20.15f, %20.15f, %20.15f]&quot; % 
+(centroid_from[0], centroid_from[1], centroid_from[2]))
+-        print(&quot;End centroid:            [%20.15f, %20.15f, %20.15f]&quot; % 
+(centroid_to[0], centroid_to[1], centroid_to[2]))
++        if centre_type == 'centroid':
++            print(&quot;Start centroid:          [%20.15f, %20.15f, %20.15f]&quot; % 
+(centroid_from[0], centroid_from[1], centroid_from[2]))
++            print(&quot;End centroid:            [%20.15f, %20.15f, %20.15f]&quot; % 
+(centroid_to[0], centroid_to[1], centroid_to[2]))
++        else:
++            print(&quot;Start CoM:               [%20.15f, %20.15f, %20.15f]&quot; % 
+(centroid_from[0], centroid_from[1], centroid_from[2]))
++            print(&quot;End CoM:                 [%20.15f, %20.15f, %20.15f]&quot; % 
+(centroid_to[0], centroid_to[1], centroid_to[2]))
+         print(&quot;Translation vector:      [%20.15f, %20.15f, %20.15f]&quot; % 
+(trans_vect[0], trans_vect[1], trans_vect[2]))
+         print(&quot;Translation distance:    %.15f&quot; % trans_dist)
+         print(&quot;Rotation matrix:&quot;)
+
+Modified: branches/frame_order_cleanup/pipe_control/structure/main.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/pipe_control/structure/main.py?rev=23207&amp;r1=23206&amp;r2=23207&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/pipe_control/structure/main.py?rev=23207&amp;r1=23206&amp;r2=23207&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/pipe_control/structure/main.py (original)
++++ branches/frame_order_cleanup/pipe_control/structure/main.py Fri May 16 
+16:32:44 2014
+@@ -1,6 +1,6 @@
+ 
+###############################################################################
+ #                                                                            
+ #
+-# Copyright (C) 2003-2013 Edward d'Auvergne                                  
+ #
++# Copyright (C) 2003-2014 Edward d'Auvergne                                  
+ #
+ #                                                                            
+ #
+ # This file is part of the program relax (<a  rel="nofollow" href="http://www.nmr-relax.com">http://www.nmr-relax.com</a>).         
+ #
+ #                                                                            
+ #
+@@ -867,23 +867,30 @@
+     spin.xh_vect = xh_vect
+ 
+ 
+-def superimpose(models=None, method='fit to mean', atom_id=None, 
+centroid=None):
++def superimpose(models=None, method='fit to mean', atom_id=None, 
+centre_type=&quot;centroid&quot;, centroid=None):
+     &quot;&quot;&quot;Superimpose a set of structural models.
+ 
+-    @keyword models:    The list of models to superimpose.  If set to None, 
+then all models will be used.
+-    @type models:       list of int or None
+-    @keyword method:    The superimposition method.  It must be one of 'fit 
+to mean' or 'fit to first'.
+-    @type method:       str
+-    @keyword atom_id:   The molecule, residue, and atom identifier string.  
+This matches the spin ID string format.
+-    @type atom_id:      str or None
+-    @keyword centroid:  An alternative position of the centroid to allow for 
+different superpositions, for example of pivot point motions.
+-    @type centroid:     list of float or numpy rank-1, 3D array
++    @keyword models:        The list of models to superimpose.  If set to 
+None, then all models will be used.
++    @type models:           list of int or None
++    @keyword method:        The superimposition method.  It must be one of 
+'fit to mean' or 'fit to first'.
++    @type method:           str
++    @keyword atom_id:       The molecule, residue, and atom identifier 
+string.  This matches the spin ID string format.
++    @type atom_id:          str or None
++    @keyword centre_type:   The type of centre to superimpose over.  This 
+can either be the standard centroid superimposition or the CoM could be used 
+instead.
++    @type centre_type:      str
++    @keyword centroid:      An alternative position of the centroid to allow 
+for different superpositions, for example of pivot point motions.
++    @type centroid:         list of float or numpy rank-1, 3D array
+     &quot;&quot;&quot;
+ 
+     # Check the method.
+     allowed = ['fit to mean', 'fit to first']
+     if method not in allowed:
+         raise RelaxError(&quot;The superimposition method '%s' is unknown.  It 
+must be one of %s.&quot; % (method, allowed))
++
++    # Check the type.
++    allowed = ['centroid', 'CoM']
++    if centre_type not in allowed:
++        raise RelaxError(&quot;The superimposition centre type '%s' is unknown.  
+It must be one of %s.&quot; % (centre_type, allowed))
+ 
+     # Test if the current data pipe exists.
+     pipes.test()
+@@ -905,11 +912,16 @@
+             coord[-1].append(pos[0])
+         coord[-1] = array(coord[-1])
+ 
++    # Assemble the element types.
++    elements = []
++    for elem in cdp.structure.atom_loop(atom_id=atom_id, model_num=model, 
+element_flag=True):
++        elements.append(elem)
++
+     # The different algorithms.
+     if method == 'fit to mean':
+-        T, R, pivot = fit_to_mean(models=models, coord=coord, 
+centroid=centroid)
++        T, R, pivot = fit_to_mean(models=models, coord=coord, 
+centre_type=centre_type, elements=elements, centroid=centroid)
+     elif method == 'fit to first':
+-        T, R, pivot = fit_to_first(models=models, coord=coord, 
+centroid=centroid)
++        T, R, pivot = fit_to_first(models=models, coord=coord, 
+centre_type=centre_type, elements=elements, centroid=centroid)
+ 
+ 
+     # Update to the new coordinates.
+
+Modified: branches/frame_order_cleanup/user_functions/structure.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/user_functions/structure.py?rev=23207&amp;r1=23206&amp;r2=23207&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/user_functions/structure.py?rev=23207&amp;r1=23206&amp;r2=23207&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/user_functions/structure.py    (original)
++++ branches/frame_order_cleanup/user_functions/structure.py    Fri May 16 
+16:32:44 2014
+@@ -1,6 +1,6 @@
+ 
+###############################################################################
+ #                                                                            
+ #
+-# Copyright (C) 2003-2013 Edward d'Auvergne                                  
+ #
++# Copyright (C) 2003-2014 Edward d'Auvergne                                  
+ #
+ #                                                                            
+ #
+ # This file is part of the program relax (<a  rel="nofollow" href="http://www.nmr-relax.com">http://www.nmr-relax.com</a>).         
+ #
+ #                                                                            
+ #
+@@ -932,6 +932,16 @@
+     can_be_none = True
+ )
+ uf.add_keyarg(
++    name = &quot;centre_type&quot;,
++    py_type = &quot;str&quot;,
++    default = &quot;centroid&quot;,
++    desc_short = &quot;centre type&quot;,
++    desc = &quot;The type of centre to user for the superimposition, i.e. either 
+the standard centroid superimposition or a superimposition using the centre 
+of mass (CoM).&quot;,
++    wiz_element_type = &quot;combo&quot;,
++    wiz_combo_choices = [&quot;The centroid&quot;, &quot;The centre of mass (CoM)&quot;],
++    wiz_combo_data = [&quot;centroid&quot;, &quot;CoM&quot;]
++)
++uf.add_keyarg(
+     name = &quot;centroid&quot;,
+     py_type = &quot;float_array&quot;,
+     desc_short = &quot;centroid position&quot;,
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri May 16 16:40:02 2014</div>  
+</body>
+</html>

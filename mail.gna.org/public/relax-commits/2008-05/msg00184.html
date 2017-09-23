@@ -1,0 +1,176 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r6201 &#45; /1.3/specific_fns/relax_fit.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 21 May 2008 22:37:10 +0200 -->
+<!--X-Message-Id: E1Jyv3d&#45;00008C&#45;7L@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r6201 - /1.3/specific_fns/relax_fit.py -- May 21, 2008 - 22:37</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r6201 - /1.3/specific_fns/relax_fit.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00184" class="tabs">Index by Date</a> | <a href="threads.html#00184" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00183.html">Date Prev</a>] [<a href="msg00185.html">Date Next</a>] [<a href="msg00183.html">Thread Prev</a>] [<a href="msg00185.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 21 May 2008 20:37:08 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00184.html">E1Jyv3d-00008C-7L@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on May 21, 2008 - 22:37:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed May 21 22:36:57 2008
+New Revision: 6201
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=6201&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=6201&amp;view=rev</a>
+Log:
+Updated the linear_constraints() method to the new design.
+
+
+Modified:
+    1.3/specific_fns/relax_fit.py
+
+Modified: 1.3/specific_fns/relax_fit.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/specific_fns/relax_fit.py?rev=6201&amp;r1=6200&amp;r2=6201&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/specific_fns/relax_fit.py?rev=6201&amp;r1=6200&amp;r2=6201&amp;view=diff</a>
+==============================================================================
+--- 1.3/specific_fns/relax_fit.py (original)
++++ 1.3/specific_fns/relax_fit.py Wed May 21 22:36:57 2008
+@@ -511,27 +511,27 @@
+         return min_options
+ 
+ 
+-    def linear_constraints(self, index=None):
+-        &quot;&quot;&quot;Function for setting up the linear constraint matrices A and b.
++    def linear_constraints(self, spin=None, scaling_matrix=None):
++        &quot;&quot;&quot;Set up the relaxation curve fitting linear constraint matrices A 
+and b.
+ 
+         Standard notation
+-        ~~~~~~~~~~~~~~~~~
+-
+-        The relaxation rate constraints are:
++        =================
++
++        The relaxation rate constraints are::
+ 
+             Rx &gt;= 0
+ 
+-        The intensity constraints are:
++        The intensity constraints are::
+ 
+             I0 &gt;= 0
+             Iinf &gt;= 0
+ 
+ 
+         Matrix notation
+-        ~~~~~~~~~~~~~~~
++        ===============
+ 
+         In the notation A.x &gt;= b, where A is an matrix of coefficients, x is 
+an array of parameter
+-        values, and b is a vector of scalars, these inequality constraints 
+are:
++        values, and b is a vector of scalars, these inequality constraints 
+are::
+ 
+             | 1  0  0 |     |  Rx  |      |    0    |
+             |         |     |      |      |         |
+@@ -539,23 +539,25 @@
+             |         |     |      |      |         |
+             | 1  0  0 |     | Iinf |      |    0    |
+ 
++
++        @keyword spin:              The spin data container.
++        @type spin:                 SpinContainer instance
++        @keyword scaling_matrix:    The diagonal, square scaling matrix.
++        @type scaling_matrix:       numpy diagonal matrix
+         &quot;&quot;&quot;
+ 
+         # Initialisation (0..j..m).
+         A = []
+         b = []
+-        n = len(self.param_vector)
++        n = len(spin.params)
+         zero_array = zeros(n, float64)
+         i = 0
+         j = 0
+ 
+-        # Alias the residue specific data structure.
+-        data = relax_data_store.res[self.run][index]
+-
+         # Loop over the parameters.
+-        for k in xrange(len(data.params)):
++        for k in xrange(len(spin.params)):
+             # Relaxation rate.
+-            if data.params[k] == 'Rx':
++            if spin.params[k] == 'Rx':
+                 # Rx &gt;= 0.
+                 A.append(zero_array * 0.0)
+                 A[j][i] = 1.0
+@@ -563,7 +565,7 @@
+                 j = j + 1
+ 
+             # Intensity parameter.
+-            elif search('^I', data.params[k]):
++            elif search('^I', spin.params[k]):
+                 # I0, Iinf &gt;= 0.
+                 A.append(zero_array * 0.0)
+                 A[j][i] = 1.0
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed May 21 22:40:17 2008</div>  
+</body>
+</html>

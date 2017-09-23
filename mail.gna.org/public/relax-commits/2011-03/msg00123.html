@@ -1,0 +1,366 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r12759 &#45; in /branches/relax_data/specific_fns: ./ model_free/ -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 03 Mar 2011 11:16:29 +0100 -->
+<!--X-Message-Id: E1Pv5a9&#45;0001qa&#45;N4@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r12759 - in /branches/relax_data/specific_fns: ./ model_free/ -- March 03, 2011 - 11:16</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r12759 - in /branches/relax_data/specific_fns: ./ model_free/</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00123" class="tabs">Index by Date</a> | <a href="threads.html#00123" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00122.html">Date Prev</a>] [<a href="msg00124.html">Date Next</a>] [<a href="msg00122.html">Thread Prev</a>] [<a href="msg00124.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 03 Mar 2011 10:16:29 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00123.html">E1Pv5a9-0001qa-N4@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on March 03, 2011 - 11:16:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Mar  3 11:16:29 2011
+New Revision: 12759
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=12759&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=12759&amp;view=rev</a>
+Log:
+Create the specific base class method _sim_pack_relax_data() for packing 
+relaxation data.
+
+This is the method from specific_fns/model_free/main.py, shifted into 
+api_common.  The J(w) mapping
+and consistency testing code now use this base method as well.
+
+
+Modified:
+    branches/relax_data/specific_fns/api_common.py
+    branches/relax_data/specific_fns/consistency_tests.py
+    branches/relax_data/specific_fns/jw_mapping.py
+    branches/relax_data/specific_fns/model_free/__init__.py
+    branches/relax_data/specific_fns/model_free/main.py
+
+Modified: branches/relax_data/specific_fns/api_common.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_data/specific_fns/api_common.py?rev=12759&amp;r1=12758&amp;r2=12759&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_data/specific_fns/api_common.py?rev=12759&amp;r1=12758&amp;r2=12759&amp;view=diff</a>
+==============================================================================
+--- branches/relax_data/specific_fns/api_common.py (original)
++++ branches/relax_data/specific_fns/api_common.py Thu Mar  3 11:16:29 2011
+@@ -1,6 +1,6 @@
+ 
+###############################################################################
+ #                                                                            
+ #
+-# Copyright (C) 2004, 2006-2009 Edward d'Auvergne                            
+ #
++# Copyright (C) 2004-2011 Edward d'Auvergne                                  
+ #
+ #                                                                            
+ #
+ # This file is part of the program relax.                                    
+ #
+ #                                                                            
+ #
+@@ -554,6 +554,38 @@
+                     sim_object.append(deepcopy(getattr(spin, object_name)))
+ 
+ 
++    def _sim_pack_relax_data(self, data_id, sim_data):
++        &quot;&quot;&quot;Pack the Monte Carlo simulation relaxation data into the 
+corresponding spin container.
++
++        @param data_id:     The spin identification string, as yielded by 
+the base_data_loop() generator method.
++        @type data_id:      str
++        @param sim_data:    The Monte Carlo simulation data.
++        @type sim_data:     list of float
++        &quot;&quot;&quot;
++
++        # Get the spin container.
++        spin = return_spin(data_id)
++
++        # Test if the simulation data already exists.
++        if hasattr(spin, 'ri_data_sim'):
++            raise RelaxError(&quot;Monte Carlo simulation data already exists.&quot;)
++
++        # Initialise the data structure.
++        spin.ri_data_sim = {}
++
++        # Loop over the relaxation data.
++        for i in range(len(cdp.ri_ids)):
++            # The ID.
++            ri_id = cdp.ri_ids[i]
++
++            # Initialise the MC data list.
++            spin.ri_data_sim[ri_id] = []
++
++            # Loop over the simulations.
++            for j in range(cdp.sim_number):
++                spin.ri_data_sim[ri_id].append(sim_data[j][i])
++
++
+     def _sim_return_chi2_spin(self, model_info, index=None):
+         &quot;&quot;&quot;Return the simulation chi-squared values (spin system specific).
+ 
+
+Modified: branches/relax_data/specific_fns/consistency_tests.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_data/specific_fns/consistency_tests.py?rev=12759&amp;r1=12758&amp;r2=12759&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_data/specific_fns/consistency_tests.py?rev=12759&amp;r1=12758&amp;r2=12759&amp;view=diff</a>
+==============================================================================
+--- branches/relax_data/specific_fns/consistency_tests.py (original)
++++ branches/relax_data/specific_fns/consistency_tests.py Thu Mar  3 11:16:29 
+2011
+@@ -1,6 +1,6 @@
+ 
+###############################################################################
+ #                                                                            
+ #
+-# Copyright (C) 2004-2009 Edward d'Auvergne                                  
+ #
++# Copyright (C) 2004-2011 Edward d'Auvergne                                  
+ #
+ # Copyright (C) 2007-2009 Sebastien Morin                                    
+ #
+ #                                                                            
+ #
+ # This file is part of the program relax.                                    
+ #
+@@ -50,6 +50,7 @@
+         self.return_value = self._return_value_general
+         self.set_param_values = self._set_param_values_spin
+         self.set_selected_sim = self._set_selected_sim_spin
++        self.sim_pack_data = self._sim_pack_relax_data
+ 
+ 
+     def _set_frq(self, frq=None):
+@@ -245,8 +246,7 @@
+             - 'r', bond length.
+             - 'csa', CSA value.
+             - 'heteronuc_type', the heteronucleus type.
+-            - 'orientation', angle between the 15N-1H vector and the 
+principal axis of the 15N
+-            chemical shift tensor.
++            - 'orientation', angle between the 15N-1H vector and the 
+principal axis of the 15N chemical shift tensor.
+             - 'tc', correlation time.
+             - 'j0', spectral density value at 0 MHz (from Farrow et al. 
+(1995) JBNMR, 6: 153-162).
+             - 'f_eta', eta-test (from Fushman et al. (1998) JACS, 120: 
+10947-10952).
+@@ -600,23 +600,3 @@
+ 
+         # Multiple spins.
+         return spin.select_sim
+-
+-
+-    def sim_pack_data(self, data_id, sim_data):
+-        &quot;&quot;&quot;Pack the Monte Carlo simulation data.
+-
+-        @param data_id:     The spin identification string, as yielded by 
+the base_data_loop() generator method.
+-        @type data_id:      str
+-        @param sim_data:    The Monte Carlo simulation data.
+-        @type sim_data:     list of float
+-        &quot;&quot;&quot;
+-
+-        # Get the spin container.
+-        spin = return_spin(data_id)
+-
+-        # Test if the simulation data already exists.
+-        if hasattr(spin, 'ri_data_sim'):
+-            raise RelaxError(&quot;Monte Carlo simulation data already exists.&quot;)
+-
+-        # Create the data structure.
+-        spin.ri_data_sim = sim_data
+
+Modified: branches/relax_data/specific_fns/jw_mapping.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_data/specific_fns/jw_mapping.py?rev=12759&amp;r1=12758&amp;r2=12759&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_data/specific_fns/jw_mapping.py?rev=12759&amp;r1=12758&amp;r2=12759&amp;view=diff</a>
+==============================================================================
+--- branches/relax_data/specific_fns/jw_mapping.py (original)
++++ branches/relax_data/specific_fns/jw_mapping.py Thu Mar  3 11:16:29 2011
+@@ -1,6 +1,6 @@
+ 
+###############################################################################
+ #                                                                            
+ #
+-# Copyright (C) 2004-2009 Edward d'Auvergne                                  
+ #
++# Copyright (C) 2004-2011 Edward d'Auvergne                                  
+ #
+ #                                                                            
+ #
+ # This file is part of the program relax.                                    
+ #
+ #                                                                            
+ #
+@@ -49,6 +49,7 @@
+         self.return_value = self._return_value_general
+         self.set_param_values = self._set_param_values_spin
+         self.set_selected_sim = self._set_selected_sim_spin
++        self.sim_pack_data = self._sim_pack_relax_data
+ 
+ 
+     def _set_frq(self, frq=None):
+@@ -512,26 +513,6 @@
+             spin.jwh_err = error
+ 
+ 
+-    def sim_pack_data(self, data_id, sim_data):
+-        &quot;&quot;&quot;Pack the Monte Carlo simulation data.
+-
+-        @param data_id:     The spin identification string, as yielded by 
+the base_data_loop() generator method.
+-        @type data_id:      str
+-        @param sim_data:    The Monte Carlo simulation data.
+-        @type sim_data:     list of float
+-        &quot;&quot;&quot;
+-
+-        # Get the spin container.
+-        spin = return_spin(data_id)
+-
+-        # Test if the simulation data already exists.
+-        if hasattr(spin, 'relax_sim_data'):
+-            raise RelaxError(&quot;Monte Carlo simulation data already exists.&quot;)
+-
+-        # Create the data structure.
+-        spin.relax_sim_data = sim_data
+-
+-
+     def sim_return_param(self, model_info, index):
+         &quot;&quot;&quot;Return the array of simulation parameter values.
+ 
+
+Modified: branches/relax_data/specific_fns/model_free/__init__.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_data/specific_fns/model_free/__init__.py?rev=12759&amp;r1=12758&amp;r2=12759&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_data/specific_fns/model_free/__init__.py?rev=12759&amp;r1=12758&amp;r2=12759&amp;view=diff</a>
+==============================================================================
+--- branches/relax_data/specific_fns/model_free/__init__.py (original)
++++ branches/relax_data/specific_fns/model_free/__init__.py Thu Mar  3 
+11:16:29 2011
+@@ -1,6 +1,6 @@
+ 
+###############################################################################
+ #                                                                            
+ #
+-# Copyright (C) 2007-2009 Edward d'Auvergne                                  
+ #
++# Copyright (C) 2007-2011 Edward d'Auvergne                                  
+ #
+ #                                                                            
+ #
+ # This file is part of the program relax.                                    
+ #
+ #                                                                            
+ #
+@@ -52,4 +52,5 @@
+         self.base_data_loop = self._base_data_loop_spin
+         self.return_error = self._return_error_relax_data
+         self.return_value = self._return_value_general
++        self.sim_pack_data = self._sim_pack_relax_data
+         self.test_grid_ops = self._test_grid_ops_general
+
+Modified: branches/relax_data/specific_fns/model_free/main.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_data/specific_fns/model_free/main.py?rev=12759&amp;r1=12758&amp;r2=12759&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_data/specific_fns/model_free/main.py?rev=12759&amp;r1=12758&amp;r2=12759&amp;view=diff</a>
+==============================================================================
+--- branches/relax_data/specific_fns/model_free/main.py (original)
++++ branches/relax_data/specific_fns/model_free/main.py Thu Mar  3 11:16:29 
+2011
+@@ -2780,38 +2780,6 @@
+                         sim_object.append(deepcopy(getattr(spin, 
+object_name)))
+ 
+ 
+-    def sim_pack_data(self, data_id, sim_data):
+-        &quot;&quot;&quot;Pack the Monte Carlo simulation data.
+-
+-        @param data_id:     The spin identification string, as yielded by 
+the base_data_loop() generator method.
+-        @type data_id:      str
+-        @param sim_data:    The Monte Carlo simulation data.
+-        @type sim_data:     list of float
+-        &quot;&quot;&quot;
+-
+-        # Get the spin container.
+-        spin = return_spin(data_id)
+-
+-        # Test if the simulation data already exists.
+-        if hasattr(spin, 'ri_data_sim'):
+-            raise RelaxError(&quot;Monte Carlo simulation data already exists.&quot;)
+-
+-        # Initialise the data structure.
+-        spin.ri_data_sim = {}
+-
+-        # Loop over the relaxation data.
+-        for i in range(len(cdp.ri_ids)):
+-            # The ID.
+-            ri_id = cdp.ri_ids[i]
+-
+-            # Initialise the MC data list.
+-            spin.ri_data_sim[ri_id] = []
+-
+-            # Loop over the simulations.
+-            for j in range(cdp.sim_number):
+-                spin.ri_data_sim[ri_id].append(sim_data[j][i])
+-
+-
+     def sim_return_chi2(self, model_info, index=None):
+         &quot;&quot;&quot;Return the simulation chi-squared values.
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Mar 03 11:20:01 2011</div>  
+</body>
+</html>

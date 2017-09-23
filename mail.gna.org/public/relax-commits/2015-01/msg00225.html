@@ -1,0 +1,214 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r27379 &#45; /trunk/lib/selection.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 30 Jan 2015 09:59:27 +0100 -->
+<!--X-Message-Id: E1YH7QF&#45;00040r&#45;BM@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r27379 - /trunk/lib/selection.py -- January 30, 2015 - 09:59</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r27379 - /trunk/lib/selection.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00225" class="tabs">Index by Date</a> | <a href="threads.html#00225" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00224.html">Date Prev</a>] [<a href="msg00226.html">Date Next</a>] [<a href="msg00224.html">Thread Prev</a>] [<a href="msg00226.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 30 Jan 2015 08:59:27 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00225.html">E1YH7QF-00040r-BM@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on January 30, 2015 - 09:59:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Jan 30 09:59:25 2015
+New Revision: 27379
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=27379&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=27379&amp;view=rev</a>
+Log:
+Large speed up of the mol-res-spin selection object.
+
+The Selection.contains_mol(), Selection.contains_res() and 
+Selection.contains_spin() methods of the
+lib.selection module have been redesigned for speed.  Instead of setting a 
+number of flags and
+performing bit operations at the end of the method to return the correct 
+Boolean value, each of the
+multiple checks now simply returns a Boolean value, avoiding all subsequent 
+checks.  The check list
+order has also been rearranged so that the least expensive checks are to the 
+top and the most time
+intensive checks are last.
+
+
+Modified:
+    trunk/lib/selection.py
+
+Modified: trunk/lib/selection.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/lib/selection.py?rev=27379&amp;r1=27378&amp;r2=27379&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/lib/selection.py?rev=27379&amp;r1=27378&amp;r2=27379&amp;view=diff</a>
+==============================================================================
+--- trunk/lib/selection.py      (original)
++++ trunk/lib/selection.py      Fri Jan 30 09:59:25 2015
+@@ -1,7 +1,7 @@
+ from __future__ import absolute_import
+ 
+###############################################################################
+ #                                                                            
+ #
+-# Copyright (C) 2003-2013 Edward d'Auvergne                                  
+ #
++# Copyright (C) 2003-2015 Edward d'Auvergne                                  
+ #
+ #                                                                            
+ #
+ # This file is part of the program relax (<a  rel="nofollow" href="http://www.nmr-relax.com">http://www.nmr-relax.com</a>).         
+ #
+ #                                                                            
+ #
+@@ -415,12 +415,12 @@
+         elif self._intersect:
+             return self._intersect[0].contains_mol(mol) and 
+self._intersect[1].contains_mol(mol)
+ 
++        # Nothingness.
++        if not self.molecules:
++            return True
++
+         # The check.
+         if regex.search(self.molecules, mol):
+-            return True
+-
+-        # Nothingness.
+-        if not self.molecules:
+             return True
+ 
+         # No match.
+@@ -449,21 +449,22 @@
+             return self._intersect[0].contains_res(res_num, res_name, mol) 
+and self._intersect[1].contains_res(res_num, res_name, mol)
+ 
+         # Does it contain the molecule.
+-        select_mol = self.contains_mol(mol)
++        if not self.contains_mol(mol):
++            return False
+ 
+         # Residue selection flag.
+         select_res = False
+ 
++        # Nothingness.
++        if not self.residues:
++            return True
++
+         # The residue checks.
+         if res_num in self.residues or regex.search(self.residues, res_name):
+-            select_res = True
+-
+-        # Nothingness.
+-        if not self.residues:
+-            select_res = True
+-
+-        # Return the result.
+-        return select_res and select_mol
++            return True
++
++        # No match.
++        return False
+ 
+ 
+     def contains_spin(self, spin_num=None, spin_name=None, res_num=None, 
+res_name=None, mol=None):
+@@ -492,24 +493,23 @@
+             return self._intersect[0].contains_spin(spin_num, spin_name, 
+res_num, res_name, mol) and self._intersect[1].contains_spin(spin_num, 
+spin_name, res_num, res_name, mol)
+ 
+         # Does it contain the molecule.
+-        select_mol = self.contains_mol(mol)
++        if not self.contains_mol(mol):
++            return False
+ 
+         # Does it contain the residue.
+-        select_res = self.contains_res(res_num, res_name, mol)
+-
+-        # Spin selection flag.
+-        select_spin = False
++        if not self.contains_res(res_num, res_name, mol):
++            return False
++
++        # Nothingness.
++        if not self.spins:
++            return True
+ 
+         # The spin checks.
+         if spin_num in self.spins or regex.search(self.spins, spin_name):
+-            select_spin = True
+-
+-        # Nothingness.
+-        if not self.spins:
+-            select_spin = True
+-
+-        # Return the result.
+-        return select_spin and select_res and select_mol
++            return True
++
++        # No match.
++        return False
+ 
+ 
+     def contains_spin_id(self, spin_id):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Jan 30 10:40:02 2015</div>  
+</body>
+</html>

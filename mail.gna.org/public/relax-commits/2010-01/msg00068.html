@@ -1,0 +1,342 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r10166 &#45; /branches/multi_processor_merge/generic_fns/subdivide_grid.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 11 Jan 2010 11:10:14 +0100 -->
+<!--X-Message-Id: E1NUHDy&#45;0007N7&#45;Rv@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r10166 - /branches/multi_processor_merge/generic_fns/subdivide_grid.py -- January 11, 2010 - 11:10</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r10166 - /branches/multi_processor_merge/generic_fns/subdivide_grid.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00068" class="tabs">Index by Date</a> | <a href="threads.html#00068" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00067.html">Date Prev</a>] [<a href="msg00069.html">Date Next</a>] [<a href="msg00067.html">Thread Prev</a>] [<a href="msg00069.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 11 Jan 2010 10:10:14 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00068.html">E1NUHDy-0007N7-Rv@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on January 11, 2010 - 11:10:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Mon Jan 11 11:10:14 2010
+New Revision: 10166
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=10166&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=10166&amp;view=rev</a>
+Log:
+Copied the grid.py minimisation module from the original multi_processor 
+branch.
+
+The command used was:
+svn cp 
+svn+ssh://bugman@xxxxxxxxxxx/svn/relax/branches/multi_processor/minimise/grid.py
+ subdivide_grid.py
+
+This module is now part of minfx, but the Grid_info class will be used by the 
+multi-processor code to
+subdivide the diffusion tensor grid search.  The code needs much work!
+
+
+Added:
+    branches/multi_processor_merge/generic_fns/subdivide_grid.py
+      - copied, changed from r10165, branches/multi_processor/minimise/grid.py
+
+Copied: branches/multi_processor_merge/generic_fns/subdivide_grid.py (from 
+r10165, branches/multi_processor/minimise/grid.py)
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/multi_processor_merge/generic_fns/subdivide_grid.py?p2=branches/multi_processor_merge/generic_fns/subdivide_grid.py&amp;p1=branches/multi_processor/minimise/grid.py&amp;r1=10165&amp;r2=10166&amp;rev=10166&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/multi_processor_merge/generic_fns/subdivide_grid.py?p2=branches/multi_processor_merge/generic_fns/subdivide_grid.py&amp;p1=branches/multi_processor/minimise/grid.py&amp;r1=10165&amp;r2=10166&amp;rev=10166&amp;view=diff</a>
+==============================================================================
+--- branches/multi_processor/minimise/grid.py (original)
++++ branches/multi_processor_merge/generic_fns/subdivide_grid.py Mon Jan 11 
+11:10:14 2010
+@@ -1,6 +1,7 @@
+ 
+###############################################################################
+ #                                                                            
+ #
+-# Copyright (C) 2003, 2004 Edward d'Auvergne                                 
+ #
++# Copyright (C) 2003, 2004, 2010 Edward d'Auvergne                           
+ #
++# Copyright (C) 2007 Gary S Thompson (<a  rel="nofollow" href="https://gna.org/users/varioustoxins">https://gna.org/users/varioustoxins</a>)   
+ #
+ #                                                                            
+ #
+ # This file is part of the program relax.                                    
+ #
+ #                                                                            
+ #
+@@ -21,14 +22,11 @@
+ 
+###############################################################################
+ 
+ #FIXME exceptiosn not progated properly in main loop
+-import sys,math
++import math
+ from Numeric import  Float
+ from textwrap import dedent
+-from copy import copy
+-
+-from Numeric import Float64, ones, zeros
+-
+-from constraint_linear import Constraint_linear
++
++from Numeric import Float64, ones
+ 
+ 
+ #constants
+@@ -261,181 +259,3 @@
+ 
+     def __iter__(self):
+         return Grid_info.Iterator(self,self.start,self.start+self.range)
+-
+-
+-
+-
+-
+-def grid(func=None, grid_ops=None, args=(), A=None, b=None, l=None, u=None, 
+c=None, print_flag=0, print_prefix=&quot;&quot;):
+-    &quot;&quot;&quot;Grid search function.
+-
+-
+-    Keyword Arguments
+-    ~~~~~~~~~~~~~~~~~
+-
+-    func:  The function to minimise.
+-
+-    grid_ops:  Matrix of options for the grid search.
+-
+-    args:  The tuple of arguments to supply to the function func.
+-
+-
+-    Grid options
+-    ~~~~~~~~~~~~
+-
+-    The first dimension of grid_ops corresponds to the parameters of the 
+function func, and the
+-    second dimension corresponds to:
+-        0 - The number of increments.
+-        1 - Lower limit.
+-        2 - Upper limit.
+-    &quot;&quot;&quot;
+-
+-    if not isinstance(grid_ops, Grid_info):
+-        info  = Grid_info(grid_ops)
+-        # FIXME: issue warning?
+-    else:
+-        info=grid_ops
+-
+-    #print 'info',info
+-    #info.print_steps()
+-
+-    # Print out.
+-    if print_flag and pre_and_post_amble:
+-        if print_flag &gt;= 2:
+-            print print_prefix
+-        print print_prefix
+-        print print_prefix + &quot;Grid search&quot;
+-        print print_prefix + &quot;~~~~~~~~~~~&quot;
+-
+-    #FIXME: edge conditions l == None u == soemthing
+-    # Linear constraints.
+-    if A != None and b != None:
+-        constraint_flag = 1
+-        constraint_linear = Constraint_linear(A, b)
+-        c = constraint_linear.func
+-        if print_flag &gt;= 3 and pre_and_post_amble:
+-            print print_prefix + &quot;Linear constraint matrices.&quot;
+-            print print_prefix + &quot;A: &quot; + `A`
+-            print print_prefix + &quot;b: &quot; + `b`
+-
+-    # Bound constraints.
+-    elif l != None and u != None:
+-        constraint_flag = 1
+-        # FIXME:  doesn't raise exceptipn
+-        print &quot;Bound constraints are not implemented yet.&quot;
+-        return
+-
+-    # General constraints.
+-    elif c != None:
+-        constraint_flag = 1
+-
+-    # No constraints.
+-    else:
+-        constraint_flag = 0
+-
+-    # Set a ridiculously large initial grid value.
+-    f_min = 1e300
+-    # FIXME:should be float.PosMax but internal float classhes with relax 
+float, rename relax float to ieee_float
+-
+-    # Initial print out.
+-    if print_flag and pre_and_post_amble:
+-        print &quot;\n&quot; + print_prefix + &quot;Searching the grid.&quot;
+-
+-    # Test if the grid is too large (ie total_steps is a long integer)
+-    if type(info.steps) == long:
+-        # FIXME: should be range error
+-        raise NameError, &quot;A grid search of size &quot; + `total_steps` + &quot; is too 
+large.&quot;
+-
+-    # Search the grid.
+-
+-    iter = info.__iter__()
+-    k = iter.step
+-    k_start = k
+-    first_time  =  True
+-    for params in iter:
+-
+-        # Check that the grid point does not violate a constraint, and if it 
+does, skip the function call.
+-        skip = False
+-        if constraint_flag:
+-            ci = c(params)
+-            if min(ci) &lt; 0.0:
+-                if print_flag &gt;= 3:
+-                    print print_prefix + &quot;%-3s%-8i%-4s%-65s&quot; % (&quot;k:&quot;, k, 
+&quot;xk:&quot;, `params`)
+-                    print print_prefix + &quot;Constraint violated, skipping grid 
+point.&quot;
+-                    print print_prefix + &quot;ci: &quot; + `ci`
+-                    print &quot;&quot;
+-                skip = True
+-        #print 'skip',k,skip
+-        # Function call, test, and increment grid_size.
+-        if not skip:
+-            # Back calculate the current function value.
+-            f = func(*(params,)+args)
+-            # nasty hacks (1) to make al results different
+-            #f=f-k
+-            #print '*****params',k,f
+-            # Test if the current function value is less than the least 
+function value.
+-            if f &lt; f_min:
+-                f_min = f
+-                #FIXME: replacw with a copy
+-                min_params = params * 1.0
+-                # nasty hacks (2) to make al results different
+-                #for i,elem in enumerate(min_params):
+-                #    min_params[i]=elem+((k*(i+1))/1000.0)
+-
+-                # Print out code.
+-                if print_flag:
+-                    print print_prefix + &quot;%-3s%-8i%-4s%-65s %-4s%-20s&quot; % 
+(&quot;k:&quot;, k, &quot;xk:&quot;, `min_params`, &quot;fk:&quot;, `f_min`)
+-
+-            # FIXME: not needed
+-            # Grid count.
+-            #grid_size = grid_size + 1
+-
+-            # Print out code.
+-            if print_flag &gt;= 2  and pre_and_post_amble:
+-                if f != f_min:
+-                    print print_prefix + &quot;%-3s%-8i%-4s%-65s %-4s%-20s&quot; % 
+(&quot;k:&quot;, k, &quot;xk:&quot;, `params`, &quot;fk:&quot;, `f`)
+-                if print_flag &gt;= 3:
+-                    print print_prefix + &quot;%-20s%-20s&quot; % (&quot;Increment:&quot;, 
+`step_num`)
+-                    print print_prefix + &quot;%-20s%-20s&quot; % (&quot;Params:&quot;, `params`)
+-                    print print_prefix + &quot;%-20s%-20s&quot; % (&quot;Min params:&quot;, 
+`min_params`)
+-                    print print_prefix + &quot;%-20s%-20g\n&quot; % (&quot;f:&quot;, f)
+-                    print print_prefix + &quot;%-20s%-20g\n&quot; % (&quot;Min f:&quot;, f_min)
+-
+-            # Increment k.
+-            k = k + 1
+-
+-
+-    # Return the results.
+-    return min_params, f_min, k-k_start
+-
+-def test(grid_ops):
+-
+-    n = len(grid_ops)
+-    grid_size = 0
+-    total_steps = 1
+-    step_num = ones((n))
+-    params = zeros((n), Float64)
+-    min_params = zeros((n), Float64)
+-    param_values = []   # This data structure eliminates the round-off error 
+of summing a step size value to the parameter value.
+-    for k in xrange(n):
+-        params[k] = grid_ops[k][GRID_LOWER]
+-        min_params[k] = grid_ops[k][GRID_LOWER]
+-        total_steps = total_steps * grid_ops[k][GRID_STEPS]
+-        param_values.append([])
+-        for i in xrange(grid_ops[k][GRID_STEPS]):
+-            param_values[k].append(grid_ops[k][GRID_LOWER] + i * 
+(grid_ops[k][GRID_UPPER] - grid_ops[k][GRID_LOWER]) / 
+(grid_ops[k][GRID_STEPS] - 1))
+-
+-    print params
+-    print param_values
+-    print step_num
+-    for i in xrange(total_steps):
+-        print i,step_num
+-
+-        for j in xrange(n):
+-            if step_num[j] &lt; grid_ops[j][GRID_STEPS]:
+-                step_num[j] = step_num[j] + 1
+-                params[j] = param_values[j][step_num[j]-1]
+-                break    # Exit so that the other step numbers are not 
+incremented.
+-            else:
+-                step_num[j] = 1
+-                params[j] = grid_ops[j][GRID_LOWER]
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Jan 11 11:20:02 2010</div>  
+</body>
+</html>

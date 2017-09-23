@@ -1,0 +1,191 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r7959 &#45; in /branches/spectral_errors: generic_fns/spectrum.py	specific_fns/relax_fit.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 23 Oct 2008 18:32:09 +0200 -->
+<!--X-Message-Id: E1Kt36W&#45;00075g&#45;T6@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r7959 - in /branches/spectral_errors: generic_fns/spectrum.py	specific_fns/relax_fit.py -- October 23, 2008 - 18:32</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r7959 - in /branches/spectral_errors: generic_fns/spectrum.py	specific_fns/relax_fit.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00488" class="tabs">Index by Date</a> | <a href="threads.html#00488" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00487.html">Date Prev</a>] [<a href="msg00489.html">Date Next</a>] [<a href="msg00487.html">Thread Prev</a>] [<a href="msg00489.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 23 Oct 2008 16:32:08 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00488.html">E1Kt36W-00075g-T6@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on October 23, 2008 - 18:32:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Oct 23 18:32:08 2008
+New Revision: 7959
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=7959&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=7959&amp;view=rev</a>
+Log:
+Destroyed assign_func() and shifted all the data storage back to 
+generic_fns.spectrum.read().
+
+
+Modified:
+    branches/spectral_errors/generic_fns/spectrum.py
+    branches/spectral_errors/specific_fns/relax_fit.py
+
+Modified: branches/spectral_errors/generic_fns/spectrum.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/spectral_errors/generic_fns/spectrum.py?rev=7959&amp;r1=7958&amp;r2=7959&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/spectral_errors/generic_fns/spectrum.py?rev=7959&amp;r1=7958&amp;r2=7959&amp;view=diff</a>
+==============================================================================
+--- branches/spectral_errors/generic_fns/spectrum.py (original)
++++ branches/spectral_errors/generic_fns/spectrum.py Thu Oct 23 18:32:08 2008
+@@ -379,6 +379,9 @@
+     if not exists_mol_res_spin_data():
+         raise RelaxNoSequenceError
+ 
++    # Get the current data pipe.
++    cdp = pipes.get_pipe()
++
+     # Extract the data from the file.
+     file_data = extract_data(file, dir)
+ 
+@@ -433,6 +436,14 @@
+     # Determine the proton and heteronucleus dimensions in the XEasy text 
+file.
+     if format == 'xeasy':
+         det_dimensions(file_data=file_data, proton=proton, 
+heteronuc=heteronuc, int_col=int_col)
++
++    # Add the spectrum id to the relax data store.
++    if not hasattr(cdp, 'spectrum_ids'):
++        cdp.spectrum_ids = []
++    if spectrum_id in cdp.spectrum_ids:
++        raise RelaxError, &quot;The spectrum identification string '%s' already 
+exists.&quot; % spectrum_id
++    else:
++        cdp.spectrum_ids.append(spectrum_id)
+ 
+     # Loop over the peak intensity data.
+     for i in xrange(len(file_data)):
+@@ -455,5 +466,9 @@
+         if not spin.select:
+             continue
+ 
+-        # Assign the data.
+-        assign_func(spin=spin, intensity=intensity, 
+spectrum_type=spectrum_type)
++        # Initialise.
++        if not hasattr(spin, 'intensities'):
++            spin.intensities = []
++
++        # Add the data.
++        spin.intensities.append(intensity)
+
+Modified: branches/spectral_errors/specific_fns/relax_fit.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/spectral_errors/specific_fns/relax_fit.py?rev=7959&amp;r1=7958&amp;r2=7959&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/spectral_errors/specific_fns/relax_fit.py?rev=7959&amp;r1=7958&amp;r2=7959&amp;view=diff</a>
+==============================================================================
+--- branches/spectral_errors/specific_fns/relax_fit.py (original)
++++ branches/spectral_errors/specific_fns/relax_fit.py Thu Oct 23 18:32:08 
+2008
+@@ -134,41 +134,6 @@
+ 
+         # Return the scaling matrix.
+         return scaling_matrix
+-
+-
+-    def assign_function(self, spin=None, intensity=None, spectrum_type=None):
+-        &quot;&quot;&quot;Place the peak intensity data into the spin container.
+-
+-        The intensity data can be either that of the reference or saturated 
+spectrum.
+-
+-        @keyword spin:          The spin container.
+-        @type spin:             SpinContainer instance
+-        @keyword intensity:     The intensity value.
+-        @type intensity:        float
+-        @keyword spectrum_type: Unused argument sent in by the caller 
+function.
+-        @type spectrum_type:    None
+-        &quot;&quot;&quot;
+-
+-        # Alias the current data pipe.
+-        cdp = pipes.get_pipe()
+-
+-        # Initialise.
+-        index = None
+-        if not hasattr(spin, 'intensities'):
+-            spin.intensities = []
+-
+-        # Determine if the relaxation time already exists for the spin 
+(duplicated spectra).
+-        for i in xrange(len(cdp.relax_times)):
+-            if self.__relax_time == cdp.relax_times[i]:
+-                index = i
+-
+-        # A new relaxation time has been encountered.
+-        if index &gt;= len(spin.intensities):
+-            spin.intensities.append([intensity])
+-
+-        # Duplicated spectra.
+-        else:
+-            spin.intensities[index].append(intensity)
+ 
+ 
+     def back_calc(self, spin=None, relax_time_index=None):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Oct 23 19:00:04 2008</div>  
+</body>
+</html>

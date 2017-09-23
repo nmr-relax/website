@@ -1,0 +1,230 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r6859 &#45; /branches/rdc_analysis/specific_fns/n_state_model.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 09 Jul 2008 11:18:55 +0200 -->
+<!--X-Message-Id: E1KGVp8&#45;0008DU&#45;Q6@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r6859 - /branches/rdc_analysis/specific_fns/n_state_model.py -- July 09, 2008 - 11:18</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r6859 - /branches/rdc_analysis/specific_fns/n_state_model.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00249" class="tabs">Index by Date</a> | <a href="threads.html#00249" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00248.html">Date Prev</a>] [<a href="msg00250.html">Date Next</a>] [<a href="msg00248.html">Thread Prev</a>] [<a href="msg00250.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 09 Jul 2008 09:18:54 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00249.html">E1KGVp8-0008DU-Q6@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on July 09, 2008 - 11:18:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Jul  9 11:18:53 2008
+New Revision: 6859
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=6859&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=6859&amp;view=rev</a>
+Log:
+Split up the model_setup() method into number_of_states(), ref_domain(), and 
+setup_model().
+
+
+Modified:
+    branches/rdc_analysis/specific_fns/n_state_model.py
+
+Modified: branches/rdc_analysis/specific_fns/n_state_model.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/rdc_analysis/specific_fns/n_state_model.py?rev=6859&amp;r1=6858&amp;r2=6859&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/rdc_analysis/specific_fns/n_state_model.py?rev=6859&amp;r1=6858&amp;r2=6859&amp;view=diff</a>
+==============================================================================
+--- branches/rdc_analysis/specific_fns/n_state_model.py (original)
++++ branches/rdc_analysis/specific_fns/n_state_model.py Wed Jul  9 11:18:53 
+2008
+@@ -36,7 +36,7 @@
+ from maths_fns.n_state_model import N_state_opt
+ from maths_fns.rotation_matrix import R_2vect, R_euler_zyz
+ from minfx.generic import generic_minimise
+-from relax_errors import RelaxError, RelaxInfError, RelaxNaNError, 
+RelaxNoModelError, RelaxNoTensorError
++from relax_errors import RelaxError, RelaxInfError, RelaxModelError, 
+RelaxNaNError, RelaxNoModelError, RelaxNoTensorError
+ from relax_io import open_write_file
+ from specific_fns.base_class import Common_functions
+ 
+@@ -655,13 +655,11 @@
+             cdp.warning = warning
+ 
+ 
+-    def model_setup(self, N=None, ref=None):
+-        &quot;&quot;&quot;Function for setting up the N-state model.
++    def number_of_states(self, N=None):
++        &quot;&quot;&quot;Set the number of states in the N-state model.
+ 
+         @param N:   The number of states.
+         @type N:    int
+-        @param ref: The reference domain.
+-        @type ref:  str
+         &quot;&quot;&quot;
+ 
+         # Test if the current data pipe exists.
+@@ -671,22 +669,18 @@
+         # Alias the current data pipe.
+         cdp = ds[ds.current_pipe]
+ 
+-        # Test if the reference domain exists.
+-        exists = 0
+-        for tensor_cont in cdp.align_tensors:
+-            if tensor_cont.domain == ref:
+-                exists = 1
+-        if not exists:
+-            raise RelaxError, &quot;The reference domain cannot be found within 
+any of the loaded tensors.&quot;
+-            
+-        # Set the value of N and reference domain.
++        # Test if the model is setup.
++        if not hasattr(cdp, 'model'):
++            raise RelaxNoModelError, 'N-state'
++
++        # Set the value of N.
+         cdp.N = N
+-        cdp.ref_domain = ref
+ 
+         # Initialise the list of model parameters.
+-        cdp.params = []
+-
+-        # Add the probability parameters.
++        if not hasattr(cdp, 'params'):
++            cdp.params = []
++
++        # Add the probability or population weight parameters.
+         for i in xrange(N-1):
+             cdp.params.append('p' + `i`)
+ 
+@@ -701,6 +695,40 @@
+         cdp.alpha = [None] * cdp.N
+         cdp.beta = [None] * cdp.N
+         cdp.gamma = [None] * cdp.N
++
++
++    def ref_domain(self, ref=None):
++        &quot;&quot;&quot;Set the reference domain for the '2-domain' N-state model.
++
++        @param ref: The reference domain.
++        @type ref:  str
++        &quot;&quot;&quot;
++
++        # Test if the current data pipe exists.
++        if not ds.current_pipe:
++            raise RelaxNoPipeError
++
++        # Alias the current data pipe.
++        cdp = ds[ds.current_pipe]
++
++        # Test if the model is setup.
++        if not hasattr(cdp, 'model'):
++            raise RelaxNoModelError, 'N-state'
++
++        # Test that the correct model is set.
++        if cdp.model != '2-domain':
++            raise RelaxError, &quot;Setting the reference domain is only possible 
+for the '2-domain' N-state model.&quot;
++
++        # Test if the reference domain exists.
++        exists = False
++        for tensor_cont in cdp.align_tensors:
++            if tensor_cont.domain == ref:
++                exists = True
++        if not exists:
++            raise RelaxError, &quot;The reference domain cannot be found within 
+any of the loaded tensors.&quot;
++            
++        # Set the reference domain.
++        cdp.ref_domain = ref
+ 
+ 
+     def param_num(self):
+@@ -944,3 +972,28 @@
+         # The tensor label doesn't exist.
+         if not match:
+             raise RelaxNoTensorError, ('alignment', tensor)
++
++
++    def setup_model(self, model=None):
++        &quot;&quot;&quot;Select the N-state model type.
++
++        @param model:   The N-state model type.  Can be one of '2-domain', 
+'population', or 'fixed'.
++        @type model:    str
++        &quot;&quot;&quot;
++
++        # Test if the current data pipe exists.
++        if not ds.current_pipe:
++            raise RelaxNoPipeError
++
++        # Alias the current data pipe.
++        cdp = ds[ds.current_pipe]
++
++        # Test if the model is setup.
++        if hasattr(cdp, 'model'):
++            raise RelaxModelError, 'N-state'
++
++        # Set the model
++        cdp.model = model
++
++        # Initialise the list of model parameters.
++        cdp.params = []
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Jul 09 11:20:12 2008</div>  
+</body>
+</html>

@@ -1,0 +1,286 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r26983 &#45; /trunk/pipe_control/spectrum.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Sun, 07 Dec 2014 12:27:33 +0100 -->
+<!--X-Message-Id: E1XxZzw&#45;0002H2&#45;Vx@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r26983 - /trunk/pipe_control/spectrum.py -- December 07, 2014 - 12:27</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r26983 - /trunk/pipe_control/spectrum.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00106" class="tabs">Index by Date</a> | <a href="threads.html#00106" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00105.html">Date Prev</a>] [<a href="msg00107.html">Date Next</a>] [<a href="msg00105.html">Thread Prev</a>] [<a href="msg00107.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Sun, 07 Dec 2014 11:27:32 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00106.html">E1XxZzw-0002H2-Vx@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on December 07, 2014 - 12:27:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Sun Dec  7 12:27:32 2014
+New Revision: 26983
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=26983&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=26983&amp;view=rev</a>
+Log:
+Added function in pipe_control.spectrum.sn_ratio_deselection(), a function to 
+deselect spins according to the Signal to Noise ration.
+
+The function is flexible, since it possible to use different comparison 
+operators.
+And the function can be switched, so a selection is made instead.
+
+Modified:
+    trunk/pipe_control/spectrum.py
+
+Modified: trunk/pipe_control/spectrum.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/pipe_control/spectrum.py?rev=26983&amp;r1=26982&amp;r2=26983&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/pipe_control/spectrum.py?rev=26983&amp;r1=26982&amp;r2=26983&amp;view=diff</a>
+==============================================================================
+--- trunk/pipe_control/spectrum.py      (original)
++++ trunk/pipe_control/spectrum.py      Sun Dec  7 12:27:32 2014
+@@ -27,18 +27,21 @@
+ 
+ # Python module imports.
+ from math import sqrt
++from numpy import asarray
++import operator
+ import sys
+ from warnings import warn
+ 
+ # relax module imports.
+ from lib.errors import RelaxError, RelaxImplementError, RelaxNoSpectraError
+ from lib.io import sort_filenames, write_data
+-from lib.text.sectioning import section
++from lib.text.sectioning import section, subsection
+ from lib.spectrum.peak_list import read_peak_list
+ from lib.statistics import std
+ from lib.warnings import RelaxWarning, RelaxNoSpinWarning
+ from pipe_control.mol_res_spin import check_mol_res_spin_data, create_spin, 
+generate_spin_id_unique, return_spin, spin_loop
+ from pipe_control.pipes import check_pipe
++from pipe_control.selection import desel_spin, sel_spin
+ 
+ 
+ def __errors_height_no_repl():
+@@ -935,3 +938,143 @@
+         if verbose:
+             section(file=sys.stdout, text=&quot;Signal to noise ratio for spin ID 
+'%s'&quot;%spin_id, prespace=1)
+             write_data(out=sys.stdout, headings=[&quot;Spectrum ID&quot;, &quot;Signal&quot;, 
+&quot;Noise&quot;, &quot;S/N&quot;], data=data_i)
++
++
++def sn_ratio_deselection(ratio=1.0, operation='&lt;', all_sn=False, 
+select=False, verbose=True):
++    &quot;&quot;&quot;Use user function deselect.spin on spins with signal to noise ratio 
+higher or lower than ratio.  The operation determines the selection operation.
++
++    @keyword ratio:         The ratio to compare to.
++    @type ratio:            float
++    @keyword operation:     The comparison operation by which to select the 
+spins.  Of the operation(sn_ratio, ratio), where operation can either be:  
+'&lt;', '&lt;=', '&gt;', '&gt;=', '==', '!='.
++    @type operation:        str
++    @keyword all_sn:        A flag specifying if all the signal to noise 
+ratios per spin should match the comparison operator, of if just a single 
+comparison match is enough.
++    @type all_sn:           bool
++    @keyword select:        A flag specifying if the user function 
+select.spin should be used instead.
++    @type select:           bool
++    @keyword verbose:       A flag which if True will print additional 
+information out.
++    @type verbose:          bool
++    &quot;&quot;&quot;
++
++    # Tests.
++    check_pipe()
++    check_mol_res_spin_data()
++
++    # Test if spectra have been loaded.
++    if not hasattr(cdp, 'spectrum_ids'):
++        raise RelaxError(&quot;No spectra have been loaded.&quot;)
++
++    # Assign the comparison operator.
++    # &quot;'&lt;' : strictly less than&quot;
++    if operation == '&lt;':
++        op = operator.lt
++
++    # &quot;'&lt;=' : less than or equal&quot;
++    elif operation == '&lt;=':
++        op = operator.le
++
++    # &quot;'&gt;' : strictly greater than&quot;
++    elif operation == '&gt;':
++        op = operator.gt
++
++    # &quot;'&gt;=' : greater than or equal&quot;
++    elif operation == '&gt;=':
++        op = operator.ge
++
++    # &quot;'==' : equal&quot;
++    elif operation == '==':
++        op = operator.eq
++
++    # &quot;'!=' : not equal&quot;,
++    elif operation == '!=':
++        op = operator.ne
++
++    # If not assigned, raise error.
++    else:
++        raise RelaxError(&quot;The compare operation does not belong to the 
+allowed list of methods: ['&lt;', '&lt;=', '&gt;', '&gt;=', '==', '!=']&quot;)
++
++    # Assign text for print out.
++    if all_sn:
++        text_all_sn = &quot;all&quot;
++    else:
++        text_all_sn = &quot;any&quot;
++
++    if select:
++        text_sel = &quot;selected&quot;
++        sel_func = sel_spin
++    else:
++        text_sel = &quot;deselected&quot;
++        sel_func = desel_spin
++
++    # Print
++    section(file=sys.stdout, text=&quot;Signal to noise ratio comparison 
+selection&quot;, prespace=1, postspace=0)
++    print(&quot;For the comparion test: S/N %s %1.1f&quot;%(operation, ratio))
++
++    # Loop over the spins.
++    spin_ids = []
++    for spin, spin_id in spin_loop(return_id=True):
++        # Skip spins missing sn_ratio.
++        if not hasattr(spin, 'sn_ratio'):
++            # Skip warning for deselected spins.
++            if spin.select:
++                warn(RelaxWarning(&quot;Spin '%s' does not contain Signal to 
+Noise calculations. Perform the user function 'spectrum.sn_ratio'. This spin 
+is skipped.&quot; % spin_id))
++            continue
++
++        # Loop over the ID, collect and sort.
++        ids = []
++        for id in spin.peak_intensity:
++            # Append the ID to the list.
++            ids.append(id)
++
++        # Sort the ids alphanumeric.
++        ids = sort_filenames(filenames=ids, rev=False)
++
++        # Loop over the sorted ids.
++        sn_val = []
++        for id in ids:
++            # Append the Signal to Noise in the list.
++            sn_val.append(spin.sn_ratio[id])
++
++        # Convert the list to array.
++        sn_val = asarray(sn_val)
++
++        # Make the comparison for the whole array.
++        test_arr = op(sn_val, ratio)
++
++        # Determine how the test should evaluate.
++        if all_sn:
++            test = test_arr.all()
++        else:
++            test = test_arr.any()
++
++        # Make an numpy array for the ids, an extract id which failed the 
+test.
++        ids_arr = asarray(ids)
++        ids_test_arr = ids_arr[test_arr]
++
++        # Make inversion of bool
++        test_arr_inv = test_arr == False
++        ids_test_arr_inv = ids_arr[test_arr_inv]
++
++        # print
++        if verbose:
++            subsection(file=sys.stdout, text=&quot;Signal to noise ratio 
+comparison for spin ID '%s'&quot;%spin_id, prespace=1, postspace=0)
++            print(&quot;Following spectra ID evaluated to True: %s&quot;%ids_test_arr)
++            print(&quot;Following spectra ID evaluated to False: 
+%s&quot;%ids_test_arr_inv)
++            print(&quot;'%s' comparisons have been used for evaluation, which 
+evaluated to: %s&quot;%(text_all_sn, test))
++            if test:
++                print(&quot;The spin ID '%s' is %s&quot;%(spin_id, text_sel))
++            else:
++                print(&quot;The spin ID '%s' is skipped&quot;%spin_id)
++
++        # If the test evaluates to True, then do selection action.
++        if test:
++            # Select/Deselect the spin.
++            sel_func(spin_id=spin_id)
++
++            # Assign spin_id to list, for printing.
++            spin_ids.append(spin_id)
++
++    # Make summary
++    if verbose:
++        if len(spin_ids) &gt; 0:
++            subsection(file=sys.stdout, text=&quot;For all of the S/N comparion 
+test, the following spin ID's was %s&quot;%text_sel, prespace=1, postspace=0)
++            print(spin_ids)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Sun Dec 07 12:40:02 2014</div>  
+</body>
+</html>

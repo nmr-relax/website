@@ -1,0 +1,182 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r27143 &#45; /trunk/test_suite/system_tests/structure.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 19 Dec 2014 11:01:03 +0100 -->
+<!--X-Message-Id: E1Y1uMo&#45;0003bg&#45;Tc@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r27143 - /trunk/test_suite/system_tests/structure.py -- December 19, 2014 - 11:01</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r27143 - /trunk/test_suite/system_tests/structure.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00266" class="tabs">Index by Date</a> | <a href="threads.html#00266" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00265.html">Date Prev</a>] [<a href="msg00267.html">Date Next</a>] [<a href="msg00265.html">Thread Prev</a>] [<a href="msg00267.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 19 Dec 2014 10:01:02 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00266.html">E1Y1uMo-0003bg-Tc@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on December 19, 2014 - 11:01:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Dec 19 11:01:02 2014
+New Revision: 27143
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=27143&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=27143&amp;view=rev</a>
+Log:
+Created the Structure.test_atomic_fluctuations_angle system test.
+
+This will be used to implement the mapping of inter-atomic vector angular 
+fluctuations between
+structures via a new 'measure' keyword argument for the 
+structure.atomic_fluctuations user function.
+
+
+Modified:
+    trunk/test_suite/system_tests/structure.py
+
+Modified: trunk/test_suite/system_tests/structure.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/test_suite/system_tests/structure.py?rev=27143&amp;r1=27142&amp;r2=27143&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/test_suite/system_tests/structure.py?rev=27143&amp;r1=27142&amp;r2=27143&amp;view=diff</a>
+==============================================================================
+--- trunk/test_suite/system_tests/structure.py  (original)
++++ trunk/test_suite/system_tests/structure.py  Fri Dec 19 11:01:02 2014
+@@ -21,7 +21,7 @@
+ 
+ # Python module imports.
+ from math import sqrt
+-from numpy import array, float64, std, zeros
++from numpy import array, average, float64, std, zeros
+ from numpy.linalg import norm
+ from os import sep
+ from re import search
+@@ -31,8 +31,9 @@
+ # relax module imports.
+ from data_store import Relax_data_store; ds = Relax_data_store()
+ from pipe_control.mol_res_spin import count_spins, return_spin, spin_loop
++from lib.errors import RelaxError, RelaxNoPdbError
+ from lib.geometry.rotations import axis_angle_to_R, euler_to_R_zyz
+-from lib.errors import RelaxError, RelaxNoPdbError
++from lib.geometry.vectors import vector_angle_acos
+ from lib.io import DummyFileObject
+ from status import Status; status = Status()
+ from test_suite.system_tests.base_classes import SystemTestCase
+@@ -328,6 +329,49 @@
+         n =  array([[ 9.464,  -9.232,  27.573], [ 9.211,  -9.425,  26.970], 
+[ 7.761,  -6.392,  27.161]], float64)
+         ca = array([[10.302,  -8.195,  26.930], [10.077,  -8.221,  26.720], 
+[ 9.256,  -6.332,  27.183]], float64)
+         sd = std(array([norm(n[0] - ca[0]), norm(n[1] - ca[1]), norm(n[2] - 
+ca[2])], float64), ddof=1)
++        expected = []
++        expected.append(&quot;# %18s %20s\n&quot; % (&quot;:4@N&quot;, &quot;:4@CA&quot;))
++        expected.append(&quot;%20.15f %20.15f\n&quot; % (0.0, sd))
++        expected.append(&quot;%20.15f %20.15f\n&quot; % (sd, 0.0))
++
++        # Check the file.
++        lines = file.readlines()
++        self.assertEqual(len(expected), len(lines))
++        for i in range(len(lines)):
++            self.assertEqual(expected[i], lines[i])
++
++
++    def test_atomic_fluctuations_angle(self):
++        &quot;&quot;&quot;Check the angular fluctuations calculated by the 
+structure.atomic_fluctuations user function.
++
++        This checks the text file (with the format argument set to text) of 
+interatomic angle fluctuations calculated by the 
+U{structure.atomic_fluctuations user 
+function&lt;<a  rel="nofollow" href="http://www.nmr-relax.com/manual/structure_atomic_fluctuations.html">http://www.nmr-relax.com/manual/structure_atomic_fluctuations.html</a>&gt;}.
++        &quot;&quot;&quot;
++
++        # Load the file.
++        path = status.install_path + 
+sep+'test_suite'+sep+'shared_data'+sep+'structures'
++        self.interpreter.structure.read_pdb('web_of_motion.pdb', dir=path)
++
++        # Run the structure.atomic_fluctuations user function and collect 
+the results in a dummy file object.
++        file = DummyFileObject()
++        self.interpreter.structure.atomic_fluctuations(measure='angles', 
+atom_id='@N,CA', file=file, format='text')
++
++        # The atom positions.
++        n =  array([[ 9.464,  -9.232,  27.573], [ 9.211,  -9.425,  26.970], 
+[ 7.761,  -6.392,  27.161]], float64)
++        ca = array([[10.302,  -8.195,  26.930], [10.077,  -8.221,  26.720], 
+[ 9.256,  -6.332,  27.183]], float64)
++
++        # The interatom vectors.
++        vectors = ca - n
++
++        # The inter-vector angles to the average.
++        vect_ave = average(vectors, axis=0)
++        angles = [
++            vector_angle_acos(vect_ave, vectors[0]),
++            vector_angle_acos(vect_ave, vectors[1]),
++            vector_angle_acos(vect_ave, vectors[2])
++        ]
++
++        # The fluctuations.
++        sd = std(array(angles, float64), ddof=1)
+         expected = []
+         expected.append(&quot;# %18s %20s\n&quot; % (&quot;:4@N&quot;, &quot;:4@CA&quot;))
+         expected.append(&quot;%20.15f %20.15f\n&quot; % (0.0, sd))
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Dec 19 11:40:02 2014</div>  
+</body>
+</html>

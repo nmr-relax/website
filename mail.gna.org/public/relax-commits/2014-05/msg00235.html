@@ -1,0 +1,182 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r23132 &#45; /trunk/pipe_control/opendx.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 09 May 2014 17:33:06 +0200 -->
+<!--X-Message-Id: E1WimnK&#45;0006zp&#45;0J@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r23132 - /trunk/pipe_control/opendx.py -- May 09, 2014 - 17:33</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r23132 - /trunk/pipe_control/opendx.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00235" class="tabs">Index by Date</a> | <a href="threads.html#00235" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00234.html">Date Prev</a>] [<a href="msg00236.html">Date Next</a>] [<a href="msg00234.html">Thread Prev</a>] [<a href="msg00236.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 09 May 2014 15:33:05 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00235.html">E1WimnK-0006zp-0J@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on May 09, 2014 - 17:33:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Fri May  9 17:33:05 2014
+New Revision: 23132
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=23132&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=23132&amp;view=rev</a>
+Log:
+Made collecting of min, max and median value of chi2, when creating the chi2 
+map.
+
+task #7792: (<a  rel="nofollow" href="https://gna.org/task/?7792">https://gna.org/task/?7792</a>) Make the dx.map write suggest chi 
+surface values.
+
+Modified:
+    trunk/pipe_control/opendx.py
+
+Modified: trunk/pipe_control/opendx.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/pipe_control/opendx.py?rev=23132&amp;r1=23131&amp;r2=23132&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/pipe_control/opendx.py?rev=23132&amp;r1=23131&amp;r2=23132&amp;view=diff</a>
+==============================================================================
+--- trunk/pipe_control/opendx.py        (original)
++++ trunk/pipe_control/opendx.py        Fri May  9 17:33:05 2014
+@@ -24,7 +24,7 @@
+ 
+ 
+ # Python module imports.
+-from numpy import float64, array, zeros
++from numpy import float64, array, median, zeros
+ from time import asctime, localtime
+ 
+ # relax module imports.
+@@ -164,8 +164,11 @@
+         # Create the strings associated with the map axes.
+         self.map_axes()
+ 
++        # Generate the map.
++        self.create_map()
++
+         # Create the OpenDX .net program file.
+-        write_program(file_prefix=self.file_prefix, 
+point_file=self.point_file, dir=self.dir, inc=self.inc, N=self.n, 
+num_points=self.num_points, labels=self.labels, 
+tick_locations=self.tick_locations, tick_values=self.tick_values, 
+date=self.date)
++        write_program(file_prefix=self.file_prefix, 
+point_file=self.point_file, dir=self.dir, inc=self.inc, N=self.n, 
+num_points=self.num_points, labels=self.labels, 
+tick_locations=self.tick_locations, tick_values=self.tick_values, 
+date=self.date, min_chi2=self.min_chi2, max_chi2=self.max_chi2, 
+median_chi2=self.median_chi2)
+ 
+         # Create the OpenDX .cfg program configuration file.
+         write_config(file_prefix=self.file_prefix, dir=self.dir, 
+date=self.date)
+@@ -176,9 +179,6 @@
+         # Create the OpenDX .general and data files for the given point.
+         if self.num_points &gt; 1:
+             write_point(file_prefix=self.point_file, dir=self.dir, 
+inc=self.inc, point=self.point, num_points=self.num_points, 
+bounds=self.bounds, N=self.n)
+-
+-        # Generate the map.
+-        self.create_map()
+ 
+ 
+     def create_map(self):
+@@ -211,6 +211,11 @@
+         percent = 0.0
+         percent_inc = 100.0 / (self.inc + 1.0)**(self.n - 1.0)
+         print(&quot;%-10s%8.3f%-1s&quot; % (&quot;Progress:&quot;, percent, &quot;%&quot;))
++
++        # Define min/max chi2 values.
++        min_chi2 = 1e20
++        max_chi2 = 1.
++        all_chi = []
+ 
+         # Fix the diffusion tensor.
+         unfix = False
+@@ -257,6 +262,14 @@
+                     else:
+                         map_file.write(&quot;%30f\n&quot; % chi2)
+ 
++                        # Save min and max values of chi2.
++                        all_chi.append(chi2)
++                        if chi2 &lt; min_chi2:
++                            min_chi2 = chi2
++
++                        if chi2 &gt; max_chi2:
++                            max_chi2 = chi2
++
+                     # Increment the value of the third parameter.
+                     values[2] = values[2] + self.step_size[2]
+ 
+@@ -274,6 +287,11 @@
+         if unfix:
+             cdp.diff_tensor.fixed = False
+ 
++        # Save the min/max chi2 values.
++        self.min_chi2 = min_chi2
++        self.max_chi2 = max_chi2
++        # Save the median chi2 value.
++        self.median_chi2 = median(array(all_chi))
+ 
+     def map_axes(self):
+         &quot;&quot;&quot;Function for creating labels, tick locations, and tick values for 
+an OpenDX map.&quot;&quot;&quot;
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri May 09 17:40:02 2014</div>  
+</body>
+</html>

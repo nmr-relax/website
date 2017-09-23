@@ -1,0 +1,320 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r26916 &#45; /branches/frame_order_cleanup/specific_analyses/frame_order/checks.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 03 Dec 2014 15:08:27 +0100 -->
+<!--X-Message-Id: E1XwAbT&#45;0000xl&#45;G3@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r26916 - /branches/frame_order_cleanup/specific_analyses/frame_order/checks.py -- December 03, 2014 - 15:08</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r26916 - /branches/frame_order_cleanup/specific_analyses/frame_order/checks.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00039" class="tabs">Index by Date</a> | <a href="threads.html#00039" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00038.html">Date Prev</a>] [<a href="msg00040.html">Date Next</a>] [<a href="msg00038.html">Thread Prev</a>] [<a href="msg00040.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 03 Dec 2014 14:08:27 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00039.html">E1XwAbT-0000xl-G3@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on December 03, 2014 - 15:08:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Dec  3 15:08:26 2014
+New Revision: 26916
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=26916&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=26916&amp;view=rev</a>
+Log:
+Converted the specific_analyses.frame_order.checks module to the new Check 
+object design.
+
+This follows from 
+<a  rel="nofollow" href="http://wiki.nmr-relax.com/Relax_source_design#The_check_.2A.28.29_functions">http://wiki.nmr-relax.com/Relax_source_design#The_check_.2A.28.29_functions</a> 
+and
+the changes significantly simplify the checking objects.
+
+
+Modified:
+    branches/frame_order_cleanup/specific_analyses/frame_order/checks.py
+
+Modified: branches/frame_order_cleanup/specific_analyses/frame_order/checks.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/specific_analyses/frame_order/checks.py?rev=26916&amp;r1=26915&amp;r2=26916&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/specific_analyses/frame_order/checks.py?rev=26916&amp;r1=26915&amp;r2=26916&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/specific_analyses/frame_order/checks.py      
+  (original)
++++ branches/frame_order_cleanup/specific_analyses/frame_order/checks.py      
+  Wed Dec  3 15:08:26 2014
+@@ -26,84 +26,38 @@
+ from warnings import warn
+ 
+ # relax module imports.
++from lib.checks import Check
+ from lib.errors import RelaxError
+ from lib.warnings import RelaxWarning
+ from pipe_control.pipes import cdp_name, get_pipe
+ 
+ 
+-def check_domain(domain=None, escalate=0):
++def check_domain_func(domain=None):
+     &quot;&quot;&quot;Check if the domain has been defined.
+ 
+-    @keyword domain:        The domain to check for.  If None, then the 
+check will be for any domain being defined.
+-    @type domain:           None or str
+-    @keyword escalate:      The feedback to give if the domain is not 
+defined.  This can be 0 for no printouts, 1 to throw a RelaxWarning, or 2 to 
+raise a RelaxError.
+-    @type escalate:         int
+-    @raises RelaxError:     If escalate is set to 2 and the domain is not 
+defined.
+-    @return:                True if the domain is defined, False otherwise.
+-    @rtype:                 bool
++    @keyword domain:    The domain to check for.  If None, then the check 
+will be for any domain being defined.
++    @type domain:       None or str
++    @return:            The initialised RelaxError object if the domain is 
+not defined, or nothing.
++    @rtype:             None or RelaxError instance
+     &quot;&quot;&quot;
+-
+-    # Init.
+-    defined = True
+-    msg = ''
+ 
+     # Check that the domain is defined.
+     if not hasattr(cdp, 'domain'):
+-        defined = False
+-        msg = &quot;No domains have been defined.  Please use the domain user 
+function.&quot;
++        return RelaxError(&quot;No domains have been defined.  Please use the 
+domain user function.&quot;)
+     if domain != None and domain not in cdp.domain:
+-        defined = False
+-        msg = &quot;The domain '%s' has not been defined.  Please use the domain 
+user function.&quot; % domain
++        return RelaxError(&quot;The domain '%s' has not been defined.  Please use 
+the domain user function.&quot; % domain)
+ 
+-    # Warnings and errors.
+-    if not defined and escalate == 1:
+-        warn(RelaxWarning(msg))
+-    elif not defined and escalate == 2:
+-        raise RelaxError(msg)
+-
+-    # Return the answer.
+-    return defined
++# Create the checking object.
++check_domain = Check(check_domain_func)
+ 
+ 
+-def check_model(pipe_name=None, escalate=0):
++def check_model_func(pipe_name=None):
+     &quot;&quot;&quot;Check if the frame order model has been set up.
+ 
+-    @keyword pipe_name:     The data pipe to check for, if not the current 
+pipe.
+-    @type pipe_name:        None or str
+-    @keyword escalate:      The feedback to give if the model is not set up. 
+ This can be 0 for no printouts, 1 to throw a RelaxWarning, or 2 to raise a 
+RelaxError.
+-    @type escalate:         int
+-    @raises RelaxError:     If escalate is set to 2 and the model is not set 
+up.
+-    @return:                True if the model is set up, False otherwise.
+-    @rtype:                 bool
+-    &quot;&quot;&quot;
+-
+-    # Init.
+-    flag = True
+-    msg = ''
+-
+-    # Check that the model is set up.
+-    if not hasattr(cdp, 'model'):
+-        flag = False
+-        msg = &quot;The frame order model has not been set up, please use the 
+frame_order.select_model user function.&quot;
+-
+-    # Warnings and errors.
+-    if not flag and escalate == 1:
+-        warn(RelaxWarning(msg))
+-    elif not flag and escalate == 2:
+-        raise RelaxError(msg)
+-
+-    # Return the answer.
+-    return flag
+-
+-
+-def check_parameters(escalate=0):
+-    &quot;&quot;&quot;Check if the frame order parameters exist.
+-
+-    @keyword escalate:      The feedback to give if the check fails.  This 
+can be 0 for no printouts, 1 to throw a RelaxWarning, or 2 to raise a 
+RelaxError.
+-    @type escalate:         int
+-    @raises RelaxError:     If escalate is set to 2 and the check fails.
+-    @return:                True if the check passes, False otherwise.
+-    @rtype:                 bool
++    @keyword pipe_name: The data pipe to check for, if not the current pipe.
++    @type pipe_name:    None or str
++    @return:            The initialised RelaxError object if the model is 
+not set up, or nothing.
++    @rtype:             None or RelaxError instance
+     &quot;&quot;&quot;
+ 
+     # The data pipe.
+@@ -113,51 +67,55 @@
+     # Get the data pipe.
+     dp = get_pipe(pipe_name)
+ 
+-    # Init.
+-    flag = True
+-    msg = ''
+-    missing = []
++    # Check that the model is set up.
++    if not hasattr(dp, 'model'):
++        return RelaxError(&quot;The frame order model has not been set up, please 
+use the frame_order.select_model user function.&quot;)
++
++# Create the checking object.
++check_model = Check(check_model_func)
++
++
++def check_parameters_func():
++    &quot;&quot;&quot;Check if the frame order parameters exist.
++
++    @return:    The initialised RelaxError object if the model parameters 
+have not been setup, or nothing.
++    @rtype:     None or RelaxError instance
++    &quot;&quot;&quot;
+ 
+     # The model has not been set up.
+-    if not hasattr(dp, 'params'):
+-        flag = False
+-        msg = &quot;The frame order model has not been set up, no parameters have 
+been defined.&quot;
++    if not hasattr(cdp, 'params'):
++        return RelaxError(&quot;The frame order model has not been set up, no 
+parameters have been defined.&quot;)
+ 
+     # The model has been set up.
+     else:
+-        # Loop over all parameters.
+-        for param in dp.params:
++        # Find missing parameters.
++        missing = []
++        for param in cdp.params:
+             # Check that the parameters exists.
+-            if not hasattr(dp, param):
++            if not hasattr(cdp, param):
+                 missing.append(param)
+ 
+             # Check that it has a value.
+             else:
+-                obj = getattr(dp, param)
++                obj = getattr(cdp, param)
+                 if obj == None:
+                     missing.append(param)
+ 
+         # Failure.
+         if len(missing):
+-            flag = False
+-            msg = &quot;The frame order parameters %s have not been set up.&quot; % 
+missing
++            return RelaxError(&quot;The frame order parameters %s have not been 
+set up.&quot; % missing)
+ 
+-    # Warnings and errors.
+-    if not flag and escalate == 1:
+-        warn(RelaxWarning(msg))
+-    elif not flag and escalate == 2:
+-        raise RelaxError(msg)
+-
+-    # Return the answer.
+-    return flag
++# Create the checking object.
++check_parameters = Check(check_parameters_func)
+ 
+ 
+-def check_pivot(pipe_name=None):
++def check_pivot_func(pipe_name=None):
+     &quot;&quot;&quot;Check that the pivot point has been set.
+ 
+     @keyword pipe_name: The data pipe to check the pivot for.  This defaults 
+to the current data pipe if not set.
+     @type pipe_name:    str
+-    @raises RelaxError: If the pivot point has not been set.
++    @return:            The initialised RelaxError object if the pivot point 
+has not been set, or nothing.
++    @rtype:             None or RelaxError instance
+     &quot;&quot;&quot;
+ 
+     # The data pipe.
+@@ -169,6 +127,7 @@
+ 
+     # Check for the pivot_x parameter.
+     if not hasattr(dp, 'pivot_x'):
+-        raise RelaxError(&quot;The pivot point has not been set, please use the 
+frame_order.pivot user function to define the point.&quot;)
++        return RelaxError(&quot;The pivot point has not been set, please use the 
+frame_order.pivot user function to define the point.&quot;)
+ 
+-
++# Create the checking object.
++check_pivot = Check(check_pivot_func)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Dec 03 15:20:02 2014</div>  
+</body>
+</html>

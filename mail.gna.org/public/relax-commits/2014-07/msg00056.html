@@ -1,0 +1,229 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r24422 &#45; in /trunk/lib/structure/internal: models.py object.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 03 Jul 2014 11:35:52 +0200 -->
+<!--X-Message-Id: E1X2dQl&#45;0006nG&#45;Pb@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r24422 - in /trunk/lib/structure/internal: models.py object.py -- July 03, 2014 - 11:35</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r24422 - in /trunk/lib/structure/internal: models.py object.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00056" class="tabs">Index by Date</a> | <a href="threads.html#00056" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00055.html">Date Prev</a>] [<a href="msg00057.html">Date Next</a>] [<a href="msg00055.html">Thread Prev</a>] [<a href="msg00057.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 03 Jul 2014 09:35:51 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00056.html">E1X2dQl-0006nG-Pb@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on July 03, 2014 - 11:35:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Jul  3 11:35:50 2014
+New Revision: 24422
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=24422&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=24422&amp;view=rev</a>
+Log:
+Improved model handling for the internal structural object.
+
+The set_model() method has been added to allow either a model number to be 
+set to the first
+unnumbered model (in preparation for adding new models) or to allow models to 
+be renumbered.
+The logic of the add_model() has also been changed.  Rather than looping over 
+all atoms of the first
+model and copying them, which does not work due to the model validity checks, 
+the entire MolList
+(molecule list) data structure is copied using copy.deepcopy() to make a 
+perfect copy of the
+structural data.
+
+The ModelList.add_item() method has also been modified to return the newly 
+added or numbered model.
+This is used by the add_model() structural object method to obtain the model 
+object.
+
+
+Modified:
+    trunk/lib/structure/internal/models.py
+    trunk/lib/structure/internal/object.py
+
+Modified: trunk/lib/structure/internal/models.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/lib/structure/internal/models.py?rev=24422&amp;r1=24421&amp;r2=24422&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/lib/structure/internal/models.py?rev=24422&amp;r1=24421&amp;r2=24422&amp;view=diff</a>
+==============================================================================
+--- trunk/lib/structure/internal/models.py      (original)
++++ trunk/lib/structure/internal/models.py      Thu Jul  3 11:35:50 2014
+@@ -66,6 +66,8 @@
+ 
+         @keyword model_num: The model number.
+         @type model_num:    int
++        @return:            The model container.
++        @rtype:             ModelContainer instance
+         &quot;&quot;&quot;
+ 
+         # If no model data exists, replace the empty first model with this 
+model (just a renumbering).
+@@ -83,6 +85,9 @@
+ 
+         # Update the current model list.
+         self.current_models.append(model_num)
++
++        # Return the model container.
++        return self[-1]
+ 
+ 
+     def is_empty(self):
+
+Modified: trunk/lib/structure/internal/object.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/lib/structure/internal/object.py?rev=24422&amp;r1=24421&amp;r2=24422&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/lib/structure/internal/object.py?rev=24422&amp;r1=24421&amp;r2=24422&amp;view=diff</a>
+==============================================================================
+--- trunk/lib/structure/internal/object.py      (original)
++++ trunk/lib/structure/internal/object.py      Thu Jul  3 11:35:50 2014
+@@ -1108,7 +1108,7 @@
+     def add_model(self, model=None, coords_from=None):
+         &quot;&quot;&quot;Add a new model to the store.
+ 
+-        The new model will be constructured with the structural information 
+from the other models currently present.  The coords_from argument allows the 
+atomic positions to be taken from a certain model.  If this argument is not 
+set, then the atomic positions from the first model will be used.
++        The new model will be constructed with the structural information 
+from the other models currently present.  The coords_from argument allows the 
+atomic positions to be taken from a certain model.  If this argument is not 
+set, then the atomic positions from the first model will be used.
+ 
+         @keyword model:         The number of the model to create.
+         @type model:            int or None
+@@ -1125,16 +1125,19 @@
+                     raise RelaxError(&quot;The model '%s' already exists.&quot; % 
+model)
+ 
+         # Add a new model.
+-        self.structural_data.add_item(model_num=model)
++        model = self.structural_data.add_item(model_num=model)
+ 
+         # The model to duplicate.
+         if coords_from == None:
+-            coords_from = self.structural_data[0].num
+-
+-        # Construct the structural data for the model from the other models.
+-        for mol_name, res_num, res_name, atom_num, atom_name, element, pos 
+in self.atom_loop(model_num=coords_from, mol_name_flag=True, 
+res_num_flag=True, res_name_flag=True, atom_num_flag=True, 
+atom_name_flag=True, element_flag=True, pos_flag=True):
+-            # Add the atom.
+-            self.add_atom(mol_name=mol_name, atom_name=atom_name, 
+res_name=res_name, res_num=res_num, pos=pos, element=element, 
+atom_num=atom_num)
++            model_from = self.structural_data[0]
++        else:
++            for i in range(len(self.structural_data)):
++                if self.structural_data[i].num == coords_from:
++                    model_from = self.structural_data[i]
++                    break
++
++        # Duplicate all data from the MolList object down.
++        model.mol = deepcopy(model_from.mol)
+ 
+         # Return the model.
+         return self.structural_data[-1]
+@@ -2281,6 +2284,35 @@
+                     mol.z[i] = pos[2]
+ 
+ 
++    def set_model(self, model_orig=None, model_new=None):
++        &quot;&quot;&quot;Set or reset the model number.
++        @keyword model_orig:    The original model number.  Leave as None if 
+no models are currently present.
++        @type model_orig:       None or int
++        @keyword model_new:     The new model number to set the model to.
++        @type model_new:        int
++        &quot;&quot;&quot;
++
++        # Check.
++        if model_orig == None and self.num_models() != 1:
++            raise RelaxError(&quot;If the original model number is not supplied, 
+only one model in the current structural object is allowed, but %s were 
+found.&quot; % self.num_models())
++
++        # Set the single model number.
++        if model_orig == None:
++            self.structural_data[0].num = model_new
++            return
++
++        # Find the model and set the number.
++        set = False
++        for i in range(len(self.structural_data)):
++            if model_orig == self.structural_data[i].num:
++                self.structural_data[i].num = model_new
++                set = True
++
++        # Sanity check.
++        if not set:
++            raise RelaxError(&quot;The original model number %s could not be 
+found in the structural object.&quot; % model_orig)
++
++
+     def target_mol_name(self, set=None, target=None, index=None, 
+mol_num=None, file=None):
+         &quot;&quot;&quot;Add the new molecule name to the target data structure.
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Jul 03 12:00:02 2014</div>  
+</body>
+</html>

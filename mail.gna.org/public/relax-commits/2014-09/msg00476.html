@@ -1,0 +1,375 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r25970 &#45; in /branches/frame_order_cleanup: lib/frame_order/simulation.py specific_analyses/frame_order/uf.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 23 Sep 2014 17:13:59 +0200 -->
+<!--X-Message-Id: E1XWRmx&#45;0002h6&#45;4f@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r25970 - in /branches/frame_order_cleanup: lib/frame_order/simulation.py specific_analyses/frame_order/uf.py -- September 23, 2014 - 17:13</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r25970 - in /branches/frame_order_cleanup: lib/frame_order/simulation.py specific_analyses/frame_order/uf.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00476" class="tabs">Index by Date</a> | <a href="threads.html#00476" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00475.html">Date Prev</a>] [<a href="msg00477.html">Date Next</a>] [<a href="msg00475.html">Thread Prev</a>] [<a href="msg00477.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 23 Sep 2014 15:13:59 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00476.html">E1XWRmx-0002h6-4f@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on September 23, 2014 - 17:13:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Sep 23 17:13:58 2014
+New Revision: 25970
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=25970&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=25970&amp;view=rev</a>
+Log:
+Implemented the frame_order.simulate user function backend for the double 
+rotor frame order model.
+
+This involved extending the algorithm to loop over N states, where N=2 for 
+the double rotor and N=1
+for all other models.  To handle the rotations being about the x and y-axes, 
+an axis permutation
+algorithm is used to shift these axes to z prior to decomposing to the 
+torsion-tilt angles.  The
+reverse permutation is used to shift the axes back after correcting for being 
+outside of the allowed
+angles.
+
+
+Modified:
+    branches/frame_order_cleanup/lib/frame_order/simulation.py
+    branches/frame_order_cleanup/specific_analyses/frame_order/uf.py
+
+Modified: branches/frame_order_cleanup/lib/frame_order/simulation.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/frame_order/simulation.py?rev=25970&amp;r1=25969&amp;r2=25970&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/frame_order/simulation.py?rev=25970&amp;r1=25969&amp;r2=25970&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/lib/frame_order/simulation.py  (original)
++++ branches/frame_order_cleanup/lib/frame_order/simulation.py  Tue Sep 23 
+17:13:58 2014
+@@ -24,11 +24,12 @@
+ 
+ # Python module imports.
+ from math import cos, pi, sin, sqrt
+-from numpy import dot, eye, float64, transpose, zeros
++from numpy import dot, eye, float64, swapaxes, transpose, zeros
+ import sys
+ 
+ # relax module imports.
+ from lib.errors import RelaxError
++from lib.frame_order.variables import MODEL_DOUBLE_ROTOR
+ from lib.geometry.angles import wrap_angles
+ from lib.geometry.rotations import axis_angle_to_R, R_to_tilt_torsion, 
+tilt_torsion_to_R
+ from lib.geometry.vectors import random_unit_vector
+@@ -47,8 +48,8 @@
+     @type parameters:       dict of float
+     @keyword eigenframe:    The full 3D eigenframe of the frame order 
+motions.
+     @type eigenframe:       numpy rank-2, 3D float64 array
+-    @keyword pivot:         The pivot point of the frame order motions.
+-    @type pivot:            numpy rank-1, 3D float64 array
++    @keyword pivot:         The list of pivot points of the frame order 
+motions.
++    @type pivot:            numpy rank-2 (N, 3) float64 array
+     @keyword atom_id:       The atom ID string for the atoms in the 
+structure to rotate - i.e. the moving domain.
+     @type atom_id:          None or str
+     @keyword step_size:     The rotation will be of a random direction but 
+with this fixed angle.  The value is in degrees.
+@@ -66,18 +67,30 @@
+     # Set the model number.
+     structure.set_model(model_orig=None, model_new=1)
+ 
+-    # The initial state.
+-    state = eye(3, dtype=float64)
++    # The initial states and motional limits.
++    num_states = len(pivot)
++    states = zeros((num_states, 3, 3), float64)
++    theta_max = []
++    sigma_max = []
++    for i in range(num_states):
++        states[i] = eye(3)
++        theta_max.append(None)
++        sigma_max.append(None)
+ 
+     # Initialise the rotation matrix data structures.
+     vector = zeros(3, float64)
+     R = eye(3, dtype=float64)
+     step_size = step_size / 360.0 * 2.0 * pi
+ 
++    # Axis permutations.
++    perm = [None]
++    if model == MODEL_DOUBLE_ROTOR:
++        perm = [[2, 0, 1], [1, 2, 0]]
++        perm_rev = [[1, 2, 0], [2, 0, 1]]
++
+     # The maximum cone opening angles (isotropic cones).
+-    theta_max = None
+-    if 'cone_theta_max' in parameters:
+-        theta_max = parameters['cone_theta_max']
++    if 'cone_theta' in parameters:
++        theta_max[0] = parameters['cone_theta']
+ 
+     # The maximum cone opening angles (isotropic cones).
+     theta_x = None
+@@ -87,16 +100,14 @@
+         theta_y = parameters['cone_theta_y']
+ 
+     # The maximum torsion angle.
+-    sigma_max = None
+     if 'cone_sigma_max' in parameters:
+-        sigma_max = parameters['cone_sigma_max']
++        sigma_max[0] = parameters['cone_sigma_max']
+     elif 'free rotor' in model:
+-        sigma_max = pi
++        sigma_max[0] = pi
+ 
+     # The second torsion angle.
+-    sigma_max_2 = None
+     if 'cone_sigma_max_2' in parameters:
+-        sigma_max_2 = parameters['cone_sigma_max_2']
++        sigma_max[1] = parameters['cone_sigma_max_2']
+ 
+     # Printout.
+     print(&quot;\nRunning the simulation:&quot;)
+@@ -110,50 +121,66 @@
+             print(&quot;\nEnd of simulation.&quot;)
+             break
+ 
+-        # The random vector.
+-        random_unit_vector(vector)
+-
+-        # The rotation matrix.
+-        axis_angle_to_R(vector, step_size, R)
+-
+-        # Shift the current state.
+-        state = dot(R, state)
+-
+-        # Rotation in the eigenframe.
+-        R_eigen = dot(transpose(eigenframe), dot(state, eigenframe))
+-
+-        # The angles.
+-        phi, theta, sigma = R_to_tilt_torsion(R_eigen)
+-        sigma = wrap_angles(sigma, -pi, pi)
+-
+-        # Determine theta_max.
+-        if theta_x != None:
+-            theta_max = 1.0 / sqrt((cos(phi) / theta_x)**2 + (sin(phi) / 
+theta_y)**2)
+-
+-        # Set the cone opening angle to the maximum if outside of the limit.
+-        if theta_max != None:
+-            if theta &gt; theta_max:
+-                theta = theta_max
+-
+-        # No tilt component.
+-        else:
+-            theta = 0.0
+-            phi = 0.0
+-
+-        # Set the torsion angle to the maximum if outside of the limits.
+-        if sigma_max != None:
+-            if sigma &gt; sigma_max:
+-                sigma = sigma_max
+-            elif sigma &lt; -sigma_max:
+-                sigma = -sigma_max
+-        else:
+-            sigma = 0.0
+-
+-        # Reconstruct the rotation matrix, in the eigenframe, without sigma.
+-        tilt_torsion_to_R(phi, theta, sigma, R_eigen)
+-
+-        # Rotate back out of the eigenframe.
+-        state = dot(eigenframe, dot(R_eigen, transpose(eigenframe)))
++        # Loop over each state, or motional mode.
++        for i in range(num_states):
++            # The random vector.
++            random_unit_vector(vector)
++
++            # The rotation matrix.
++            axis_angle_to_R(vector, step_size, R)
++
++            # Shift the current state.
++            states[i] = dot(R, states[i])
++
++            # Rotation in the eigenframe.
++            R_eigen = dot(transpose(eigenframe), dot(states[i], eigenframe))
++
++            # Axis permutation to shift each rotation axis to Z.
++            if perm[i] != None:
++                for j in range(3):
++                    R_eigen[:, j] = R_eigen[perm[i], j]
++                for j in range(3):
++                    R_eigen[j, :] = R_eigen[j, perm[i]]
++
++            # The angles.
++            phi, theta, sigma = R_to_tilt_torsion(R_eigen)
++            sigma = wrap_angles(sigma, -pi, pi)
++
++            # Determine theta_max for the pseudo-ellipse models.
++            if theta_x != None:
++                theta_max[i] = 1.0 / sqrt((cos(phi) / theta_x)**2 + 
+(sin(phi) / theta_y)**2)
++
++            # Set the cone opening angle to the maximum if outside of the 
+limit.
++            if theta_max[i] != None:
++                if theta &gt; theta_max[i]:
++                    theta = theta_max[i]
++
++            # No tilt component.
++            else:
++                theta = 0.0
++                phi = 0.0
++
++            # Set the torsion angle to the maximum if outside of the limits.
++            if sigma_max[i] != None:
++                if sigma &gt; sigma_max[i]:
++                    sigma = sigma_max[i]
++                elif sigma &lt; -sigma_max[i]:
++                    sigma = -sigma_max[i]
++            else:
++                sigma = 0.0
++
++            # Reconstruct the rotation matrix, in the eigenframe, without 
+sigma.
++            tilt_torsion_to_R(phi, theta, sigma, R_eigen)
++
++            # Reverse axis permutation to shift each rotation z-axis back.
++            if perm[i] != None:
++                for j in range(3):
++                    R_eigen[:, j] = R_eigen[perm_rev[i], j]
++                for j in range(3):
++                    R_eigen[j, :] = R_eigen[j, perm_rev[i]]
++
++            # Rotate back out of the eigenframe.
++            states[i] = dot(eigenframe, dot(R_eigen, transpose(eigenframe)))
+ 
+         # Take a snapshot.
+         if step == snapshot:
+@@ -168,7 +195,8 @@
+             structure.add_model(model=current_snapshot, coords_from=1)
+ 
+             # Rotate the model.
+-            structure.rotate(R=state, origin=pivot, model=current_snapshot, 
+atom_id=atom_id)
++            for i in range(num_states):
++                structure.rotate(R=states[i], origin=pivot[i], 
+model=current_snapshot, atom_id=atom_id)
+ 
+             # Reset the step counter.
+             step = 0
+
+Modified: branches/frame_order_cleanup/specific_analyses/frame_order/uf.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/specific_analyses/frame_order/uf.py?rev=25970&amp;r1=25969&amp;r2=25970&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/specific_analyses/frame_order/uf.py?rev=25970&amp;r1=25969&amp;r2=25970&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/specific_analyses/frame_order/uf.py    
+(original)
++++ branches/frame_order_cleanup/specific_analyses/frame_order/uf.py    Tue 
+Sep 23 17:13:58 2014
+@@ -34,14 +34,14 @@
+ from lib.check_types import is_float
+ from lib.errors import RelaxError, RelaxFault
+ from lib.frame_order.simulation import brownian
+-from lib.frame_order.variables import MODEL_ISO_CONE, 
+MODEL_ISO_CONE_FREE_ROTOR, MODEL_ISO_CONE_TORSIONLESS, MODEL_LIST, 
+MODEL_LIST_FREE_ROTORS, MODEL_LIST_ISO_CONE, MODEL_LIST_PSEUDO_ELLIPSE, 
+MODEL_LIST_RESTRICTED_TORSION, MODEL_PSEUDO_ELLIPSE, 
+MODEL_PSEUDO_ELLIPSE_TORSIONLESS, MODEL_RIGID
++from lib.frame_order.variables import MODEL_DOUBLE_ROTOR, MODEL_ISO_CONE, 
+MODEL_ISO_CONE_FREE_ROTOR, MODEL_ISO_CONE_TORSIONLESS, MODEL_LIST, 
+MODEL_LIST_FREE_ROTORS, MODEL_LIST_ISO_CONE, MODEL_LIST_PSEUDO_ELLIPSE, 
+MODEL_LIST_RESTRICTED_TORSION, MODEL_PSEUDO_ELLIPSE, 
+MODEL_PSEUDO_ELLIPSE_TORSIONLESS, MODEL_RIGID
+ from lib.geometry.coord_transform import cartesian_to_spherical, 
+spherical_to_cartesian
+ from lib.geometry.rotations import euler_to_R_zyz, R_to_euler_zyz
+ from lib.io import open_write_file
+ from lib.warnings import RelaxWarning
+ from pipe_control import pipes
+ from specific_analyses.frame_order.checks import check_domain, check_model, 
+check_parameters, check_pivot
+-from specific_analyses.frame_order.data import domain_moving
++from specific_analyses.frame_order.data import domain_moving, generate_pivot
+ from specific_analyses.frame_order.geometric import average_position, 
+create_ave_pos, create_geometric_rep, generate_axis_system
+ from specific_analyses.frame_order.optimisation import count_sobol_points
+ from specific_analyses.frame_order.parameters import assemble_param_vector, 
+update_model
+@@ -402,8 +402,13 @@
+     if structure.num_models() &gt; 1:
+         structure.collapse_ensemble(model_num=model)
+ 
+-    # The pivot point.
+-    pivot = array([cdp.pivot_x, cdp.pivot_y, cdp.pivot_z], float64)
++    # The pivot points.
++    num_states = 1
++    if cdp.model == MODEL_DOUBLE_ROTOR:
++        num_states = 2
++    pivot = zeros((num_states, 3), float64)
++    for i in range(num_states):
++        pivot[i] = generate_pivot(order=i+1, pdb_limit=True)
+ 
+     # Shift to the average position.
+     average_position(structure=structure, models=[1])
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Sep 23 18:20:02 2014</div>  
+</body>
+</html>

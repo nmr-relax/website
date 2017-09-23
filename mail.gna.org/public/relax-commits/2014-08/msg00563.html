@@ -1,0 +1,143 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r25429 &#45; /trunk/specific_analyses/relax_disp/estimate_r2eff.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 29 Aug 2014 12:40:08 +0200 -->
+<!--X-Message-Id: E1XNJbD&#45;0000iZ&#45;V0@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r25429 - /trunk/specific_analyses/relax_disp/estimate_r2eff.py -- August 29, 2014 - 12:40</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r25429 - /trunk/specific_analyses/relax_disp/estimate_r2eff.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00563" class="tabs">Index by Date</a> | <a href="threads.html#00563" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00562.html">Date Prev</a>] [<a href="msg00564.html">Date Next</a>] [<a href="msg00562.html">Thread Prev</a>] [<a href="msg00564.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 29 Aug 2014 10:40:07 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00563.html">E1XNJbD-0000iZ-V0@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on August 29, 2014 - 12:40:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Fri Aug 29 12:40:07 2014
+New Revision: 25429
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=25429&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=25429&amp;view=rev</a>
+Log:
+Swithced in estimate_r2eff_err() to use the chi2 Jacobian from C code, and 
+Jacobian from python code.
+
+task #7822(<a  rel="nofollow" href="https://gna.org/task/index.php?7822">https://gna.org/task/index.php?7822</a>): Implement user function to 
+estimate R2eff and associated errors for exponential curve fitting.
+
+Modified:
+    trunk/specific_analyses/relax_disp/estimate_r2eff.py
+
+Modified: trunk/specific_analyses/relax_disp/estimate_r2eff.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/relax_disp/estimate_r2eff.py?rev=25429&amp;r1=25428&amp;r2=25429&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/relax_disp/estimate_r2eff.py?rev=25429&amp;r1=25428&amp;r2=25429&amp;view=diff</a>
+==============================================================================
+--- trunk/specific_analyses/relax_disp/estimate_r2eff.py        (original)
++++ trunk/specific_analyses/relax_disp/estimate_r2eff.py        Fri Aug 29 
+12:40:07 2014
+@@ -175,7 +175,7 @@
+             i0 = getattr(cur_spin, 'i0')[param_key]
+ 
+             # Pack data
+-            params = [r2eff, i0]
++            param_vector = [r2eff, i0]
+ 
+             # The peak intensities, errors and times.
+             values = []
+@@ -193,15 +193,18 @@
+ 
+             # Initialise data in C code.
+             scaling_list = [1.0, 1.0]
+-            setup(num_params=len(params), num_times=len(times), 
+values=values, sd=errors, relax_times=times, scaling_matrix=scaling_list)
+-
++            setup(num_params=len(param_vector), num_times=len(times), 
+values=values, sd=errors, relax_times=times, scaling_matrix=scaling_list)
++
++            # Determine Jacobian and weights.
+             if chi2_jacobian:
+-                jacobian_matrix_exp = func_exp_chi2_grad(params=params, 
+times=times, values=values, errors=errors)
++                # Calculate the direct exponential Jacobian matrix from C 
+code.
++                jacobian_matrix_exp = transpose(asarray( 
+jacobian(param_vector) ) )
++
++                # The Jacobian in the C-code is from chi2 function, and is 
+already weighted.
+                 weights = ones(errors.shape)
+             else:
+-                # Calculate the direct exponential Jacobian matrix from C 
+code.
+-                #jacobian_matrix_exp = transpose(asarray( jacobian(params) ) 
+)
+-                jacobian_matrix_exp = func_exp_grad(params=params, 
+times=times, values=values, errors=errors)
++                # Use the direct Jacobian from python Code
++                jacobian_matrix_exp = func_exp_grad(params=param_vector, 
+times=times, values=values, errors=errors)
+                 weights = 1. / errors**2
+ 
+             # Get the co-variance
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Aug 29 13:00:02 2014</div>  
+</body>
+</html>

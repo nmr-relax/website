@@ -1,0 +1,192 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r24823 &#45; /branches/frame_order_cleanup/specific_analyses/frame_order/parameters.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 30 Jul 2014 12:22:44 +0200 -->
+<!--X-Message-Id: E1XCR1w&#45;0005wi&#45;Ct@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r24823 - /branches/frame_order_cleanup/specific_analyses/frame_order/parameters.py -- July 30, 2014 - 12:22</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r24823 - /branches/frame_order_cleanup/specific_analyses/frame_order/parameters.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00457" class="tabs">Index by Date</a> | <a href="threads.html#00457" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00456.html">Date Prev</a>] [<a href="msg00458.html">Date Next</a>] [<a href="msg00456.html">Thread Prev</a>] [<a href="msg00458.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 30 Jul 2014 10:22:44 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00457.html">E1XCR1w-0005wi-Ct@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on July 30, 2014 - 12:22:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Jul 30 12:22:43 2014
+New Revision: 24823
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=24823&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=24823&amp;view=rev</a>
+Log:
+Added linear constraints for the pivot and average domain translation frame 
+order parameters.
+
+The pivot coordinates are constrained between -999 and 999 Angstrom and the 
+translation between -500
+and 500 Angstrom.  This allows the frame_order.pdb_model user function to 
+operate in the case of
+failed models - often the free rotors fitting to torsionally restricted data 
+- by preventing the PDB
+coordinates from being out of the PDB format range.  It should also speed up 
+optimisation by
+stopping the optimisation of failed models earlier.
+
+
+Modified:
+    branches/frame_order_cleanup/specific_analyses/frame_order/parameters.py
+
+Modified: 
+branches/frame_order_cleanup/specific_analyses/frame_order/parameters.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/specific_analyses/frame_order/parameters.py?rev=24823&amp;r1=24822&amp;r2=24823&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/specific_analyses/frame_order/parameters.py?rev=24823&amp;r1=24822&amp;r2=24823&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/specific_analyses/frame_order/parameters.py  
+  (original)
++++ branches/frame_order_cleanup/specific_analyses/frame_order/parameters.py  
+  Wed Jul 30 12:22:43 2014
+@@ -90,7 +90,16 @@
+         -0.125 &lt;= S &lt;= 1,
+         0 &lt;= sigma_max &lt;= pi,
+ 
+-    The pivot point parameter, domain position parameters, and eigenframe 
+parameters are unconstrained.
++    The pivot point and average domain position parameter constraints are::
++
++        -999 &lt;= pivot_x &lt;= 999
++        -999 &lt;= pivot_y &lt;= 999
++        -999 &lt;= pivot_z &lt;= 999
++        -500 &lt;= ave_pos_x &lt;= 500
++        -500 &lt;= ave_pos_y &lt;= 500
++        -500 &lt;= ave_pos_y &lt;= 500
++    
++    These are necessary to allow for valid PDB representations to be 
+created.  The eigenframe parameters are unconstrained.
+ 
+ 
+     Matrix notation
+@@ -120,6 +129,32 @@
+         |               |                        |        |
+         | 0  0  0  0 -1 |                        |  -pi   |
+ 
++    The pivot and average position constraints in the A.x &gt;= b notation are::
++
++        | 1  0  0  0  0  0 |                        | -999.0 |
++        |                  |                        |        |
++        |-1  0  0  0  0  0 |                        | -999.0 |
++        |                  |                        |        |
++        | 0  1  0  0  0  0 |                        | -999.0 |
++        |                  |                        |        |
++        | 0 -1  0  0  0  0 |     |  pivot_x  |      | -999.0 |
++        |                  |     |           |      |        |
++        | 0  0  1  0  0  0 |     |  pivot_y  |      | -999.0 |
++        |                  |     |           |      |        |
++        | 0  0 -1  0  0  0 |     |  pivot_z  |      | -999.0 |
++        |                  |  .  |           |  &gt;=  |        |
++        | 0  0  0  1  0  0 |     | ave_pos_x |      | -500.0 |
++        |                  |     |           |      |        |
++        | 0  0  0 -1  0  0 |     | ave_pos_y |      | -500.0 |
++        |                  |     |           |      |        |
++        | 0  0  0  0  1  0 |     | ave_pos_z |      | -500.0 |
++        |                  |                        |        |
++        | 0  0  0  0 -1  0 |                        | -500.0 |
++        |                  |                        |        |
++        | 0  0  0  0  0  1 |                        | -500.0 |
++        |                  |                        |        |
++        | 0  0  0  0  0 -1 |                        | -500.0 |
++
+ 
+     @keyword scaling_matrix:    The diagonal, square scaling matrix.
+     @type scaling_matrix:       numpy rank-2 square matrix
+@@ -137,6 +172,28 @@
+ 
+     # Loop over the parameters of the model.
+     for i in range(n):
++        # The pivot parameters.
++        if cdp.params[i] in ['pivot_x', 'pivot_y', 'pivot_z']:
++            # -999 &lt;= pivot_i &lt;= 999.
++            A.append(zero_array * 0.0)
++            A.append(zero_array * 0.0)
++            A[j][i] = 1.0
++            A[j+1][i] = -1.0
++            b.append(-999.0 / scaling_matrix[i, i])
++            b.append(-999.0 / scaling_matrix[i, i])
++            j = j + 2
++
++        # The average domain translation parameters.
++        if cdp.params[i] in ['ave_pos_x', 'ave_pos_y', 'ave_pos_z']:
++            # -500 &lt;= ave_pos_i &lt;= 500.
++            A.append(zero_array * 0.0)
++            A.append(zero_array * 0.0)
++            A[j][i] = 1.0
++            A[j+1][i] = -1.0
++            b.append(-500.0 / scaling_matrix[i, i])
++            b.append(-500.0 / scaling_matrix[i, i])
++            j = j + 2
++
+         # The cone opening angles and sigma_max.
+         if cdp.params[i] in ['cone_theta', 'cone_theta_x', 'cone_theta_y', 
+'cone_sigma_max']:
+             # 0 &lt;= theta &lt;= pi.
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Jul 30 13:00:03 2014</div>  
+</body>
+</html>

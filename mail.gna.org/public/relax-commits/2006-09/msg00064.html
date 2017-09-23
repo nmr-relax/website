@@ -1,0 +1,166 @@
+<!-- MHonArc v2.6.10 -->
+<!--X-Subject: r2591 &#45; in /1.2: errors.py generic_fns/pdb.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Sat, 30 Sep 2006 16:52:04 +0200 -->
+<!--X-Message-Id: E1GTgBi&#45;0000R6&#45;4h@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r2591 - in /1.2: errors.py generic_fns/pdb.py -- September 30, 2006 - 16:52</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r2591 - in /1.2: errors.py generic_fns/pdb.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00064" class="tabs">Index by Date</a> | <a href="threads.html#00064" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00063.html">Date Prev</a>] [Date Next] [<a href="msg00063.html">Thread Prev</a>] [Thread Next]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Sat, 30 Sep 2006 14:51:34 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00064.html">E1GTgBi-0000R6-4h@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on September 30, 2006 - 16:52:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Sat Sep 30 16:51:33 2006
+New Revision: 2591
+
+URL: <a  href="http://svn.gna.org/viewcvs/relax?rev=2591&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=2591&amp;view=rev</a>
+Log:
+An attempt at fixing bug #7241 (<a  href="https://gna.org/bugs/?7241">https://gna.org/bugs/?7241</a>).
+
+The algorithm I've implemented is to first check for and use peptide chains, 
+then check for and use
+nucleotide chains.  If neither are present a new error RelaxNoPdbChainError 
+is raised.
+
+
+Modified:
+    1.2/errors.py
+    1.2/generic_fns/pdb.py
+
+Modified: 1.2/errors.py
+URL: 
+<a  href="http://svn.gna.org/viewcvs/relax/1.2/errors.py?rev=2591&amp;r1=2590&amp;r2=2591&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.2/errors.py?rev=2591&amp;r1=2590&amp;r2=2591&amp;view=diff</a>
+==============================================================================
+--- 1.2/errors.py (original)
++++ 1.2/errors.py Sat Sep 30 16:51:33 2006
+@@ -135,6 +135,7 @@
+             if Debug:
+                 self.save_state()
+ 
++
+     # PDB errors.
+     #############
+ 
+@@ -155,7 +156,7 @@
+     # Loading error.
+     class RelaxPdbLoadError(BaseError):
+         def __init__(self, name):
+-            self.text = &quot;The PDB file &quot; + `name` + &quot; could not be loaded 
+properly, no proteins could be extracted.&quot;
++            self.text = &quot;The PDB file &quot; + `name` + &quot; could not be loaded 
+properly, no molecular chains could be extracted.&quot;
+             if Debug:
+                 self.save_state()
+ 
+@@ -165,6 +166,14 @@
+             self.text = &quot;The unit XH bond vectors for the run &quot; + `run` + &quot; 
+have not been calculated.&quot;
+             if Debug:
+                 self.save_state()
++
++    # PDB data corresponding to the run already exists.
++    class RelaxNoPdbChainError(BaseError):
++        def __init__(self):
++            self.text = &quot;No peptide or nucleotide chains can be found within 
+the PDB file.&quot;
++            if Debug:
++                self.save_state()
++
+ 
+     # Nuclear errors.
+     #################
+
+Modified: 1.2/generic_fns/pdb.py
+URL: 
+<a  href="http://svn.gna.org/viewcvs/relax/1.2/generic_fns/pdb.py?rev=2591&amp;r1=2590&amp;r2=2591&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.2/generic_fns/pdb.py?rev=2591&amp;r1=2590&amp;r2=2591&amp;view=diff</a>
+==============================================================================
+--- 1.2/generic_fns/pdb.py (original)
++++ 1.2/generic_fns/pdb.py Sat Sep 30 16:51:33 2006
+@@ -225,8 +225,13 @@
+             if self.print_flag:
+                 print &quot;\nStructure &quot; + `i + 1` + &quot;\n&quot;
+ 
+-            # Reassign the first peptide chain of the first structure.
+-            pdb_residues = 
+self.relax.data.pdb[self.run].structures[i].peptide_chains[0].residues
++            # Reassign the first peptide or nucleotide chain of the first 
+structure.
++            if hasattr(self.relax.data.pdb[self.run].structures[i], 
+'peptide_chains'):
++                pdb_residues = 
+self.relax.data.pdb[self.run].structures[i].peptide_chains[0].residues
++            elif hasattr(self.relax.data.pdb[self.run].structures[i], 
+'nucleotide_chains'):
++                pdb_residues = 
+self.relax.data.pdb[self.run].structures[i].nucleotide_chains[0].residues
++            else:
++                raise RelaxNoPdbChainError
+ 
+             # Loop over the sequence.
+             for j in xrange(len(self.relax.data.res[self.run])):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Sat Sep 30 17:00:06 2006</div>  
+</body>
+</html>

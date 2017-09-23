@@ -1,0 +1,225 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r27338 &#45; /trunk/lib/structure/internal/coordinates.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 28 Jan 2015 12:29:06 +0100 -->
+<!--X-Message-Id: E1YGQny&#45;0004zL&#45;Fk@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r27338 - /trunk/lib/structure/internal/coordinates.py -- January 28, 2015 - 12:29</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r27338 - /trunk/lib/structure/internal/coordinates.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00184" class="tabs">Index by Date</a> | <a href="threads.html#00184" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00183.html">Date Prev</a>] [<a href="msg00185.html">Date Next</a>] [<a href="msg00183.html">Thread Prev</a>] [<a href="msg00185.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 28 Jan 2015 11:29:06 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00184.html">E1YGQny-0004zL-Fk@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on January 28, 2015 - 12:29:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Jan 28 12:29:05 2015
+New Revision: 27338
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=27338&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=27338&amp;view=rev</a>
+Log:
+Large simplification of the atomic coordinate assembly code in the internal 
+structural object.
+
+This is in the lib.structure.internal.coordinates.assemble_coord_array() 
+function.  The logic of the
+function has recently changed due to the introduction of the pairwise 
+sequence alignments.  This
+caused a lot of code to now be redundant, and also incorrect in certain 
+cases.  This simplification
+fixes the problem caught by the Structure.test_align_molecules2 system test.
+
+
+Modified:
+    trunk/lib/structure/internal/coordinates.py
+
+Modified: trunk/lib/structure/internal/coordinates.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/lib/structure/internal/coordinates.py?rev=27338&amp;r1=27337&amp;r2=27338&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/lib/structure/internal/coordinates.py?rev=27338&amp;r1=27337&amp;r2=27338&amp;view=diff</a>
+==============================================================================
+--- trunk/lib/structure/internal/coordinates.py (original)
++++ trunk/lib/structure/internal/coordinates.py Wed Jan 28 12:29:05 2015
+@@ -65,7 +65,6 @@
+     # Assemble the atomic coordinates of all structures.
+     print(&quot;Assembling all atomic coordinates:&quot;)
+     ids = []
+-    atom_ids = []
+     atom_pos = []
+     mol_names = []
+     res_names = []
+@@ -95,28 +94,6 @@
+             # Printout.
+             print(&quot;        Model: %s&quot; % model.num)
+ 
+-            # Create a new structure ID for all the molecules of this model 
+(if the molecules argument is not supplied).
+-            if molecules == None:
+-                if len(object_names) &gt; 1 and num_models &gt; 1:
+-                    ids.append('%s, model %i' % (object_names[struct_index], 
+model.num))
+-                elif len(object_names) &gt; 1:
+-                    ids.append('%s' % (object_names[struct_index]))
+-                elif num_models &gt; 1:
+-                    ids.append('model %i' % (model.num))
+-                else:
+-                    ids.append(None)
+-
+-            # Extend the lists.
+-            if molecules == None:
+-                atom_names.append([])
+-                atom_ids.append([])
+-                atom_pos.append([])
+-                if seq_info_flag:
+-                    mol_names.append([])
+-                    res_names.append([])
+-                    res_nums.append([])
+-                    elements.append([])
+-
+             # Add all coordinates and elements.
+             current_mol = ''
+             current_res = None
+@@ -138,26 +115,23 @@
+                     
+one_letter_codes.append(objects[struct_index].one_letter_codes(mol_name=mol_name))
+ 
+                     # Extend the lists.
+-                    if molecules != None:
+-                        atom_names.append([])
+-                        atom_ids.append([])
+-                        atom_pos.append([])
+-                        if seq_info_flag:
+-                            mol_names.append([])
+-                            res_names.append([])
+-                            res_nums.append([])
+-                            elements.append([])
++                    atom_names.append([])
++                    atom_pos.append([])
++                    if seq_info_flag:
++                        mol_names.append([])
++                        res_names.append([])
++                        res_nums.append([])
++                        elements.append([])
+ 
+                     # Create a new structure ID.
+-                    if molecules != None:
+-                        if len(object_names) &gt; 1 and num_models &gt; 1:
+-                            ids.append('%s, model %i, %s' % 
+(object_names[struct_index], model.num, mol_name))
+-                        elif len(object_names) &gt; 1:
+-                            ids.append('%s, %s' % 
+(object_names[struct_index], mol_name))
+-                        elif num_models &gt; 1:
+-                            ids.append('model %i, %s' % (model.num, 
+mol_name))
+-                        else:
+-                            ids.append('%s' % mol_name)
++                    if len(object_names) &gt; 1 and num_models &gt; 1:
++                        ids.append('%s, model %i, %s' % 
+(object_names[struct_index], model.num, mol_name))
++                    elif len(object_names) &gt; 1:
++                        ids.append('%s, %s' % (object_names[struct_index], 
+mol_name))
++                    elif num_models &gt; 1:
++                        ids.append('model %i, %s' % (model.num, mol_name))
++                    else:
++                        ids.append('%s' % mol_name)
+ 
+                 # A new residue.
+                 if res_num != current_res:
+@@ -166,7 +140,6 @@
+ 
+                     # Extend the lists.
+                     atom_names[-1].append([])
+-                    atom_ids[-1].append({})
+                     atom_pos[-1].append({})
+                     if seq_info_flag:
+                         mol_names[-1].append({})
+@@ -174,15 +147,8 @@
+                         res_nums[-1].append({})
+                         elements[-1].append({})
+ 
+-                # A unique identifier.
+-                if molecules != None:
+-                    id = &quot;:%s&amp;%s@%s&quot; % (res_num, res_name, atom_name)
+-                else:
+-                    id = &quot;#%s:%s&amp;%s@%s&quot; % (mol_name, res_num, res_name, 
+atom_name)
+-
+                 # Store the per-structure ID and coordinate.
+                 atom_names[-1][-1].append(atom_name)
+-                atom_ids[-1][-1][atom_name] = id
+                 atom_pos[-1][-1][atom_name] = pos[0]
+ 
+                 # Store the per-structure sequence information.
+@@ -193,7 +159,7 @@
+                     elements[-1][-1][atom_name] = elem
+ 
+     # The total number of molecules.
+-    num_mols = len(atom_ids)
++    num_mols = len(atom_names)
+ 
+     # Sequence alignment.
+     if algorithm == 'NW70':
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Jan 28 12:40:02 2015</div>  
+</body>
+</html>

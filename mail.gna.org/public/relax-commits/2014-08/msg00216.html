@@ -1,0 +1,215 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r25082 &#45; /trunk/auto_analyses/relax_disp.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 19 Aug 2014 17:14:06 +0200 -->
+<!--X-Message-Id: E1XJl6r&#45;00026Y&#45;Uc@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r25082 - /trunk/auto_analyses/relax_disp.py -- August 19, 2014 - 17:14</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r25082 - /trunk/auto_analyses/relax_disp.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00216" class="tabs">Index by Date</a> | <a href="threads.html#00216" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00215.html">Date Prev</a>] [<a href="msg00217.html">Date Next</a>] [<a href="msg00215.html">Thread Prev</a>] [<a href="msg00217.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 19 Aug 2014 15:14:05 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00216.html">E1XJl6r-00026Y-Uc@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on August 19, 2014 - 17:14:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Tue Aug 19 17:14:05 2014
+New Revision: 25082
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=25082&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=25082&amp;view=rev</a>
+Log:
+Implemented the function, which translates how parameters are copied from a 
+nested model in the auto_analyses for relax_disp.
+
+This makes it possible to test the translating code, and makes logic clearer 
+in the auto_analyses.
+
+Modified:
+    trunk/auto_analyses/relax_disp.py
+
+Modified: trunk/auto_analyses/relax_disp.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/auto_analyses/relax_disp.py?rev=25082&amp;r1=25081&amp;r2=25082&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/auto_analyses/relax_disp.py?rev=25082&amp;r1=25081&amp;r2=25082&amp;view=diff</a>
+==============================================================================
+--- trunk/auto_analyses/relax_disp.py   (original)
++++ trunk/auto_analyses/relax_disp.py   Tue Aug 19 17:14:05 2014
+@@ -39,7 +39,7 @@
+ from prompt.interpreter import Interpreter
+ from specific_analyses.relax_disp.data import has_exponential_exp_type, 
+has_cpmg_exp_type, has_fixed_time_exp_type, has_r1rho_exp_type, loop_frq
+ from specific_analyses.relax_disp.data import INTERPOLATE_DISP, 
+INTERPOLATE_OFFSET, X_AXIS_DISP, X_AXIS_W_EFF, X_AXIS_THETA, Y_AXIS_R2_R1RHO, 
+Y_AXIS_R2_EFF
+-from specific_analyses.relax_disp.model import nesting_model
++from specific_analyses.relax_disp.model import nesting_model, nesting_param
+ from specific_analyses.relax_disp.variables import EQ_ANALYTIC, EQ_NUMERIC, 
+EQ_SILICO, MODEL_LIST_ANALYTIC, MODEL_LIST_NEST, MODEL_LIST_NUMERIC, 
+MODEL_LIST_R1RHO_FIT_R1, MODEL_LIST_R1RHO_W_R1, MODEL_LIST_R1RHO_FULL, 
+MODEL_NOREX, MODEL_NOREX_R1RHO, MODEL_NOREX_R1RHO_FIT_R1, MODEL_PARAMS, 
+MODEL_R2EFF, PARAMS_R20
+ from status import Status; status = Status()
+ 
+@@ -322,58 +322,28 @@
+         if analytic:
+             print(&quot;The parameters are copied from a %s model to a %s model.&quot; 
+% (comparable_model_info.eq, model_info.eq))
+ 
+-        # Loop over the parameters in comparable model.
+-        for param in comparable_model_info.params:
+-            # The R20 parameters.
+-            if param in PARAMS_R20:
+-                # If both models have same parameter.
+-                if param in model_info.params:
+-                    print(&quot;Copying %s.&quot; % param)
+-                    # Loop over the spins to copy the parameters.
+-                    for spin, spin_id in spin_loop(return_id=True, 
+skip_desel=True):
+-                        # Get the nested spin.
+-                        nested_spin = return_spin(spin_id=spin_id, 
+pipe=nested_pipe)
+-                        setattr(spin, param, deepcopy(getattr(nested_spin, 
+param)))
+-
+-                # If copying from a simple model to a complex model
+-                elif param == 'r2' and 'r2a' in model_info.params and 'r2b' 
+in model_info.params:
+-                    print(&quot;Copying %s, to r2a and r2b.&quot; % param)
+-                    # Loop over the spins to copy the parameters.
+-                    for spin, spin_id in spin_loop(return_id=True, 
+skip_desel=True):
+-                        # Get the nested spin.
+-                        nested_spin = return_spin(spin_id=spin_id, 
+pipe=nested_pipe)
+-                        setattr(spin, 'r2a', deepcopy(getattr(nested_spin, 
+'r2')))
+-                        setattr(spin, 'r2b', deepcopy(getattr(nested_spin, 
+'r2')))
+-
+-                # If copying from a complex model to a lower complex model
+-                elif param == 'r2a' and 'r2' in model_info.params:
+-                    print(&quot;Copying %s, to r2.&quot; % param)
+-                    # Loop over the spins to copy the parameters.
+-                    for spin, spin_id in spin_loop(return_id=True, 
+skip_desel=True):
+-                        # Get the nested spin.
+-                        nested_spin = return_spin(spin_id=spin_id, 
+pipe=nested_pipe)
+-                        setattr(spin, 'r2', deepcopy(getattr(nested_spin, 
+'r2a')))
+-
+-            # All other parameters.
+-            elif param in model_info.params:
+-                print(&quot;Copying %s.&quot; % param)
++        # Get the dictionary of how the model parameters of the current 
+model can be copied.
++        par_dic = nesting_param(model_params=model_info.params, 
+nested_model_params=comparable_model_info.params)
++
++        # Loop over the parameters in current model.
++        for param in model_info.params:
++            # Extract how parameter is translated.
++            param_conv = par_dic[param]
++
++            # If the param_conv is None, then continue.
++            if param_conv == None:
++                continue
++
++            else:
++                print(&quot;Copying parameter %s to %s.&quot; % (param, param_conv))
++
+                 # Loop over the spins to copy the parameters.
+                 for spin, spin_id in spin_loop(return_id=True, 
+skip_desel=True):
+                     # Get the nested spin.
+                     nested_spin = return_spin(spin_id=spin_id, 
+pipe=nested_pipe)
+-                    setattr(spin, param, deepcopy(getattr(nested_spin, 
+param)))
+-
+-        ## The LM63 3-site model parameters.
+-        if 'phi_ex' in comparable_model_info.params and 'kex' in 
+comparable_model_info.params and 'phi_ex_B' in model_info.params and 
+'phi_ex_C' in model_info.params and 'kB' in model_info.params and 'kC' in 
+model_info.params:
+-            print(&quot;Translating phi_ex_B=phi_ex, phi_ex_C=phi_ex, kB=kex and 
+kC=kex.&quot;)
+-            # Loop over the spins to copy the parameters.
+-            for spin, spin_id in spin_loop(return_id=True, skip_desel=True):
+-                # Get the nested spin.
+-                nested_spin = return_spin(spin_id=spin_id, pipe=nested_pipe)
+-                setattr(spin, 'phi_ex_B', deepcopy(nested_spin.phi_ex))
+-                setattr(spin, 'phi_ex_C', deepcopy(nested_spin.phi_ex))
+-                setattr(spin, 'kB', deepcopy(nested_spin.kex))
+-                setattr(spin, 'kC', deepcopy(nested_spin.kex))
++
++                    # Set the attribute.
++                    setattr(spin, param, deepcopy(getattr(nested_spin, 
+param_conv)))
+ 
+         # Determine if model is equivalent, and should not be Grid searched, 
+or if nested, and some parameters are pre-set. Here Grid search should still 
+be issued.
+         return equivalent
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Aug 19 17:20:03 2014</div>  
+</body>
+</html>

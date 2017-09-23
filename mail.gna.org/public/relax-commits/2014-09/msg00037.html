@@ -1,0 +1,257 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r25531 &#45; /branches/est_par_error/target_functions/relax_disp.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 02 Sep 2014 10:29:51 +0200 -->
+<!--X-Message-Id: E1XOjTL&#45;0000pi&#45;6p@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r25531 - /branches/est_par_error/target_functions/relax_disp.py -- September 02, 2014 - 10:29</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r25531 - /branches/est_par_error/target_functions/relax_disp.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00037" class="tabs">Index by Date</a> | <a href="threads.html#00037" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00036.html">Date Prev</a>] [<a href="msg00038.html">Date Next</a>] [<a href="msg00036.html">Thread Prev</a>] [<a href="msg00038.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 02 Sep 2014 08:29:51 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00037.html">E1XOjTL-0000pi-6p@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on September 02, 2014 - 10:29:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Tue Sep  2 10:29:50 2014
+New Revision: 25531
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=25531&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=25531&amp;view=rev</a>
+Log:
+To target function, added function which will calculate the Jacobian and its 
+corresponding unit conversion matrix and return them.
+
+task #7824(<a  rel="nofollow" href="https://gna.org/task/index.php?7824">https://gna.org/task/index.php?7824</a>): Model parameter ERROR 
+estimation from Jacobian and Co-variance matrix of dispersion models.
+
+Modified:
+    branches/est_par_error/target_functions/relax_disp.py
+
+Modified: branches/est_par_error/target_functions/relax_disp.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/est_par_error/target_functions/relax_disp.py?rev=25531&amp;r1=25530&amp;r2=25531&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/est_par_error/target_functions/relax_disp.py?rev=25531&amp;r1=25530&amp;r2=25531&amp;view=diff</a>
+==============================================================================
+--- branches/est_par_error/target_functions/relax_disp.py       (original)
++++ branches/est_par_error/target_functions/relax_disp.py       Tue Sep  2 
+10:29:50 2014
+@@ -26,7 +26,7 @@
+ 
+ # Python module imports.
+ from copy import deepcopy
+-from numpy import all, arctan2, cos, dot, float64, int16, isfinite, max, 
+multiply, ones, rollaxis, pi, sin, sum, version, zeros
++from numpy import all, arctan2, array, cos, divide, dot, float64, int16, 
+isfinite, max, multiply, ones, rollaxis, pi, sin, sum, transpose, version, 
+zeros
+ from numpy.ma import masked_equal
+ 
+ # relax module imports.
+@@ -497,10 +497,18 @@
+             # Transpose M0, to prepare for dot operation. Roll the last axis 
+one back, corresponds to a transpose for the outer two axis.
+             self.M0_T = rollaxis(self.M0, 6, 5)
+ 
++        # Set up parameters related to the Jacobian.
++        # Set Jacobian function to None as standard.
++        self.func_jacobian = None
++
++        # Structure of data arrays for calculation in Jacobian function.
++        # This is for speed, since it minimises the creation of array 
+structures for each function call.
++        # Creating new structures is a safety measure, where a minimisation 
+could possible call both
++        # the function and the Jacobian, and overwrite each other. Even 
+though they should be the same.
++        self.r20a_struct_jac =  deepcopy(self.r20a_struct)
++        self.dw_struct_jac = deepcopy(self.dw_struct)
++
+         # Set up the model.
+-        # Set Jacobian to None as standard.
+-        self.jacobian = None
+-
+         if model == MODEL_NOREX:
+             # FIXME: Handle mixed experiment types here - probably by 
+merging target functions.
+             if self.exp_types[0] in EXP_TYPE_LIST_CPMG:
+@@ -522,7 +530,7 @@
+             self.func = self.func_IT99
+         if model == MODEL_TSMFK01:
+             self.func = self.func_TSMFK01
+-            self.jacobian = self.func_TSMFK01_jacobian
++            self.func_jacobian = self.func_TSMFK01_jacobian
+         if model == MODEL_B14:
+             self.func = self.func_B14
+         if model == MODEL_B14_FULL:
+@@ -2193,40 +2201,33 @@
+         k_AB = params[self.end_index[1]]
+ 
+         # Convert dw from ppm to rad/s. Use the out argument, to pass 
+directly to structure.
+-        multiply( multiply.outer( dw.reshape(1, self.NS), self.nm_no_nd_ones 
+), self.frqs, out=self.dw_struct )
++        multiply( multiply.outer( dw.reshape(1, self.NS), self.nm_no_nd_ones 
+), self.frqs, out=self.dw_struct_jac )
+ 
+         # Reshape R20A and R20B to per experiment, spin and frequency.
+-        self.r20a_struct[:] = multiply.outer( R20A.reshape(self.NE, self.NS, 
+self.NM), self.no_nd_ones )
+-
+-        # Get the Jacobian.
+-        jacobian = r2eff_TSMFK01_jacobian(r20a=self.r20a_struct, 
+dw=self.dw_struct, k_AB=k_AB, tcp=self.tau_cpmg)
+-
+-        # Insert checks.
+-        if True:
+-            from lib.dispersion.tsmfk01 import d_f_d_r20a, d_f_d_dw, 
+d_f_d_k_AB
+-            from numpy import transpose, array, all
+-            NJ, NE, NS, NM, NO, ND = jacobian.shape
+-            for ei in range(NE):
+-                for si in range(NS):
+-                    for mi in range(NM):
+-                        for oi in range(NO):
+-                            print ei, si, mi, oi
+-                            cur_jacobian = jacobian[0:NJ:1, ei, si, mi, oi]
+-
+-                            r20a_t = self.r20a_struct[ei, si, mi, oi]
+-                            dw_t = self.dw_struct[ei, si, mi, oi]
+-                            k_AB_t = k_AB
+-                            tcp_t = self.tau_cpmg[ei, si, mi, oi]
+-
+-                            get_d_f_d_r20a = d_f_d_r20a(r20a=r20a_t, 
+dw=dw_t, k_AB=k_AB_t, tcp=tcp_t)
+-                            get_d_f_d_dw = d_f_d_dw(r20a=r20a_t, dw=dw_t, 
+k_AB=k_AB_t, tcp=tcp_t)
+-                            get_d_f_d_k_AB = d_f_d_k_AB(r20a=r20a_t, 
+dw=dw_t, k_AB=k_AB_t, tcp=tcp_t)
+-
+-                            jac_t = transpose(array( [get_d_f_d_r20a , 
+get_d_f_d_dw , get_d_f_d_k_AB] ) )
+-
+-                            #print cur_jacobian
+-                            #print jac_t
+-                            print jac_t == cur_jacobian
++        self.r20a_struct_jac[:] = multiply.outer( R20A.reshape(self.NE, 
+self.NS, self.NM), self.no_nd_ones )
++
++        # Get the Jacobian as list of derivatives.
++        d_f_d_r20a , d_f_d_dw, d_f_d_k_AB = 
+r2eff_TSMFK01_jacobian(r20a=self.r20a_struct_jac, dw=self.dw_struct_jac, 
+k_AB=k_AB, tcp=self.tau_cpmg)
++
++        # Convert it to normal representation, where each column is the 
+derivative.
++        jacobian = transpose(array( [d_f_d_r20a, d_f_d_dw, d_f_d_k_AB] ) )
++
++        # If get_jacobian is set to True, calculate a scale back matrix for 
+the Jacobian from rad/s to corresponding units in relax, and then store in 
+class.
++        # This adds a overhead for the function.
++        if self.get_jacobian:
++                # Store in class, which will be extracted from function.
++                self.jacobian =  jacobian
++
++                # Define scaling matrix, which will convert the units.
++                d_f_d_r20a_scale = ones(d_f_d_r20a.shape)
++
++                # Scale from rad/s to ppm.
++                d_f_d_dw_scale = divide(ones(d_f_d_dw.shape), self.frqs)
++
++                d_f_d_k_AB_scale = ones(d_f_d_k_AB.shape)
++
++                # Collect the scaling matrix.
++                self.jacobian_scale_mat =  transpose(array( 
+[d_f_d_r20a_scale, d_f_d_dw_scale, d_f_d_k_AB_scale] ) )
+ 
+         # Return the Jacobian.
+         return jacobian
+@@ -2255,3 +2256,23 @@
+ 
+         return back_calc_return
+ 
++
++    def get_jacobian_scaled(self, params):
++        &quot;&quot;&quot;Class function to return Jacobian in scaled units for relax.
++
++        @param params:  The vector of parameter values.
++        @type params:   numpy rank-1 float array
++        @return:        The Jacobian matrix for the current model, scaled 
+back to relax units.
++        @rtype:         list of numpy multidimensional array
++        &quot;&quot;&quot;
++
++        # A flag which if True will initialise the calculation to scale back 
+the jacobian from rad/s to units in relax and store it.
++        self.get_jacobian = True
++
++        # Make a single call, to store the scaled Jacobian.
++        self.func_jacobian(params)
++
++        # Now return list with first Jacobian, and scaling matrix to convert 
+to units in relax.
++        # These have been stored in the Class.
++
++        return [self.jacobian, self.jacobian_scale_mat]
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Sep 02 10:40:03 2014</div>  
+</body>
+</html>

@@ -1,0 +1,475 @@
+<!-- MHonArc v2.6.10 -->
+<!--X-Subject: Re: r3208 &#45; /branches/multi_processor/relax -->
+<!--X-From-R13: "Unel E. Fubzcfba" <tnelgNozo.yrrqf.np.hx> -->
+<!--X-Date: Fri, 16 Mar 2007 16:11:12 +0100 -->
+<!--X-Message-Id: 45FA8930.5030308@bmb.leeds.ac.uk -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>Re: r3208 - /branches/multi_processor/relax -- March 16, 2007 - 16:11</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />Re: r3208 - /branches/multi_processor/relax</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00075" class="tabs">Index by Date</a> | <a href="threads.html#00075" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00074.html">Date Prev</a>] [<a href="msg00076.html">Date Next</a>] [<a href="msg00074.html">Thread Prev</a>] [<a href="msg00080.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-devel@xxxxxxx, Edward d'Auvergne &lt;edward.dauvergne@xxxxxxxxx&gt;</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 16 Mar 2007 12:10:24 +0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00075.html">45FA8930.5030308@bmb.leeds.ac.uk</a>&gt;</li>
+<li class="menuitem">
+<em>User-agent</em>: Mozilla Thunderbird 1.0 (X11/20041206)</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>Gary S. Thompson</strong> on March 16, 2007 - 16:11:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">garyt@xxxxxxxxxxxxxxx wrote:</pre><br>
+<tt>Hi<br>
+  This is  an initial try at creating a multiprocessor intialization 
+setup for relax</tt><br>
+<br>
+<tt>It uses the idea of a specific class that determines how to load relax 
+nd setup communication depending on which communication methodology you 
+use. The loading of the class is done dynamically. Currently there is 
+only a single launcher multi.uni_processor and this will load and launch 
+a single instance of relax on a single processor.  The reason for this 
+prelaunch methodology is that the semantics for different communication 
+stratergies are differerent.</tt><br>
+<br>
+<pre style="margin: 0em;">for example</pre><br>
+<tt>1. for mpi once your programme instance has started and mpi is 
+initialised you just need to run a single interpreter which will 
+communicate with all other interpreteres via mpi calls<br>
+2. for a threaded system when we start we have to create a set of 
+threads and all the interpreters to go in them and set their 
+communicatiosn channels up...</tt><br>
+<br>
+<tt>there are still a few bits of refactoring and deciding which modes work 
+with which processing setup to be defined. I think we need two modes:  
+the current relax run type mode and a multiprocessor type mode, but 
+anyway it works ;-)</tt><br>
+<br>
+<pre style="margin: 0em;"><br>regards
+gary</pre><br>
+<blockquote class="blockquote"><pre style="margin: 0em;">Author: varioustoxins
+Date: Fri Mar 16 12:47:30 2007
+New Revision: 3208</pre><br>
+<pre style="margin: 0em;">URL: <a  href="http://svn.gna.org/viewcvs/relax?rev=3208&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=3208&amp;view=rev</a>
+Log:
+initial work to add multiprocessor startup and refactoring of main Relax
+class</pre><br>
+<pre style="margin: 0em;">Modified:
+   branches/multi_processor/relax</pre><br>
+<tt>Modified: branches/multi_processor/relax<br>
+URL: 
+<a  href="http://svn.gna.org/viewcvs/relax/branches/multi_processor/relax?rev=3208&amp;r1=3207&amp;r2=3208&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/multi_processor/relax?rev=3208&amp;r1=3207&amp;r2=3208&amp;view=diff</a> </tt><br>
+<br>
+<tt>============================================================================== </tt><br>
+<br>
+<pre style="margin: 0em;">--- branches/multi_processor/relax (original)
++++ branches/multi_processor/relax Fri Mar 16 12:47:30 2007
+@@ -103,7 +103,7 @@</pre><br>
+<pre style="margin: 0em;">        # Debugging flag (default is off).
+        __builtin__.Debug = 0
+-        +
+        # Pedantic flag (default is off).
+        __builtin__.Pedantic = 0</pre><br>
+<pre style="margin: 0em;">@@ -137,25 +137,27 @@
+        # Setup the object containing the thread setup functions.
+        self.threading = Threading(self)</pre><br>
+<tt>+        # FIXME removed<br>
+        # Process the command line arguments and determine the relax 
+mode.<br>
+-        mode, log_file, tee_file = self.arguments()<br>
+-        +        #mode, log_file, tee_file = self.arguments()<br>
++<br>
+        # Initialise the warnings sytem.<br>
+        RelaxWarnings()<br>
+        __builtin__.warn = warn<br>
+-                +<br>
++    def run(self, mode):<br>
+        # Show the version number and exit.<br>
+        if mode == 'version':<br>
+            print 'relax ' + self.version<br>
+            sys.exit()</tt><br>
+<br>
+<pre style="margin: 0em;">        # Logging.
+-        if log_file and mode != 'thread':
+-            self.IO.log(log_file)
++        if self.log_file and mode != 'thread':
++            self.IO.log(self.log_file)</pre><br>
+<pre style="margin: 0em;">        # Tee.
+-        elif tee_file and mode != 'thread':
+-            self.IO.tee(tee_file)
++        elif self.tee_file and mode != 'thread':
++            self.IO.tee(self.tee_file)</pre><br>
+<pre style="margin: 0em;">        # Run the interpreter for the prompt or script modes.
+        if mode == 'prompt' or mode == 'script':
+@@ -173,11 +175,11 @@
+            sys.stdout.flush()</pre><br>
+<pre style="margin: 0em;">            # Logging (silent IO redirection).
+-            if log_file:
++            if self.log_file:
+                self.IO.log(log_file, print_flag=0)</pre><br>
+<pre style="margin: 0em;">            # Tee (silent IO redirection).
+-            elif tee_file:
++            elif self.tee_file:
+                self.IO.tee(tee_file, print_flag=0)</pre><br>
+<pre style="margin: 0em;">            # Execute the script.
+@@ -213,7 +215,7 @@
+            self.licence()</pre><br>
+<pre style="margin: 0em;"><br>-    def arguments(self):
++    def arguments(self,args):
+        &quot;&quot;&quot;Function for processing the command line arguments.&quot;&quot;&quot;</pre><br>
+<tt>        # Parser object.<br>
+@@ -228,16 +230,20 @@<br>
+        parser.add_option('--test', action='store_true', dest='test', 
+default=0, help='run relax in test mode')<br>
+        parser.add_option('--test-suite', action='store_true', 
+dest='test_suite', default=0, help='execute the relax test suite')<br>
+        parser.add_option('--unit-test', action='store_true', 
+dest='unit_test', default=0, help='execute the relax unit tests (part 
+of the test suite)')<br>
+-        parser.add_option('--thread', action='store_true', 
+dest='thread', default=0, help='run relax in threading mode (this mode 
+should not be invoked by a user)')<br>
++# FIXME remove threading<br>
++# threading dprecated<br>
++#        parser.add_option('--thread', action='store_true', 
+dest='thread', default=0, help='run relax in threading mode (this mode 
+should not be invoked by a user)')<br>
+        parser.add_option('-v', '--version', action='store_true', 
+dest='version', default=0, help='show the version number and exit')<br>
++        parser.add_option('-m', '--multi', action='store', 
+type='string', dest='multiprocessor', default='uni', help='set multi 
+processor method')<br>
++        parser.add_option('-n', '--processors', action='store', 
+type='int', dest='n_processors', default=1, help='set number of 
+processors (may be ignored)')</tt><br>
+<br>
+<pre style="margin: 0em;">        # Parse the options.
+-        (options, args) = parser.parse_args()
++        (options, args) = parser.parse_args(args)</pre><br>
+<tt>        # Debugging flag.<br>
+        if options.debug:<br>
+            __builtin__.Debug = 1<br>
+-        +<br>
+        # Pedantic flag.<br>
+        if options.pedantic:<br>
+            __builtin__.Pedantic = 1<br>
+@@ -249,9 +255,9 @@<br>
+                parser.error(&quot;the logging and tee options cannot be 
+set simultaneously&quot;)</tt><br>
+<br>
+<pre style="margin: 0em;">            # The log file.
+-            log_file = options.log
++            self.log_file = options.log
+        else:
+-            log_file = None
++            self.log_file = None</pre><br>
+<tt>        # Tee.<br>
+        if options.tee:<br>
+@@ -260,9 +266,9 @@<br>
+                parser.error(&quot;the tee and logging options cannot be 
+set simultaneously&quot;)</tt><br>
+<br>
+<pre style="margin: 0em;">            # The tee file.
+-            tee_file = options.tee
++            self.tee_file = options.tee
+        else:
+-            tee_file = None
++            self.tee_file = None</pre><br>
+<tt>        # Number of positional arguements should only be 0 or 1.  1 
+should be the script file.<br>
+        if len(args) &gt; 1:<br>
+@@ -276,6 +282,9 @@<br>
+            # Test if the script file exists.<br>
+            if not access(self.script_file, F_OK):<br>
+                parser.error(&quot;the script file &quot; + `self.script_file` + 
+&quot; does not exist&quot;)<br>
++<br>
++<br>
++</tt><br>
+<br>
+<tt><br>        # Determine the relax mode and test for mutually exclusive modes.<br>
+@@ -294,8 +303,9 @@<br>
+            # Exclusive modes.<br>
+            if options.test:<br>
+                parser.error(&quot;executing the relax test suite and 
+running relax in test mode are mutually exclusive&quot;)<br>
+-            elif options.thread:<br>
+-                parser.error(&quot;executing the relax test suite and 
+running relax in thread mode are mutually exclusive&quot;)<br>
++# FIXME: delete<br>
++#            elif options.thread:<br>
++#                parser.error(&quot;executing the relax test suite and 
+running relax in thread mode are mutually exclusive&quot;)<br>
+            elif options.licence:<br>
+                parser.error(&quot;executing the relax test suite and 
+running relax in licence mode are mutually exclusive&quot;)</tt><br>
+<br>
+<tt>@@ -315,28 +325,30 @@<br>
+            # Exclusive modes.<br>
+            if options.test_suite or options.unit_test:<br>
+                parser.error(&quot;the relax test mode and executing the 
+test suite are mutually exclusive&quot;)<br>
+-            elif options.thread:<br>
+-                parser.error(&quot;the relax modes test and thread are 
+mutually exclusive&quot;)<br>
++# FIXME delete<br>
++#            elif options.thread:<br>
++#                parser.error(&quot;the relax modes test and thread are 
+mutually exclusive&quot;)<br>
+            elif options.licence:<br>
+                parser.error(&quot;the relax modes test and licence are 
+mutually exclusive&quot;)</tt><br>
+<br>
+<pre style="margin: 0em;">            # Set the mode.
+            mode = 'test'</pre><br>
+<tt>+        # FIXME threading deprecated<br>
+        # Threaded mode.<br>
+-        elif options.thread:<br>
+-            # Make sure a script is supplied.<br>
+-            if not self.script_file:<br>
+-                parser.error(&quot;in threaded mode, a script is required&quot;)<br>
+-<br>
+-            # Exclusive modes.<br>
+-            if options.test:<br>
+-                parser.error(&quot;the relax modes thread and test are 
+mutually exclusive&quot;)<br>
+-            elif options.licence:<br>
+-                parser.error(&quot;the relax modes thread and licence are 
+mutually exclusive&quot;)<br>
+-<br>
+-            # Set the mode.<br>
+-            mode = 'thread'<br>
++#        elif options.thread:<br>
++#            # Make sure a script is supplied.<br>
++#            if not self.script_file:<br>
++#                parser.error(&quot;in threaded mode, a script is required&quot;)<br>
++#<br>
++#            # Exclusive modes.<br>
++#            if options.test:<br>
++#                parser.error(&quot;the relax modes thread and test are 
+mutually exclusive&quot;)<br>
++#            elif options.licence:<br>
++#                parser.error(&quot;the relax modes thread and licence are 
+mutually exclusive&quot;)<br>
++#<br>
++#            # Set the mode.<br>
++#            mode = 'thread'</tt><br>
+<br>
+<tt>        # Licence mode.<br>
+        elif options.licence:<br>
+@@ -349,22 +361,44 @@<br>
+                parser.error(&quot;the relax licence mode and executing the 
+test suite are mutually exclusive&quot;)<br>
+            elif options.test:<br>
+                parser.error(&quot;the relax modes licence and test are 
+mutually exclusive&quot;)<br>
+-            elif options.thread:<br>
+-                parser.error(&quot;the relax modes licence and thread are 
+mutually exclusive&quot;)<br>
++# FIXME delete<br>
++#            elif options.thread:<br>
++#                parser.error(&quot;the relax modes licence and thread are 
+mutually exclusive&quot;)</tt><br>
+<br>
+<pre style="margin: 0em;">            # Set the mode.
+            mode = 'licence'</pre><br>
+<tt>+        # multi processor<br>
++        elif options.multiprocessor != 'uni':<br>
++<br>
++            # Exclusive modes.<br>
++            if options.test_suite or options.unit_test:<br>
++                parser.error(&quot;the relax multi processor mode and 
+executing the test suite are mutually exclusive&quot;)<br>
++            elif options.licence:<br>
++                parser.error(&quot;the relax multi processor multi 
+processor and licence are mutually exclusive&quot;)<br>
++<br>
++            self.multiprocessor_type = options.multiprocessor<br>
++            self.n_processors = options.n_processors<br>
++<br>
++            mode='multi'<br>
++<br>
+        # Script mode.<br>
+        elif self.script_file:<br>
++            #FIXME check for uniprocessor and n_processors<br>
++            self.multiprocessor_type = options.multiprocessor<br>
++            self.n_processors = options.n_processors<br>
+            mode = 'script'<br>
++</tt><br>
+<br>
+<pre style="margin: 0em;">        # Prompt mode (default).
+        else:
++            #FIXME check for uniprocessor and n_processors
++            self.multiprocessor_type = options.multiprocessor
++            self.n_processors = options.n_processors
+            mode = 'prompt'</pre><br>
+<pre style="margin: 0em;">        # Return.
+-        return mode, log_file, tee_file
++        return mode</pre><br>
+<pre style="margin: 0em;"><br>    def licence(self):
+@@ -459,16 +493,77 @@
+        # Exit.
+        sys.exit()</pre><br>
+<tt>+# FIXME: code shared with unit testing framework not changed from 
+unit tests version<br>
++# replace unit test version with this<br>
++def import_module(module_path, verbose=False):<br>
++    ''' import the python module named by module_path<br>
++<br>
++        @type module_path: a string containing a dot separated module 
+path<br>
++        @param module_path: a module path in python dot separated format<br>
++                            note: this currently doesn't support 
+relative module<br>
++                            paths as defined by pep328 and python 2.5<br>
++<br>
++        @type verbose: Boolean<br>
++        @param verbose: whether to report sucesses and failures for 
+debugging<br>
++<br>
++        @rtype:     list of class module instances or None<br>
++        @return:    the module path as a list of module instances or 
+None<br>
++                    if the module path cannot be found in the python 
+path<br>
++<br>
++        '''<br>
++<br>
++    module = None<br>
++    result = None<br>
++<br>
++    try:<br>
++        module = __import__(module_path,globals(),  locals(), [])<br>
++        print 'loaded module %s' % module_path<br>
++    except Exception, e:<br>
++        if verbose:<br>
++            print 'failed to load module_path %s' % module_path<br>
++            print 'exception:',e<br>
++<br>
++<br>
++    if module != None:<br>
++        result = [module]<br>
++        components = module_path.split('.')<br>
++        for component in components[1:]:<br>
++            module = getattr(module, component)<br>
++            result.append(module)<br>
++    return result<br>
++<br>
++#FIXME: mode not required should be an instance variable of relax?<br>
++def load_multiprocessor(mode,relax_instance):<br>
++<br>
++    processor_name = relax_instance.multiprocessor_type + '_processor'<br>
++    class_name= processor_name[0].upper() + processor_name[1:]<br>
++    module_path = '.'.join(('multi',processor_name))<br>
++<br>
++<br>
++    modules = import_module(module_path)<br>
++    clazz =  getattr(modules[-1], class_name)<br>
++    object = clazz(mode,relax_instance)<br>
++    return object</tt><br>
+<br>
+<pre style="margin: 0em;">if __name__ == &quot;__main__&quot;:
++    #import multi.uni_processor
++    for elem in  sys.modules:
++        if elem == 'multi.uni_processor':
++            print 'found',elem
+    # Change this flag to 1 for code profiling.
+    profile_flag = 0</pre><br>
+<pre style="margin: 0em;">    if not profile_flag:
+-        Relax()
++        relax_instance = Relax()
++        mode=relax_instance.arguments(sys.argv[1:])
++        multi_processor = load_multiprocessor(mode,relax_instance)
++        multi_processor.run()
++
+    else:
+        def print_stats(stats, status=0):
+            pstats.Stats(stats).sort_stats('time', 'name').print_stats()
+-
++        #FIXME: profiling won't work with multi processors.
+        profile.Profile.print_stats = print_stats
+        profile.run('Relax()')
++
++</pre><br>
+<pre style="margin: 0em;"><br>_______________________________________________
+relax (<a  href="http://nmr-relax.com">http://nmr-relax.com</a>)</pre><br>
+<pre style="margin: 0em;">This is the relax-commits mailing list
+relax-commits@xxxxxxx</pre><br>
+<pre style="margin: 0em;">To unsubscribe from this list, get a password
+reminder, or change your subscription options,
+visit the list information page at
+<a  href="https://mail.gna.org/listinfo/relax-commits">https://mail.gna.org/listinfo/relax-commits</a></pre><br>
+<pre style="margin: 0em;">.</pre><br>
+<tt> </tt><br>
+<br>
+</blockquote><pre style="margin: 0em;"><br></pre><br>
+<pre style="margin: 0em;">--
+-------------------------------------------------------------------
+Dr Gary Thompson
+Astbury Centre for Structural Molecular Biology,
+University of Leeds, Astbury Building,
+Leeds, LS2 9JT, West-Yorkshire, UK             Tel. +44-113-3433024
+email: garyt@xxxxxxxxxxxxxxx                   Fax  +44-113-2331407
+-------------------------------------------------------------------</pre><br>
+<pre style="margin: 0em;"><br></pre><br>
+<br>
+
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<ul><li><strong>Follow-Ups</strong>:
+<ul>
+<li><strong><a name="00080" href="msg00080.html">Re: r3208 - /branches/multi_processor/relax</a></strong>
+<ul><li><em>From:</em> Edward d'Auvergne</li></ul></li>
+</ul></li></ul>
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Sat Mar 17 03:20:35 2007</div>  
+</body>
+</html>

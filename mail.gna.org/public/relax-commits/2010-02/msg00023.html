@@ -1,0 +1,274 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r10627 &#45; /1.3/relax -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 03 Feb 2010 18:00:19 +0100 -->
+<!--X-Message-Id: E1NciaR&#45;0006Kr&#45;3f@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r10627 - /1.3/relax -- February 03, 2010 - 18:00</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r10627 - /1.3/relax</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00023" class="tabs">Index by Date</a> | <a href="threads.html#00023" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00022.html">Date Prev</a>] [<a href="msg00024.html">Date Next</a>] [<a href="msg00022.html">Thread Prev</a>] [<a href="msg00024.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 03 Feb 2010 17:00:18 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00023.html">E1NciaR-0006Kr-3f@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on February 03, 2010 - 18:00:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Feb  3 18:00:17 2010
+New Revision: 10627
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=10627&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=10627&amp;view=rev</a>
+Log:
+Redesigned get_intro_string() to return a container of different strings.
+
+The method is now called get_intro_text() and returns a container with the 
+following str objects:
+    - title:  The program title 'relax'
+    - version:  For example 'repository checkout' or '1.3.8'.
+    - desc:  The short program description.
+    - copyright:  A list of copyright statements.
+    - licence:  Text pertaining to the licencing.
+    - errors:  A list of import errors.
+
+This is being abstracted so that the different UIs can use this differently.  
+The prompt/script can
+word wrap to 100 char (80 char in Windows), and print this to stdout.  The 
+GUI can use this in the
+about prompt and not print to stdout.  Other interfaces can use this in any 
+other way.  And the
+information content can be expanded for different purposes.
+
+
+Modified:
+    1.3/relax
+
+Modified: 1.3/relax
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/relax?rev=10627&amp;r1=10626&amp;r2=10627&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/relax?rev=10627&amp;r1=10626&amp;r2=10627&amp;view=diff</a>
+==============================================================================
+--- 1.3/relax (original)
++++ 1.3/relax Wed Feb  3 18:00:17 2010
+@@ -56,13 +56,17 @@
+ from relax_io import io_streams_log, io_streams_tee
+ import relax_warnings
+ from test_suite.test_suite_runner import Test_suite_runner
+-import version
++from version import version
+ 
+ sys.path.append(sys.path[0])
+ sys.path[0] = '.'
+ putenv('PDBVIEWER', 'vmd')
+ 
+ 
++class Container:
++    &quot;&quot;&quot;An empty container.&quot;&quot;&quot;
++
++
+ class Relax:
+     &quot;&quot;&quot;The main relax class.
+ 
+@@ -73,9 +77,6 @@
+     def __init__(self):
+         &quot;&quot;&quot;The top level class for initialising the program.&quot;&quot;&quot;
+ 
+-        # relax version number.
+-        self.version = version.version
+-
+         # Get and store the PID of this process.
+         self.pid = getpid()
+ 
+@@ -87,9 +88,6 @@
+ 
+         # Pedantic flag (default is off).
+         self.Pedantic = 0
+-
+-        # Set the program introduction string to nothing.
+-        self.intro_string = None
+ 
+         # Setup the object containing the generic functions.
+         self.generic = generic_fns
+@@ -107,7 +105,7 @@
+ 
+         # Show the version number and exit.
+         if mode == 'version':
+-            print(('relax ' + self.version))
++            print(('relax ' + version))
+             sys.exit()
+ 
+         # Logging.
+@@ -119,12 +117,12 @@
+             io_streams_tee(tee_file)
+ 
+         # Create a string to pass to the interpreter to print.
+-        intro_string = self.get_intro_string()
++        intro_text = self.get_intro_text()
+ 
+         # Run the interpreter for the prompt or script modes.
+         if mode == 'prompt' or mode == 'script':
+             # Run the interpreter.
+-            self.interpreter = interpreter.Interpreter(intro_string)
++            self.interpreter = interpreter.Interpreter(intro_text)
+             self.interpreter.run(self.script_file)
+ 
+         # Execute the relax test suite
+@@ -305,57 +303,47 @@
+         return mode, log_file, tee_file
+ 
+ 
+-    def get_intro_string(self):
++    def get_intro_text(self):
+         &quot;&quot;&quot;Create the program introduction.
+ 
+-        @return:    The program introduction string.
++        This method returns a container with the following objects:
++            - title:  The program title 'relax'
++            - version:  For example 'repository checkout' or '1.3.8'.
++            - desc:  The short program description.
++            - copyright:  A list of copyright statements.
++            - licence:  Text pertaining to the licencing.
++            - errors:  A list of import errors.
++
++
++        @return:    The program introduction string container.
+         @rtype:     str
+         &quot;&quot;&quot;
+ 
+-        # The width of the printout.
+-        if self.platform == 'Windows' or self.platform == 'Microsoft':
+-            width = 80
+-        else:
+-            width = 100
+-
+-        # Some new lines.
+-        intro_string = '\n\n\n'
++        # The container.
++        text = Container()
+ 
+         # Program name and version.
+-        string = &quot;relax &quot; + self.version
+-        intro_string = intro_string + self.spacing(string, width) + '\n\n'
++        text.title = &quot;relax&quot;
++        text.version = version
+ 
+         # Program description.
+-        string = &quot;Protein dynamics by NMR relaxation data analysis&quot;
+-        intro_string = intro_string + self.spacing(string, width) + '\n\n'
++        text.desc = &quot;Protein dynamics by NMR data analysis&quot;
+ 
+         # Copyright printout.
+-        string = &quot;Copyright (C) 2001-2006 Edward d'Auvergne&quot;
+-        intro_string = intro_string + self.spacing(string, width) + '\n'
+-        string = &quot;Copyright (C) 2006-2010 the relax development team&quot;
+-        intro_string = intro_string + self.spacing(string, width) + '\n\n'
+-
+-        # Program licence and help (80 characters wide).
+-        if width == 80:
+-            intro_string = intro_string + &quot;This is free software which you 
+are welcome to modify and redistribute under\n&quot;
+-            intro_string = intro_string + &quot;the conditions of the GNU General 
+Public License (GPL).  This program,\n&quot;
+-            intro_string = intro_string + &quot;including all modules, is 
+licensed under the GPL and comes with absolutely no\n&quot;
+-            intro_string = intro_string + &quot;warranty.  For details type 
+'GPL'.  Assistance in using this program can be\n&quot;
+-            intro_string = intro_string + &quot;accessed by typing 'help'.\n&quot;
+-
+-        # Program licence and help (100 characters wide).
+-        else:
+-            intro_string = intro_string + &quot;This is free software which you 
+are welcome to modify and redistribute under the conditions of the\n&quot;
+-            intro_string = intro_string + &quot;GNU General Public License (GPL). 
+ This program, including all modules, is licensed under the GPL\n&quot;
+-            intro_string = intro_string + &quot;and comes with absolutely no 
+warranty.  For details type 'GPL'.  Assistance in using this program\n&quot;
+-            intro_string = intro_string + &quot;can be accessed by typing 
+'help'.\n&quot;
++        text.copyright = []
++        text.copyright.append(&quot;Copyright (C) 2001-2006 Edward d'Auvergne&quot;)
++        text.copyright.append(&quot;Copyright (C) 2006-2010 the relax development 
+team&quot;)
++
++        # Program licence and help.
++        text.licence = &quot;This is free software which you are welcome to 
+modify and redistribute under the conditions of the GNU General Public 
+License (GPL).  This program, including all modules, is licensed under the 
+GPL and comes with absolutely no warranty.  For details type 'GPL'.  
+Assistance in using this program can be accessed by typing 'help'.&quot;
+ 
+         # ImportErrors, if any.
++        text.errors = []
+         if not dep_check.C_module_exp_fn:
+-            intro_string = intro_string + &quot;\n&quot; + 
+dep_check.C_module_exp_fn_mesg + &quot;\n&quot;
+-
+-        # Return the string.
+-        return intro_string
++            text.errors.append(dep_check.C_module_exp_fn_mesg)
++
++        # Return the container.
++        return text
+ 
+ 
+     def licence(self):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Feb 03 18:20:02 2010</div>  
+</body>
+</html>

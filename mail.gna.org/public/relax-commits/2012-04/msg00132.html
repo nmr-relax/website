@@ -1,0 +1,382 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r15780 &#45; /1.3/setup.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 18 Apr 2012 17:58:37 +0200 -->
+<!--X-Message-Id: E1SKXHB&#45;0002Ne&#45;4p@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r15780 - /1.3/setup.py -- April 18, 2012 - 17:58</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r15780 - /1.3/setup.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00132" class="tabs">Index by Date</a> | <a href="threads.html#00132" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00131.html">Date Prev</a>] [<a href="msg00133.html">Date Next</a>] [<a href="msg00131.html">Thread Prev</a>] [<a href="msg00133.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 18 Apr 2012 15:58:37 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00132.html">E1SKXHB-0002Ne-4p@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on April 18, 2012 - 17:58:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Apr 18 17:58:36 2012
+New Revision: 15780
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=15780&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=15780&amp;view=rev</a>
+Log:
+Complete redesign of the py2app setup.py script for building Mac OS X 
+applications.
+
+The script has been converted into a class called Setup which performs all 
+the actions.  All files,
+source or otherwise, are now stated as data files to be included in 
+relax.app/Contents/Resources.
+All relax modules are specified by the py2app 'includes' option so that they 
+are all included within
+the relax.app/Contents/Resources/lib/python2.X/site-packages.zip as *.pyc 
+files.  These changes are
+needed for the newer versions of the py2app and setuptools Python packages.
+
+
+Modified:
+    1.3/setup.py
+
+Modified: 1.3/setup.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/setup.py?rev=15780&amp;r1=15779&amp;r2=15780&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/setup.py?rev=15780&amp;r1=15779&amp;r2=15780&amp;view=diff</a>
+==============================================================================
+--- 1.3/setup.py (original)
++++ 1.3/setup.py Wed Apr 18 17:58:36 2012
+@@ -36,12 +36,11 @@
+ &quot;&quot;&quot;
+ 
+ # Python module import.
+-from os import getcwd, listdir, sep
++from os import getcwd, listdir, sep, walk
++from os.path import relpath, sep
+ from re import search
+-try:
+-    from setuptools import setup
+-except ImportError:
+-    setup = None
++from setuptools import setup
++from string import replace, split
+ import sys
+ 
+ # relax module imports.
+@@ -50,62 +49,198 @@
+ from version import version_full
+ 
+ 
+-def mac_setup():
+-    &quot;&quot;&quot;Mac OS X setup.&quot;&quot;&quot;
+-
+-    # No setuptools!
+-    if setup == None:
+-        raise RelaxError(&quot;The setuptools module has not been installed!&quot;)
+-
+-    # The relax settings.
+-    APP = ['relax_gui_mode.py']
+-    NAME = 'relax'
+-    VERSION = version_full()
+-    OPTIONS = {
+-        'argv_emulation': False,
+-        'iconfile': status.install_path + sep + 'graphics' + sep + 
+'ulysses_shadowless_trans_128x128.icns',
+-        'packages': 'wx',
+-        'site_packages': True,
+-        'resources': 'docs/COPYING',
+-        'plist': {
+-            'CFBundleName':                 'relax',
+-            'CFBundleShortVersionString':   version_full(),
+-            'CFBundleGetInfoString':        'relax %s' % version_full(),
+-            'CFBundleIdentifier':           'com.nmr-relax.relax'
+-        }
+-    }
+-
+-    # All files and directories.
+-    DATA_FILES = []
+-    for name in listdir(getcwd()):
+-        # Skip names starting with '.'.
+-        if search('^\.', name):
+-            continue
+-
+-        # Blacklist.
+-        blacklist = [
++class Setup:
++    &quot;&quot;&quot;Class containing setuptools targets for different platforms.&quot;&quot;&quot;
++
++    def __init__(self):
++        &quot;&quot;&quot;Initialise and execute.&quot;&quot;&quot;
++
++        # Mac OS X application.
++        if sys.argv[1] == 'py2app':
++            self.mac_setup()
++
++        # Unsupported platform.
++        else:
++            raise RelaxError(&quot;The setuptools build for the '%s' package is 
+not yet supported.&quot;)
++
++        # Generic setup args.
++        self.args_generic()
++
++        # Execute the setuptools setup() method to actually do something.
++        setup(
++            app=self.APP,
++            name=self.NAME,
++            version=self.VERSION,
++            data_files=self.DATA_FILES,
++            options=self.OPTIONS,
++            setup_requires=self.REQUIRES
++        )
++
++
++    def args_generic(self):
++        &quot;&quot;&quot;Set up the arguments which are independent of the target.&quot;&quot;&quot;
++
++        # Get a list of data files.
++        self.DATA_FILES = self.get_data_files()
++        #for i in range(len(self.DATA_FILES)):
++        #    print self.DATA_FILES[i]
++        #sys.exit(1)
++
++        # Get the includes.
++        self.INCLUDES = self.get_includes()
++        #for i in range(len(self.INCLUDES)):
++        #    print self.INCLUDES[i]
++        #sys.exit(1)
++
++
++    def get_data_files(self):
++        &quot;&quot;&quot;Collect and return a list of data files.
++
++        @return:    The list of data files as full paths.
++        @rtype:     list of str
++        &quot;&quot;&quot;
++
++        # Blacklisted files and directories.
++        blacklist_dir = [
+             'build',
+             'dist'
+         ]
+-        if name in blacklist:
+-            continue
+-
+-        # Add the file.
+-        DATA_FILES.append(name)
+-
+-    # Setup.
+-    setup(
+-        app=APP,
+-        name=NAME,
+-        version=VERSION,
+-        data_files=DATA_FILES,
+-        options={
+-            'py2app': OPTIONS,
+-        },
+-        setup_requires=['py2app']
+-    )
+-
+-
+-# Mac OS X.
+-if __name__ == '__main__' and 'darwin' in sys.platform:
+-    mac_setup()
++        blacklist_files = [
++        ]
++
++        # All files and directories.
++        data_files = []
++        cwd = getcwd()
++        for (dirpath, dirnames, filenames) in walk(cwd):
++            # Skip .svn directories.
++            split_path = split(dirpath, sep)
++            if '.svn' in split_path:
++                continue
++
++            # Skip blacklisted directories.
++            skip = False
++            for dir_name in blacklist_dir:
++                if dir_name in split_path:
++                    skip = True
++            if skip:
++                continue
++
++            # The relative path.
++            rel_path = relpath(dirpath, cwd)
++
++            # Loop over the files.
++            for file in filenames:
++                # Skip names starting with '.'.
++                if search('^\.', file):
++                    continue
++
++                # Blacklist.
++                if file in blacklist_files:
++                    continue
++
++                # Append a tuple of the destination directory and the file.
++                data_files.append((rel_path, &quot;%s%s%s&quot; % (rel_path, sep, 
+file)))
++
++        # Return the data files.
++        return data_files
++
++
++    def get_includes(self):
++        &quot;&quot;&quot;Collect and return a list of modules to include.
++
++        @return:    The list of modules.
++        @rtype:     list of str
++        &quot;&quot;&quot;
++
++        # Blacklisted files and directories.
++        blacklist_dir = [
++            'build',
++            'dist',
++            'bmrblib'+sep+'html_dictionary',
++            'graphics',
++            'sample_scripts',
++            'scripts',
++            'test_suite'+sep+'system_tests'+sep+'scripts',
++            'test_suite'+sep+'shared_data'
++        ]
++        blacklist_files = [
++        ]
++
++        # All files and directories.
++        includes = []
++        cwd = getcwd()
++        for (dirpath, dirnames, filenames) in walk(cwd):
++            # Skip .svn directories.
++            split_path = split(dirpath, sep)
++            if '.svn' in split_path:
++                continue
++
++            # The relative path.
++            rel_path = relpath(dirpath, cwd)
++
++            # Skip blacklisted directories.
++            skip = False
++            for dir_name in blacklist_dir:
++                if search(dir_name, rel_path):
++                    skip = True
++            if skip:
++                continue
++
++            # The module path.
++            if rel_path == '.':
++                module_path = ''
++            else:
++                module_path = replace(rel_path, sep, '.')
++                if module_path:
++                    module_path += '.'
++
++            # Loop over the files.
++            for file in filenames:
++                # Skip names starting with '.'.
++                if search('^\.', file):
++                    continue
++
++                # Skip non-Python source files.
++                if not search('\.py$', file):
++                    continue
++
++                # Blacklist.
++                if file in blacklist_files:
++                    continue
++
++                # Append a tuple of the destination directory and the file.
++                includes.append(&quot;%s%s&quot; % (module_path, file[:-3]))
++
++        # Return the data files.
++        return includes
++
++
++    def mac_setup(self):
++        &quot;&quot;&quot;Mac OS X setup.&quot;&quot;&quot;
++
++        # The relax settings.
++        self.APP = ['relax_gui_mode.py']
++        self.NAME = 'relax'
++        self.VERSION = version_full()
++        self.OPTIONS = {}
++        self.OPTIONS['py2app'] = {
++            'argv_emulation': False,
++            'iconfile': status.install_path + sep + 'graphics' + sep + 
+'ulysses_shadowless_trans_128x128.icns',
++            'packages': 'wx',
++            'site_packages': True,
++            'resources': 'docs/COPYING',
++            'includes': self.get_includes(),
++            'excludes': ['build', 'dist'],
++            'plist': {
++                'CFBundleName':                 'relax',
++                'CFBundleShortVersionString':   version_full(),
++                'CFBundleGetInfoString':        'relax %s' % version_full(),
++                'CFBundleIdentifier':           'com.nmr-relax.relax'
++            }
++        }
++        self.REQUIRES = ['py2app']
++
++
++# Execute the main class.
++if __name__ == '__main__':
++    Setup()
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Apr 18 18:20:01 2012</div>  
+</body>
+</html>

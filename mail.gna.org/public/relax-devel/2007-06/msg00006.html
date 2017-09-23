@@ -1,0 +1,376 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: Re: [bug #9259] Reduced spectral density mapping yielding bad values -->
+<!--X-From-R13: "Sqjneq q'Ohiretar" <rqjneq.qnhiretarNtznvy.pbz> -->
+<!--X-Date: Fri, 15 Jun 2007 09:41:16 +0200 -->
+<!--X-Message-Id: 7f080ed10706150040v7366098dvad9b863201861b50@mail.gmail.com -->
+<!--X-Content-Type: text/plain -->
+<!--X-Reference: 20070601&#45;171559.sv0.50521@gna.org -->
+<!--X-Reference: 7f080ed10706011031j6cb5c066v5c22d9183b048c83@mail.gmail.com -->
+<!--X-Reference: 46702272.9000709@ulaval.ca -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>Re: [bug #9259] Reduced spectral density mapping yielding bad values -- June 15, 2007 - 09:41</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />Re: [bug #9259] Reduced spectral density mapping yielding bad values</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00006" class="tabs">Index by Date</a> | <a href="threads.html#00006" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00005.html">Date Prev</a>] [<a href="msg00007.html">Date Next</a>] [<a href="msg00003.html">Thread Prev</a>] [<a href="msg00007.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: &quot;Sebastien Morin&quot; &lt;sebastien.morin.1@xxxxxxxxx&gt;</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 15 Jun 2007 09:40:28 +0200</li>
+<li class="menuitem">
+<em>Cc</em>: Stephane Gagne &lt;smg@xxxxxxxxxxxxxx&gt;,	anonymous &lt;NO-REPLY.INVALID-ADDRESS@xxxxxxx&gt;, relax-devel@xxxxxxx</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00006.html">7f080ed10706150040v7366098dvad9b863201861b50@mail.gmail.com</a>&gt;</li>
+<li class="menuitem">
+<em>References</em>: &lt;20070601-171559.sv0.50521@xxxxxxx&gt;	&lt;7f080ed10706011031j6cb5c066v5c22d9183b048c83@xxxxxxxxxxxxxx&gt;	&lt;46702272.9000709@xxxxxxxxx&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>Edward d'Auvergne</strong> on June 15, 2007 - 09:41:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">
+Hi,
+
+That is awesome work tracking down this problem.  Thank you!  I'll
+apply your patch and then hopefully make a new relax 1.2 release with
+your fixes very soon.  I do have a important question first though.
+
+My question relates to the multiplication of the frequency by 2pi to
+convert from Hz to rad/s units.  The symbol for the frequency in Hz is
+nu whereas the frequency in rad/s is omega.  In all the relaxation
+equations composed of spectral density components, the frequencies are
+in rad/s and are represented by the omega symbol.  This includes the
+CSA constant defined in SI units as
+
+  c = (omegaX.CSA)^2/3,
+
+where CSA is the chemical shift anisotropy and
+
+  omegaX = gammaX.B0.
+
+To get nuX which is the frequency of the X nucleus in Hz, omegaX
+measured in rad/s should be divided by 2pi.  So my question is, do you
+get the same results as the Mathematica notebooks of Leo Spyracopoulos
+if you retain the multiplication of the frequency by 2pi?
+
+Thanks,
+
+Edward
+
+
+P.S.  The problem with the list of frequencies is probably the major
+issue.  I'm not sure why I attempted to fill out the entire list of
+frequencies as the reduced spectral density mapping code only uses the
+value in self.data.frq_list[0, 1], the frequency of the heteronucleus,
+to calculate the CSA constant.  The higher frequencies are never used
+in the calculation.  Anyway, your patch fixes this problem.
+
+
+
+
+On 6/13/07, Sebastien Morin &lt;sebastien.morin.1@xxxxxxxxx&gt; wrote:
+</pre><blockquote class="blockquote"><pre style="margin: 0em;">
+Hi !
+
+I've checked the equations used for reduced spectral density mapping in
+relax. They're all right... The assumption about the factor of (mu0 /
+(4pi))^2 is ok since the old equations were written in Gaussian units
+(cgs) and now we use SI units.
+
+However, 2 things seem to be wrong.
+
+
+1.
+
+The frequencies need not to be scaled by a factor of 2 pi since the unit
+of frequency in the SI is Hz. Thus, line 52 of 'maths_fns/jw_mapping.py'
+must be removed.
+
+
+2.
+
+The frequency used for calculating the CSA seems not to be the
+heteronuclear frequency. In fact, there is an error in lines 57 to 60
+from 'maths_fns/jw_mapping.py' since the same item in the list is
+assigned different values one after the other. Changing those lines from :
+
+        self.data.frq_list[0, 1] = frqX
+        self.data.frq_list[0, 1] = frq - frqX
+        self.data.frq_list[0, 1] = frq
+        self.data.frq_list[0, 1] = frq + frqX
+
+to :
+
+        self.data.frq_list[0, 1] = frqX
+        self.data.frq_list[0, 2] = frq - frqX
+        self.data.frq_list[0, 3] = frq
+        self.data.frq_list[0, 4] = frq + frqX
+
+should work. The important thing is that item 1 stays the heteronuclear
+frequency so it matches with line 1020 of 'maths_fns/ri_comps.py' :
+
+         data.csa_const_fixed[j] = data.frq_sqrd_list[j, 1] / 3.0
+
+where the constant 'c' is calculated using the squared heteronuclear
+frequency.
+
+
+With those two modifications, I now get the same values as when
+calculating manually or using Leo Spyracopoulos's Mathematica notebooks
+(<a  rel="nofollow" href="http://www.bionmr.ualberta.ca/~lspy/index_7.html">http://www.bionmr.ualberta.ca/~lspy/index_7.html</a>).
+
+Bye !
+
+
+Sébastien  :)
+
+
+
+
+
+Edward d'Auvergne wrote:
+&gt; Hi,
+&gt;
+&gt; For the reduced spectral density mapping in relax, I have used
+&gt; equations 10 to 12 from:
+&gt;
+&gt; Markus M. A., Dayie K. T., Matsudaira P., and Wagner G.  Local
+&gt; mobility within villin 14T probed via heteronuclear relaxation
+&gt; measurements and a reduced spectral density mapping.  Biochemistry.
+&gt; 1996, 35(6):1722-32.
+&gt;
+&gt; The equations themselves are derived from:
+&gt;
+&gt; Lefevre J. F., Dayie K. T., Peng J. W., and Wagner G.  Internal
+&gt; mobility in the partially folded DNA binding and dimerization domains
+&gt; of GAL4: NMR analysis of the N-H spectral density functions.
+&gt; Biochemistry. 1996, 35(8):2674-86.
+&gt;
+&gt; One problem may be that I made the assumption that the dipolar
+&gt; constant of equation 7 of the first reference was missing the factor
+&gt; of (mu0 / (4pi))^2!  I based this assumption on the SI units
+&gt; formulation of the R1, R2, and NOE equations and how the CSA constant
+&gt; is defined.  I think this is a fairly safe assumption though if you
+&gt; look at equations 1, 2, and 8 of that paper.
+&gt;
+&gt; Could the problem be the definition of the equations used?  I've
+&gt; looked at the code in relax and it seems to replicate these equations
+&gt; correctly.  Are the equations of Markus et al., (1996) correct?  Is my
+&gt; assumption about the dipolar constant correct?  If you manually
+&gt; calculate the reduced spectral density values using these alternative
+&gt; equations, does relax produce the same values?  I'm sorry that I can't
+&gt; exactly pinpoint the problem, but something is seriously amiss.
+&gt;
+&gt; Regards,
+&gt;
+&gt; Edward
+&gt;
+&gt;
+&gt;
+&gt;
+&gt; On 6/1/07, anonymous &lt;NO-REPLY.INVALID-ADDRESS@xxxxxxx&gt; wrote:
+&gt;&gt;
+&gt;&gt; URL:
+&gt;&gt;   &lt;<a  rel="nofollow" href="http://gna.org/bugs/?9259">http://gna.org/bugs/?9259</a>&gt;
+&gt;&gt;
+&gt;&gt;                  Summary: Reduced spectral density mapping yielding bad
+&gt;&gt; values
+&gt;&gt;                  Project: relax
+&gt;&gt;             Submitted by: None
+&gt;&gt;             Submitted on: Friday 06/01/2007 at 17:15 CEST
+&gt;&gt;                 Category: relax's source code
+&gt;&gt;                 Severity: 4 - Important
+&gt;&gt;                 Priority: 5 - Normal
+&gt;&gt;                   Status: None
+&gt;&gt;                  Privacy: Public
+&gt;&gt;              Assigned to: None
+&gt;&gt;          Originator Name: Sébastien Morin
+&gt;&gt;         Originator Email: sebastien.morin.1@xxxxxxxxx
+&gt;&gt;              Open/Closed: Open
+&gt;&gt;          Discussion Lock: Any
+&gt;&gt;                  Release: Repository: 1.2 line
+&gt;&gt;         Operating System: GNU/Linux
+&gt;&gt;
+&gt;&gt;     _______________________________________________________
+&gt;&gt;
+&gt;&gt; Details:
+&gt;&gt;
+&gt;&gt; Hi
+&gt;&gt;
+&gt;&gt; I performed spectral density mapping on data recorded at three magnetic
+&gt;&gt; fields (500, 600, 800).
+&gt;&gt;
+&gt;&gt; The values I get are erroneous (when compared with Leo Spyracopoulos'
+&gt;&gt; Mathematica notebook which were manually verified using equations
+&gt;&gt; from the
+&gt;&gt; method 1 of Farrow et al., 1995, JBNMR, 6 : 153) and scaled depending
+&gt;&gt; on the
+&gt;&gt; magnetic field as shown in the table below (for which values
+&gt;&gt; calculated using
+&gt;&gt; either Leo's notebook or relax are divided by the value calculated
+&gt;&gt; manually).
+&gt;&gt;
+&gt;&gt; Field    Method    J(0)          J(wN)         J(wH)
+&gt;&gt; =====    =======   ==========    ==========    ==========
+&gt;&gt; 500      Farrow    1 (ref)       1 (ref)       1 (ref)
+&gt;&gt;          Leo       1             1             1
+&gt;&gt;          relax     0.04758       0.04757       0.999
+&gt;&gt;
+&gt;&gt; 600      Farrow    1 (ref)       1 (ref)       1 (ref)
+&gt;&gt;          Leo       1             1             1
+&gt;&gt;          relax     0.03361       0.03361       0.999
+&gt;&gt;
+&gt;&gt; 800      Farrow    1 (ref)       1 (ref)       1
+&gt;&gt;          Leo       1             1             1
+&gt;&gt;          relax     0.01932       0.01932       0.999
+&gt;&gt;
+&gt;&gt; Then, if you take the different values for J(0) and J(wN) and compare
+&gt;&gt; from
+&gt;&gt; field to field, you get this :
+&gt;&gt;
+&gt;&gt;               J(0)      J(wN)     J(wH)
+&gt;&gt;               ========  ========  ========
+&gt;&gt; 500/600 -&gt;    1.415     1.415     1
+&gt;&gt; 500/800 -&gt;    2.462     2.462     1
+&gt;&gt;
+&gt;&gt; Those ratios are similar to what you get when comparing fields
+&gt;&gt; quadratically
+&gt;&gt; :
+&gt;&gt;
+&gt;&gt; (600/500)^2 = (1.2)^2 = 1.44 ~ 1.415
+&gt;&gt; (800/500)^2 = (1.6)^2 = 2.56 ~ 2.462
+&gt;&gt;
+&gt;&gt; So there seems to be a problem somewhere in the calculations of J(0) and
+&gt;&gt; J(wN) and, to a lesser extent, J(wH)...
+&gt;&gt;
+&gt;&gt; I first thought the problem was related with bug #9238... In fact,
+&gt;&gt; before
+&gt;&gt; this bug was solved, the problem was worst by a factor of ~2...
+&gt;&gt; Still, the
+&gt;&gt; skewing of Jw mapping results is quite important. Maybe is this
+&gt;&gt; something
+&gt;&gt; with the units or constants values...
+&gt;&gt;
+&gt;&gt; Thanks for helping me !
+&gt;&gt;
+&gt;&gt;
+&gt;&gt; Sébastien :)
+&gt;&gt;
+&gt;&gt;
+&gt;&gt;
+&gt;&gt;
+&gt;&gt;
+&gt;&gt;
+&gt;&gt;     _______________________________________________________
+&gt;&gt;
+&gt;&gt; Reply to this item at:
+&gt;&gt;
+&gt;&gt;   &lt;<a  rel="nofollow" href="http://gna.org/bugs/?9259">http://gna.org/bugs/?9259</a>&gt;
+&gt;&gt;
+&gt;&gt; _______________________________________________
+&gt;&gt;   Message sent via/by Gna!
+&gt;&gt;   <a  rel="nofollow" href="http://gna.org/">http://gna.org/</a>
+&gt;&gt;
+&gt;&gt;
+&gt;&gt; _______________________________________________
+&gt;&gt; relax (<a  rel="nofollow" href="http://nmr-relax.com">http://nmr-relax.com</a>)
+&gt;&gt;
+&gt;&gt; This is the relax-devel mailing list
+&gt;&gt; relax-devel@xxxxxxx
+&gt;&gt;
+&gt;&gt; To unsubscribe from this list, get a password
+&gt;&gt; reminder, or change your subscription options,
+&gt;&gt; visit the list information page at
+&gt;&gt; <a  rel="nofollow" href="https://mail.gna.org/listinfo/relax-devel">https://mail.gna.org/listinfo/relax-devel</a>
+&gt;&gt;
+&gt;
+&gt;
+
+--
+         ______________________________________
+     _______________________________________________
+    |                                               |
+   || Sebastien Morin                               ||
+  ||| Etudiant au PhD en biochimie                  |||
+ |||| Laboratoire de resonance magnetique nucleaire ||||
+||||| Dr Stephane Gagne                             |||||
+ |||| CREFSIP (Universite Laval, Quebec, CANADA)    ||||
+  ||| 1-418-656-2131 #4530                          |||
+   ||                                               ||
+    |_______________________________________________|
+         ______________________________________
+
+
+
+</pre></blockquote><pre style="margin: 0em;">
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<ul><li><strong>Follow-Ups</strong>:
+<ul>
+<li><strong><a name="00011" href="msg00011.html">Re: [bug #9259] Reduced spectral density mapping yielding bad values</a></strong>
+<ul><li><em>From:</em> Sebastien Morin</li></ul></li>
+<li><strong><a name="00010" href="msg00010.html">Re: [bug #9259] Reduced spectral density mapping yielding bad values</a></strong>
+<ul><li><em>From:</em> Sebastien Morin</li></ul></li>
+<li><strong><a name="00007" href="msg00007.html">Re: [bug #9259] Reduced spectral density mapping yielding bad values</a></strong>
+<ul><li><em>From:</em> Sebastien Morin</li></ul></li>
+</ul></li></ul>
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<ul><li><strong>References</strong>:
+<ul>
+<li><strong><a name="00001" href="msg00001.html">[bug #9259] Reduced spectral density mapping yielding bad values</a></strong>
+<ul><li><em>From:</em> anonymous</li></ul></li>
+<li><strong><a name="00002" href="msg00002.html">Re: [bug #9259] Reduced spectral density mapping yielding bad values</a></strong>
+<ul><li><em>From:</em> Edward d'Auvergne</li></ul></li>
+<li><strong><a name="00003" href="msg00003.html">Re: [bug #9259] Reduced spectral density mapping yielding bad values</a></strong>
+<ul><li><em>From:</em> Sebastien Morin</li></ul></li>
+</ul></li></ul>
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Jun 15 23:20:29 2007</div>  
+</body>
+</html>

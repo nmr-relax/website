@@ -1,0 +1,330 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r23979 &#45; /branches/frame_order_cleanup/lib/frame_order/ -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 16 Jun 2014 17:39:25 +0200 -->
+<!--X-Message-Id: E1WwZ0H&#45;0005Zs&#45;HT@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r23979 - /branches/frame_order_cleanup/lib/frame_order/ -- June 16, 2014 - 17:39</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r23979 - /branches/frame_order_cleanup/lib/frame_order/</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00366" class="tabs">Index by Date</a> | <a href="threads.html#00366" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00365.html">Date Prev</a>] [<a href="msg00367.html">Date Next</a>] [<a href="msg00365.html">Thread Prev</a>] [<a href="msg00367.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 16 Jun 2014 15:39:25 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00366.html">E1WwZ0H-0005Zs-HT@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on June 16, 2014 - 17:39:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Mon Jun 16 17:39:25 2014
+New Revision: 23979
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=23979&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=23979&amp;view=rev</a>
+Log:
+Fixes for all PCS numeric integration for all frame order models in the rigid 
+case.
+
+The exact PCS values for the rigid state are now correctly calculated when no 
+Sobol' points lie
+within the motional model.  The identity matrix is used to set the rotation 
+to zero, and the PCS
+values are now multiplied by the constant.
+
+
+Modified:
+    branches/frame_order_cleanup/lib/frame_order/double_rotor.py
+    branches/frame_order_cleanup/lib/frame_order/iso_cone.py
+    branches/frame_order_cleanup/lib/frame_order/iso_cone_torsionless.py
+    branches/frame_order_cleanup/lib/frame_order/pseudo_ellipse.py
+    branches/frame_order_cleanup/lib/frame_order/pseudo_ellipse_torsionless.py
+    branches/frame_order_cleanup/lib/frame_order/rotor.py
+
+Modified: branches/frame_order_cleanup/lib/frame_order/double_rotor.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/frame_order/double_rotor.py?rev=23979&amp;r1=23978&amp;r2=23979&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/frame_order/double_rotor.py?rev=23979&amp;r1=23978&amp;r2=23979&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/lib/frame_order/double_rotor.py        
+(original)
++++ branches/frame_order_cleanup/lib/frame_order/double_rotor.py        Mon 
+Jun 16 17:39:25 2014
+@@ -136,11 +136,16 @@
+ 
+     # Default to the rigid state if no points lie in the distribution.
+     if num == 0:
+-        # Fast frame shift.
+-        Ri = dot(R_eigen, tensordot(R_eigen, RT_eigen, axes=1))
++        # Fast identity frame shift.
++        Ri_prime = eye(3, dtype=float64)
++        Ri = dot(R_eigen, tensordot(Ri_prime, RT_eigen, axes=1))
++        Ri = swapaxes(Ri, 0, 1)
+ 
+         # Calculate the PCSs for this state.
+         pcs_pivot_motion_double_rotor(full_in_ref_frame=full_in_ref_frame, 
+r_pivot_atom=r_pivot_atom, r_pivot_atom_rev=r_pivot_atom_rev, 
+r_ln_pivot=r_ln_pivot, A=A, Ri=Ri, pcs_theta=pcs_theta, 
+pcs_theta_err=pcs_theta_err, missing_pcs=missing_pcs)
++
++        # Multiply the constant.
++        multiply(c, pcs_theta, pcs_theta)
+ 
+     # Average the PCS.
+     else:
+
+Modified: branches/frame_order_cleanup/lib/frame_order/iso_cone.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/frame_order/iso_cone.py?rev=23979&amp;r1=23978&amp;r2=23979&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/frame_order/iso_cone.py?rev=23979&amp;r1=23978&amp;r2=23979&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/lib/frame_order/iso_cone.py    (original)
++++ branches/frame_order_cleanup/lib/frame_order/iso_cone.py    Mon Jun 16 
+17:39:25 2014
+@@ -24,7 +24,7 @@
+ 
+ # Python module imports.
+ from math import cos, pi, sqrt
+-from numpy import divide, dot, multiply, sinc, swapaxes, tensordot
++from numpy import divide, dot, eye, float64, multiply, sinc, swapaxes, 
+tensordot
+ 
+ # relax module imports.
+ from lib.frame_order.matrix_ops import pcs_pivot_motion_full_qrint, 
+rotate_daeg
+@@ -115,11 +115,16 @@
+ 
+     # Default to the rigid state if no points lie in the distribution.
+     if num == 0:
+-        # Fast frame shift.
+-        Ri = dot(R_eigen, tensordot(R_eigen, RT_eigen, axes=1))
++        # Fast identity frame shift.
++        Ri_prime = eye(3, dtype=float64)
++        Ri = dot(R_eigen, tensordot(Ri_prime, RT_eigen, axes=1))
++        Ri = swapaxes(Ri, 0, 1)
+ 
+         # Calculate the PCSs for this state.
+         pcs_pivot_motion_full_qrint(full_in_ref_frame=full_in_ref_frame, 
+r_pivot_atom=r_pivot_atom, r_pivot_atom_rev=r_pivot_atom_rev, 
+r_ln_pivot=r_ln_pivot, A=A, Ri=Ri, pcs_theta=pcs_theta, 
+pcs_theta_err=pcs_theta_err, missing_pcs=missing_pcs)
++
++        # Multiply the constant.
++        multiply(c, pcs_theta, pcs_theta)
+ 
+     # Average the PCS.
+     else:
+
+Modified: branches/frame_order_cleanup/lib/frame_order/iso_cone_torsionless.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/frame_order/iso_cone_torsionless.py?rev=23979&amp;r1=23978&amp;r2=23979&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/frame_order/iso_cone_torsionless.py?rev=23979&amp;r1=23978&amp;r2=23979&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/lib/frame_order/iso_cone_torsionless.py      
+  (original)
++++ branches/frame_order_cleanup/lib/frame_order/iso_cone_torsionless.py      
+  Mon Jun 16 17:39:25 2014
+@@ -24,7 +24,7 @@
+ 
+ # Python module imports.
+ from math import cos, sqrt
+-from numpy import divide, dot, multiply, swapaxes, tensordot
++from numpy import divide, dot, eye, float64, multiply, swapaxes, tensordot
+ 
+ # relax module imports.
+ from lib.frame_order.matrix_ops import pcs_pivot_motion_torsionless_qrint, 
+rotate_daeg
+@@ -135,11 +135,16 @@
+ 
+     # Default to the rigid state if no points lie in the distribution.
+     if num == 0:
+-        # Fast frame shift.
+-        Ri = dot(R_eigen, tensordot(R_eigen, RT_eigen, axes=1))
++        # Fast identity frame shift.
++        Ri_prime = eye(3, dtype=float64)
++        Ri = dot(R_eigen, tensordot(Ri_prime, RT_eigen, axes=1))
++        Ri = swapaxes(Ri, 0, 1)
+ 
+         # Calculate the PCSs for this state.
+         
+pcs_pivot_motion_torsionless_qrint(full_in_ref_frame=full_in_ref_frame, 
+r_pivot_atom=r_pivot_atom, r_pivot_atom_rev=r_pivot_atom_rev, 
+r_ln_pivot=r_ln_pivot, A=A, Ri=Ri, pcs_theta=pcs_theta, 
+pcs_theta_err=pcs_theta_err, missing_pcs=missing_pcs)
++
++        # Multiply the constant.
++        multiply(c, pcs_theta, pcs_theta)
+ 
+     # Average the PCS.
+     else:
+
+Modified: branches/frame_order_cleanup/lib/frame_order/pseudo_ellipse.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/frame_order/pseudo_ellipse.py?rev=23979&amp;r1=23978&amp;r2=23979&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/frame_order/pseudo_ellipse.py?rev=23979&amp;r1=23978&amp;r2=23979&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/lib/frame_order/pseudo_ellipse.py      
+(original)
++++ branches/frame_order_cleanup/lib/frame_order/pseudo_ellipse.py      Mon 
+Jun 16 17:39:25 2014
+@@ -24,7 +24,7 @@
+ 
+ # Python module imports.
+ from math import cos, pi, sin, sqrt
+-from numpy import divide, dot, multiply, repeat, sinc, swapaxes, tensordot, 
+tile
++from numpy import divide, dot, eye, float64, multiply, repeat, sinc, 
+swapaxes, tensordot, tile
+ try:
+     from scipy.integrate import quad
+ except ImportError:
+@@ -659,11 +659,16 @@
+ 
+     # Default to the rigid state if no points lie in the distribution.
+     if num == 0:
+-        # Fast frame shift.
+-        Ri = dot(R_eigen, tensordot(R_eigen, RT_eigen, axes=1))
++        # Fast identity frame shift.
++        Ri_prime = eye(3, dtype=float64)
++        Ri = dot(R_eigen, tensordot(Ri_prime, RT_eigen, axes=1))
++        Ri = swapaxes(Ri, 0, 1)
+ 
+         # Calculate the PCSs for this state.
+         pcs_pivot_motion_full_qrint(full_in_ref_frame=full_in_ref_frame, 
+r_pivot_atom=r_pivot_atom, r_pivot_atom_rev=r_pivot_atom_rev, 
+r_ln_pivot=r_ln_pivot, A=A, Ri=Ri, pcs_theta=pcs_theta, 
+pcs_theta_err=pcs_theta_err, missing_pcs=missing_pcs)
++
++        # Multiply the constant.
++        multiply(c, pcs_theta, pcs_theta)
+ 
+     # Average the PCS.
+     else:
+
+Modified: 
+branches/frame_order_cleanup/lib/frame_order/pseudo_ellipse_torsionless.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/frame_order/pseudo_ellipse_torsionless.py?rev=23979&amp;r1=23978&amp;r2=23979&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/frame_order/pseudo_ellipse_torsionless.py?rev=23979&amp;r1=23978&amp;r2=23979&amp;view=diff</a>
+==============================================================================
+--- 
+branches/frame_order_cleanup/lib/frame_order/pseudo_ellipse_torsionless.py  
+(original)
++++ 
+branches/frame_order_cleanup/lib/frame_order/pseudo_ellipse_torsionless.py  
+Mon Jun 16 17:39:25 2014
+@@ -24,7 +24,7 @@
+ 
+ # Python module imports.
+ from math import cos, pi, sin, sqrt
+-from numpy import divide, dot, multiply, swapaxes, tensordot
++from numpy import divide, dot, eye, float64, multiply, swapaxes, tensordot
+ try:
+     from scipy.integrate import quad
+ except ImportError:
+@@ -328,11 +328,16 @@
+ 
+     # Default to the rigid state if no points lie in the distribution.
+     if num == 0:
+-        # Fast frame shift.
+-        Ri = dot(R_eigen, tensordot(R_eigen, RT_eigen, axes=1))
++        # Fast identity frame shift.
++        Ri_prime = eye(3, dtype=float64)
++        Ri = dot(R_eigen, tensordot(Ri_prime, RT_eigen, axes=1))
++        Ri = swapaxes(Ri, 0, 1)
+ 
+         # Calculate the PCSs for this state.
+         
+pcs_pivot_motion_torsionless_qrint(full_in_ref_frame=full_in_ref_frame, 
+r_pivot_atom=r_pivot_atom, r_pivot_atom_rev=r_pivot_atom_rev, 
+r_ln_pivot=r_ln_pivot, A=A, Ri=Ri, pcs_theta=pcs_theta, 
+pcs_theta_err=pcs_theta_err, missing_pcs=missing_pcs)
++
++        # Multiply the constant.
++        multiply(c, pcs_theta, pcs_theta)
+ 
+     # Average the PCS.
+     else:
+
+Modified: branches/frame_order_cleanup/lib/frame_order/rotor.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/frame_order/rotor.py?rev=23979&amp;r1=23978&amp;r2=23979&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/frame_order/rotor.py?rev=23979&amp;r1=23978&amp;r2=23979&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/lib/frame_order/rotor.py       (original)
++++ branches/frame_order_cleanup/lib/frame_order/rotor.py       Mon Jun 16 
+17:39:25 2014
+@@ -136,11 +136,16 @@
+ 
+     # Default to the rigid state if no points lie in the distribution.
+     if num == 0:
+-        # Fast frame shift.
+-        Ri = dot(R_eigen, tensordot(R_eigen, RT_eigen, axes=1))
++        # Fast identity frame shift.
++        Ri_prime = eye(3, dtype=float64)
++        Ri = dot(R_eigen, tensordot(Ri_prime, RT_eigen, axes=1))
++        Ri = swapaxes(Ri, 0, 1)
+ 
+         # Calculate the PCSs for this state.
+         pcs_pivot_motion_rotor_qrint(full_in_ref_frame=full_in_ref_frame, 
+r_pivot_atom=r_pivot_atom, r_pivot_atom_rev=r_pivot_atom_rev, 
+r_ln_pivot=r_ln_pivot, A=A, Ri=Ri, pcs_theta=pcs_theta, 
+pcs_theta_err=pcs_theta_err, missing_pcs=missing_pcs)
++
++        # Multiply the constant.
++        multiply(c, pcs_theta, pcs_theta)
+ 
+     # Average the PCS.
+     else:
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Jun 16 18:00:02 2014</div>  
+</body>
+</html>

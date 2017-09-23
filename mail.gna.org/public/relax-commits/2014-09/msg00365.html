@@ -1,0 +1,232 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r25859 &#45; /trunk/auto_analyses/relax_disp_repeat_cpmg.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 16 Sep 2014 19:45:59 +0200 -->
+<!--X-Message-Id: E1XTwpD&#45;0001m0&#45;HP@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r25859 - /trunk/auto_analyses/relax_disp_repeat_cpmg.py -- September 16, 2014 - 19:45</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r25859 - /trunk/auto_analyses/relax_disp_repeat_cpmg.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00365" class="tabs">Index by Date</a> | <a href="threads.html#00365" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00364.html">Date Prev</a>] [<a href="msg00366.html">Date Next</a>] [<a href="msg00364.html">Thread Prev</a>] [<a href="msg00366.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 16 Sep 2014 17:45:59 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00365.html">E1XTwpD-0001m0-HP@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on September 16, 2014 - 19:45:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Tue Sep 16 19:45:59 2014
+New Revision: 25859
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=25859&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=25859&amp;view=rev</a>
+Log:
+Trying implementing flexibility, when data expected data is missing.
+
+This can be due failing of processing data, where a whole run of data is 
+randomly skipped.
+
+Task #7826 (<a  rel="nofollow" href="https://gna.org/task/index.php?7826">https://gna.org/task/index.php?7826</a>): Write an python class for 
+the repeated analysis of dispersion data.
+
+Modified:
+    trunk/auto_analyses/relax_disp_repeat_cpmg.py
+
+Modified: trunk/auto_analyses/relax_disp_repeat_cpmg.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/auto_analyses/relax_disp_repeat_cpmg.py?rev=25859&amp;r1=25858&amp;r2=25859&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/auto_analyses/relax_disp_repeat_cpmg.py?rev=25859&amp;r1=25858&amp;r2=25859&amp;view=diff</a>
+==============================================================================
+--- trunk/auto_analyses/relax_disp_repeat_cpmg.py       (original)
++++ trunk/auto_analyses/relax_disp_repeat_cpmg.py       Tue Sep 16 19:45:59 
+2014
+@@ -238,6 +238,11 @@
+             # Sort the file list Alphanumeric.
+             peaks_file_list = sort_filenames(filenames=peaks_file_list)
+ 
++            # If there is no peak list, then continue.
++            if len(peaks_file_list) == 0:
++                finished = False
++                continue
++
+             # There should only be one peak file.
+             for peaks_file in peaks_file_list:
+                 self.interpreter.spectrum.read_intensities(file=peaks_file, 
+spectrum_id=spectrum_ids, int_method=self.int_method, 
+int_col=range(len(spectrum_ids)))
+@@ -264,6 +269,10 @@
+                     rmsd = float(extract_data(file=rmsd_file)[0][0])
+                     self.interpreter.spectrum.baseplane_rmsd(error=rmsd, 
+spectrum_id=spectrum_id)
+ 
++                finished = True
++
++            return finished
++
+ 
+     def do_spectrum_error_analysis(self, pipe_name, set_rep=None):
+         &quot;&quot;&quot;Do spectrum error analysis, where both replicates per 
+spectrometer frequency and subset is taken into consideration.&quot;&quot;&quot;
+@@ -320,8 +329,10 @@
+ 
+                 if not found:
+                     calculate = True
++                    finished = False
+                 elif found:
+                     calculate = False
++                    finished = True
+ 
+                 if calculate:
+                     # Create the data pipe, by copying setup pipe.
+@@ -329,14 +340,21 @@
+                     self.interpreter.pipe.switch(pipe_name)
+ 
+                     # Call set intensity.
+-                    self.set_intensity_and_error(pipe_name=pipe_name, 
+glob_ini=glob_ini, set_rmsd=set_rmsd)
+-
+-                    # Call error analysis.
+-                    self.do_spectrum_error_analysis(pipe_name=pipe_name, 
+set_rep=set_rep)
+-
+-                    # Save results, and store the current settings dic to 
+pipe.
+-                    cdp.settings = self.settings
+-                    self.interpreter.results.write(file=resfile, dir=path, 
+force=force)
++                    finished = 
+self.set_intensity_and_error(pipe_name=pipe_name, glob_ini=glob_ini, 
+set_rmsd=set_rmsd)
++
++                    if finished:
++                        # Call error analysis.
++                        self.do_spectrum_error_analysis(pipe_name=pipe_name, 
+set_rep=set_rep)
++
++                        # Save results, and store the current settings dic 
+to pipe.
++                        cdp.settings = self.settings
++                        self.interpreter.results.write(file=resfile, 
+dir=path, force=force)
++
++                    else:
++                        pipe_name = pipes.cdp_name()
++                        self.interpreter.pipe.delete(pipe_name=pipe_name)
++
++                return finished
+ 
+ 
+     def calc_r2eff(self, methods=None, list_glob_ini=None, force=False):
+@@ -366,7 +384,9 @@
+                     intensity_pipe_name = self.name_pipe(method=self.method, 
+model='setup', analysis='int', glob_ini=glob_ini)
+ 
+                     if not pipes.has_pipe(intensity_pipe_name):
+-                        self.set_int(methods=[method], 
+list_glob_ini=[glob_ini])
++                        finished = self.set_int(methods=[method], 
+list_glob_ini=[glob_ini])
++                        if not finished:
++                            continue
+ 
+                     
+self.interpreter.pipe.copy(pipe_from=intensity_pipe_name, pipe_to=pipe_name, 
+bundle_to=self.method)
+                     self.interpreter.pipe.switch(pipe_name)
+@@ -883,7 +903,7 @@
+             if not pipes.has_pipe(pipe_name):
+                 self.set_int(methods=[method], list_glob_ini=[glob_ini])
+ 
+-            if pipes.get_pipe() != pipe_name:
++            if pipes.cdp_name() != pipe_name:
+                 self.interpreter.pipe.switch(pipe_name)
+ 
+             # Results dictionary.
+@@ -1028,8 +1048,11 @@
+             if not pipes.has_pipe(pipe_name):
+                 self.calc_r2eff(methods=[method], list_glob_ini=[glob_ini])
+ 
+-            if pipes.get_pipe() != pipe_name:
++            if pipes.cdp_name() != pipe_name and pipes.has_pipe(pipe_name):
+                 self.interpreter.pipe.switch(pipe_name)
++
++            else:
++                continue
+ 
+             # Results dictionary.
+             res_dic[str(glob_ini)] = {}
+@@ -1371,10 +1394,12 @@
+         # Write png.
+         png_file_name = file_name_ini + '.png'
+         png_file_path = get_file_path(file_name=png_file_name, 
+dir=self.results_dir)
+-        plt.savefig(png_file_path, bbox_inches='tight')
+ 
+         # Write to file.
+         if write_stats:
++            # save figure
++            plt.savefig(png_file_path, bbox_inches='tight')
++
+             file_name = file_name_ini + '.txt'
+             path = self.results_dir
+             file_obj, file_path = open_write_file(file_name=file_name, 
+dir=path, force=True, compress_type=0, verbosity=1, return_path=True)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Sep 16 20:00:03 2014</div>  
+</body>
+</html>

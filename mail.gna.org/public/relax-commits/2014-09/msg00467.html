@@ -1,0 +1,293 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r25961 &#45; in /branches/frame_order_cleanup: lib/frame_order/simulation.py specific_analyses/frame_order/uf.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 23 Sep 2014 09:26:09 +0200 -->
+<!--X-Message-Id: E1XWKUD&#45;0004wm&#45;4J@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r25961 - in /branches/frame_order_cleanup: lib/frame_order/simulation.py specific_analyses/frame_order/uf.py -- September 23, 2014 - 09:26</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r25961 - in /branches/frame_order_cleanup: lib/frame_order/simulation.py specific_analyses/frame_order/uf.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00467" class="tabs">Index by Date</a> | <a href="threads.html#00467" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00466.html">Date Prev</a>] [<a href="msg00468.html">Date Next</a>] [<a href="msg00466.html">Thread Prev</a>] [<a href="msg00468.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 23 Sep 2014 07:26:09 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00467.html">E1XWKUD-0004wm-4J@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on September 23, 2014 - 09:26:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Sep 23 09:26:08 2014
+New Revision: 25961
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=25961&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=25961&amp;view=rev</a>
+Log:
+Implemented the pseudo-Brownian frame order dynamics simulation for the 
+single motion models.
+
+This uses the same logic as in the 
+test_suite/shared_data/frame_order/cam/*/generate_distribution.py
+scripts which were used to generate all of the test suite data.  However 
+rather than using a random
+rotation matrix, a random 3D vector is used to rotate a fixed angle.  And the 
+rotation is used to
+rotate the current state to state i+1.  The rotation for the state is 
+decomposed into torsion-tilt
+angles once shifted into the motional eigenframe, the violations checked for 
+as the state shifted to
+the boundary, then the new state reconstructed from the corrected 
+torsion-tilt angles, and then it
+is shifted from the motional eigenframe to the PDB frame.
+
+
+Modified:
+    branches/frame_order_cleanup/lib/frame_order/simulation.py
+    branches/frame_order_cleanup/specific_analyses/frame_order/uf.py
+
+Modified: branches/frame_order_cleanup/lib/frame_order/simulation.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/frame_order/simulation.py?rev=25961&amp;r1=25960&amp;r2=25961&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/frame_order/simulation.py?rev=25961&amp;r1=25960&amp;r2=25961&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/lib/frame_order/simulation.py  (original)
++++ branches/frame_order_cleanup/lib/frame_order/simulation.py  Tue Sep 23 
+09:26:08 2014
+@@ -23,14 +23,18 @@
+ &quot;&quot;&quot;Module for simulating the frame order motions.&quot;&quot;&quot;
+ 
+ # Python module imports.
+-from numpy import eye, float64
++from math import cos, pi, sin, sqrt
++from numpy import dot, eye, float64, transpose, zeros
+ import sys
+ 
+ # relax module imports.
+ from lib.errors import RelaxError
++from lib.geometry.angles import wrap_angles
++from lib.geometry.rotations import axis_angle_to_R, R_to_tilt_torsion, 
+tilt_torsion_to_R
++from lib.geometry.vectors import random_unit_vector
+ 
+ 
+-def brownian(file=None, model=None, structure=None, parameters={}, 
+pivot=None, step_size=2.0, snapshot=10, total=1000):
++def brownian(file=None, model=None, structure=None, parameters={}, 
+eigenframe=None, pivot=None, atom_id=None, step_size=2.0, snapshot=10, 
+total=1000):
+     &quot;&quot;&quot;Pseudo-Brownian dynamics simulation of the frame order motions.
+ 
+     @keyword file:          The opened and writable file object to place the 
+snapshots into.
+@@ -41,8 +45,12 @@
+     @type model:            str
+     @keyword parameters:    The dictionary of model parameter values.  The 
+key is the parameter name and the value is the value.
+     @type parameters:       dict of float
++    @keyword eigenframe:    The full 3D eigenframe of the frame order 
+motions.
++    @type eigenframe:       numpy rank-2, 3D float64 array
+     @keyword pivot:         The pivot point of the frame order motions.
+     @type pivot:            numpy rank-1, 3D float64 array
++    @keyword atom_id:       The atom ID string for the atoms in the 
+structure to rotate - i.e. the moving domain.
++    @type atom_id:          None or str
+     @keyword step_size:     The rotation will be of a random direction but 
+with this fixed angle.  The value is in degrees.
+     @type step_size:        float
+     @keyword snapshot:      The number of steps in the simulation when 
+snapshots will be taken.
+@@ -61,8 +69,34 @@
+     # The initial state.
+     state = eye(3, dtype=float64)
+ 
+-    # Initialise the rotation matrix.
++    # Initialise the rotation matrix data structures.
++    vector = zeros(3, float64)
+     R = eye(3, dtype=float64)
++    step_size = step_size / 360.0 * 2.0 * pi
++
++    # The maximum cone opening angles (isotropic cones).
++    theta_max = None
++    if 'cone_theta_max' in parameters:
++        theta_max = parameters['cone_theta_max']
++
++    # The maximum cone opening angles (isotropic cones).
++    theta_x = None
++    theta_y = None
++    if 'cone_theta_x' in parameters:
++        theta_x = parameters['cone_theta_x']
++        theta_y = parameters['cone_theta_y']
++
++    # The maximum torsion angle.
++    sigma_max = None
++    if 'cone_sigma_max' in parameters:
++        sigma_max = parameters['cone_sigma_max']
++    elif 'free rotor' in model:
++        sigma_max = pi
++
++    # The second torsion angle.
++    sigma_max_2 = None
++    if 'cone_sigma_max_2' in parameters:
++        sigma_max_2 = parameters['cone_sigma_max_2']
+ 
+     # Printout.
+     print(&quot;\nRunning the simulation:&quot;)
+@@ -75,6 +109,51 @@
+         if current_snapshot == total:
+             print(&quot;\nEnd of simulation.&quot;)
+             break
++
++        # The random vector.
++        random_unit_vector(vector)
++
++        # The rotation matrix.
++        axis_angle_to_R(vector, step_size, R)
++
++        # Shift the current state.
++        state = dot(R, state)
++
++        # Rotation in the eigenframe.
++        R_eigen = dot(transpose(eigenframe), dot(state, eigenframe))
++
++        # The angles.
++        phi, theta, sigma = R_to_tilt_torsion(R_eigen)
++        sigma = wrap_angles(sigma, -pi, pi)
++
++        # Determine theta_max.
++        if theta_x != None:
++            theta_max = 1.0 / sqrt((cos(phi) / theta_x)**2 + (sin(phi) / 
+theta_y)**2)
++
++        # Set the cone opening angle to the maximum if outside of the limit.
++        if theta_max != None:
++            if theta &gt; theta_max:
++                theta = theta_max
++
++        # No tilt component.
++        else:
++            theta = 0.0
++            phi = 0.0
++
++        # Set the torsion angle to the maximum if outside of the limits.
++        if sigma_max != None:
++            if sigma &gt; sigma_max:
++                sigma = sigma_max
++            elif sigma &lt; -sigma_max:
++                sigma = -sigma_max
++        else:
++            sigma = 0.0
++
++        # Reconstruct the rotation matrix, in the eigenframe, without sigma.
++        tilt_torsion_to_R(phi, theta, sigma, R_eigen)
++
++        # Rotate back out of the eigenframe.
++        state = dot(eigenframe, dot(R_eigen, transpose(eigenframe)))
+ 
+         # Take a snapshot.
+         if step == snapshot:
+@@ -89,7 +168,7 @@
+             structure.add_model(model=current_snapshot, coords_from=1)
+ 
+             # Rotate the model.
+-            structure.rotate(R=R, origin=pivot, model=current_snapshot, 
+atom_id=None)
++            structure.rotate(R=state, origin=pivot, model=current_snapshot, 
+atom_id=atom_id)
+ 
+             # Reset the step counter.
+             step = 0
+
+Modified: branches/frame_order_cleanup/specific_analyses/frame_order/uf.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/specific_analyses/frame_order/uf.py?rev=25961&amp;r1=25960&amp;r2=25961&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/specific_analyses/frame_order/uf.py?rev=25961&amp;r1=25960&amp;r2=25961&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/specific_analyses/frame_order/uf.py    
+(original)
++++ branches/frame_order_cleanup/specific_analyses/frame_order/uf.py    Tue 
+Sep 23 09:26:08 2014
+@@ -40,6 +40,7 @@
+ from lib.warnings import RelaxWarning
+ from pipe_control import pipes
+ from specific_analyses.frame_order.checks import check_domain, check_model, 
+check_parameters, check_pivot
++from specific_analyses.frame_order.data import domain_moving
+ from specific_analyses.frame_order.geometric import average_position, 
+create_ave_pos, create_geometric_rep, generate_axis_system
+ from specific_analyses.frame_order.optimisation import count_sobol_points
+ from specific_analyses.frame_order.parameters import assemble_param_vector, 
+update_model
+@@ -407,8 +408,11 @@
+     # Shift to the average position.
+     average_position(structure=structure, models=[1])
+ 
++    # The motional eigenframe.
++    frame = generate_axis_system()
++
+     # Create the distribution.
+-    brownian(file=file, model=cdp.model, structure=structure, 
+parameters=params, pivot=pivot, step_size=step_size, snapshot=snapshot, 
+total=total)
++    brownian(file=file, model=cdp.model, structure=structure, 
+parameters=params, eigenframe=frame, pivot=pivot, atom_id=domain_moving(), 
+step_size=step_size, snapshot=snapshot, total=total)
+ 
+     # Close the file.
+     file.close()
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Sep 23 10:20:04 2014</div>  
+</body>
+</html>

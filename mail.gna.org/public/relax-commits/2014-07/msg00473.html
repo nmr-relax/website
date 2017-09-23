@@ -1,0 +1,215 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r24839 &#45; in /branches/frame_order_cleanup/specific_analyses/frame_order: api.py optimisation.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 30 Jul 2014 17:27:08 +0200 -->
+<!--X-Message-Id: E1XCVmW&#45;0004Hc&#45;BL@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r24839 - in /branches/frame_order_cleanup/specific_analyses/frame_order: api.py optimisation.py -- July 30, 2014 - 17:27</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r24839 - in /branches/frame_order_cleanup/specific_analyses/frame_order: api.py optimisation.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00473" class="tabs">Index by Date</a> | <a href="threads.html#00473" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00472.html">Date Prev</a>] [<a href="msg00474.html">Date Next</a>] [<a href="msg00472.html">Thread Prev</a>] [<a href="msg00474.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 30 Jul 2014 15:27:08 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00473.html">E1XCVmW-0004Hc-BL@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on July 30, 2014 - 17:27:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Jul 30 17:27:07 2014
+New Revision: 24839
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=24839&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=24839&amp;view=rev</a>
+Log:
+Fixes for the removal of the RDC data checks from the frame order 
+optimisation functions.
+
+The specific analysis API method overfit_deselect() has now been created to 
+deselect spins which do
+not have PCS data or interatomic data containers missing RDC data.  The 
+handling of deselected spins
+and interatomic data containers is now also correctly handled throughout the 
+frame order specific
+code.
+
+
+Modified:
+    branches/frame_order_cleanup/specific_analyses/frame_order/api.py
+    branches/frame_order_cleanup/specific_analyses/frame_order/optimisation.py
+
+Modified: branches/frame_order_cleanup/specific_analyses/frame_order/api.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/specific_analyses/frame_order/api.py?rev=24839&amp;r1=24838&amp;r2=24839&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/specific_analyses/frame_order/api.py?rev=24839&amp;r1=24838&amp;r2=24839&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/specific_analyses/frame_order/api.py   
+(original)
++++ branches/frame_order_cleanup/specific_analyses/frame_order/api.py   Wed 
+Jul 30 17:27:07 2014
+@@ -37,7 +37,6 @@
+ from pipe_control import pipes
+ from pipe_control.interatomic import interatomic_loop, return_interatom
+ from pipe_control.mol_res_spin import return_spin, spin_loop
+-from pipe_control.rdc import check_rdcs
+ from specific_analyses.api_base import API_base
+ from specific_analyses.api_common import API_common
+ from specific_analyses.frame_order.checks import check_pivot
+@@ -63,7 +62,6 @@
+         self.is_spin_param = self._is_spin_param_false
+         self.model_loop = self._model_loop_single_global
+         self.model_type = self._model_type_global
+-        self.overfit_deselect = self._overfit_deselect_dummy
+         self.print_model_title = self._print_model_title_global
+         self.return_conversion_factor = self._return_no_conversion_factor
+         self.set_param_values = self._set_param_values_global
+@@ -86,8 +84,12 @@
+ 
+         # Loop over the interatomic data containers for the moving domain 
+(for the RDC data).
+         for interatom in interatomic_loop(selection1=domain_moving()):
+-            # RDC checks.
+-            if not check_rdcs(interatom):
++            # Skip deselected containers.
++            if not interatom.select:
++                continue
++
++            # No RDC, so skip.
++            if not hasattr(interatom, 'rdc'):
+                 continue
+ 
+             # Loop over the alignment IDs.
+@@ -619,6 +621,32 @@
+         return k, n, cdp.chi2
+ 
+ 
++    def overfit_deselect(self, data_check=True, verbose=True):
++        &quot;&quot;&quot;Deselect spins which have insufficient data to support 
+minimisation.
++
++        @keyword data_check:    A flag to signal if the presence of base 
+data is to be checked for.
++        @type data_check:       bool
++        @keyword verbose:       A flag which if True will allow printouts.
++        @type verbose:          bool
++        &quot;&quot;&quot;
++
++        # Nothing to do.
++        if not data_check:
++            return
++
++        # Loop over spin data, checking for PCS data.
++        for spin, spin_id in spin_loop(return_id=True, skip_desel=True):
++            if not hasattr(spin, 'pcs'):
++                print(&quot;No PCS data is present, deselecting the spin '%s'.&quot; % 
+spin_id)
++                spin.select = False
++
++        # Loop over the interatomic data containers, checking for RDC data.
++        for interatom in interatomic_loop(selection1=domain_moving()):
++            if not hasattr(interatom, 'rdc'):
++                print(&quot;No RDC data is present, deselecting the interatomic 
+data container between spins '%s' and '%s'.&quot; % (interatom.spin_id1, 
+interatom.spin_id2))
++                interatom.select = False
++
++
+     def return_error(self, data_id):
+         &quot;&quot;&quot;Return the RDC or PCS error structure.
+ 
+
+Modified: 
+branches/frame_order_cleanup/specific_analyses/frame_order/optimisation.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/specific_analyses/frame_order/optimisation.py?rev=24839&amp;r1=24838&amp;r2=24839&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/specific_analyses/frame_order/optimisation.py?rev=24839&amp;r1=24838&amp;r2=24839&amp;view=diff</a>
+==============================================================================
+--- 
+branches/frame_order_cleanup/specific_analyses/frame_order/optimisation.py  
+(original)
++++ 
+branches/frame_order_cleanup/specific_analyses/frame_order/optimisation.py  
+Wed Jul 30 17:27:07 2014
+@@ -364,14 +364,10 @@
+         absolute.append([])
+ 
+         # Interatom loop over the domain.
+-        for interatom in interatomic_loop(domain_moving()):
++        for interatom in interatomic_loop(domain_moving(), skip_desel=True):
+             # Get the spins.
+             spin1 = return_spin(interatom.spin_id1)
+             spin2 = return_spin(interatom.spin_id2)
+-
+-            # Skip deselected spins.
+-            if not spin1.select or not spin2.select:
+-                continue
+ 
+             # Only use interatomic data containers with RDC and vector data.
+             if not hasattr(interatom, 'rdc') or not hasattr(interatom, 
+'vector'):
+@@ -603,7 +599,7 @@
+ 
+         # Interatomic data container loop.
+         rdc_index = 0
+-        for interatom in interatomic_loop(domain_moving()):
++        for interatom in interatomic_loop(domain_moving(), skip_desel=True):
+             # Initialise the data structure.
+             if not hasattr(interatom, 'rdc_bc'):
+                 interatom.rdc_bc = {}
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Jul 30 17:40:02 2014</div>  
+</body>
+</html>

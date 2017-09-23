@@ -1,0 +1,301 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r15075 &#45; /branches/frame_order_testing/maths_fns/frame_order.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 09 Dec 2011 18:05:15 +0100 -->
+<!--X-Message-Id: E1RZ3sp&#45;00057L&#45;Ew@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r15075 - /branches/frame_order_testing/maths_fns/frame_order.py -- December 09, 2011 - 18:05</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r15075 - /branches/frame_order_testing/maths_fns/frame_order.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00062" class="tabs">Index by Date</a> | <a href="threads.html#00062" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00061.html">Date Prev</a>] [<a href="msg00063.html">Date Next</a>] [<a href="msg00061.html">Thread Prev</a>] [<a href="msg00063.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 09 Dec 2011 17:05:15 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00062.html">E1RZ3sp-00057L-Ew@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on December 09, 2011 - 18:05:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Dec  9 18:05:15 2011
+New Revision: 15075
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=15075&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=15075&amp;view=rev</a>
+Log:
+Converted the rigid frame order model target function to use raw RDC and PCS 
+data.
+
+
+Modified:
+    branches/frame_order_testing/maths_fns/frame_order.py
+
+Modified: branches/frame_order_testing/maths_fns/frame_order.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_testing/maths_fns/frame_order.py?rev=15075&amp;r1=15074&amp;r2=15075&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_testing/maths_fns/frame_order.py?rev=15075&amp;r1=15074&amp;r2=15075&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_testing/maths_fns/frame_order.py (original)
++++ branches/frame_order_testing/maths_fns/frame_order.py Fri Dec  9 18:05:15 
+2011
+@@ -27,6 +27,7 @@
+ from copy import deepcopy
+ from math import sqrt
+ from numpy import array, dot, float64, ones, transpose, zeros
++from numpy.linalg import norm
+ 
+ # relax module imports.
+ from float import isNaN
+@@ -38,6 +39,7 @@
+ from maths_fns.kronecker_product import kron_prod
+ from maths_fns.rotation_matrix import euler_to_R_zyz as euler_to_R
+ from maths_fns.rotation_matrix import two_vect_to_R
++from pcs import pcs_tensor
+ from physical_constants import pcs_constant
+ from rdc import rdc_tensor
+ from relax_errors import RelaxError
+@@ -527,63 +529,25 @@
+         @rtype:         float
+         &quot;&quot;&quot;
+ 
+-        # Unpack the parameters.
+-        ave_pos_alpha, ave_pos_beta, ave_pos_gamma = params
+-
+-        # Reduce and rotate the tensors.
+-        self.reduce_and_rot(ave_pos_alpha, ave_pos_beta, ave_pos_gamma)
+-
+-        # Return the chi-squared value.
+-        return chi2(self.red_tensors, self.A_5D_bc, self.red_errors)
+-
+-
+-    def func_rotor(self, params):
+-        &quot;&quot;&quot;Target function for rotor model optimisation.
+-
+-        This function optimises against alignment tensors.  The Euler angles 
+for the tensor rotation are the first 3 parameters optimised in this model, 
+followed by the polar and azimuthal angles of the cone axis and the torsion 
+angle restriction.
+-
+-        @param params:  The vector of parameter values.  These are the 
+tensor rotation angles {alpha, beta, gamma, theta, phi, sigma_max}.
+-        @type params:   list of float
+-        @return:        The chi-squared or SSE value.
+-        @rtype:         float
+-        &quot;&quot;&quot;
+-
+-        # Initial chi-squared (or SSE) value.
+-        chi2_sum = 0.0
+-
+         # Scaling.
+         if self.scaling_flag:
+             params = dot(params, self.scaling_matrix)
+ 
+         # Unpack the parameters.
+-        if self.pivot_opt:
+-            self._param_pivot = params[:3]
+-            ave_pos_alpha, ave_pos_beta, ave_pos_gamma, axis_theta, 
+axis_phi, sigma_max = params[3:]
+-        else:
+-            ave_pos_alpha, ave_pos_beta, ave_pos_gamma, axis_theta, 
+axis_phi, sigma_max = params
+-
+-        # Generate the cone axis from the spherical angles.
+-        spherical_to_cartesian([1.0, axis_theta, axis_phi], self.cone_axis)
+-
+-        # Pre-calculate the eigenframe rotation matrix.
+-        two_vect_to_R(self.z_axis, self.cone_axis, self.R_eigen)
+-
+-        # The Kronecker product of the eigenframe rotation.
+-        Rx2_eigen = kron_prod(self.R_eigen, self.R_eigen)
+-
+-        # Generate the 2nd degree Frame Order super matrix.
+-        frame_order_2nd = compile_2nd_matrix_rotor(self.frame_order_2nd, 
+Rx2_eigen, sigma_max)
++        ave_pos_alpha, ave_pos_beta, ave_pos_gamma = params
+ 
+         # The average frame rotation matrix (and reduce and rotate the 
+tensors).
+-        self.reduce_and_rot(ave_pos_alpha, ave_pos_beta, ave_pos_gamma, 
+frame_order_2nd)
++        self.reduce_and_rot(ave_pos_alpha, ave_pos_beta, ave_pos_gamma)
+ 
+         # Pre-transpose matrices for faster calculations.
+-        RT_eigen = transpose(self.R_eigen)
+         RT_ave = transpose(self.R_ave)
+ 
+         # Pre-calculate all the necessary vectors.
+         if self.pcs_flag:
+             self.calc_vectors(self._param_pivot, self.R_ave, RT_ave)
++
++        # Initial chi-squared (or SSE) value.
++        chi2_sum = 0.0
+ 
+         # Loop over each alignment.
+         for i in xrange(self.num_align):
+@@ -610,6 +574,91 @@
+                         else:
+                             r_pivot_atom = self.r_pivot_atom[j]
+ 
++                        # The PCS calculation.
++                        vect = self.r_ln_pivot + r_pivot_atom
++                        length = norm(vect)
++                        self.pcs_theta[i, j] = pcs_tensor(self.pcs_const[i] 
+/ length**5, vect, self.A_3D[i])
++
++                # Calculate and sum the single alignment chi-squared value 
+(for the PCS).
++                chi2_sum = chi2_sum + chi2(self.pcs[i], self.pcs_theta[i], 
+self.pcs_error[i])
++
++        # Return the chi-squared value.
++        return chi2_sum
++
++
++    def func_rotor(self, params):
++        &quot;&quot;&quot;Target function for rotor model optimisation.
++
++        This function optimises against alignment tensors.  The Euler angles 
+for the tensor rotation are the first 3 parameters optimised in this model, 
+followed by the polar and azimuthal angles of the cone axis and the torsion 
+angle restriction.
++
++        @param params:  The vector of parameter values.  These are the 
+tensor rotation angles {alpha, beta, gamma, theta, phi, sigma_max}.
++        @type params:   list of float
++        @return:        The chi-squared or SSE value.
++        @rtype:         float
++        &quot;&quot;&quot;
++
++        # Scaling.
++        if self.scaling_flag:
++            params = dot(params, self.scaling_matrix)
++
++        # Unpack the parameters.
++        if self.pivot_opt:
++            self._param_pivot = params[:3]
++            ave_pos_alpha, ave_pos_beta, ave_pos_gamma, axis_theta, 
+axis_phi, sigma_max = params[3:]
++        else:
++            ave_pos_alpha, ave_pos_beta, ave_pos_gamma, axis_theta, 
+axis_phi, sigma_max = params
++
++        # Generate the cone axis from the spherical angles.
++        spherical_to_cartesian([1.0, axis_theta, axis_phi], self.cone_axis)
++
++        # Pre-calculate the eigenframe rotation matrix.
++        two_vect_to_R(self.z_axis, self.cone_axis, self.R_eigen)
++
++        # The Kronecker product of the eigenframe rotation.
++        Rx2_eigen = kron_prod(self.R_eigen, self.R_eigen)
++
++        # Generate the 2nd degree Frame Order super matrix.
++        frame_order_2nd = compile_2nd_matrix_rotor(self.frame_order_2nd, 
+Rx2_eigen, sigma_max)
++
++        # The average frame rotation matrix (and reduce and rotate the 
+tensors).
++        self.reduce_and_rot(ave_pos_alpha, ave_pos_beta, ave_pos_gamma, 
+frame_order_2nd)
++
++        # Pre-transpose matrices for faster calculations.
++        RT_eigen = transpose(self.R_eigen)
++        RT_ave = transpose(self.R_ave)
++
++        # Pre-calculate all the necessary vectors.
++        if self.pcs_flag:
++            self.calc_vectors(self._param_pivot, self.R_ave, RT_ave)
++
++        # Initial chi-squared (or SSE) value.
++        chi2_sum = 0.0
++
++        # Loop over each alignment.
++        for i in xrange(self.num_align):
++            # RDCs.
++            if self.rdc_flag:
++                # Loop over the RDCs.
++                for j in xrange(self.num_rdc):
++                    # The back calculated RDC.
++                    if not self.missing_rdc[i, j]:
++                        self.rdc_theta[i, j] = rdc_tensor(self.rdc_const[j], 
+self.rdc_vect[j], self.A_3D_bc[i])
++
++                # Calculate and sum the single alignment chi-squared value 
+(for the RDC).
++                chi2_sum = chi2_sum + chi2(self.rdc[i], self.rdc_theta[i], 
+self.rdc_error[i])
++
++            # PCS.
++            if self.pcs_flag:
++                # Loop over the PCSs.
++                for j in xrange(self.num_pcs):
++                    # The back calculated PCS.
++                    if not self.missing_pcs[i, j]:
++                        # Forwards and reverse rotations.
++                        if self.full_in_ref_frame[i]:
++                            r_pivot_atom = self.r_pivot_atom_rev[j]
++                        else:
++                            r_pivot_atom = self.r_pivot_atom[j]
++
+                         # The numerical integration.
+                         self.pcs_theta[i, j] = 
+pcs_numeric_int_rotor(sigma_max=sigma_max, c=self.pcs_const[i], 
+r_pivot_atom=r_pivot_atom, r_ln_pivot=self.r_ln_pivot, A=self.A_3D[i], 
+R_eigen=self.R_eigen, RT_eigen=RT_eigen, Ri_prime=self.Ri_prime)
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Dec 12 12:00:02 2011</div>  
+</body>
+</html>

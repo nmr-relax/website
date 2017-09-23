@@ -1,0 +1,154 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r20700 &#45;	/branches/relax_disp/specific_analyses/relax_disp/disp_data.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 27 Aug 2013 15:13:31 +0200 -->
+<!--X-Message-Id: E1VEJ5P&#45;0006ng&#45;4d@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r20700 -	/branches/relax_disp/specific_analyses/relax_disp/disp_data.py -- August 27, 2013 - 15:13</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r20700 -	/branches/relax_disp/specific_analyses/relax_disp/disp_data.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00217" class="tabs">Index by Date</a> | <a href="threads.html#00217" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00216.html">Date Prev</a>] [<a href="msg00218.html">Date Next</a>] [<a href="msg00216.html">Thread Prev</a>] [<a href="msg00218.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 27 Aug 2013 13:13:31 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00217.html">E1VEJ5P-0006ng-4d@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on August 27, 2013 - 15:13:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Aug 27 15:13:30 2013
+New Revision: 20700
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=20700&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=20700&amp;view=rev</a>
+Log:
+Added checks to the specific_analyses.relax_disp.disp_data.return_r1_data() 
+function.
+
+This is to help indicate to the user when data is missing.
+
+
+Modified:
+    branches/relax_disp/specific_analyses/relax_disp/disp_data.py
+
+Modified: branches/relax_disp/specific_analyses/relax_disp/disp_data.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp/disp_data.py?rev=20700&amp;r1=20699&amp;r2=20700&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp/disp_data.py?rev=20700&amp;r1=20699&amp;r2=20700&amp;view=diff</a>
+==============================================================================
+--- branches/relax_disp/specific_analyses/relax_disp/disp_data.py (original)
++++ branches/relax_disp/specific_analyses/relax_disp/disp_data.py Tue Aug 27 
+15:13:30 2013
+@@ -929,13 +929,18 @@
+     @rtype:                 numpy rank-2 float array
+     &quot;&quot;&quot;
+ 
++    # Check for the presence of data.
++    if not hasattr(cdp, 'ri_ids'):
++        raise RelaxError(&quot;No R1 relaxation data has been loaded.  This data 
+is essential for certain off-resonance R1rho experiments.&quot;)
++
+     # The spin count.
+     spin_num = len(spins)
+ 
+     # Initialise the data structure.
+-    r1 = zeros((spin_num, field_count), float64)
++    r1 = -ones((spin_num, field_count), float64)
+ 
+     # Loop over the Rx IDs.
++    flags = [False]*field_count
+     for ri_id in cdp.ri_ids:
+         # Only use R1 data.
+         if cdp.ri_type[ri_id] != 'R1':
+@@ -944,6 +949,9 @@
+         # The frequency.
+         frq = cdp.spectrometer_frq[ri_id]
+         frq_index = return_index_from_frq(frq)
++
++        # Flip the flag.
++        flags[frq_index] = True
+ 
+         # Spin loop.
+         for spin_index in range(spin_num):
+@@ -952,6 +960,20 @@
+                 r1[spin_index, frq_index] = 
+spins[spin_index].ri_data_sim[ri_id][sim_index]
+             else:
+                 r1[spin_index, frq_index] = spins[spin_index].ri_data[ri_id]
++
++    # Check the data to prevent user mistakes.
++    for frq_index in range(field_count):
++        # The frequency.
++        frq = return_value_from_frq_index(frq_index=frq_index)
++
++        # Check for R1 data for this frequency.
++        if not flags[frq_index]:
++            raise RelaxError(&quot;R1 data for the %.1f MHz field strength cannot 
+be found.&quot; % (frq/1e6))
++
++        # Check the spin data.
++        for spin_index in range(spin_num):
++            if r1[spin_index, frq_index] == -1.0:
++                raise RelaxError(&quot;R1 data for the '%s' spin at %.1f MHz 
+field strength cannot be found.&quot; % (spin_ids[spin_index], frq/1e6))
+ 
+     # Return the data.
+     return r1
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Aug 28 09:40:02 2013</div>  
+</body>
+</html>

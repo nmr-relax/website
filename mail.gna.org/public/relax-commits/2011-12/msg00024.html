@@ -1,0 +1,439 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r15037 &#45; in /branches/frame_order_testing/maths_fns: frame_order.py	frame_order_matrix_ops.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 06 Dec 2011 12:30:00 +0100 -->
+<!--X-Message-Id: E1RXtDj&#45;0006i0&#45;Uj@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r15037 - in /branches/frame_order_testing/maths_fns: frame_order.py	frame_order_matrix_ops.py -- December 06, 2011 - 12:30</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r15037 - in /branches/frame_order_testing/maths_fns: frame_order.py	frame_order_matrix_ops.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00024" class="tabs">Index by Date</a> | <a href="threads.html#00024" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00023.html">Date Prev</a>] [<a href="msg00025.html">Date Next</a>] [<a href="msg00023.html">Thread Prev</a>] [<a href="msg00025.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 06 Dec 2011 11:29:59 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00024.html">E1RXtDj-0006i0-Uj@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on December 06, 2011 - 12:30:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Dec  6 12:29:59 2011
+New Revision: 15037
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=15037&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=15037&amp;view=rev</a>
+Log:
+Massive speed ups of the frame order PCS integration by shifting repetitive 
+calcs higher up the chain.
+
+The repetitive calcs for the frame order and rotation matrices are now 
+happening in the scope of the
+target function rather than in the frame_order_matrix_ops module functions.
+
+
+Modified:
+    branches/frame_order_testing/maths_fns/frame_order.py
+    branches/frame_order_testing/maths_fns/frame_order_matrix_ops.py
+
+Modified: branches/frame_order_testing/maths_fns/frame_order.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_testing/maths_fns/frame_order.py?rev=15037&amp;r1=15036&amp;r2=15037&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_testing/maths_fns/frame_order.py?rev=15037&amp;r1=15036&amp;r2=15037&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_testing/maths_fns/frame_order.py (original)
++++ branches/frame_order_testing/maths_fns/frame_order.py Tue Dec  6 12:29:59 
+2011
+@@ -33,8 +33,11 @@
+ from generic_fns.frame_order import print_frame_order_2nd_degree
+ from maths_fns.alignment_tensor import to_5D, to_tensor
+ from maths_fns.chi2 import chi2
++from maths_fns.coord_transform import spherical_to_cartesian
+ from maths_fns.frame_order_matrix_ops import compile_2nd_matrix_free_rotor, 
+compile_2nd_matrix_iso_cone, compile_2nd_matrix_iso_cone_free_rotor, 
+compile_2nd_matrix_iso_cone_torsionless, compile_2nd_matrix_pseudo_ellipse, 
+compile_2nd_matrix_pseudo_ellipse_free_rotor, 
+compile_2nd_matrix_pseudo_ellipse_torsionless, compile_2nd_matrix_rotor, 
+reduce_alignment_tensor, pcs_numeric_int_rotor
++from maths_fns.kronecker_product import kron_prod
+ from maths_fns.rotation_matrix import euler_to_R_zyz as euler_to_R
++from maths_fns.rotation_matrix import two_vect_to_R
+ from physical_constants import pcs_constant
+ from rdc import rdc_tensor
+ from relax_errors import RelaxError
+@@ -236,9 +239,9 @@
+             if self.paramag_centre == None:
+                 self.paramag_centre = zeros(3, float64)
+ 
+-            # Set up the paramagnetic constant (without the interatomic 
+distance).
++            # Set up the paramagnetic constant (without the interatomic 
+distance and in Angstrom units).
+             for i in range(self.num_align):
+-                self.pcs_const[i] = pcs_constant(self.temp[i], self.frq[i], 
+1.0)
++                self.pcs_const[i] = pcs_constant(self.temp[i], self.frq[i], 
+1.0) * 1e30
+ 
+         # PCS function, gradient, and Hessian matrices.
+         self.pcs_theta = zeros((self.num_align, self.num_pcs), float64)
+@@ -553,11 +556,24 @@
+         else:
+             ave_pos_alpha, ave_pos_beta, ave_pos_gamma, axis_theta, 
+axis_phi, sigma_max = params
+ 
+-        # Generate the 2nd degree Frame Order super matrix.
+-        frame_order_2nd = compile_2nd_matrix_rotor(self.frame_order_2nd, 
+self.R_eigen, self.z_axis, self.cone_axis, axis_theta, axis_phi, sigma_max)
+-
+-        # Reduce and rotate the tensors.
++        # Generate the cone axis from the spherical angles.
++        spherical_to_cartesian([1.0, axis_theta, axis_phi], self.cone_axis)
++
++        # Pre-calculate the eigenframe rotation matrix.
++        two_vect_to_R(self.z_axis, self.cone_axis, self.R_eigen)
++
++        # The Kronecker product of the eigenframe rotation.
++        Rx2_eigen = kron_prod(self.R_eigen, self.R_eigen)
++
++        # Generate the 2nd degree Frame Order super matrix.
++        frame_order_2nd = compile_2nd_matrix_rotor(self.frame_order_2nd, 
+Rx2_eigen, sigma_max)
++
++        # The average frame rotation matrix (and reduce and rotate the 
+tensors).
+         self.reduce_and_rot(ave_pos_alpha, ave_pos_beta, ave_pos_gamma, 
+frame_order_2nd)
++
++        # Pre-transpose matrices for faster calculations.
++        RT_eigen = transpose(self.R_eigen)
++        RT_ave = transpose(self.R_ave)
+ 
+         # Loop over each alignment.
+         for i in xrange(self.num_align):
+@@ -571,10 +587,14 @@
+             for j in xrange(self.num_pcs):
+                 # The back calculated PCS.
+                 if self.pcs_flag and not self.missing_pcs[i, j]:
++                    # Forwards and reverse rotations.
+                     if self.full_in_ref_frame[i]:
+-                        self.pcs_theta[i, j] = 
+pcs_numeric_int_rotor(axis_theta=axis_theta, axis_phi=axis_phi, 
+sigma_max=sigma_max, c=self.pcs_const[i], atom_pos=self.pcs_atoms[j], 
+pivot=pivot, ln_pos=self.paramag_centre, A=self.A_3D[i], 
+ave_pos_R=self.R_ave, R=self.Ri_prime)
++                        R_ave = RT_ave
+                     else:
+-                        self.pcs_theta[i, j] = 
+pcs_numeric_int_rotor(axis_theta=axis_theta, axis_phi=axis_phi, 
+sigma_max=sigma_max, c=self.pcs_const[i], atom_pos=self.pcs_atoms[j], 
+pivot=pivot, ln_pos=self.paramag_centre, A=self.A_3D[i], 
+ave_pos_R=transpose(self.R_ave), R=self.Ri_prime)
++                        R_ave = self.R_ave
++
++                    # The numerical integration.
++                    self.pcs_theta[i, j] = 
+pcs_numeric_int_rotor(sigma_max=sigma_max, c=self.pcs_const[i], 
+atom_pos=self.pcs_atoms[j], pivot=pivot, ln_pos=self.paramag_centre, 
+A=self.A_3D[i], R_ave=R_ave, R_eigen=self.R_eigen, RT_eigen=RT_eigen, 
+Ri_prime=self.Ri_prime)
+ 
+             # Calculate and sum the single alignment chi-squared value (for 
+the RDC).
+             if self.rdc_flag:
+
+Modified: branches/frame_order_testing/maths_fns/frame_order_matrix_ops.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_testing/maths_fns/frame_order_matrix_ops.py?rev=15037&amp;r1=15036&amp;r2=15037&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_testing/maths_fns/frame_order_matrix_ops.py?rev=15037&amp;r1=15036&amp;r2=15037&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_testing/maths_fns/frame_order_matrix_ops.py 
+(original)
++++ branches/frame_order_testing/maths_fns/frame_order_matrix_ops.py Tue Dec  
+6 12:29:59 2011
+@@ -406,7 +406,7 @@
+     return rotate_daeg(matrix, R)
+ 
+ 
+-def compile_2nd_matrix_rotor(matrix, R, z_axis, axis, theta_axis, phi_axis, 
+smax):
++def compile_2nd_matrix_rotor(matrix, Rx2_eigen, smax):
+     &quot;&quot;&quot;Generate the rotated 2nd degree Frame Order matrix for the rotor 
+model.
+ 
+     The cone axis is assumed to be parallel to the z-axis in the eigenframe.
+@@ -414,16 +414,8 @@
+ 
+     @param matrix:      The Frame Order matrix, 2nd degree to be populated.
+     @type matrix:       numpy 9D, rank-2 array
+-    @param R:           The rotation matrix to be populated.
+-    @type R:            numpy 3D, rank-2 array
+-    @param z_axis:      The molecular frame z-axis from which the rotor axis 
+is rotated from.
+-    @type z_axis:       numpy 3D, rank-1 array
+-    @param axis:        The storage structure for the axis.
+-    @type axis:         numpy 3D, rank-1 array
+-    @param theta_axis:  The axis polar angle.
+-    @type theta_axis:   float
+-    @param phi_axis:    The axis azimuthal angle.
+-    @type phi_axis:     float
++    @param Rx2_eigen:   The Kronecker product of the eigenframe rotation 
+matrix with itself.
++    @type Rx2_eigen:    numpy 9D, rank-2 array
+     @param smax:        The maximum torsion angle.
+     @type smax:         float
+     &quot;&quot;&quot;
+@@ -454,14 +446,8 @@
+     # Off diagonal set 2.
+     matrix[1, 3] = matrix[3, 1] = -matrix[0, 4]
+ 
+-    # Generate the cone axis from the spherical angles.
+-    spherical_to_cartesian([1.0, theta_axis, phi_axis], axis)
+-
+-    # Average position rotation.
+-    two_vect_to_R(z_axis, axis, R)
+-
+     # Rotate and return the frame order matrix.
+-    return rotate_daeg(matrix, R)
++    return rotate_daeg(matrix, Rx2_eigen)
+ 
+ 
+ def daeg_to_rotational_superoperator(daeg, Rsuper):
+@@ -1312,16 +1298,12 @@
+     return 2 - 2*cos(tmax)**3
+ 
+ 
+-def pcs_numeric_int_rotor(axis_theta=None, axis_phi=None, sigma_max=None, 
+c=None, atom_pos=None, pivot=None, ln_pos=None, A=None, ave_pos_R=None, 
+Ri=None):
++def pcs_numeric_int_rotor(sigma_max=None, c=None, atom_pos=None, pivot=None, 
+ln_pos=None, A=None, R_ave=None, R_eigen=None, RT_eigen=None, Ri_prime=None):
+     &quot;&quot;&quot;Determine the averaged PCS value via numerical integration.
+ 
+-    @keyword axis_theta:    The rotation axis polar angle.
+-    @type axis_theta:       float
+-    @keyword axis_phi:      The rotation axis azimuthal angle.
+-    @type axis_phi:         float
+     @keyword sigma_max:     The maximum rotor angle.
+     @type sigma_max:        float
+-    @keyword c:             The PCS constant (without the interatomic 
+distance).
++    @keyword c:             The PCS constant (without the interatomic 
+distance and in Angstrom units).
+     @type c:                float
+     @keyword atom_pos:      The Euclidean position of the atom of interest.
+     @type atom_pos:         numpy rank-1, 3D array
+@@ -1331,26 +1313,27 @@
+     @type ln_pos:           numpy rank-1, 3D array
+     @keyword A:             The full alignment tensor of the non-moving 
+domain.
+     @type A:                numpy rank-2, 3D array
+-    @keyword ave_pos_R:     The rotation matrix for rotating from the 
+reference frame to the average position.
+-    @type ave_pos_R:        numpy rank-2, 3D array
+-    @keyword Ri:            The empty rotation matrix for the in-frame rotor 
+motion, used to calculate the PCS for each state i in the numerical 
+integration.
+-    @type Ri:               numpy rank-2, 3D array
++    @keyword R_ave:         The rotation matrix for rotating from the 
+reference frame to the average position.
++    @type R_ave:            numpy rank-2, 3D array
++    @keyword R_eigen:       The eigenframe rotation matrix.
++    @type R_eigen:          numpy rank-2, 3D array
++    @keyword RT_eigen:      The transpose of the eigenframe rotation matrix 
+(for faster calculations).
++    @type RT_eigen:         numpy rank-2, 3D array
++    @keyword Ri_prime:      The empty rotation matrix for the in-frame rotor 
+motion, used to calculate the PCS for each state i in the numerical 
+integration.
++    @type Ri_prime:         numpy rank-2, 3D array
+     @return:                The averaged PCS value.
+     @rtype:                 float
+     &quot;&quot;&quot;
+ 
+     # Preset the rotation matrix elements for state i.
+-    Ri[0, 2] = 0.0
+-    Ri[1, 2] = 0.0
+-    Ri[2, 0] = 0.0
+-    Ri[2, 1] = 0.0
+-    Ri[2, 2] = 1.0
+-
+-    # Convert the PCS constant to Angstrom units.
+-    c = c * 1e30
++    Ri_prime[0, 2] = 0.0
++    Ri_prime[1, 2] = 0.0
++    Ri_prime[2, 0] = 0.0
++    Ri_prime[2, 1] = 0.0
++    Ri_prime[2, 2] = 1.0
+ 
+     # Perform numerical integration.
+-    result = quad(pcs_pivot_motion_rotor, -sigma_max, sigma_max, args=(c, 
+atom_pos, pivot, ln_pos, A, R), full_output=1)
++    result = quad(pcs_pivot_motion_rotor, -sigma_max, sigma_max, args=(c, 
+atom_pos, pivot, ln_pos, A, R_ave, R_eigen, RT_eigen, Ri_prime), 
+full_output=1)
+ 
+     # The surface area normalisation factor.
+     SA = 2.0 * sigma_max
+@@ -1359,37 +1342,47 @@
+     return result[0] / SA
+ 
+ 
+-def pcs_pivot_motion_rotor(sigma_i, c, pN, pPiv, pLn, A, Ri):
++def pcs_pivot_motion_rotor(sigma_i, c, pN, pPiv, pLn, A, R_ave, R_eigen, 
+RT_eigen, Ri_prime):
+     &quot;&quot;&quot;Calculate the PCS value after a pivoted motion for the rotor model.
+ 
+-    @param sigma_i: The rotor angle for state i.
+-    @type sigma_i:  float
+-    @param c:       The PCS constant (without the interatomic distance).
+-    @type c:        float
+-    @param pN:      The Euclidean position of the atom of interest.
+-    @type pN:       numpy rank-1, 3D array
+-    @param pPiv:    The Euclidean position of the pivot of the motion.
+-    @type pPiv:     numpy rank-1, 3D array
+-    @param pLn:     The Euclidean position of the lanthanide.
+-    @type pLn:      numpy rank-1, 3D array
+-    @param A:       The full alignment tensor of the non-moving domain.
+-    @type A:        numpy rank-2, 3D array
+-    @param Ri:      The empty rotation matrix for the in-frame rotor motion 
+for state i.
+-    @type Ri:       numpy rank-2, 3D array
+-    @return:        The PCS value for the changed position.
+-    @rtype:         float
++    @param sigma_i:     The rotor angle for state i.
++    @type sigma_i:      float
++    @param c:           The PCS constant (without the interatomic distance 
+and in Angstrom units).
++    @type c:            float
++    @param pN:          The Euclidean position of the atom of interest.
++    @type pN:           numpy rank-1, 3D array
++    @param pPiv:        The Euclidean position of the pivot of the motion.
++    @type pPiv:         numpy rank-1, 3D array
++    @param pLn:         The Euclidean position of the lanthanide.
++    @type pLn:          numpy rank-1, 3D array
++    @param A:           The full alignment tensor of the non-moving domain.
++    @type A:            numpy rank-2, 3D array
++    @param R_ave:       The rotation matrix for rotating from the reference 
+frame to the average position.
++    @type R_ave:        numpy rank-2, 3D array
++    @param R_eigen:     The eigenframe rotation matrix.
++    @type R_eigen:      numpy rank-2, 3D array
++    @param RT_eigen:    The transpose of the eigenframe rotation matrix (for 
+faster calculations).
++    @type RT_eigen:     numpy rank-2, 3D array
++    @param Ri_prime:    The empty rotation matrix for the in-frame rotor 
+motion for state i.
++    @type Ri_prime:     numpy rank-2, 3D array
++    @return:            The PCS value for the changed position.
++    @rtype:             float
+     &quot;&quot;&quot;
+ 
+     # The rotation matrix.
+     c_sigma = cos(sigma_i)
+     s_sigma = sin(sigma_i)
+-    R[0, 0] =  c_sigma
+-    R[0, 1] = -s_sigma
+-    R[1, 0] =  s_sigma
+-    R[1, 1] =  c_sigma
++    Ri_prime[0, 0] =  c_sigma
++    Ri_prime[0, 1] = -s_sigma
++    Ri_prime[1, 0] =  s_sigma
++    Ri_prime[1, 1] =  c_sigma
++
++    # The rotation.
++    #RT_i = dot(R_ave, dot(R_eigen, dot(transpose(Ri_prime), RT_eigen)))
++    R_i = dot(R_eigen, dot(Ri_prime, dot(RT_eigen, R_ave)))
+ 
+     # Calculate the new vector.
+-    vect = dot(transpose(R), (pN - pPiv)) - pLn
++    vect = dot(R_i, (pN - pPiv)) - pLn
+ 
+     # The vector length.
+     length = norm(vect)
+@@ -1589,7 +1582,7 @@
+     red_tensor[4] = (D[5, 5] + D[5, 7])*A[4]
+ 
+ 
+-def rotate_daeg(matrix, R):
++def rotate_daeg(matrix, Rx2_eigen):
+     &quot;&quot;&quot;Rotate the given frame order matrix.
+ 
+     It is assumed that the frame order matrix is in the Kronecker product 
+form.
+@@ -1597,15 +1590,12 @@
+ 
+     @param matrix:      The Frame Order matrix, 2nd degree to be populated.
+     @type matrix:       numpy 9D, rank-2 array
+-    @param R:           The rotation matrix to be populated.
+-    @type R:            numpy 3D, rank-2 array
+-    &quot;&quot;&quot;
+-
+-    # The outer product of R.
+-    R_kron = kron_prod(R, R)
++    @param Rx2_eigen:   The Kronecker product of the eigenframe rotation 
+matrix with itself.
++    @type Rx2_eigen:    numpy 9D, rank-2 array
++    &quot;&quot;&quot;
+ 
+     # Rotate.
+-    matrix_rot = dot(R_kron, dot(matrix, transpose(R_kron)))
++    matrix_rot = dot(Rx2_eigen, dot(matrix, transpose(Rx2_eigen)))
+ 
+     # Return the matrix.
+     return matrix_rot
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Dec 06 19:00:02 2011</div>  
+</body>
+</html>

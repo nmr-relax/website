@@ -1,0 +1,365 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r24279 &#45; in /branches/frame_order_cleanup: lib/frame_order/double_rotor.py target_functions/frame_order.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 24 Jun 2014 14:52:58 +0200 -->
+<!--X-Message-Id: E1WzQDa&#45;0003gF&#45;O2@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r24279 - in /branches/frame_order_cleanup: lib/frame_order/double_rotor.py target_functions/frame_order.py -- June 24, 2014 - 14:52</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r24279 - in /branches/frame_order_cleanup: lib/frame_order/double_rotor.py target_functions/frame_order.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00666" class="tabs">Index by Date</a> | <a href="threads.html#00666" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00665.html">Date Prev</a>] [<a href="msg00667.html">Date Next</a>] [<a href="msg00665.html">Thread Prev</a>] [<a href="msg00667.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 24 Jun 2014 12:52:58 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00666.html">E1WzQDa-0003gF-O2@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on June 24, 2014 - 14:52:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Jun 24 14:52:58 2014
+New Revision: 24279
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=24279&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=24279&amp;view=rev</a>
+Log:
+Fully implemented the double rotor frame order model for PCS data.
+
+Sobol' quasi-random points for the numerical integration are now generated 
+separately for both
+torsion angles, and two separate sets of rotation matrices for both angles 
+for each Sobol' point are
+now pre-calculated in the create_sobol_data() target function method.  The 
+calc_vectors() target
+function method has also been modified as the lanthanide to pivot vector is 
+to the second pivot in
+the double rotor model rather than the first.  The target function itself has 
+been fixed as the two
+pivots were mixed up - the 2nd pivot is optimised and the inter-pivot 
+distance along the z-axis
+gives the position of the 1st pivot.
+
+For the lib.frame_order.double_rotor module, the second set of Sobol' point 
+rotation matrices
+corresponding to sigma2, the rotation about the second pivot, is now passed 
+into the
+pcs_numeric_int_double_rotor() function.  These rotations are frame shifted 
+into the eigenframe of
+the motion, and then correctly passed into pcs_pivot_motion_double_rotor().  
+The elimination of
+Sobol' points outside of the distribution has been fixed in the base 
+pcs_numeric_int_double_rotor()
+function and now both torsion angles are being checked.
+
+
+Modified:
+    branches/frame_order_cleanup/lib/frame_order/double_rotor.py
+    branches/frame_order_cleanup/target_functions/frame_order.py
+
+Modified: branches/frame_order_cleanup/lib/frame_order/double_rotor.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/frame_order/double_rotor.py?rev=24279&amp;r1=24278&amp;r2=24279&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/frame_order/double_rotor.py?rev=24279&amp;r1=24278&amp;r2=24279&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/lib/frame_order/double_rotor.py        
+(original)
++++ branches/frame_order_cleanup/lib/frame_order/double_rotor.py        Tue 
+Jun 24 14:52:58 2014
+@@ -75,7 +75,7 @@
+     return rotate_daeg(matrix, Rx2_eigen)
+ 
+ 
+-def pcs_numeric_int_double_rotor(points=None, sigma_max=None, 
+sigma_max_2=None, c=None, full_in_ref_frame=None, r_pivot_atom=None, 
+r_pivot_atom_rev=None, r_ln_pivot=None, r_inter_pivot=None, A=None, 
+R_eigen=None, RT_eigen=None, Ri_prime=None, pcs_theta=None, 
+pcs_theta_err=None, missing_pcs=None):
++def pcs_numeric_int_double_rotor(points=None, sigma_max=None, 
+sigma_max_2=None, c=None, full_in_ref_frame=None, r_pivot_atom=None, 
+r_pivot_atom_rev=None, r_ln_pivot=None, r_inter_pivot=None, A=None, 
+R_eigen=None, RT_eigen=None, Ri_prime=None, Ri2_prime=None, pcs_theta=None, 
+pcs_theta_err=None, missing_pcs=None):
+     &quot;&quot;&quot;The averaged PCS value via numerical integration for the double rotor 
+frame order model.
+ 
+     @keyword points:            The Sobol points in the torsion-tilt angle 
+space.
+@@ -102,8 +102,10 @@
+     @type R_eigen:              numpy rank-2, 3D array
+     @keyword RT_eigen:          The transpose of the eigenframe rotation 
+matrix (for faster calculations).
+     @type RT_eigen:             numpy rank-2, 3D array
+-    @keyword Ri_prime:          The array of pre-calculated rotation 
+matrices for the in-frame double rotor motion, used to calculate the PCS for 
+each state i in the numerical integration.
++    @keyword Ri_prime:          The array of pre-calculated rotation 
+matrices for the in-frame double rotor motion for the 1st mode of motion, 
+used to calculate the PCS for each state i in the numerical integration.
+     @type Ri_prime:             numpy rank-3, array of 3D arrays
++    @keyword Ri2_prime:         The array of pre-calculated rotation 
+matrices for the in-frame double rotor motion for the 2nd mode of motion, 
+used to calculate the PCS for each state i in the numerical integration.
++    @type Ri2_prime:            numpy rank-3, array of 3D arrays
+     @keyword pcs_theta:         The storage structure for the 
+back-calculated PCS values.
+     @type pcs_theta:            numpy rank-2 array
+     @keyword pcs_theta_err:     The storage structure for the 
+back-calculated PCS errors.
+@@ -119,6 +121,8 @@
+     # Fast frame shift.
+     Ri = dot(R_eigen, tensordot(Ri_prime, RT_eigen, axes=1))
+     Ri = swapaxes(Ri, 0, 1)
++    Ri2 = dot(R_eigen, tensordot(Ri2_prime, RT_eigen, axes=1))
++    Ri2 = swapaxes(Ri2, 0, 1)
+ 
+     # Unpack the points.
+     sigma, sigma2 = swapaxes(points, 0, 1)
+@@ -129,9 +133,11 @@
+         # Outside of the distribution, so skip the point.
+         if abs(sigma[i]) &gt; sigma_max:
+             continue
++        if abs(sigma2[i]) &gt; sigma_max_2:
++            continue
+ 
+         # Calculate the PCSs for this state.
+-        pcs_pivot_motion_double_rotor(full_in_ref_frame=full_in_ref_frame, 
+r_pivot_atom=r_pivot_atom, r_pivot_atom_rev=r_pivot_atom_rev, 
+r_ln_pivot=r_ln_pivot, r_inter_pivot=r_inter_pivot, A=A, Ri=Ri[i], Ri2=Ri[i], 
+pcs_theta=pcs_theta, pcs_theta_err=pcs_theta_err, missing_pcs=missing_pcs)
++        pcs_pivot_motion_double_rotor(full_in_ref_frame=full_in_ref_frame, 
+r_pivot_atom=r_pivot_atom, r_pivot_atom_rev=r_pivot_atom_rev, 
+r_ln_pivot=r_ln_pivot, r_inter_pivot=r_inter_pivot, A=A, Ri=Ri[i], 
+Ri2=Ri2[i], pcs_theta=pcs_theta, pcs_theta_err=pcs_theta_err, 
+missing_pcs=missing_pcs)
+ 
+         # Increment the number of points.
+         num += 1
+@@ -170,9 +176,9 @@
+     @type r_inter_pivot:        numpy rank-1, 3D array
+     @keyword A:                 The full alignment tensor of the non-moving 
+domain.
+     @type A:                    numpy rank-2, 3D array
+-    @keyword Ri:                The frame-shifted, pre-calculated rotation 
+matrix for state i for the first mode of motion.
++    @keyword Ri:                The frame-shifted, pre-calculated rotation 
+matrix for state i for the 1st mode of motion.
+     @type Ri:                   numpy rank-2, 3D array
+-    @keyword Ri2:               The frame-shifted, pre-calculated rotation 
+matrix for state i for the second mode of motion.
++    @keyword Ri2:               The frame-shifted, pre-calculated rotation 
+matrix for state i for the 2nd mode of motion.
+     @type Ri2:                  numpy rank-2, 3D array
+     @keyword pcs_theta:         The storage structure for the 
+back-calculated PCS values.
+     @type pcs_theta:            numpy rank-2 array
+@@ -183,7 +189,7 @@
+     &quot;&quot;&quot;
+ 
+     # Rotate the first pivot to atomic position vectors.
+-    rot_vect = dot(r_pivot_atom, Ri) + r_ln_pivot
++    rot_vect = dot(r_pivot_atom, Ri)
+ 
+     # Add the inter-pivot vector to obtain the 2nd pivot to atomic position 
+vectors.
+     add(r_inter_pivot, rot_vect, rot_vect)
+
+Modified: branches/frame_order_cleanup/target_functions/frame_order.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/target_functions/frame_order.py?rev=24279&amp;r1=24278&amp;r2=24279&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/target_functions/frame_order.py?rev=24279&amp;r1=24278&amp;r2=24279&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/target_functions/frame_order.py        
+(original)
++++ branches/frame_order_cleanup/target_functions/frame_order.py        Tue 
+Jun 24 14:52:58 2014
+@@ -366,7 +366,7 @@
+         This function optimises the model parameters using the RDC and PCS 
+base data.  Quasi-random, Sobol' sequence based, numerical integration is 
+used for the PCS.
+ 
+ 
+-        @param params:  The vector of parameter values.  These can include 
+{pivot_x, pivot_y, pivot_z, pivot_disp, ave_pos_x, ave_pos_y, ave_pos_z, 
+ave_pos_alpha, ave_pos_beta, ave_pos_gamma, eigen_alpha, eigen_beta, 
+eigen_gamma, cone_sigma_max, cone_sigma_max2}.
++        @param params:  The vector of parameter values.  These can include 
+{pivot_x, pivot_y, pivot_z, pivot_disp, ave_pos_x, ave_pos_y, ave_pos_z, 
+ave_pos_alpha, ave_pos_beta, ave_pos_gamma, eigen_alpha, eigen_beta, 
+eigen_gamma, cone_sigma_max, cone_sigma_max_2}.
+         @type params:   list of float
+         @return:        The chi-squared or SSE value.
+         @rtype:         float
+@@ -378,12 +378,12 @@
+ 
+         # Unpack the parameters.
+         if self.pivot_opt:
+-            pivot = outer(self.spin_ones_struct, params[:3])
++            pivot2 = outer(self.spin_ones_struct, params[:3])
+             param_disp = params[3]
+             self._translation_vector = params[4:7]
+             ave_pos_alpha, ave_pos_beta, ave_pos_gamma, eigen_alpha, 
+eigen_beta, eigen_gamma, sigma_max, sigma_max_2 = params[6:]
+         else:
+-            pivot = self.pivot
++            pivot2 = self.pivot
+             param_disp = params[0]
+             self._translation_vector = params[1:4]
+             ave_pos_alpha, ave_pos_beta, ave_pos_gamma, eigen_alpha, 
+eigen_beta, eigen_gamma, sigma_max, sigma_max_2 = params[4:]
+@@ -406,8 +406,8 @@
+ 
+         # Pre-calculate all the necessary vectors.
+         if self.pcs_flag:
+-            # The second pivot point (sum of the first pivot and the 
+displacement along the eigenframe z-axis).
+-            pivot2 = pivot + param_disp * self.R_eigen[:,2]
++            # The 1st pivot point (sum of the 2nd pivot and the displacement 
+along the eigenframe z-axis).
++            pivot = pivot2 + param_disp * self.R_eigen[:,2]
+ 
+             # Calculate the vectors.
+             self.calc_vectors(pivot=pivot, pivot2=pivot2, R_ave=self.R_ave, 
+RT_ave=RT_ave)
+@@ -431,7 +431,7 @@
+         # PCS via numerical integration.
+         if self.pcs_flag:
+             # Numerical integration of the PCSs.
+-            pcs_numeric_int_double_rotor(points=self.sobol_angles, 
+sigma_max=sigma_max, sigma_max_2=sigma_max_2, c=self.pcs_const, 
+full_in_ref_frame=self.full_in_ref_frame, r_pivot_atom=self.r_pivot_atom, 
+r_pivot_atom_rev=self.r_pivot_atom_rev, r_ln_pivot=self.r_ln_pivot, 
+r_inter_pivot=self.r_inter_pivot, A=self.A_3D, R_eigen=self.R_eigen, 
+RT_eigen=RT_eigen, Ri_prime=self.Ri_prime, pcs_theta=self.pcs_theta, 
+pcs_theta_err=self.pcs_theta_err, missing_pcs=self.missing_pcs)
++            pcs_numeric_int_double_rotor(points=self.sobol_angles, 
+sigma_max=sigma_max, sigma_max_2=sigma_max_2, c=self.pcs_const, 
+full_in_ref_frame=self.full_in_ref_frame, r_pivot_atom=self.r_pivot_atom, 
+r_pivot_atom_rev=self.r_pivot_atom_rev, r_ln_pivot=self.r_ln_pivot, 
+r_inter_pivot=self.r_inter_pivot, A=self.A_3D, R_eigen=self.R_eigen, 
+RT_eigen=RT_eigen, Ri_prime=self.Ri_prime, Ri2_prime=self.Ri2_prime, 
+pcs_theta=self.pcs_theta, pcs_theta_err=self.pcs_theta_err, 
+missing_pcs=self.missing_pcs)
+ 
+             # Calculate and sum the single alignment chi-squared value (for 
+the PCS).
+             for align_index in range(self.num_align):
+@@ -1148,6 +1148,8 @@
+         # The lanthanide to pivot vector.
+         if self.pivot_opt:
+             subtract(pivot, self.paramag_centre, self.r_ln_pivot)
++        if pivot2 != None:
++            subtract(pivot2, self.paramag_centre, self.r_ln_pivot)
+ 
+         # Calculate the average position pivot point to atomic positions 
+vectors once.
+         vect = self.atomic_pos - self.ave_pos_pivot
+@@ -1188,6 +1190,7 @@
+         # Initialise.
+         self.sobol_angles = zeros((n, m), float32)
+         self.Ri_prime = zeros((n, 3, 3), float64)
++        self.Ri2_prime = zeros((n, 3, 3), float64)
+ 
+         # The Sobol' points.
+         points = i4_sobol_generate(m, n, 0)
+@@ -1209,13 +1212,38 @@
+                     phi = 2.0 * pi * points[j, i]
+                     self.sobol_angles[i, j] = phi
+ 
+-                # The torsion angle - the angle of rotation about the z' 
+axis.
+-                if dims[j] in ['sigma', 'sigma2']:
++                # The 1st torsion angle - the angle of rotation about the z' 
+axis (or y' for the double motion models).
++                if dims[j] in ['sigma']:
+                     sigma = 2.0 * pi * (points[j, i] - 0.5)
+                     self.sobol_angles[i, j] = sigma
+ 
++                # The 2nd torsion angle - the angle of rotation about the x' 
+axis.
++                if dims[j] in ['sigma2']:
++                    sigma2 = 2.0 * pi * (points[j, i] - 0.5)
++                    self.sobol_angles[i, j] = sigma2
++
++            # Pre-calculate the rotation matrices for the double motion 
+models.
++            if 'sigma2' in dims:
++                # The 1st rotation about the y-axis.
++                c_sigma = cos(sigma)
++                s_sigma = sin(sigma)
++                self.Ri_prime[i, 0, 0] =  c_sigma
++                self.Ri_prime[i, 0, 2] = -s_sigma
++                self.Ri_prime[i, 1, 1] = 1.0
++                self.Ri_prime[i, 2, 0] =  s_sigma
++                self.Ri_prime[i, 2, 2] =  c_sigma
++
++                # The 2nd rotation about the x-axis.
++                c_sigma2 = cos(sigma2)
++                s_sigma2 = sin(sigma2)
++                self.Ri2_prime[i, 0, 0] = 1.0
++                self.Ri2_prime[i, 1, 1] =  c_sigma2
++                self.Ri2_prime[i, 1, 2] = -s_sigma2
++                self.Ri2_prime[i, 2, 1] =  s_sigma2
++                self.Ri2_prime[i, 2, 2] =  c_sigma2
++
+             # Pre-calculate the rotation matrix for the full tilt-torsion.
+-            if theta != None and phi != None and sigma != None:
++            elif theta != None and phi != None and sigma != None:
+                 tilt_torsion_to_R(phi, theta, sigma, self.Ri_prime[i])
+ 
+             # Pre-calculate the rotation matrix for the torsionless models.
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Jun 24 15:00:03 2014</div>  
+</body>
+</html>

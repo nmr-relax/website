@@ -1,0 +1,239 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r18702 &#45; /trunk/lib/text/table.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 08 Mar 2013 15:16:34 +0100 -->
+<!--X-Message-Id: E1UDy66&#45;0007A9&#45;HE@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r18702 - /trunk/lib/text/table.py -- March 08, 2013 - 15:16</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r18702 - /trunk/lib/text/table.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00120" class="tabs">Index by Date</a> | <a href="threads.html#00120" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00119.html">Date Prev</a>] [<a href="msg00121.html">Date Next</a>] [<a href="msg00119.html">Thread Prev</a>] [<a href="msg00121.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 08 Mar 2013 14:16:34 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00120.html">E1UDy66-0007A9-HE@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on March 08, 2013 - 15:16:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Mar  8 15:16:34 2013
+New Revision: 18702
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=18702&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=18702&amp;view=rev</a>
+Log:
+Implemented the custom_format argument for lib.text.table.format_table().
+
+This allows cell contents to be formatted as the user asks.  It defaults to 
+standard string
+conversion is the custom conversion fails.
+
+
+Modified:
+    trunk/lib/text/table.py
+
+Modified: trunk/lib/text/table.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/lib/text/table.py?rev=18702&amp;r1=18701&amp;r2=18702&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/lib/text/table.py?rev=18702&amp;r1=18701&amp;r2=18702&amp;view=diff</a>
+==============================================================================
+--- trunk/lib/text/table.py (original)
++++ trunk/lib/text/table.py Fri Mar  8 15:16:34 2013
+@@ -51,13 +51,15 @@
+     return prefix + ' '*width + postfix + &quot;\n&quot;
+ 
+ 
+-def _convert_to_string(data=None, justification=None):
++def _convert_to_string(data=None, justification=None, custom_format=None):
+     &quot;&quot;&quot;Convert all elements of the given data structures to strings in place.
+ 
+     @keyword data:          The headings or content to convert.
+     @type data:             list of lists
+     @keyword justification: The structure to store the cell justification in.
+     @type justification:    list of lists
++    @keyword custom_format: This list allows a custom format to be specified 
+for each column.  The number of elements must match the number of columns.  
+If an element is None, then the default will be used.  Otherwise the elements 
+must be valid string formatting constructs.
++    @type custom_format:    None or list of None and str
+     &quot;&quot;&quot;
+ 
+     # Loop over the rows.
+@@ -67,19 +69,28 @@
+             # Default left justification.
+             justification[i][j] = 'l'
+ 
++            # Right justify numbers.
++            if isinstance(data[i][j], int) or is_float(data[i][j]):
++                justification[i][j] = 'r'
++
+             # None types.
+             if data[i][j] == None:
+                 data[i][j] = ''
+ 
++            # Custom format (defaulting to standard string conversion if all 
+fails).
++            elif custom_format and custom_format[j]:
++                try:
++                    data[i][j] = custom_format[j] % data[i][j]
++                except TypeError:
++                    data[i][j] = &quot;%s&quot; % data[i][j]
++
+             # Int types.
+             elif isinstance(data[i][j], int):
+                 data[i][j] = &quot;%i&quot; % data[i][j]
+-                justification[i][j] = 'r'
+ 
+             # Float types.
+             elif is_float(data[i][j]):
+                 data[i][j] = &quot;%g&quot; % data[i][j]
+-                justification[i][j] = 'r'
+ 
+             # All other non-string types.
+             elif not isinstance(data[i][j], str):
+@@ -170,34 +181,36 @@
+     return line
+ 
+ 
+-def format_table(headings=None, contents=None, max_width=None, separator='   
+', pad_left=' ', pad_right=' ', prefix=' ', postfix=' ', spacing=False, 
+debug=False):
++def format_table(headings=None, contents=None, max_width=None, separator='   
+', pad_left=' ', pad_right=' ', prefix=' ', postfix=' ', custom_format=None, 
+spacing=False, debug=False):
+     &quot;&quot;&quot;Format and return the table as text.
+ 
+     If the heading or contents contains the value of the MULTI_COL constant 
+defined in this module, then that cell will be merged with the previous cell 
+to allow elements to span multiple columns.
+ 
+ 
+-    @keyword headings:  The table header.
+-    @type headings:     list of lists of str
+-    @keyword contents:  The table contents.
+-    @type contents:     list of lists of str
+-    @keyword max_width: The maximum width of the table.
+-    @type max_width:    int
+-    @keyword separator: The column separation string.
+-    @type separator:    str
+-    @keyword pad_left:  The string to pad the left side of the table with.
+-    @type pad_left:     str
+-    @keyword pad_right: The string to pad the right side of the table with.
+-    @type pad_right:    str
+-    @keyword prefix:    The text to add to the start of the line.
+-    @type prefix:       str
+-    @keyword postfix:   The text to add to the end of the line.
+-    @type postfix:      str
+-    @keyword spacing:   A flag which if True will add blank line between 
+each row.
+-    @type spacing:      bool
+-    @keyword debug:     A flag which if True will activate a number of 
+debugging printouts.
+-    @type debug:        bool
+-    @return:            The formatted table.
+-    @rtype:             str
++    @keyword headings:      The table header.
++    @type headings:         list of lists of str
++    @keyword contents:      The table contents.
++    @type contents:         list of lists of str
++    @keyword max_width:     The maximum width of the table.
++    @type max_width:        int
++    @keyword separator:     The column separation string.
++    @type separator:        str
++    @keyword pad_left:      The string to pad the left side of the table 
+with.
++    @type pad_left:         str
++    @keyword pad_right:     The string to pad the right side of the table 
+with.
++    @type pad_right:        str
++    @keyword prefix:        The text to add to the start of the line.
++    @type prefix:           str
++    @keyword postfix:       The text to add to the end of the line.
++    @type postfix:          str
++    @keyword custom_format: This list allows a custom format to be specified 
+for each column.  The number of elements must match the number of columns.  
+If an element is None, then the default will be used.  Otherwise the elements 
+must be valid string formatting constructs.
++    @type custom_format:    None or list of None and str
++    @keyword spacing:       A flag which if True will add blank line between 
+each row.
++    @type spacing:          bool
++    @keyword debug:         A flag which if True will activate a number of 
+debugging printouts.
++    @type debug:            bool
++    @return:                The formatted table.
++    @rtype:                 str
+     &quot;&quot;&quot;
+ 
+     # Initialise some variables.
+@@ -215,8 +228,8 @@
+     justification_contents = deepcopy(contents)
+ 
+     # Convert all data to strings.
+-    _convert_to_string(data=headings, justification=justification_headings)
+-    _convert_to_string(data=contents, justification=justification_contents)
++    _convert_to_string(data=headings, justification=justification_headings, 
+custom_format=custom_format)
++    _convert_to_string(data=contents, justification=justification_contents, 
+custom_format=custom_format)
+ 
+     # Initialise the pre-wrapping column widths.
+     prewrap_widths = [0] * num_cols
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Mar 08 15:40:02 2013</div>  
+</body>
+</html>

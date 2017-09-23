@@ -1,0 +1,282 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r19455 &#45; /branches/relax_disp/auto_analyses/relax_disp.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 11 Apr 2013 14:10:29 +0200 -->
+<!--X-Message-Id: E1UQGKj&#45;0007zV&#45;1j@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r19455 - /branches/relax_disp/auto_analyses/relax_disp.py -- April 11, 2013 - 14:10</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r19455 - /branches/relax_disp/auto_analyses/relax_disp.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00174" class="tabs">Index by Date</a> | <a href="threads.html#00174" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00173.html">Date Prev</a>] [<a href="msg00175.html">Date Next</a>] [<a href="msg00173.html">Thread Prev</a>] [<a href="msg00175.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 11 Apr 2013 12:10:29 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00174.html">E1UQGKj-0007zV-1j@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on April 11, 2013 - 14:10:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Apr 11 14:10:28 2013
+New Revision: 19455
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=19455&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=19455&amp;view=rev</a>
+Log:
+Created a basic initial auto-analysis script for relaxation dispersion.
+
+This currently only supports the optimisation of the 'exp_fit' diffusion 
+model, but has all of the
+infrastructure set up to make it easy to add other models.
+
+
+Added:
+    branches/relax_disp/auto_analyses/relax_disp.py
+
+Added: branches/relax_disp/auto_analyses/relax_disp.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/auto_analyses/relax_disp.py?rev=19455&amp;view=auto">http://svn.gna.org/viewcvs/relax/branches/relax_disp/auto_analyses/relax_disp.py?rev=19455&amp;view=auto</a>
+==============================================================================
+--- branches/relax_disp/auto_analyses/relax_disp.py (added)
++++ branches/relax_disp/auto_analyses/relax_disp.py Thu Apr 11 14:10:28 2013
+@@ -1,0 +1,149 @@
++###############################################################################
++#                                                                            
+ #
++# Copyright (C) 2013 Edward d'Auvergne                                       
+ #
++#                                                                            
+ #
++# This file is part of the program relax (<a  rel="nofollow" href="http://www.nmr-relax.com">http://www.nmr-relax.com</a>).         
+ #
++#                                                                            
+ #
++# This program is free software: you can redistribute it and/or modify       
+ #
++# it under the terms of the GNU General Public License as published by       
+ #
++# the Free Software Foundation, either version 3 of the License, or          
+ #
++# (at your option) any later version.                                        
+ #
++#                                                                            
+ #
++# This program is distributed in the hope that it will be useful,            
+ #
++# but WITHOUT ANY WARRANTY; without even the implied warranty of             
+ #
++# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the              
+ #
++# GNU General Public License for more details.                               
+ #
++#                                                                            
+ #
++# You should have received a copy of the GNU General Public License          
+ #
++# along with this program.  If not, see &lt;<a  rel="nofollow" href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.      
+ #
++#                                                                            
+ #
++###############################################################################
++
++# Module docstring.
++&quot;&quot;&quot;The automatic relaxation dispersion protocol.&quot;&quot;&quot;
++
++# Python module imports.
++from os import getcwd, sep
++import sys
++
++# relax module imports.
++from lib.text.sectioning import title, subtitle
++from pipe_control.pipes import has_pipe
++from prompt.interpreter import Interpreter
++from status import Status; status = Status()
++
++
++class Relax_disp:
++    def __init__(self, pipe_name=None, pipe_bundle=None, results_dir=None, 
+models=['exp_fit'], grid_inc=11, mc_sim_num=500):
++        &quot;&quot;&quot;Perform a full relaxation dispersion analysis for the given list 
+of models.
++
++        @keyword pipe_name:     The name of the data pipe containing all of 
+the data for the analysis.
++        @type pipe_name:        str
++        @keyword pipe_bundle:   The data pipe bundle to associate all 
+spawned data pipes with.
++        @type pipe_bundle:      str
++        @keyword results_dir:   The directory where results files are saved.
++        @type results_dir:      str
++        @keyword models:        The list of relaxation dispersion models to 
+optimise.
++        @type models:           list of str
++        @keyword grid_inc:      Number of grid search increments.
++        @type grid_inc:         int
++        @keyword mc_sim_num:    The number of Monte Carlo simulations to be 
+used for error analysis at the end of the analysis.
++        @type mc_sim_num:       int
++        &quot;&quot;&quot;
++
++        # Printout.
++        title(file=sys.stdout, text=&quot;Relaxation dispersion auto-analysis&quot;)
++
++        # Execution lock.
++        status.exec_lock.acquire(pipe_bundle, mode='auto-analysis')
++
++        # Set up the analysis status object.
++        status.init_auto_analysis(pipe_bundle, type='relax_disp')
++        status.current_analysis = pipe_bundle
++
++        # Store the args.
++        self.pipe_name = pipe_name
++        self.pipe_bundle = pipe_bundle
++        self.results_dir = results_dir
++        self.models = models
++        self.grid_inc = grid_inc
++        self.mc_sim_num = mc_sim_num
++
++        # No results directory, so default to the current directory.
++        if not self.results_dir:
++            self.results_dir = getcwd()
++
++        # Data checks.
++        self.check_vars()
++
++        # Load the interpreter.
++        self.interpreter = Interpreter(show_script=False, quit=False, 
+raise_relax_error=True)
++        self.interpreter.populate_self()
++        self.interpreter.on(verbose=False)
++
++        # Execute.
++        self.run()
++
++        # Finish and unlock execution.
++        status.auto_analysis[self.pipe_bundle].fin = True
++        status.current_analysis = None
++        status.exec_lock.release()
++
++
++    def check_vars(self):
++        &quot;&quot;&quot;Check that the user has set the variables correctly.&quot;&quot;&quot;
++
++        # The pipe name.
++        if not has_pipe(self.pipe_name):
++            raise RelaxNoPipeError(self.pipe_name)
++
++
++    def exponential_fit(self):
++        &quot;&quot;&quot;Optimise the simple exponential fit relaxation dispersion 
+model.&quot;&quot;&quot;
++
++        # Printout.
++        subtitle(file=sys.stdout, text=&quot;Simple exponential curve-fitting&quot;)
++
++        # Create the data pipe by copying the base pipe.o
++        self.interpreter.pipe.copy(pipe_from=self.pipe_name, 
+pipe_to='exp_fit', bundle_to=self.pipe_bundle)
++
++        # Grid search.
++        self.interpreter.grid_search(inc=self.grid_inc)
++
++        # Minimise.
++        self.interpreter.minimise('simplex', constraints=False)
++
++        # Monte Carlo simulations.
++        self.interpreter.monte_carlo.setup(number=self.mc_sim_num)
++        self.interpreter.monte_carlo.create_data()
++        self.interpreter.monte_carlo.initial_values()
++        self.interpreter.minimise('simplex', constraints=False)
++        self.interpreter.monte_carlo.error_analysis()
++
++        # Write out the results.
++        self.write_results()
++
++
++    def run(self):
++        &quot;&quot;&quot;Execute the auto-analysis.&quot;&quot;&quot;
++
++        # First optimise the exponential curves to obtain the initial R2eff 
+values for all other models.
++        self.exponential_fit()
++
++
++    def write_results(self):
++        &quot;&quot;&quot;Create a set of results, text and Grace files for the current 
+data pipe.&quot;&quot;&quot;
++
++        # The directory name.
++        path = self.results_dir + sep + cdp.model
++
++        # Save the results.
++        self.interpreter.results.write(file='results', dir=path, force=True)
++
++        # Save the relaxation dispersion parameters.
++        self.interpreter.value.write(param='rex', file='rex.out', dir=path, 
+force=True)
++
++        # Create Grace plots of the data.
++        self.interpreter.grace.write(y_data_type='chi2', file='chi2.agr', 
+dir=path, force=True)
++        self.interpreter.grace.write(x_data_type='res_num', 
+y_data_type='r2eff', file='r2eff.agr', dir=path, force=True)
++        self.interpreter.grace.write(x_data_type='spin_lock_nu1', 
+y_data_type='r2eff', file='dispersion_curves.agr', dir=path, force=True)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Apr 11 14:20:01 2013</div>  
+</body>
+</html>

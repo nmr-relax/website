@@ -1,0 +1,161 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r24480 &#45; /branches/frame_order_cleanup/target_functions/frame_order.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 08 Jul 2014 14:21:24 +0200 -->
+<!--X-Message-Id: E1X4UOh&#45;0002qs&#45;U6@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r24480 - /branches/frame_order_cleanup/target_functions/frame_order.py -- July 08, 2014 - 14:21</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r24480 - /branches/frame_order_cleanup/target_functions/frame_order.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00114" class="tabs">Index by Date</a> | <a href="threads.html#00114" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00113.html">Date Prev</a>] [<a href="msg00115.html">Date Next</a>] [<a href="msg00113.html">Thread Prev</a>] [<a href="msg00115.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 08 Jul 2014 12:21:23 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00114.html">E1X4UOh-0002qs-U6@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on July 08, 2014 - 14:21:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Jul  8 14:21:23 2014
+New Revision: 24480
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=24480&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=24480&amp;view=rev</a>
+Log:
+Speed up of the PCS component of the rigid frame order model.
+
+The lanthanide to atom vectors are now being calculated outside of the 
+alignment tensor and spin
+loops, as well as the inverse vector lengths to the 5th power.  This 
+increases the speed by a factor
+of 1.216 (from 38.133 to 31.368 seconds for 23329 calls of the func_rigid() 
+target function).
+
+
+Modified:
+    branches/frame_order_cleanup/target_functions/frame_order.py
+
+Modified: branches/frame_order_cleanup/target_functions/frame_order.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/target_functions/frame_order.py?rev=24480&amp;r1=24479&amp;r2=24480&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/target_functions/frame_order.py?rev=24480&amp;r1=24479&amp;r2=24480&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/target_functions/frame_order.py        
+(original)
++++ branches/frame_order_cleanup/target_functions/frame_order.py        Tue 
+Jul  8 14:21:23 2014
+@@ -1011,10 +1011,6 @@
+         # Pre-transpose matrices for faster calculations.
+         RT_ave = transpose(self.R_ave)
+ 
+-        # Pre-calculate all the necessary vectors.
+-        if self.pcs_flag:
+-            self.calc_vectors(pivot=self.pivot, R_ave=self.R_ave, 
+RT_ave=RT_ave)
+-
+         # Initial chi-squared (or SSE) value.
+         chi2_sum = 0.0
+ 
+@@ -1033,6 +1029,17 @@
+ 
+         # PCS.
+         if self.pcs_flag:
++            # Pre-calculate all the necessary vectors.
++            self.calc_vectors(pivot=self.pivot, R_ave=self.R_ave, 
+RT_ave=RT_ave)
++            r_ln_atom = self.r_ln_pivot + self.r_pivot_atom
++            if min(self.full_in_ref_frame) == 0:
++                r_ln_atom_rev = self.r_ln_pivot + self.r_pivot_atom_rev
++
++            # The vector length (to the inverse 5th power).
++            length = 1.0 / norm(r_ln_atom, axis=1)**5
++            if min(self.full_in_ref_frame) == 0:
++                length_rev = 1.0 / norm(r_ln_atom, axis=1)**5
++
+             # Loop over each alignment.
+             for align_index in range(self.num_align):
+                 # Loop over the PCSs.
+@@ -1041,14 +1048,14 @@
+                     if not self.missing_pcs[align_index, j]:
+                         # Forwards and reverse rotations.
+                         if self.full_in_ref_frame[align_index]:
+-                            r_pivot_atom = self.r_pivot_atom[j]
++                            r_ln_atom_i = r_ln_atom[j]
++                            length_i = length[j]
+                         else:
+-                            r_pivot_atom = self.r_pivot_atom_rev[j]
++                            r_ln_atom_i = r_ln_atom_rev[j]
++                            length_i = length_rev[j]
+ 
+                         # The PCS calculation.
+-                        vect = self.r_ln_pivot[0] + r_pivot_atom
+-                        length = norm(vect)
+-                        self.pcs_theta[align_index, j] = 
+pcs_tensor(self.pcs_const[align_index, j] / length**5, vect, 
+self.A_3D[align_index])
++                        self.pcs_theta[align_index, j] = 
+pcs_tensor(self.pcs_const[align_index, j] * length_i, r_ln_atom_i, 
+self.A_3D[align_index])
+ 
+                 # Calculate and sum the single alignment chi-squared value 
+(for the PCS).
+                 chi2_sum = chi2_sum + chi2(self.pcs[align_index], 
+self.pcs_theta[align_index], self.pcs_error[align_index])
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Jul 08 16:00:02 2014</div>  
+</body>
+</html>

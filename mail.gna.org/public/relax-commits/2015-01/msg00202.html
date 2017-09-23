@@ -1,0 +1,323 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r27356 &#45; /trunk/lib/sequence_alignment/msa.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 29 Jan 2015 15:48:35 +0100 -->
+<!--X-Message-Id: E1YGqOZ&#45;00077U&#45;7J@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r27356 - /trunk/lib/sequence_alignment/msa.py -- January 29, 2015 - 15:48</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r27356 - /trunk/lib/sequence_alignment/msa.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00202" class="tabs">Index by Date</a> | <a href="threads.html#00202" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00201.html">Date Prev</a>] [<a href="msg00203.html">Date Next</a>] [<a href="msg00201.html">Thread Prev</a>] [<a href="msg00203.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 29 Jan 2015 14:48:35 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00202.html">E1YGqOZ-00077U-7J@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on January 29, 2015 - 15:48:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Jan 29 15:48:34 2015
+New Revision: 27356
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=27356&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=27356&amp;view=rev</a>
+Log:
+Complete implementation of the central star multiple sequence alignment 
+algorithm.
+
+This includes all the four major steps - pairwise alignment between all 
+sequence pairs, finding the
+central sequence, iteratively aligning the sequences to the gapped central 
+sequence, and introducing
+gaps in previous alignments during the iterative alignment.
+
+The correctness of the implementation is verified by the 
+Test_msa.test_central_star unit test of the
+_lib._sequence_alignment.test_msa module.
+
+
+Modified:
+    trunk/lib/sequence_alignment/msa.py
+
+Modified: trunk/lib/sequence_alignment/msa.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/lib/sequence_alignment/msa.py?rev=27356&amp;r1=27355&amp;r2=27356&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/lib/sequence_alignment/msa.py?rev=27356&amp;r1=27355&amp;r2=27356&amp;view=diff</a>
+==============================================================================
+--- trunk/lib/sequence_alignment/msa.py (original)
++++ trunk/lib/sequence_alignment/msa.py Thu Jan 29 15:48:34 2015
+@@ -23,13 +23,11 @@
+ &quot;&quot;&quot;Multiple sequence alignment (MSA) algorithms.&quot;&quot;&quot;
+ 
+ # Python module imports.
+-from numpy import int16, zeros
++from numpy import float64, int16, zeros
+ import sys
+ 
+ # relax module imports.
+-from lib.errors import RelaxError
+-from lib.sequence_alignment.needleman_wunsch import needleman_wunsch_align
+-from lib.sequence_alignment.substitution_matrices import BLOSUM62, 
+BLOSUM62_SEQ, PAM250, PAM250_SEQ
++from lib.sequence_alignment.align_protein import align_pairwise
+ 
+ 
+ def central_star(sequences, algorithm='NW70', matrix='BLOSUM62', 
+gap_open_penalty=1.0, gap_extend_penalty=1.0, end_gap_open_penalty=0.0, 
+end_gap_extend_penalty=0.0):
+@@ -49,75 +47,114 @@
+     @type end_gap_open_penalty:         float
+     @keyword end_gap_extend_penalty:    The optional penalty for extending a 
+gap at the end of a sequence.
+     @type end_gap_extend_penalty:       float
+-    @return:                            The two alignment strings and the 
+gap matrix.
+-    @rtype:                             str, str, numpy rank-2 int array
++    @return:                            The list of alignment strings and 
+the gap matrix.
++    @rtype:                             list of str, numpy rank-2 int array
+     &quot;&quot;&quot;
+ 
+-    # The pairwise alignments.
++    # Initialise.
+     N = len(sequences)
+-    align1_list = []
+-    align2_list = []
+-    gap_list = []
++    scores = zeros((N, N), float64)
++
++    # Set up lists of lists for storing all alignment strings.
++    align1_matrix = []
++    align2_matrix = []
+     for i in range(N):
+-        # Pairwise alignment.
+-        align1, align2, gaps = align_pairwise(reference_sequence, 
+sequences[i], algorithm=algorithm, matrix=matrix, 
+gap_open_penalty=gap_open_penalty, gap_extend_penalty=gap_extend_penalty, 
+end_gap_open_penalty=end_gap_open_penalty, 
+end_gap_extend_penalty=end_gap_extend_penalty)
++        align1_matrix.append([])
++        align2_matrix.append([])
++        for j in range(N):
++            if i == j:
++                align1_matrix[i].append(sequences[i])
++                align2_matrix[i].append(sequences[i])
++            else:
++                align1_matrix[i].append(None)
++                align2_matrix[i].append(None)
+ 
+-        # Store the results.
+-        align1_list.append(align1)
+-        align2_list.append(align2)
+-        gap_list.append(gaps)
++    # Printout.
++    sys.stdout.write(&quot;Central Star multiple sequence alignment.\n\n&quot;)
++    sys.stdout.write(&quot;%-30s %s\n&quot; % (&quot;Pairwise algorithm:&quot;, algorithm))
++    sys.stdout.write(&quot;%-30s %s\n&quot; % (&quot;Substitution matrix:&quot;, matrix))
++    sys.stdout.write(&quot;%-30s %s\n&quot; % (&quot;Gap opening penalty:&quot;, 
+gap_open_penalty))
++    sys.stdout.write(&quot;%-30s %s\n&quot; % (&quot;Gap extend penalty:&quot;, 
+gap_extend_penalty))
++    sys.stdout.write(&quot;Initial sequences:\n&quot;)
++    for i in range(N):
++        sys.stdout.write(&quot;%3i %s\n&quot; % (i+1, sequences[i]))
+ 
+-    # Convert all sequence strings to lists.
+-    ref_list = list(reference_sequence)
+-    seq_list = []
++    # All pairwise alignments.
++    sys.stdout.write(&quot;\nDetermining the scores for all pairwise 
+alignments:\n&quot;)
+     for i in range(N):
+-        seq_list.append(list(sequences[i]))
++        for j in range(i+1, N):
++            # Align the pair.
++            sys.stdout.write(&quot;%-30s &quot; % (&quot;Sequences %i-%i:&quot; % (i+1, j+1)))
++            score, align1, align2, gaps = align_pairwise(sequences[i], 
+sequences[j], algorithm=algorithm, matrix=matrix, 
+gap_open_penalty=gap_open_penalty, gap_extend_penalty=gap_extend_penalty, 
+end_gap_open_penalty=end_gap_open_penalty, 
+end_gap_extend_penalty=end_gap_extend_penalty, verbosity=0)
++            sys.stdout.write(&quot;%10.1f\n&quot; % score)
+ 
+-    # Loop over the alignment elements.
++            # Store the score and alignment strings.
++            scores[i, j] = scores[j, i] = score
++            align1_matrix[i][j] = align1_matrix[j][i] = align1
++            align2_matrix[i][j] = align2_matrix[j][i] = align2
++
++    # The central sequence.
++    sys.stdout.write(&quot;\nDetermining the central sequence:\n&quot;)
++    sum_scores = scores.sum(0)
++    Sc_sum_score = 1e100
++    Sc_index = 0
++    for i in range(N):
++        if sum_scores[i] &lt; Sc_sum_score:
++            Sc_sum_score = sum_scores[i]
++            Sc_index = i
++        sys.stdout.write(&quot;%-30s %10.1f\n&quot; % ((&quot;Sum of scores, sequence %i:&quot; 
+% (i+1)), sum_scores[i]))
++    sys.stdout.write(&quot;%-30s %i\n&quot; % (&quot;Central sequence:&quot;, Sc_index+1))
++
++    # Partition the sequences.
++    Sc = sequences[Sc_index]
++    Si = []
++    for i in range(N):
++        if i != Sc_index:
++            Si.append(sequences[i])
++
++    # Optimal alignments.
++    sys.stdout.write(&quot;\nDetermining the iterative optimal alignments:\n&quot;)
++    Sc_prime = Sc
++    string_lists = []
++    for i in range(N-1):
++        # Update the string lists.
++        string_lists.append([])
++
++        # Perform the pairwise alignment between Sc' and Si, replacing all 
+'-' with 'X'.
++        score, Sc_prime, Si_prime, gaps = 
+align_pairwise(Sc_prime.replace('-', 'X'), Si[i].replace('-', 'X'), 
+algorithm=algorithm, matrix=matrix, gap_open_penalty=gap_open_penalty, 
+gap_extend_penalty=gap_extend_penalty, 
+end_gap_open_penalty=end_gap_open_penalty, 
+end_gap_extend_penalty=end_gap_extend_penalty, verbosity=0)
++        sys.stdout.write(&quot;\n%-30s %s\n&quot; % (&quot;Sequence Sc':&quot;, 
+Sc_prime.replace('X', '-')))
++        sys.stdout.write(&quot;%-30s %s\n&quot; % ((&quot;Sequence S%i':&quot; % (i+1)), 
+Si_prime.replace('X', '-')))
++
++        # Store the Si alignment.
++        for j in range(len(Sc_prime)):
++            string_lists[i].append(Si_prime[j])
++
++        # Add spaces to the lists for all previous alignments.
++        else:
++            # Find gaps in the central sequence.
++            for j in range(len(Sc_prime)):
++                if Sc_prime[j] == '-':
++                    # Pad the previous alignments.
++                    for k in range(0, i):
++                        string_lists[k].insert(j, '-')
++
++    # Rebuild the alignment lists and create a gap matrix.
+     strings = []
+-    index = -1
+-    offsets = zeros(N, int16)
+-    while 1:
+-        # Increment the index.
+-        index += 1
+-        print &quot;\nIndex %i&quot; % index
++    M = len(Sc_prime)
++    gaps = zeros((N, M), int16)
++    strings.append(Sc_prime)
++    for i in range(N-1):
++        strings.append(''.join(string_lists[i]))
++    for i in range(N):
++        strings[i] = strings[i].replace('X', '-')
++        for j in range(M):
++            if strings[i][j] == '-':
++                gaps[i, j] = 1
+ 
+-        # Termination condition.
+-        term = True
+-        for i in range(N):
+-            if index + offsets[i] &lt; len(gap_list[i][0]):
+-                term = False
+-            else:
+-                print &quot;    At end in %i&quot; % i
+-        if term:
+-            break
+-
+-        # A gap in one of the references.
+-        gap = False
+-        for i in range(N):
+-            if index + offsets[i] &gt;= len(gap_list[i][0]) or gap_list[i][0, 
+index]:
+-                print &quot;    Gap in %i&quot; % i
+-                offsets[i] += 1
+-                gap = True
+-        print &quot;    New offsets %s&quot; % offsets
+-
+-        # No reference gap.
+-        if not gap:
+-            print &quot;    No ref gap.&quot;
+-            continue
+-
+-        # Insert the gap into the reference list.
+-        print &quot;    Inserting gap into ref list at %i&quot; % index
+-        ref_list.insert(index, '-')
+-
++    # Final printout.
++    sys.stdout.write(&quot;\nFinal MSA:\n&quot;)
+     for i in range(N):
+-        seq = ''.join(seq_list[i])
+-        strings.append(seq)
+-
+-    ref = ''.join(ref_list)
+-
+-    print ref_list
+-    print seq_list
++        sys.stdout.write(&quot;%3i %s\n&quot; % (i+1, strings[i]))
+ 
+     # Return the results.
+-    return [ref] + strings, gap_list
++    return strings, gaps
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Jan 29 16:00:02 2015</div>  
+</body>
+</html>

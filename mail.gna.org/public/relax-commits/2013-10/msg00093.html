@@ -1,0 +1,250 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r21099 &#45; /trunk/pipe_control/minimise.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 14 Oct 2013 20:18:14 +0200 -->
+<!--X-Message-Id: E1VVmic&#45;0004X3&#45;AL@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r21099 - /trunk/pipe_control/minimise.py -- October 14, 2013 - 20:18</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r21099 - /trunk/pipe_control/minimise.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00093" class="tabs">Index by Date</a> | <a href="threads.html#00093" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00092.html">Date Prev</a>] [<a href="msg00094.html">Date Next</a>] [<a href="msg00092.html">Thread Prev</a>] [<a href="msg00094.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 14 Oct 2013 18:18:14 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00093.html">E1VVmic-0004X3-AL@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on October 14, 2013 - 20:18:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Mon Oct 14 20:18:11 2013
+New Revision: 21099
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=21099&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=21099&amp;view=rev</a>
+Log:
+Modified the Monte Carlo simulation printout behaviour for the minimisation 
+related user functions.
+
+This is to help in fixing bug #21190 (<a  rel="nofollow" href="https://gna.org/bugs/?21190">https://gna.org/bugs/?21190</a>).
+
+This includes the calculate, grid_search, and minimise user functions.  The 
+new multi-processor
+is_queued() method is used to determine if the optimisation code of the 
+specific analysis has queued
+rather than run the calculations.  If queued, the 'Simulation X' text will 
+not be printed out.  This
+avoids printing out all the text at the start before anything has happened.  
+The specific
+multi-processor optimisation code must provide it's own printouts when each 
+calculation is complete.
+
+
+Modified:
+    trunk/pipe_control/minimise.py
+
+Modified: trunk/pipe_control/minimise.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/pipe_control/minimise.py?rev=21099&amp;r1=21098&amp;r2=21099&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/pipe_control/minimise.py?rev=21099&amp;r1=21098&amp;r2=21099&amp;view=diff</a>
+==============================================================================
+--- trunk/pipe_control/minimise.py (original)
++++ trunk/pipe_control/minimise.py Mon Oct 14 20:18:11 2013
+@@ -54,14 +54,14 @@
+     # Deselect spins lacking data:
+     overfit_deselect()
+ 
++    # Get the Processor box singleton (it contains the Processor instance) 
+and alias the Processor.
++    processor_box = Processor_box() 
++    processor = processor_box.processor
++
+     # Monte Carlo simulation calculation.
+     if hasattr(cdp, 'sim_state') and cdp.sim_state == 1:
+         # Loop over the simulations.
+         for i in range(cdp.sim_number):
+-            # Print out.
+-            if verbosity:
+-                print(&quot;Simulation &quot; + repr(i+1))
+-
+             # Status.
+             if status.current_analysis:
+                 status.auto_analysis[status.current_analysis].mc_number = i
+@@ -70,6 +70,10 @@
+ 
+             # Calculation.
+             calculate(verbosity=verbosity-1, sim_index=i)
++
++            # Print out.
++            if verbosity and not processor.is_queued():
++                print(&quot;Simulation &quot; + repr(i+1))
+ 
+         # Unset the status.
+         if status.current_analysis:
+@@ -80,10 +84,6 @@
+     # Minimisation.
+     else:
+         calculate(verbosity=verbosity)
+-
+-    # Get the Processor box singleton (it contains the Processor instance) 
+and alias the Processor.
+-    processor_box = Processor_box() 
+-    processor = processor_box.processor
+ 
+     # Execute any queued commands.
+     processor.run_queue()
+@@ -120,14 +120,14 @@
+     # Deselect spins lacking data:
+     overfit_deselect()
+ 
++    # Get the Processor box singleton (it contains the Processor instance) 
+and alias the Processor.
++    processor_box = Processor_box() 
++    processor = processor_box.processor
++
+     # Monte Carlo simulation grid search.
+     if hasattr(cdp, 'sim_state') and cdp.sim_state == 1:
+         # Loop over the simulations.
+         for i in range(cdp.sim_number):
+-            # Print out.
+-            if verbosity:
+-                print(&quot;Simulation &quot; + repr(i+1))
+-
+             # Status.
+             if status.current_analysis:
+                 status.auto_analysis[status.current_analysis].mc_number = i
+@@ -136,6 +136,10 @@
+ 
+             # Optimisation.
+             grid_search(lower=lower, upper=upper, inc=inc, 
+constraints=constraints, verbosity=verbosity-1, sim_index=i)
++
++            # Print out.
++            if verbosity and not processor.is_queued():
++                print(&quot;Simulation &quot; + repr(i+1))
+ 
+         # Unset the status.
+         if status.current_analysis:
+@@ -146,10 +150,6 @@
+     # Grid search.
+     else:
+         grid_search(lower=lower, upper=upper, inc=inc, 
+constraints=constraints, verbosity=verbosity)
+-
+-    # Get the Processor box singleton (it contains the Processor instance) 
+and alias the Processor.
+-    processor_box = Processor_box() 
+-    processor = processor_box.processor
+ 
+     # Execute any queued commands.
+     processor.run_queue()
+@@ -209,6 +209,10 @@
+     # Deselect spins lacking data:
+     overfit_deselect()
+ 
++    # Get the Processor box singleton (it contains the Processor instance) 
+and alias the Processor.
++    processor_box = Processor_box() 
++    processor = processor_box.processor
++
+     # Single Monte Carlo simulation.
+     if sim_index != None:
+         minimise(min_algor=min_algor, min_options=min_options, 
+func_tol=func_tol, grad_tol=grad_tol, max_iterations=max_iter, 
+constraints=constraints, scaling=scaling, verbosity=verbosity, 
+sim_index=sim_index)
+@@ -216,10 +220,6 @@
+     # Monte Carlo simulation minimisation.
+     elif hasattr(cdp, 'sim_state') and cdp.sim_state == 1:
+         for i in range(cdp.sim_number):
+-            # Print out.
+-            if verbosity:
+-                print(&quot;Simulation &quot; + repr(i+1))
+-
+             # Status.
+             if status.current_analysis:
+                 status.auto_analysis[status.current_analysis].mc_number = i
+@@ -228,6 +228,10 @@
+ 
+             # Optimisation.
+             minimise(min_algor=min_algor, min_options=min_options, 
+func_tol=func_tol, grad_tol=grad_tol, max_iterations=max_iter, 
+constraints=constraints, scaling=scaling, verbosity=verbosity-1, sim_index=i)
++
++            # Print out.
++            if verbosity and not processor.is_queued():
++                print(&quot;Simulation &quot; + repr(i+1))
+ 
+         # Unset the status.
+         if status.current_analysis:
+@@ -238,10 +242,6 @@
+     # Standard minimisation.
+     else:
+         minimise(min_algor=min_algor, min_options=min_options, 
+func_tol=func_tol, grad_tol=grad_tol, max_iterations=max_iter, 
+constraints=constraints, scaling=scaling, verbosity=verbosity)
+-
+-    # Get the Processor box singleton (it contains the Processor instance) 
+and alias the Processor.
+-    processor_box = Processor_box() 
+-    processor = processor_box.processor
+ 
+     # Execute any queued commands.
+     processor.run_queue()
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Oct 14 20:20:05 2013</div>  
+</body>
+</html>

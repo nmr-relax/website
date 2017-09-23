@@ -1,0 +1,293 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r8055 &#45; /branches/spectral_errors/generic_fns/spectrum.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 28 Nov 2008 18:02:42 +0100 -->
+<!--X-Message-Id: E1L66jq&#45;0002wD&#45;UL@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r8055 - /branches/spectral_errors/generic_fns/spectrum.py -- November 28, 2008 - 18:02</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r8055 - /branches/spectral_errors/generic_fns/spectrum.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00085" class="tabs">Index by Date</a> | <a href="threads.html#00085" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00084.html">Date Prev</a>] [<a href="msg00086.html">Date Next</a>] [<a href="msg00084.html">Thread Prev</a>] [<a href="msg00086.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 28 Nov 2008 17:02:42 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00085.html">E1L66jq-0002wD-UL@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on November 28, 2008 - 18:02:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Nov 28 18:02:42 2008
+New Revision: 8055
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=8055&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=8055&amp;view=rev</a>
+Log:
+Started to implement the __errors_repl() function.
+
+This is a highly modified form of the relaxation curve-fitting 
+mean_and_error() method.
+
+
+Modified:
+    branches/spectral_errors/generic_fns/spectrum.py
+
+Modified: branches/spectral_errors/generic_fns/spectrum.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/spectral_errors/generic_fns/spectrum.py?rev=8055&amp;r1=8054&amp;r2=8055&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/spectral_errors/generic_fns/spectrum.py?rev=8055&amp;r1=8054&amp;r2=8055&amp;view=diff</a>
+==============================================================================
+--- branches/spectral_errors/generic_fns/spectrum.py (original)
++++ branches/spectral_errors/generic_fns/spectrum.py Fri Nov 28 18:02:42 2008
+@@ -28,12 +28,12 @@
+ # Python module imports.
+ from math import sqrt
+ from re import split
+-from warnings import warn
+ import string
+ import sys
++from warnings import warn
+ 
+ # relax module imports.
+-from generic_fns.mol_res_spin import exists_mol_res_spin_data, 
+generate_spin_id, return_spin, spin_loop
++from generic_fns.mol_res_spin import count_spins, exists_mol_res_spin_data, 
+generate_spin_id, return_spin, spin_loop
+ from generic_fns import pipes
+ from relax_errors import RelaxError, RelaxArgNotInListError, 
+RelaxImplementError, RelaxNoSequenceError
+ from relax_io import extract_data, strip
+@@ -59,6 +59,150 @@
+ 
+         # Set the error to the RMSD.
+         spin.intensity_err = spin.baseplane_rmsd
++
++
++def __errors_repl(verbosity=0):
++    &quot;&quot;&quot;Calculate the errors for peak intensities from replicated spectra.
++
++    @keyword verbosity: The amount of information to print.  The higher the 
+value, the greater the
++                        verbosity.
++    @type verbosity:    int
++    &quot;&quot;&quot;
++
++    # Get the current data pipe.
++    cdp = pipes.get_pipe()
++
++    # replicated spectra.
++    repl = [False] * len(cdp.spectrum_ids)
++    for i in xrange(len(cdp.replicates)):
++        for j in xrange(len(cdp.replicates[i])):
++            repl[cdp.spectrum_ids.index(cdp.replicates[i][j])] = True
++
++    # Are all spectra replicated?
++    all_repl = not (False in repl)
++    if all_repl:
++        print &quot;All spectra replicated:  Yes.&quot;
++    else:
++        print &quot;All spectra replicated:  No.&quot;
++
++
++    # Test if the standard deviation has already been calculated.
++    if hasattr(cdp, 'sigma_I'):
++        raise RelaxError, &quot;The peak intensity standard deviation of all 
+spectra has already been calculated.&quot;
++
++    # Print out.
++    print &quot;\nCalculating peak intensity standard deviation of all replicated 
+spectra.&quot;
++
++    # Initialise.
++    cdp.sigma_I = [0.0] * len(cdp.spectrum_ids)
++    cdp.var_I = [0.0] * len(cdp.spectrum_ids)
++
++    # Loop over the spectra.
++    for i in xrange(len(cdp.spectrum_ids)):
++        # Skip non-replicated spectra.
++        if not repl[i]:
++            continue
++
++        # Skip replicated spectra which already have been used.
++        if cdp.var_I[i] != 0.0:
++            continue
++
++        # The replicated spectra.
++        for j in xrange(len(cdp.replicates)):
++            if cdp.spectrum_ids[i] in cdp.replicates[j]:
++                spectra = cdp.replicates[j]
++
++        # Number of spectra.
++        num_spectra = len(spectra)
++
++        # Indices of the spectra.
++        indices = [None] * num_spectra
++        for j in xrange(num_spectra):
++            indices[j] = cdp.spectrum_ids.index(spectra[j])
++
++        # Print out.
++        print &quot;\nSpectra:  &quot; + `spectra`
++        if verbosity:
++            print &quot;%-5s%-6s%-20s%-20s&quot; % (&quot;Num&quot;, &quot;Name&quot;, &quot;Average&quot;, &quot;SD&quot;)
++
++        # Calculate the mean value.
++        for spin in spin_loop():
++            # Skip deselected spins.
++            if not spin.select:
++                continue
++
++            # Skip and deselect spins which have no data.
++            if not hasattr(spin, 'intensities'):
++                spin.select = False
++                continue
++
++            # Average intensity.
++            ave_intensity = 0.0
++            for j in xrange(num_spectra):
++                ave_intensity = ave_intensity + spin.intensities[indices[j]]
++            ave_intensity = ave_intensity / num_spectra
++
++            # Sum of squared errors.
++            SSE = 0.0
++            for j in xrange(num_spectra):
++                SSE = SSE + (spin.intensities[indices[j]] - ave_intensity) 
+** 2
++
++            # Variance.
++            #
++            #                   1
++            #       sigma^2 = ----- * sum({Xi - Xav}^2)]
++            #                 n - 1
++            #
++            var_I = 1.0 / (num_spectra - 1.0) * SSE
++
++            # Print out.
++            if verbosity:
++                print &quot;%-5i%-6s%-20s%-20s&quot; % (spin.num, spin.name, 
+`ave_intensity`, `var_I`)
++
++            # Sum of variances (for average).
++            cdp.var_I[indices[0]] = cdp.var_I[indices[0]] + var_I
++
++        # Average variance.
++        cdp.var_I[indices[0]] = cdp.var_I[indices[0]] / float(count_spins())
++
++        # Set all spectra variances.
++        for j in xrange(num_spectra):
++            cdp.var_I[indices[j]] = cdp.var_I[indices[0]]
++
++        # Print out.
++        print &quot;Standard deviation:  %s&quot; % sqrt(cdp.var_I[indices[0]])
++
++
++    # Average across all spectra if there are time points with a single 
+spectrum.
++    if not all_repl:
++        # Initialise.
++        var_I = 0.0
++        num_dups = 0
++
++        # Loop over all time points.
++        for i in xrange(len(cdp.relax_times)):
++            # Single spectrum (or extraordinarily accurate NMR spectra!).
++            if cdp.var_I[i] == 0.0:
++                continue
++
++            # Sum and count.
++            var_I = var_I + cdp.var_I[i]
++            num_dups = num_dups + 1
++
++        # Average value.
++        var_I = var_I / float(num_dups)
++
++        # Assign the average value to all time points.
++        for i in xrange(len(cdp.relax_times)):
++            cdp.var_I[i] = var_I
++
++        # Print out.
++        print &quot;\nStandard deviation (averaged over all spectra):  &quot; + `var_I`
++
++    # Create the standard deviation data structure.
++    cdp.sigma_I = []
++    for var_I in cdp.var_I:
++        cdp.sigma_I.append(sqrt(var_I))
+ 
+ 
+ def __errors_volume_no_repl():
+@@ -223,7 +367,9 @@
+         if hasattr(cdp, 'replicates'):
+             # Print out.
+             print &quot;Replicated spectra:  Yes.&quot;
+-            raise RelaxImplementError
++
++            # Set the errors.
++            __errors_repl()
+ 
+         # No replicated spectra.
+         else:
+@@ -250,7 +396,7 @@
+             print &quot;Replicated spectra:  No.&quot;
+ 
+             # Set the errors.
+-            __errors_volume_no_repl()
++            __errors_repl()
+ 
+ 
+ def intensity_generic(line, int_col):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Sat Nov 29 13:00:04 2008</div>  
+</body>
+</html>

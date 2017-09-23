@@ -1,0 +1,173 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r21025 &#45; /trunk/pipe_control/spectrum.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 09 Oct 2013 18:00:30 +0200 -->
+<!--X-Message-Id: E1VTwBa&#45;0001So&#45;8Y@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r21025 - /trunk/pipe_control/spectrum.py -- October 09, 2013 - 18:00</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r21025 - /trunk/pipe_control/spectrum.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00019" class="tabs">Index by Date</a> | <a href="threads.html#00019" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00018.html">Date Prev</a>] [<a href="msg00020.html">Date Next</a>] [<a href="msg00018.html">Thread Prev</a>] [<a href="msg00020.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 09 Oct 2013 16:00:30 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00019.html">E1VTwBa-0001So-8Y@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on October 09, 2013 - 18:00:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Oct  9 18:00:30 2013
+New Revision: 21025
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=21025&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=21025&amp;view=rev</a>
+Log:
+Updated the spectrum.error_analysis user function backend to use the 
+lib.statistics.std() function.
+
+This simplifies the code.  It affects only the peak intensity error analysis 
+when spectra have been
+replicated.
+
+
+Modified:
+    trunk/pipe_control/spectrum.py
+
+Modified: trunk/pipe_control/spectrum.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/pipe_control/spectrum.py?rev=21025&amp;r1=21024&amp;r2=21025&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/pipe_control/spectrum.py?rev=21025&amp;r1=21024&amp;r2=21025&amp;view=diff</a>
+==============================================================================
+--- trunk/pipe_control/spectrum.py (original)
++++ trunk/pipe_control/spectrum.py Wed Oct  9 18:00:30 2013
+@@ -34,6 +34,7 @@
+ from lib.errors import RelaxError, RelaxImplementError, RelaxNoSpectraError
+ from lib.io import write_data
+ from lib.spectrum.peak_list import read_peak_list
++from lib.statistics import std
+ from lib.warnings import RelaxWarning, RelaxNoSpinWarning
+ from pipe_control import pipes
+ from pipe_control.mol_res_spin import check_mol_res_spin_data, 
+generate_spin_id_unique, return_spin, spin_loop
+@@ -110,14 +111,14 @@
+         # Number of spectra.
+         num_spectra = len(spectra)
+ 
+-        # Print out.
++        # Printout.
+         print(&quot;\nReplicated spectra:  &quot; + repr(spectra))
+         if verbosity:
+-            print(&quot;%-5s%-6s%-20s%-20s&quot; % (&quot;Num&quot;, &quot;Name&quot;, &quot;Average&quot;, &quot;SD&quot;))
++            print(&quot;%-20s%-20s&quot; % (&quot;Spin_ID&quot;, &quot;SD&quot;))
+ 
+         # Calculate the mean value.
+         count = 0
+-        for spin in spin_loop():
++        for spin, spin_id in spin_loop(return_id=True):
+             # Skip deselected spins.
+             if not spin.select:
+                 continue
+@@ -135,33 +136,22 @@
+             if missing:
+                 continue
+ 
+-            # Average intensity.
+-            ave_intensity = 0.0
++            # The peak intensities.
++            values = []
+             for j in range(num_spectra):
+-                ave_intensity = ave_intensity + spin.intensities[spectra[j]]
+-            ave_intensity = ave_intensity / num_spectra
+-
+-            # Sum of squared errors.
+-            SSE = 0.0
+-            for j in range(num_spectra):
+-                SSE = SSE + (spin.intensities[spectra[j]] - ave_intensity) 
+** 2
+-
+-            # Variance.
+-            #
+-            #                   1
+-            #       sigma^2 = ----- * sum({Xi - Xav}^2)]
+-            #                 n - 1
+-            #
+-            var_I = 1.0 / (num_spectra - 1.0) * SSE
+-
+-            # Print out.
++                values.append(spin.intensities[spectra[j]])
++
++            # The standard deviation.
++            sd = std(values=values, dof=1)
++
++            # Printout.
+             if verbosity:
+-                print(&quot;%-5i%-6s%-20s%-20s&quot; % (spin.num, spin.name, 
+repr(ave_intensity), repr(var_I)))
++                print(&quot;%-20s%-20s&quot; % (spin_id, sd))
+ 
+             # Sum of variances (for average).
+             if not id in cdp.var_I:
+                 cdp.var_I[id] = 0.0
+-            cdp.var_I[id] = cdp.var_I[id] + var_I
++            cdp.var_I[id] = cdp.var_I[id] + sd**2
+             count = count + 1
+ 
+         # No data catch.
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Oct 09 18:20:01 2013</div>  
+</body>
+</html>

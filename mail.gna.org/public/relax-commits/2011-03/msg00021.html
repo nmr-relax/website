@@ -1,0 +1,194 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r12657 &#45; /branches/relax_data/generic_fns/relax_data.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 01 Mar 2011 17:56:29 +0100 -->
+<!--X-Message-Id: E1PuSs9&#45;0008Gx&#45;RM@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r12657 - /branches/relax_data/generic_fns/relax_data.py -- March 01, 2011 - 17:56</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r12657 - /branches/relax_data/generic_fns/relax_data.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00021" class="tabs">Index by Date</a> | <a href="threads.html#00021" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00020.html">Date Prev</a>] [<a href="msg00022.html">Date Next</a>] [<a href="msg00020.html">Thread Prev</a>] [<a href="msg00022.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 01 Mar 2011 16:56:29 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00021.html">E1PuSs9-0008Gx-RM@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on March 01, 2011 - 17:56:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Mar  1 17:56:29 2011
+New Revision: 12657
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=12657&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=12657&amp;view=rev</a>
+Log:
+Updated the relax_data.back_calc() function for the new design.
+
+
+Modified:
+    branches/relax_data/generic_fns/relax_data.py
+
+Modified: branches/relax_data/generic_fns/relax_data.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_data/generic_fns/relax_data.py?rev=12657&amp;r1=12656&amp;r2=12657&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_data/generic_fns/relax_data.py?rev=12657&amp;r1=12656&amp;r2=12657&amp;view=diff</a>
+==============================================================================
+--- branches/relax_data/generic_fns/relax_data.py (original)
++++ branches/relax_data/generic_fns/relax_data.py Tue Mar  1 17:56:29 2011
+@@ -44,15 +44,18 @@
+ import specific_fns
+ 
+ 
+-def back_calc(ri_label=None, frq_label=None, frq=None):
++def back_calc(ri_id=None, ri_type=None, frq=None):
+     &quot;&quot;&quot;Back calculate the relaxation data.
+ 
+-    @param ri_label:    The relaxation data type, ie 'R1', 'R2', or 'NOE'.
+-    @type ri_label:     str
+-    @param frq_label:   The field strength label.
+-    @type frq_label:    str
+-    @param frq:         The spectrometer proton frequency in Hz.
+-    @type frq:          float
++    If no relaxation data currently exists, then the ri_id, ri_type, and frq 
+args are required.
++
++
++    @keyword ri_id:     The relaxation data ID string.  If not given, all 
+relaxation data will be back calculated.
++    @type ri_id:        None or str
++    @keyword ri_type:   The relaxation data type.  This should be one of 
+'R1', 'R2', or 'NOE'.
++    @type ri_type:      None or str
++    @keyword frq:       The spectrometer proton frequency in Hz.
++    @type frq:          None or float
+     &quot;&quot;&quot;
+ 
+     # Test if the current pipe exists.
+@@ -62,29 +65,19 @@
+     if not exists_mol_res_spin_data():
+         raise RelaxNoSequenceError
+ 
+-    # Test if relaxation data corresponding to 'ri_label' and 'frq_label' 
+already exists.
+-    if test_labels(ri_label, frq_label):
+-        raise RelaxRiError(ri_label, frq_label)
+-
+-
+-    # Global (non-residue specific) data.
+-    #####################################
+-
+-    # Global data flag.
+-    global_flag = 1
+-
+-    # Initialise the global data if necessary.
+-    data_init(cdp)
+-
+-    # Update the global data.
+-    update_data_structures_pipe(ri_label, frq_label, frq)
+-
+-
+-    # Residue specific data.
+-    ########################
+-
+-    # Global data flag.
+-    global_flag = 0
++    # Initialise the global data for the current pipe if necessary.
++    if not hasattr(cdp, 'frq'):
++        cdp.frq = {}
++    if not hasattr(cdp, 'ri_type'):
++        cdp.ri_type = {}
++    if not hasattr(cdp, 'ri_ids'):
++        cdp.ri_ids = []
++
++    # Update the global data if needed.
++    if ri_id and ri_id not in cdp.ri_ids:
++        cdp.ri_ids.append(ri_id)
++        cdp.ri_type[ri_id] = ri_type
++        cdp.frq[ri_id] = frq
+ 
+     # Specific Ri back-calculate function setup.
+     back_calculate = specific_fns.setup.get_specific_fn('back_calc_ri', 
+pipes.get_type())
+@@ -98,18 +91,12 @@
+         # The global index.
+         spin_index = find_index(spin_id)
+ 
+-        # Initialise all data structures.
+-        update_data_structures_spin(spin, ri_label, frq_label, frq)
++        # Initialise the spin data if necessary.
++        if not hasattr(cdp, 'ri_data_bc'):
++            spin.ri_data_bc = {}
+ 
+         # Back-calculate the relaxation value.
+-        value = back_calculate(spin_index=spin_index, ri_label=ri_label, 
+frq_label=frq_label, frq=frq)
+-
+-        # No data.
+-        if value == None:
+-            continue
+-
+-        # Update all data structures.
+-        update_data_structures_spin(spin, ri_label, frq_label, frq, value)
++        spin.ri_data_bc[ri_id] = back_calculate(spin_index=spin_index, 
+ri_id=ri_id, ri_type=ri_type, frq=frq)
+ 
+ 
+ def bmrb_read(star, sample_conditions=None):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Mar 01 18:20:01 2011</div>  
+</body>
+</html>

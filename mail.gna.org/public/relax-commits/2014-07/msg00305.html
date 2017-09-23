@@ -1,0 +1,394 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r24671 &#45; in /branches/zooming_grid_search: pipe_control/ specific_analyses/ specific_analyses/relax_disp/ specific_analyses/... -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 23 Jul 2014 10:57:24 +0200 -->
+<!--X-Message-Id: E1X9sMW&#45;0007E8&#45;8S@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r24671 - in /branches/zooming_grid_search: pipe_control/ specific_analyses/ specific_analyses/relax_disp/ specific_analyses/... -- July 23, 2014 - 10:57</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r24671 - in /branches/zooming_grid_search: pipe_control/ specific_analyses/ specific_analyses/relax_disp/ specific_analyses/...</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00305" class="tabs">Index by Date</a> | <a href="threads.html#00305" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00304.html">Date Prev</a>] [<a href="msg00306.html">Date Next</a>] [<a href="msg00304.html">Thread Prev</a>] [<a href="msg00306.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 23 Jul 2014 08:57:24 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00305.html">E1X9sMW-0007E8-8S@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on July 23, 2014 - 10:57:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Jul 23 10:57:23 2014
+New Revision: 24671
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=24671&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=24671&amp;view=rev</a>
+Log:
+The grid search upper and lower bound functions now must accept the incs 
+argument.
+
+For a few analyses, the number of grid search increments are used to remove 
+the end point of the
+grid, to remove duplicate points due to the circular nature of angles.  
+Therefore the parameter
+object grid_lower() and grid_upper() methods now send the grid increment 
+number for each parameter
+into all grid bound determining functions.  The relaxation dispersion and 
+curve-fitting analyses
+have been updated for the change.
+
+
+Modified:
+    branches/zooming_grid_search/pipe_control/minimise.py
+    branches/zooming_grid_search/specific_analyses/parameter_object.py
+    branches/zooming_grid_search/specific_analyses/relax_disp/api.py
+    
+branches/zooming_grid_search/specific_analyses/relax_disp/parameter_object.py
+    
+branches/zooming_grid_search/specific_analyses/relax_fit/parameter_object.py
+
+Modified: branches/zooming_grid_search/pipe_control/minimise.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/zooming_grid_search/pipe_control/minimise.py?rev=24671&amp;r1=24670&amp;r2=24671&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/zooming_grid_search/pipe_control/minimise.py?rev=24671&amp;r1=24670&amp;r2=24671&amp;view=diff</a>
+==============================================================================
+--- branches/zooming_grid_search/pipe_control/minimise.py       (original)
++++ branches/zooming_grid_search/pipe_control/minimise.py       Wed Jul 23 
+10:57:23 2014
+@@ -292,17 +292,20 @@
+             elif upper != None:
+                 comment = 'User supplied upper bound'
+ 
++            # Alias the number of increments for this parameter.
++            incs = model_inc[-1][i]
++
+             # The lower bound for this parameter.
+             if lower != None:
+                 lower_i = lower[i]
+             else:
+-                lower_i = param_object.grid_lower(names[i], 
+model_info=model_info)
++                lower_i = param_object.grid_lower(names[i], incs=incs, 
+model_info=model_info)
+ 
+             # The upper bound for this parameter.
+             if upper != None:
+                 upper_i = upper[i]
+             else:
+-                upper_i = param_object.grid_upper(names[i], 
+model_info=model_info)
++                upper_i = param_object.grid_upper(names[i], incs=incs, 
+model_info=model_info)
+ 
+             # Skip preset values.
+             if skip_preset and not values[i] in [None, {}, []] and not 
+isNaN(values[i]):
+@@ -321,7 +324,7 @@
+             model_upper[-1].append(upper_i)
+ 
+             # Add to the data list for printing out.
+-            data.append([names[i], &quot;%15s&quot; % lower_i, &quot;%15s&quot; % upper_i, 
+&quot;%15s&quot; % model_inc[-1][i], comment])
++            data.append([names[i], &quot;%15s&quot; % lower_i, &quot;%15s&quot; % upper_i, 
+&quot;%15s&quot; % incs, comment])
+ 
+         # Printout.
+         if verbosity:
+
+Modified: branches/zooming_grid_search/specific_analyses/parameter_object.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/zooming_grid_search/specific_analyses/parameter_object.py?rev=24671&amp;r1=24670&amp;r2=24671&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/zooming_grid_search/specific_analyses/parameter_object.py?rev=24671&amp;r1=24670&amp;r2=24671&amp;view=diff</a>
+==============================================================================
+--- branches/zooming_grid_search/specific_analyses/parameter_object.py  
+(original)
++++ branches/zooming_grid_search/specific_analyses/parameter_object.py  Wed 
+Jul 23 10:57:23 2014
+@@ -602,15 +602,17 @@
+         return self._err[name]
+ 
+ 
+-    def grid_lower(self, name, model_info=None):
++    def grid_lower(self, name, incs=None, model_info=None):
+         &quot;&quot;&quot;Return the default lower grid bound for the parameter.
+ 
+-        @param model_info:  The model information from the model_loop() 
+specific API method.  If the lower bound is a function, this information is 
+sent into it.
+-        @type model_info:   int
+-        @param name:        The name of the parameter.
+-        @type name:         str
+-        @return:            The lower bound for the grid search.
+-        @rtype:             int
++        @param name:            The name of the parameter.
++        @type name:             str
++        @keyword incs:          The number of grid search increments.  This 
+is used by some of the bound determining functions.
++        @type incs:             int
++        @keyword model_info:    The model information from the model_loop() 
+specific API method.  If the lower bound is a function, this information is 
+sent into it.
++        @type model_info:       int
++        @return:                The lower bound for the grid search.
++        @rtype:                 int
+         &quot;&quot;&quot;
+ 
+         # Parameter check.
+@@ -618,21 +620,23 @@
+ 
+         # Call any function or method.
+         if isinstance(self._grid_lower[name], FunctionType) or 
+isinstance(self._grid_lower[name], MethodType):
+-            return self._grid_lower[name](model_info)
++            return self._grid_lower[name](incs=incs, model_info=model_info)
+ 
+         # Return the value.
+         return self._grid_lower[name]
+ 
+ 
+-    def grid_upper(self, name, model_info=None):
++    def grid_upper(self, name, incs=None, model_info=None):
+         &quot;&quot;&quot;Return the default upper grid bound for the parameter.
+ 
+-        @param model_info:  The model information from the model_loop() 
+specific API method.  If the upper bound is a function, this information is 
+sent into it.
+-        @type model_info:   int
+-        @param name:        The name of the parameter.
+-        @type name:         str
+-        @return:            The upper bound for the grid search.
+-        @rtype:             int
++        @param name:            The name of the parameter.
++        @type name:             str
++        @keyword incs:          The number of grid search increments.  This 
+is used by some of the bound determining functions.
++        @type incs:             int
++        @keyword model_info:    The model information from the model_loop() 
+specific API method.  If the upper bound is a function, this information is 
+sent into it.
++        @type model_info:       int
++        @return:                The upper bound for the grid search.
++        @rtype:                 int
+         &quot;&quot;&quot;
+ 
+         # Parameter check.
+@@ -640,7 +644,7 @@
+ 
+         # Call any function or method.
+         if isinstance(self._grid_upper[name], FunctionType) or 
+isinstance(self._grid_upper[name], MethodType):
+-            return self._grid_upper[name](model_info)
++            return self._grid_upper[name](incs=incs, model_info=model_info)
+ 
+         # Return the value.
+         return self._grid_upper[name]
+
+Modified: branches/zooming_grid_search/specific_analyses/relax_disp/api.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/zooming_grid_search/specific_analyses/relax_disp/api.py?rev=24671&amp;r1=24670&amp;r2=24671&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/zooming_grid_search/specific_analyses/relax_disp/api.py?rev=24671&amp;r1=24670&amp;r2=24671&amp;view=diff</a>
+==============================================================================
+--- branches/zooming_grid_search/specific_analyses/relax_disp/api.py    
+(original)
++++ branches/zooming_grid_search/specific_analyses/relax_disp/api.py    Wed 
+Jul 23 10:57:23 2014
+@@ -533,7 +533,7 @@
+             # Test if the parameter is in the list:
+ 
+             if param_names[i] == param:
+-                return [self._PARAMS.grid_lower(param, [spin_id]), 
+self._PARAMS.grid_upper(param, [spin_id])]
++                return [self._PARAMS.grid_lower(param, incs=0, 
+model_info=[spin_id]), self._PARAMS.grid_upper(param, incs=0, 
+model_info=[spin_id])]
+ 
+ 
+     def minimise(self, min_algor=None, min_options=None, func_tol=None, 
+grad_tol=None, max_iterations=None, constraints=False, scaling_matrix=None, 
+verbosity=0, sim_index=None, lower=None, upper=None, inc=None):
+
+Modified: 
+branches/zooming_grid_search/specific_analyses/relax_disp/parameter_object.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/zooming_grid_search/specific_analyses/relax_disp/parameter_object.py?rev=24671&amp;r1=24670&amp;r2=24671&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/zooming_grid_search/specific_analyses/relax_disp/parameter_object.py?rev=24671&amp;r1=24670&amp;r2=24671&amp;view=diff</a>
+==============================================================================
+--- 
+branches/zooming_grid_search/specific_analyses/relax_disp/parameter_object.py 
+      (original)
++++ 
+branches/zooming_grid_search/specific_analyses/relax_disp/parameter_object.py 
+      Wed Jul 23 10:57:23 2014
+@@ -29,9 +29,11 @@
+ from specific_analyses.relax_disp.variables import MODEL_LIST_MMQ, MODEL_M61B
+ 
+ 
+-def dw_lower(model_info):
++def dw_lower(incs=None, model_info=None):
+     &quot;&quot;&quot;Determine the lower grid bound for the dw parameters.
+ 
++    @keyword incs:          The number of grid search increments.
++    @type incs:             int
+     @keyword model_info:    The spin ID strings from the model_loop() 
+specific API method.
+     @type model_info:       list of str
+     @return:                The lower grid search bound for the dw 
+parameters.
+@@ -50,9 +52,11 @@
+         return 0.0
+ 
+ 
+-def dwH_lower(model_info):
++def dwH_lower(incs=None, model_info=None):
+     &quot;&quot;&quot;Determine the lower grid bound for the dwH parameters.
+ 
++    @keyword incs:          The number of grid search increments.
++    @type incs:             int
+     @keyword model_info:    The spin ID strings from the model_loop() 
+specific API method.
+     @type model_info:       list of str
+     @return:                The lower grid search bound for the dwH 
+parameters.
+@@ -71,9 +75,11 @@
+         return 0.0
+ 
+ 
+-def pA_lower(model_info):
++def pA_lower(incs=None, model_info=None):
+     &quot;&quot;&quot;Determine the lower grid bound for the pA parameter.
+ 
++    @keyword incs:          The number of grid search increments.
++    @type incs:             int
+     @keyword model_info:    The spin containers and the spin ID strings from 
+the model_loop() specific API method.
+     @type model_info:       list of SpinContainer instances, list of str
+     @return:                The lower grid search bound for the pA parameter.
+@@ -92,12 +98,14 @@
+         return 0.5
+ 
+ 
+-def i0_upper(model_info):
++def i0_upper(incs=None, model_info=None):
+     &quot;&quot;&quot;Find the maximum peak intensity for the cluster.
+ 
+     This is for the grid search upper bound for the I0 parameter.
+ 
+ 
++    @keyword incs:          The number of grid search increments.
++    @type incs:             int
+     @keyword model_info:    The spin containers and the spin ID strings from 
+the model_loop() specific API method.
+     @type model_info:       list of SpinContainer instances, list of str
+     @return:                The maximum peak intensity of all spins and time 
+points.
+
+Modified: 
+branches/zooming_grid_search/specific_analyses/relax_fit/parameter_object.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/zooming_grid_search/specific_analyses/relax_fit/parameter_object.py?rev=24671&amp;r1=24670&amp;r2=24671&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/zooming_grid_search/specific_analyses/relax_fit/parameter_object.py?rev=24671&amp;r1=24670&amp;r2=24671&amp;view=diff</a>
+==============================================================================
+--- 
+branches/zooming_grid_search/specific_analyses/relax_fit/parameter_object.py  
+      (original)
++++ 
+branches/zooming_grid_search/specific_analyses/relax_fit/parameter_object.py  
+      Wed Jul 23 10:57:23 2014
+@@ -30,7 +30,7 @@
+ from specific_analyses.parameter_object import Param_list
+ 
+ 
+-def i_scaling(model_info):
++def i_scaling(model_info=None):
+     &quot;&quot;&quot;Determine the scaling factor for the peak intensities.
+ 
+     This is for the scaling of the I0 and Iinf parameters during 
+optimisation.  The maximum intensity will be used to scale all values.
+@@ -49,12 +49,14 @@
+     return round_to_next_order(max(spin.peak_intensity.values()))
+ 
+ 
+-def i0(model_info):
++def i0(incs=None, model_info=None):
+     &quot;&quot;&quot;Find the average intensity of the first time point.
+ 
+     This is for the grid search upper bound for the I0 parameter.
+ 
+ 
++    @keyword incs:          The number of grid search increments.
++    @type incs:             int
+     @keyword model_info:    The spin container and the spin ID string from 
+the _model_loop_spin() specific API method.
+     @type model_info:       SpinContainer instance, str
+     @return:                The average peak intensity of the first time 
+point.
+@@ -75,12 +77,14 @@
+     return average(spin.peak_intensity[id])
+ 
+ 
+-def iinf(model_info):
++def iinf(incs=None, model_info=None):
+     &quot;&quot;&quot;Find the average intensity of the last time point.
+ 
+     This is for the grid search upper bound for the Iinf parameter.
+ 
+ 
++    @keyword incs:          The number of grid search increments.
++    @type incs:             int
+     @keyword model_info:    The spin container and the spin ID string from 
+the _model_loop_spin() specific API method.
+     @type model_info:       SpinContainer instance, str
+     @return:                The average peak intensity of the last time 
+point.
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Jul 23 11:20:02 2014</div>  
+</body>
+</html>

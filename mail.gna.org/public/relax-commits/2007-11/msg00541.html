@@ -1,0 +1,188 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r3928 &#45; /1.3/generic_fns/diffusion_tensor.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Sun, 25 Nov 2007 18:24:20 +0100 -->
+<!--X-Message-Id: E1IwLDQ&#45;000692&#45;GR@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r3928 - /1.3/generic_fns/diffusion_tensor.py -- November 25, 2007 - 18:24</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r3928 - /1.3/generic_fns/diffusion_tensor.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00541" class="tabs">Index by Date</a> | <a href="threads.html#00541" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00540.html">Date Prev</a>] [<a href="msg00542.html">Date Next</a>] [<a href="msg00540.html">Thread Prev</a>] [<a href="msg00542.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Sun, 25 Nov 2007 17:24:20 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00541.html">E1IwLDQ-000692-GR@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on November 25, 2007 - 18:24:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Sun Nov 25 18:24:19 2007
+New Revision: 3928
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=3928&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=3928&amp;view=rev</a>
+Log:
+Converted the generic_fns.diffusion_tensor.init() function to the new relax 
+design.
+
+
+Modified:
+    1.3/generic_fns/diffusion_tensor.py
+
+Modified: 1.3/generic_fns/diffusion_tensor.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/generic_fns/diffusion_tensor.py?rev=3928&amp;r1=3927&amp;r2=3928&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/generic_fns/diffusion_tensor.py?rev=3928&amp;r1=3927&amp;r2=3928&amp;view=diff</a>
+==============================================================================
+--- 1.3/generic_fns/diffusion_tensor.py (original)
++++ 1.3/generic_fns/diffusion_tensor.py Sun Nov 25 18:24:19 2007
+@@ -27,6 +27,7 @@
+ 
+ # relax module imports.
+ from data import Data as relax_data_store
++import pipes
+ from relax_errors import RelaxError, RelaxNoPipeError, RelaxNoTensorError, 
+RelaxTensorError, RelaxUnknownParamCombError, RelaxUnknownParamError
+ 
+ 
+@@ -441,58 +442,51 @@
+                 relax_data_store.diff[self.run].gamma_sim[sim_index] = 
+relax_data_store.diff[self.run].gamma_sim[sim_index] + pi
+ 
+ 
+-def init(self, run=None, params=None, time_scale=1.0, d_scale=1.0, 
+angle_units='deg', param_types=0, spheroid_type=None, fixed=1):
++def init(params=None, time_scale=1.0, d_scale=1.0, angle_units='deg', 
+param_types=0, spheroid_type=None, fixed=1):
+     &quot;&quot;&quot;Function for initialising the diffusion tensor.&quot;&quot;&quot;
+ 
+-    # Arguments.
+-    self.run = run
+-    self.params = params
+-    self.time_scale = time_scale
+-    self.d_scale = d_scale
+-    self.angle_units = angle_units
+-    self.param_types = param_types
+-    self.spheroid_type = spheroid_type
+-
+-    # Test if the run exists.
+-    if not self.run in relax_data_store.run_names:
+-        raise RelaxNoPipeError, self.run
+-
+-    # Test if diffusion tensor data corresponding to the run already exists.
+-    if relax_data_store.diff.has_key(self.run):
+-        raise RelaxTensorError, self.run
++    # Test if the current data pipe exists.
++    pipes.test()
++
++    # Alias the current data pipe.
++    cdp = relax_data_store[relax_data_store.current_pipe]
++
++    # Test if diffusion tensor data already exists.
++    if hasattr(cdp, 'diff'):
++        raise RelaxTensorError
+ 
+     # Check the validity of the angle_units argument.
+     valid_types = ['deg', 'rad']
+     if not angle_units in valid_types:
+         raise RelaxError, &quot;The diffusion tensor 'angle_units' argument &quot; + 
+`angle_units` + &quot; should be either 'deg' or 'rad'.&quot;
+ 
+-    # Add the run to the diffusion tensor data structure.
+-    relax_data_store.diff.add_item(self.run)
++    # Create the diffusion tensor data structure.
++    cdp.diff.add_item()
+ 
+     # Set the fixed flag.
+-    relax_data_store.diff[self.run].fixed = fixed
++    cdp.diff.fixed = fixed
+ 
+     # Spherical diffusion.
+     if type(params) == float:
+         num_params = 1
+-        self.sphere()
++        sphere()
+ 
+     # Spheroidal diffusion.
+     elif (type(params) == tuple or type(params) == list) and len(params) == 
+4:
+         num_params = 4
+-        self.spheroid()
++        spheroid()
+ 
+     # Ellipsoidal diffusion.
+     elif (type(params) == tuple or type(params) == list) and len(params) == 
+6:
+         num_params = 6
+-        self.ellipsoid()
++        ellipsoid()
+ 
+     # Unknown.
+     else:
+         raise RelaxError, &quot;The diffusion tensor parameters &quot; + `params` + &quot; 
+are of an unknown type.&quot;
+ 
+     # Test the validity of the parameters.
+-    self.test_params(num_params)
++    test_params(num_params)
+ 
+ 
+ def map_bounds(self, run, param):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Sun Nov 25 18:40:12 2007</div>  
+</body>
+</html>

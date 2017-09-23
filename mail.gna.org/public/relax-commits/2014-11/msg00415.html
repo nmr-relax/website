@@ -1,0 +1,275 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r26811 &#45; in /branches/nmrglue: lib/software/nmrglue.py pipe_control/nmrglue.py test_suite/system_tests/nmrglue.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 28 Nov 2014 22:10:20 +0100 -->
+<!--X-Message-Id: E1XuSo0&#45;0004oI&#45;2s@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r26811 - in /branches/nmrglue: lib/software/nmrglue.py pipe_control/nmrglue.py test_suite/system_tests/nmrglue.py -- November 28, 2014 - 22:10</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r26811 - in /branches/nmrglue: lib/software/nmrglue.py pipe_control/nmrglue.py test_suite/system_tests/nmrglue.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00415" class="tabs">Index by Date</a> | <a href="threads.html#00415" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00414.html">Date Prev</a>] [<a href="msg00416.html">Date Next</a>] [<a href="msg00414.html">Thread Prev</a>] [<a href="msg00416.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 28 Nov 2014 21:10:20 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00415.html">E1XuSo0-0004oI-2s@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on November 28, 2014 - 22:10:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Fri Nov 28 22:10:19 2014
+New Revision: 26811
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=26811&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=26811&amp;view=rev</a>
+Log:
+Expanded the histogram plotting to add initial gauss distribution.
+
+This shows that the gauss distribution should be fitted, instead of just 
+calculating the gauss distribution from the Full width at half maximum (FWHM).
+
+Task #7873 (<a  rel="nofollow" href="https://gna.org/task/index.php?7873">https://gna.org/task/index.php?7873</a>): Write wrapper function to 
+nmrglue, to read .ft2 files and process them.
+Homepage: <a  rel="nofollow" href="http://www.nmrglue.com/">http://www.nmrglue.com/</a>
+Link to nmrglue discussion: 
+<a  rel="nofollow" href="https://groups.google.com/forum/#!forum/nmrglue-discuss">https://groups.google.com/forum/#!forum/nmrglue-discuss</a>
+The code is develop at Github: <a  rel="nofollow" href="https://github.com/jjhelmus/nmrglue/">https://github.com/jjhelmus/nmrglue/</a>
+Google code: <a  rel="nofollow" href="https://code.google.com/p/nmrglue/">https://code.google.com/p/nmrglue/</a>
+Documentation: <a  rel="nofollow" href="http://nmrglue.readthedocs.org/en/latest/index.html">http://nmrglue.readthedocs.org/en/latest/index.html</a>
+
+Modified:
+    branches/nmrglue/lib/software/nmrglue.py
+    branches/nmrglue/pipe_control/nmrglue.py
+    branches/nmrglue/test_suite/system_tests/nmrglue.py
+
+Modified: branches/nmrglue/lib/software/nmrglue.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/nmrglue/lib/software/nmrglue.py?rev=26811&amp;r1=26810&amp;r2=26811&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/nmrglue/lib/software/nmrglue.py?rev=26811&amp;r1=26810&amp;r2=26811&amp;view=diff</a>
+==============================================================================
+--- branches/nmrglue/lib/software/nmrglue.py    (original)
++++ branches/nmrglue/lib/software/nmrglue.py    Fri Nov 28 22:10:19 2014
+@@ -23,7 +23,7 @@
+ &quot;&quot;&quot;Module for the wrapper functions around the nmrglue module.&quot;&quot;&quot;
+ 
+ # Python module imports.
+-from numpy import arange
++from numpy import arange, argmax, exp, log, pi, sqrt
+ import matplotlib.pyplot as plt
+ import matplotlib.cm
+ 
+@@ -109,11 +109,13 @@
+     return ax
+ 
+ 
+-def hist_plot(ndarray=None, show=False):
++def hist_plot(ndarray=None, hist_kwargs=None, show=False):
+     &quot;&quot;&quot;Flatten the 2D numpy array, and plot as histogram.
+ 
+     @keyword ndarray:           The numpy array to flatten, and plot as 
+histogram.
+     @type ndarray:              numpy array
++    @keyword hist_kwargs:       The dictionary of keyword arguments to be 
+send to matplotlib.pyplot.hist() plot function.  If None, standard values 
+will be used.
++    @type hist_kwargs:          None or dic
+     @keyword show:              A flag which if True will make a call to 
+matplotlib.pyplot.show().
+     @type show:                 bool
+     @return:                    The matplotlib.axes.AxesSubplot class, which 
+can be manipulated to add additional text to the axis.
+@@ -128,17 +130,68 @@
+     fig = plt.figure()
+     ax = fig.add_subplot(111)
+ 
+-    #kwargs = {'bins': 3000, 'spam': 'ham'}
+-
+-    # Make the plot.
+-    n, bins, patches = ax.hist(data, bins=1000, range=None, normed=False, 
+facecolor='green', alpha=0.75)
++    if hist_kwargs == None:
++        hist_kwargs = {'bins': 1000, 'range': None, 'normed': False, 
+'facecolor':'green', 'alpha':0.75}
++
++    # Make the plot, and unpack the dictionary keywords.
++    #n : array or list of arrays. The values of the histogram bins.
++    #bins : array. The edges of the bins.
++    #patches : list or list of lists. Silent list of individual patches used 
+to create the histogram.
++    n, bins, patches = ax.hist(data, **hist_kwargs)
+ 
+     # Calculate the bin centers.
+     bincenters = 0.5*(bins[1:]+bins[:-1])
+ 
++    # Find index for maximum number in a bin.
++    i = argmax(n)
++
++    # Get the position for the maximum.
++    x0 = bincenters[i]
++
++    # Get the amplitude for the maximum.
++    amp = n[i]
++
++    # Try find Full width at half maximum (FWHM). FWHM = 2 * sqrt(2 ln(2 )) 
+* sigma ~ 2.355 * sigma.
++    # Half maximum
++    hm = 0.5 * amp
++
++    # Find the first instances of left and right bin, where is lower than hm.
++    for j in range(1, len(bins)):
++        # Find the center values of the bins.
++        left_bin_x = bincenters[i-j]
++        right_bin_x = bincenters[i+j]
++
++        # Find the values of the bins.
++        left_bin_y = n[i-j]
++        right_bin_y = n[i+j]
++
++        if left_bin_y &lt; hm and right_bin_y &lt; hm:
++            fwhm = right_bin_x - left_bin_x
++            fwhm_std = fwhm / (2 * sqrt(2 * log(2)))
++            break
++
++    # Annotate the center.
++    ax.annotate(&quot;%3.2f&quot;%x0, xy=(x0, 0.0), xycoords='data', xytext=(x0, 
+0.25*amp), textcoords='data', size=8, horizontalalignment=&quot;center&quot;, 
+arrowprops=dict(arrowstyle=&quot;-&gt;&quot;, connectionstyle=&quot;arc3, rad=0&quot;))
++
++    # Annotate the Full width at half maximum.
++    ax.annotate(&quot;&quot;, xy=(left_bin_x, hm), xycoords='data', 
+xytext=(right_bin_x, hm), textcoords='data', 
+arrowprops=dict(arrowstyle=&quot;&lt;-&gt;&quot;, connectionstyle=&quot;arc3, rad=0&quot;))
++    #ax.annotate(&quot;Test 1&quot;, xy=(0.5, 0.5), xycoords=&quot;data&quot;, va=&quot;center&quot;, 
+ha=&quot;center&quot;, bbox=dict(boxstyle=&quot;round&quot;, fc=&quot;w&quot;))
++    ax.annotate(&quot;FWHM=%3.2f std=%3.2f&quot;%(fwhm, fwhm_std), xy=(x0, hm), 
+xycoords=&quot;data&quot;, size=8, va=&quot;center&quot;, horizontalalignment=&quot;center&quot;, 
+bbox=dict(boxstyle=&quot;round&quot;, facecolor=&quot;w&quot;))
++
++    # Plot the gaussian function.
++    a = amp
++    sigma = fwhm_std
++    x = bincenters
++
++    # Calculate the gauss values.
++    gauss = a*exp(-(x-x0)**2/(2*sigma**2))
++
++    # Plot the values.
++    ax.plot(bincenters, gauss, 'r-', label='gauss')
++
+     # Set limits.
+-    ax.set_ylim(0, 10000)
+-    ax.set_xlim(-30000, 50000)
++    ax.set_xlim(x0-5*sigma, x0+5*sigma)
++    ax.set_ylim(0, amp)
+ 
+     # If show.
+     if show:
+
+Modified: branches/nmrglue/pipe_control/nmrglue.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/nmrglue/pipe_control/nmrglue.py?rev=26811&amp;r1=26810&amp;r2=26811&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/nmrglue/pipe_control/nmrglue.py?rev=26811&amp;r1=26810&amp;r2=26811&amp;view=diff</a>
+==============================================================================
+--- branches/nmrglue/pipe_control/nmrglue.py    (original)
++++ branches/nmrglue/pipe_control/nmrglue.py    Fri Nov 28 22:10:19 2014
+@@ -100,11 +100,13 @@
+     return ax
+ 
+ 
+-def plot_hist(ndarray=None, show=False):
++def plot_hist(ndarray=None, hist_kwargs=None, show=False):
+     &quot;&quot;&quot;Flatten the 2D numpy array, and plot as histogram.
+ 
+     @keyword ndarray:           The numpy array to flatten, and plot as 
+histogram.
+     @type ndarray:              numpy array
++    @keyword hist_kwargs:       The dictionary of keyword arguments to be 
+send to matplotlib.pyplot.hist() plot function.  If None, standard values 
+will be used.
++    @type hist_kwargs:          None or dic
+     @keyword show:              A flag which if True will make a call to 
+matplotlib.pyplot.show().
+     @type show:                 bool
+     @return:                    The matplotlib.axes.AxesSubplot class, which 
+can be manipulated to add additional text to the axis.
+@@ -112,7 +114,7 @@
+     &quot;&quot;&quot;
+ 
+     # Call the contour plot.
+-    ax = hist_plot(ndarray=ndarray, show=show)
++    ax = hist_plot(ndarray=ndarray, hist_kwargs=hist_kwargs, show=show)
+ 
+     # Return the axis instance, for possibility for additional decoration.
+     return ax
+
+Modified: branches/nmrglue/test_suite/system_tests/nmrglue.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/nmrglue/test_suite/system_tests/nmrglue.py?rev=26811&amp;r1=26810&amp;r2=26811&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/nmrglue/test_suite/system_tests/nmrglue.py?rev=26811&amp;r1=26810&amp;r2=26811&amp;view=diff</a>
+==============================================================================
+--- branches/nmrglue/test_suite/system_tests/nmrglue.py (original)
++++ branches/nmrglue/test_suite/system_tests/nmrglue.py Fri Nov 28 22:10:19 
+2014
+@@ -165,4 +165,5 @@
+         data = cdp.ngdata[sp_id].data
+ 
+         # Plot the histogram.
+-        plot_hist(ndarray=data, show=True)
++        kwargs = {'bins': 3000, 'range': None, 'normed': False, 
+'facecolor':'green', 'alpha':0.75}
++        plot_hist(ndarray=data, hist_kwargs=kwargs, show=True)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Nov 28 22:40:02 2014</div>  
+</body>
+</html>

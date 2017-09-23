@@ -1,0 +1,296 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r6947 &#45; /1.3/maths_fns/chi2.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 24 Jul 2008 14:20:10 +0200 -->
+<!--X-Message-Id: E1KLznl&#45;0005pZ&#45;5m@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r6947 - /1.3/maths_fns/chi2.py -- July 24, 2008 - 14:20</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r6947 - /1.3/maths_fns/chi2.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00342" class="tabs">Index by Date</a> | <a href="threads.html#00342" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00341.html">Date Prev</a>] [<a href="msg00343.html">Date Next</a>] [<a href="msg00341.html">Thread Prev</a>] [<a href="msg00343.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 24 Jul 2008 12:20:08 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00342.html">E1KLznl-0005pZ-5m@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on July 24, 2008 - 14:20:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Jul 24 14:20:02 2008
+New Revision: 6947
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=6947&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=6947&amp;view=rev</a>
+Log:
+Overhaul of the chi-squared gradient and Hessian functions.
+
+The original functions have been renamed to dchi2_element and d2chi2_element 
+as these calculate the
+gradient for element j and the Hessian for element {j, k}.  Two new 
+functions, dchi2 and d2chi2 have
+been written to calculate the full gradient and Hessian in one function call.
+
+These changes will temporarily break a lot of code!
+
+
+Modified:
+    1.3/maths_fns/chi2.py
+
+Modified: 1.3/maths_fns/chi2.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/maths_fns/chi2.py?rev=6947&amp;r1=6946&amp;r2=6947&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/maths_fns/chi2.py?rev=6947&amp;r1=6946&amp;r2=6947&amp;view=diff</a>
+==============================================================================
+--- 1.3/maths_fns/chi2.py (original)
++++ 1.3/maths_fns/chi2.py Thu Jul 24 14:20:02 2008
+@@ -70,8 +70,8 @@
+ #######################
+ 
+ 
+-def dchi2(data, back_calc_vals, back_calc_grad, errors):
+-    &quot;&quot;&quot;Function to create the chi-squared gradient.
++def dchi2(dchi2, M, data, back_calc_vals, back_calc_grad, errors):
++    &quot;&quot;&quot;Calculate the full chi-squared gradient.
+ 
+     The chi-squared gradient
+     ========================
+@@ -94,28 +94,127 @@
+         - sigma_i are the values of the error set.
+ 
+ 
++    @param dchi2:           The chi-squared gradient data structure to place 
+the gradient elements
++                            into.
++    @type dchi2:            numpy rank-1 size M array
++    @param M:               The dimensions of the gradient.
++    @type M:                int
+     @param data:            The vector of yi values.
+     @type data:             numpy rank-1 size N array
+     @param back_calc_vals:  The vector of yi(theta) values.
+     @type back_calc_vals:   numpy rank-1 size N array
+-    @param back_calc_grad:  The vector of dyi(theta)/dthetaj values for 
+parameter j.
+-    @type back_calc_grad:   numpy rank-1 size N array
++    @param back_calc_grad:  The matrix of dyi(theta)/dtheta values.
++    @type back_calc_grad:   numpy rank-2 size MxN array
+     @param errors:          The vector of sigma_i values.
+     @type errors:           numpy rank-1 size N array
+-    @return:                The chi-squared gradient element j.
+-    @rtype:                 float
+     &quot;&quot;&quot;
+ 
+     # Calculate the chi-squared gradient.
+-    return -2.0 * sum(1.0 / (errors**2) * (data - back_calc_vals) * 
+back_calc_grad, axis=0)
++    grad = -2.0 * dot(1.0 / (errors**2) * (data - back_calc_vals), 
+transpose(back_calc_grad))
++
++    # Pack the elements.
++    for i in xrange(M):
++        dchi2[i] = grad[i]
++
++
++def dchi2_element(data, back_calc_vals, back_calc_grad_j, errors):
++    &quot;&quot;&quot;Calculate the chi-squared gradient element j.
++
++    The chi-squared gradient
++    ========================
++
++    The equation is::
++
++                             _n_
++        dchi^2(theta)        \   / yi - yi(theta)     dyi(theta) \ 
++        -------------  =  -2  &gt;  | --------------  .  ---------- |
++           dthetaj           /__ \   sigma_i**2        dthetaj   /
++                             i=1
++
++    where
++        - i is the index over data sets.
++        - j is the parameter index of the gradient.
++        - theta is the parameter vector.
++        - yi are the values of the measured data set.
++        - yi(theta) are the values of the back calculated data set.
++        - dyi(theta)/dthetaj are the values of the back calculated gradient 
+for parameter j.
++        - sigma_i are the values of the error set.
++
++
++    @param data:                The vector of yi values.
++    @type data:                 numpy rank-1 size N array
++    @param back_calc_vals:      The vector of yi(theta) values.
++    @type back_calc_vals:       numpy rank-1 size N array
++    @param back_calc_grad_j:    The vector of dyi(theta)/dthetaj values for 
+parameter j.
++    @type back_calc_grad_j:     numpy rank-1 size N array
++    @param errors:              The vector of sigma_i values.
++    @type errors:               numpy rank-1 size N array
++    @return:                    The chi-squared gradient element j.
++    @rtype:                     float
++    &quot;&quot;&quot;
++
++    # Calculate the chi-squared gradient.
++    return -2.0 * sum(1.0 / (errors**2) * (data - back_calc_vals) * 
+back_calc_grad_j, axis=0)
+ 
+ 
+ # Chi-squared Hessian.
+ ######################
+ 
+ 
+-def d2chi2(data, back_calc_vals, back_calc_grad_j, back_calc_grad_k, 
+back_calc_hess, errors):
+-    &quot;&quot;&quot;Function to create the chi-squared Hessian.
++def d2chi2(d2chi2, M, data, back_calc_vals, back_calc_grad, back_calc_hess, 
+errors):
++    &quot;&quot;&quot;Calculate the full chi-squared Hessian.
++
++    The chi-squared Hessian
++    =======================
++
++    The equation is::
++
++                              _n_
++        d2chi^2(theta)        \       1      / dyi(theta)   dyi(theta)       
+                 d2yi(theta)   \ 
++        ---------------  =  2  &gt;  ---------- | ---------- . ----------  -  
+(yi-yi(theta)) . --------------- |
++        dthetaj.dthetak       /__ sigma_i**2 \  dthetaj      dthetak         
+               dthetaj.dthetak /
++                              i=1
++
++    where
++        - i is the index over data sets.
++        - j is the parameter index for the first dimension of the Hessian.
++        - k is the parameter index for the second dimension of the Hessian.
++        - theta is the parameter vector.
++        - yi are the values of the measured data set.
++        - yi(theta) are the values of the back calculated data set.
++        - dyi(theta)/dthetaj are the values of the back calculated gradient 
+for parameter j.
++        - d2yi(theta)/dthetaj.dthetak are the values of the back calculated 
+Hessian for the
++        parameters j and k.
++        - sigma_i are the values of the error set.
++
++
++    @param d2chi2:              The chi-squared Hessian data structure to 
+place the Hessian elements
++                                into.
++    @type d2chi2:               numpy rank-2 size MxM array
++    @param M:                   The size of the first dimension of the 
+Hessian.
++    @type M:                    int
++    @param data:                The vector of yi values.
++    @type data:                 numpy rank-1 size N array
++    @param back_calc_vals:      The vector of yi(theta) values.
++    @type back_calc_vals:       numpy rank-1 size N array
++    @param back_calc_grad:      The matrix of dyi(theta)/dtheta values.
++    @type back_calc_grad:       numpy rank-2 size MxN array
++    @param back_calc_hess:      The matrix of d2yi(theta)/dtheta.dtheta 
+values.
++    @type back_calc_hess:       numpy rank-3 size MxMxN array
++    @param errors:              The vector of sigma_i values.
++    @type errors:               numpy rank-1 size N array
++    &quot;&quot;&quot;
++
++    # Calculate the chi-squared Hessian.
++    for j in xrange(M):
++        for k in xrange(M):
++            d2chi2[j,k] = 0.0
++            for i in xrange(len(data)):
++                d2chi2[j,k] = d2chi2[j,k] + 2.0 / (errors[i]**2) * 
+(back_calc_grad[j,i] * back_calc_grad[k,i] - (data[i] - back_calc_vals[i]) * 
+back_calc_hess[j,k,i])
++
++
++def d2chi2_element(data, back_calc_vals, back_calc_grad_j, back_calc_grad_k, 
+back_calc_hess_jk, errors):
++    &quot;&quot;&quot;Calculate the chi-squared Hessian element {j, k}.
+ 
+     The chi-squared Hessian
+     =======================
+@@ -149,8 +248,8 @@
+     @type back_calc_grad_j:     numpy rank-1 size N array
+     @param back_calc_grad_k:    The vector of dyi(theta)/dthetak values for 
+parameter k.
+     @type back_calc_grad_k:     numpy rank-1 size N array
+-    @param back_calc_hess:      The vector of d2yi(theta)/dthetaj.dthetak 
+values at {j, k}.
+-    @type back_calc_hess:       numpy rank-1 size N array
++    @param back_calc_hess_jk:   The vector of d2yi(theta)/dthetaj.dthetak 
+values at {j, k}.
++    @type back_calc_hess_jk:    numpy rank-1 size N array
+     @param errors:              The vector of sigma_i values.
+     @type errors:               numpy rank-1 size N array
+     @return:                    The chi-squared Hessian element {j,k}.
+@@ -165,6 +264,7 @@
+     # This is faster than the above sums, and having the errors term first 
+appears to minimise roundoff errors.
+     d2chi2 = 0.0
+     for i in xrange(len(data)):
+-        d2chi2 = d2chi2 + 2.0 / (errors[i]**2) * (back_calc_grad_j[i] * 
+back_calc_grad_k[i] - (data[i] - back_calc_vals[i]) * back_calc_hess[i])
+-
++        d2chi2 = d2chi2 + 2.0 / (errors[i]**2) * (back_calc_grad_j[i] * 
+back_calc_grad_k[i] - (data[i] - back_calc_vals[i]) * back_calc_hess_jk[i])
++
++    # Return the {j, k} element.
+     return d2chi2
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Jul 24 14:40:17 2008</div>  
+</body>
+</html>

@@ -1,0 +1,320 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r27088 &#45; in /trunk: lib/structure/internal/coordinates.py pipe_control/structure/main.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 11 Dec 2014 12:25:04 +0100 -->
+<!--X-Message-Id: E1Xz1rj&#45;0001t0&#45;Va@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r27088 - in /trunk: lib/structure/internal/coordinates.py pipe_control/structure/main.py -- December 11, 2014 - 12:25</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r27088 - in /trunk: lib/structure/internal/coordinates.py pipe_control/structure/main.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00211" class="tabs">Index by Date</a> | <a href="threads.html#00211" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00210.html">Date Prev</a>] [<a href="msg00212.html">Date Next</a>] [<a href="msg00210.html">Thread Prev</a>] [<a href="msg00212.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 11 Dec 2014 11:25:03 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00211.html">E1Xz1rj-0001t0-Va@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on December 11, 2014 - 12:25:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Dec 11 12:25:03 2014
+New Revision: 27088
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=27088&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=27088&amp;view=rev</a>
+Log:
+Code refactorisation for the structure.align user function backend.
+
+The looping over data pipes, model numbers, and molecule names, skipping 
+those that don't match the
+function arguments, has been shifted into the new structure_loop() generator 
+function of the
+pipe_control.structure.main module.  This function assembles the data from 
+the data store and then
+calls the new loop_coord_structures() generator function of the 
+lib.structure.internal.coordinates
+module which does all of the work.
+
+
+Modified:
+    trunk/lib/structure/internal/coordinates.py
+    trunk/pipe_control/structure/main.py
+
+Modified: trunk/lib/structure/internal/coordinates.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/lib/structure/internal/coordinates.py?rev=27088&amp;r1=27087&amp;r2=27088&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/lib/structure/internal/coordinates.py?rev=27088&amp;r1=27087&amp;r2=27088&amp;view=diff</a>
+==============================================================================
+--- trunk/lib/structure/internal/coordinates.py (original)
++++ trunk/lib/structure/internal/coordinates.py Thu Dec 11 12:25:03 2014
+@@ -152,3 +152,51 @@
+         return coord, ids, elements
+     else:
+         return coord, ids
++
++
++def loop_coord_structures(objects=None, molecules=None, models=None, 
+atom_id=None):
++    &quot;&quot;&quot;Generator function for looping over all internal structural objects, 
+models and molecules.
++ 
++    @keyword objects:       The list of internal structural objects to loop 
+over.
++    @type objects:          list of str
++    @keyword models:        The list of models for each structural object.  
+The number of elements must match the objects argument.  If set to None, then 
+all models will be used.
++    @type models:           None or list of lists of int
++    @keyword molecules:     The list of molecules for each structural 
+object.  The number of elements must match the objects argument.  If set to 
+None, then all molecules will be used.
++    @type molecules:        None or list of lists of str
++    @keyword atom_id:       The molecule, residue, and atom identifier 
+string of the coordinates of interest.  This matches the spin ID string 
+format.
++    @type atom_id:          None or str
++    @return:                The structural object index, model number, and 
+molecule name.
++    @rtype:                 int, int or None, str
++    &quot;&quot;&quot;
++
++    # Loop over all structural objects.
++    for struct_index in range(len(objects)):
++        # Validate the models.
++        objects[struct_index].validate_models(verbosity=0)
++
++        # The number of models.
++        num_models = objects[struct_index].num_models()
++
++        # The selection object.
++        selection = objects[struct_index].selection(atom_id=atom_id)
++
++        # Loop over the models.
++        for model in objects[struct_index].model_loop():
++            # No model match.
++            if models != None and model.num not in models[struct_index]:
++                continue
++
++            # Coordinate loop.
++            current_mol = ''
++            for mol_name, res_num, res_name, atom_name, elem, pos in 
+objects[struct_index].atom_loop(selection=selection, model_num=model.num, 
+mol_name_flag=True, res_num_flag=True, res_name_flag=True, 
+atom_name_flag=True, pos_flag=True, element_flag=True):
++                # No molecule match, so skip.
++                if molecules != None and mol_name not in 
+molecules[struct_index]:
++                    continue
++
++                # A new molecule.
++                if mol_name != current_mol:
++                    # Change the current molecule name.
++                    current_mol = mol_name
++
++                    # Yield the data.
++                    yield struct_index, model.num, mol_name
+
+Modified: trunk/pipe_control/structure/main.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/pipe_control/structure/main.py?rev=27088&amp;r1=27087&amp;r2=27088&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/pipe_control/structure/main.py?rev=27088&amp;r1=27087&amp;r2=27088&amp;view=diff</a>
+==============================================================================
+--- trunk/pipe_control/structure/main.py        (original)
++++ trunk/pipe_control/structure/main.py        Thu Dec 11 12:25:03 2014
+@@ -34,7 +34,7 @@
+ from lib.io import get_file_path, open_write_file, write_data
+ from lib.selection import tokenise
+ from lib.sequence import write_spin_data
+-from lib.structure.internal.coordinates import assemble_coord_array
++from lib.structure.internal.coordinates import assemble_coord_array, 
+loop_coord_structures
+ from lib.structure.internal.displacements import Displacements
+ from lib.structure.internal.object import Internal
+ from lib.structure.represent.diffusion_tensor import diffusion_tensor
+@@ -144,44 +144,20 @@
+     elif method == 'fit to first':
+         T, R, pivot = fit_to_first(models=list(range(len(elements))), 
+coord=coord, centre_type=centre_type, elements=elements[0], centroid=centroid)
+ 
+-    # Update to the new coordinates.
++    # Loop over all pipes, models, and molecules.
+     i = 0
+-    for pipe_index in range(len(pipes)):
+-        # The data pipe object.
+-        dp = get_pipe(pipes[pipe_index])
+-
+-        # The selection object.
+-        selection = dp.structure.selection(atom_id=atom_id)
+-
+-        # Loop over the models.
+-        for model in dp.structure.model_loop():
+-            # No model match.
+-            if models != None and model.num not in models[pipe_index]:
+-                continue
+-
+-            # Loop over the molecules.
+-            current_mol = ''
+-            for mol_name in dp.structure.atom_loop(selection=selection, 
+model_num=model.num, mol_name_flag=True):
+-                # No molecule match, so skip.
+-                if molecules != None and mol_name not in 
+molecules[pipe_index]:
+-                    continue
+-
+-                # A new molecule.
+-                if mol_name != current_mol:
+-                    # Change the current molecule name.
+-                    current_mol = mol_name
+-
+-                    # The atom ID from the molecule name.
+-                    id = '#%s' % mol_name
+-
+-                    # Translate the molecule first (the rotational pivot is 
+defined in the first model).
+-                    translate(T=T[i], model=model.num, 
+pipe_name=pipes[pipe_index], atom_id=id)
+-
+-                    # Rotate the molecule.
+-                    rotate(R=R[i], origin=pivot[i], model=model.num, 
+pipe_name=pipes[pipe_index], atom_id=id)
+-
+-                    # Increment the index.
+-                    i += 1
++    for pipe_index, model_num, mol_name in structure_loop(pipes=pipes, 
+molecules=molecules, models=models, atom_id=atom_id):
++        # The atom ID from the molecule name.
++        id = '#%s' % mol_name
++
++        # Translate the molecule first (the rotational pivot is defined in 
+the first model).
++        translate(T=T[i], model=model_num, pipe_name=pipes[pipe_index], 
+atom_id=id)
++
++        # Rotate the molecule.
++        rotate(R=R[i], origin=pivot[i], model=model_num, 
+pipe_name=pipes[pipe_index], atom_id=id)
++
++        # Increment the index.
++        i += 1
+ 
+ 
+ def assemble_coordinates(pipes=None, molecules=None, models=None, 
+atom_id=None, elements_flag=False):
+@@ -1078,6 +1054,49 @@
+     spin.xh_vect = xh_vect
+ 
+ 
++def structure_loop(pipes=None, molecules=None, models=None, atom_id=None):
++    &quot;&quot;&quot;Generator function for looping over all internal structural objects, 
+models and molecules.
++ 
++    @keyword pipes:         The data pipes to loop over.
++    @type pipes:            None or list of str
++    @keyword models:        The list of models for each data pipe.  The 
+number of elements must match the pipes argument.  If set to None, then all 
+models will be used.
++    @type models:           None or list of lists of int
++    @keyword molecules:     The list of molecules for each data pipe.  The 
+number of elements must match the pipes argument.
++    @type molecules:        None or list of lists of str
++    @keyword atom_id:       The molecule, residue, and atom identifier 
+string of the coordinates of interest.  This matches the spin ID string 
+format.
++    @type atom_id:          None or str
++    @return:                The data pipe index, model number, and molecule 
+name.
++    @rtype:                 int, int or None, str
++    &quot;&quot;&quot;
++
++    # The data pipes to use.
++    if pipes == None:
++        pipes = [cdp_name()]
++    num_pipes = len(pipes)
++
++    # Checks.
++    for pipe in pipes:
++        check_pipe(pipe)
++
++    # Check the models and molecules arguments.
++    if models != None:
++        if len(models) != num_pipes:
++            raise RelaxError(&quot;The %i elements of the models argument does 
+not match the %i data pipes.&quot; % (len(models), num_pipes))
++    if molecules != None:
++        if len(molecules) != num_pipes:
++            raise RelaxError(&quot;The %i elements of the molecules argument does 
+not match the %i data pipes.&quot; % (len(molecules), num_pipes))
++
++    # Assemble the structural objects.
++    objects = []
++    for pipe_index in range(len(pipes)):
++        dp = get_pipe(pipes[pipe_index])
++        objects.append(dp.structure)
++
++    # Call the library method to do all of the work.
++    for pipe_index, model_num, mol_name in 
+loop_coord_structures(objects=objects, molecules=molecules, models=models, 
+atom_id=atom_id):
++        yield pipe_index, model_num, mol_name
++
++
+ def superimpose(models=None, method='fit to mean', atom_id=None, 
+centre_type=&quot;centroid&quot;, centroid=None):
+     &quot;&quot;&quot;Superimpose a set of structural models.
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Dec 11 13:20:01 2014</div>  
+</body>
+</html>

@@ -1,0 +1,240 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r14908 &#45; in /1.3: maths_fns/n_state_model.py	maths_fns/paramag_centre.py specific_fns/n_state_model.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 24 Oct 2011 23:35:12 +0200 -->
+<!--X-Message-Id: E1RISAq&#45;0004Ka&#45;CG@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r14908 - in /1.3: maths_fns/n_state_model.py	maths_fns/paramag_centre.py specific_fns/n_state_model.py -- October 24, 2011 - 23:35</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r14908 - in /1.3: maths_fns/n_state_model.py	maths_fns/paramag_centre.py specific_fns/n_state_model.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00140" class="tabs">Index by Date</a> | <a href="threads.html#00140" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00139.html">Date Prev</a>] [<a href="msg00141.html">Date Next</a>] [<a href="msg00139.html">Thread Prev</a>] [<a href="msg00141.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 24 Oct 2011 21:35:12 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00140.html">E1RISAq-0004Ka-CG@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on October 24, 2011 - 23:35:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Mon Oct 24 23:35:10 2011
+New Revision: 14908
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=14908&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=14908&amp;view=rev</a>
+Log:
+Extended the N-state model analysis to allow a separate paramagnetic centre 
+per state.
+
+
+Modified:
+    1.3/maths_fns/n_state_model.py
+    1.3/maths_fns/paramag_centre.py
+    1.3/specific_fns/n_state_model.py
+
+Modified: 1.3/maths_fns/n_state_model.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/maths_fns/n_state_model.py?rev=14908&amp;r1=14907&amp;r2=14908&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/maths_fns/n_state_model.py?rev=14908&amp;r1=14907&amp;r2=14908&amp;view=diff</a>
+==============================================================================
+--- 1.3/maths_fns/n_state_model.py (original)
++++ 1.3/maths_fns/n_state_model.py Mon Oct 24 23:35:10 2011
+@@ -22,13 +22,13 @@
+ 
+ # Python module imports.
+ from math import sqrt
+-from numpy import array, dot, float64, ones, transpose, zeros
++from numpy import array, dot, float64, ones, rank, transpose, zeros
+ 
+ # relax module imports.
+ from alignment_tensor import dAi_dAxx, dAi_dAyy, dAi_dAxy, dAi_dAxz, 
+dAi_dAyz, to_tensor
+ from chi2 import chi2, dchi2_element, d2chi2_element
+ from float import isNaN
+-from paramag_centre import paramag_data
++from paramag_centre import vectors_single_centre, vectors_centre_per_state
+ from pcs import ave_pcs_tensor, ave_pcs_tensor_ddeltaij_dAmn, pcs_tensor
+ from physical_constants import pcs_constant
+ from rdc import ave_rdc_tensor, ave_rdc_tensor_dDij_dAmn, rdc_tensor
+@@ -141,8 +141,8 @@
+         @type dip_const:            numpy rank-1 array
+         @keyword atomic_pos:        The atomic positions of all spins.  The 
+first index is the spin systems j and the second is the structure or state c.
+         @type atomic_pos:           numpy rank-3 array
+-        @keyword paramag_centre:    The paramagnetic centre position.
+-        @type paramag_centre:       numpy rank-1 array
++        @keyword paramag_centre:    The paramagnetic centre position (or 
+positions).
++        @type paramag_centre:       numpy rank-1, 3D array or rank-2, Nx3 
+array
+         @keyword scaling_matrix:    The square and diagonal scaling matrix.
+         @type scaling_matrix:       numpy rank-2 array
+         @keyword centre_fixed:      A flag which if False will cause the 
+paramagnetic centre to be optimised.
+@@ -1614,7 +1614,10 @@
+         &quot;&quot;&quot;Calculate the paramagnetic centre to spin vectors, distances and 
+constants.&quot;&quot;&quot;
+ 
+         # Get the vectors and distances.
+-        paramag_data(self.atomic_pos, self.paramag_centre, 
+self.paramag_unit_vect, self.paramag_dist)
++        if rank(self.paramag_centre) == 1:
++            vectors_single_centre(self.atomic_pos, self.paramag_centre, 
+self.paramag_unit_vect, self.paramag_dist)
++        else:
++            vectors_centre_per_state(self.atomic_pos, self.paramag_centre, 
+self.paramag_unit_vect, self.paramag_dist)
+ 
+         # The PCS constants.
+         for i in range(self.num_align):
+
+Modified: 1.3/maths_fns/paramag_centre.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/maths_fns/paramag_centre.py?rev=14908&amp;r1=14907&amp;r2=14908&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/maths_fns/paramag_centre.py?rev=14908&amp;r1=14907&amp;r2=14908&amp;view=diff</a>
+==============================================================================
+--- 1.3/maths_fns/paramag_centre.py (original)
++++ 1.3/maths_fns/paramag_centre.py Mon Oct 24 23:35:10 2011
+@@ -1,6 +1,6 @@
+ 
+###############################################################################
+ #                                                                            
+ #
+-# Copyright (C) 2010 Edward d'Auvergne                                       
+ #
++# Copyright (C) 2010-2011 Edward d'Auvergne                                  
+ #
+ #                                                                            
+ #
+ # This file is part of the program relax.                                    
+ #
+ #                                                                            
+ #
+@@ -27,8 +27,44 @@
+ from numpy.linalg import norm
+ 
+ 
+-def paramag_data(atomic_pos, paramag_centre, unit_vector, r):
++def vectors_centre_per_state(atomic_pos, paramag_centre, unit_vector, r):
+     &quot;&quot;&quot;Calculate the electron spin to nuclear spin unit vectors and 
+distances.
++
++    This assumes that there is one paramagnetic centre per state of the 
+system.
++
++
++    @param atomic_pos:      The atomic positions in Angstrom.  The first 
+index is the spins, the second is the structures, and the third is the atomic 
+coordinates.
++    @type atomic_pos:       numpy rank-3 array
++    @param paramag_centre:  The paramagnetic centre position in Angstrom.
++    @type paramag_centre:   numpy rank-2, Nx3 array
++    @param unit_vector:     The structure to fill with the electron spin to 
+nuclear spin unit vectors.
++    @type unit_vector:      numpy rank-3 array
++    @param r:               The structure to fill with the electron spin to 
+nuclear spin distances.
++    @type r:                numpy rank-2 array
++    &quot;&quot;&quot;
++
++    # Loop over the spins.
++    for i in range(len(atomic_pos)):
++        # Loop over the states.
++        for c in range(len(atomic_pos[i])):
++            # The vector.
++            vect = atomic_pos[i, c] - paramag_centre[c]
++
++            # The length.
++            r[i, c] = norm(vect)
++
++            # The unit vector.
++            unit_vector[i, c] = vect / r[i, c]
++
++            # Convert the distances from Angstrom to meters.
++            r[i, c] = r[i, c] * 1e-10
++
++
++def vectors_single_centre(atomic_pos, paramag_centre, unit_vector, r):
++    &quot;&quot;&quot;Calculate the electron spin to nuclear spin unit vectors and 
+distances.
++
++    This assumes that there is only one paramagnetic centre for all states 
+of the system.
++
+ 
+     @param atomic_pos:      The atomic positions in Angstrom.  The first 
+index is the spins, the second is the structures, and the third is the atomic 
+coordinates.
+     @type atomic_pos:       numpy rank-3 array
+
+Modified: 1.3/specific_fns/n_state_model.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/specific_fns/n_state_model.py?rev=14908&amp;r1=14907&amp;r2=14908&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/specific_fns/n_state_model.py?rev=14908&amp;r1=14907&amp;r2=14908&amp;view=diff</a>
+==============================================================================
+--- 1.3/specific_fns/n_state_model.py (original)
++++ 1.3/specific_fns/n_state_model.py Mon Oct 24 23:35:10 2011
+@@ -836,7 +836,7 @@
+ 
+         # The paramagnetic centre.
+         if hasattr(cdp, 'paramagnetic_centre'):
+-            paramag_centre = cdp.paramagnetic_centre
++            paramag_centre = array(cdp.paramagnetic_centre)
+         else:
+             paramag_centre = zeros(3, float64)
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Oct 25 11:20:02 2011</div>  
+</body>
+</html>

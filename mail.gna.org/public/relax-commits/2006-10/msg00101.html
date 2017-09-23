@@ -1,0 +1,214 @@
+<!-- MHonArc v2.6.10 -->
+<!--X-Subject: r2666 &#45; /branches/tensor_pdb/generic_fns/pdb.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 26 Oct 2006 07:51:06 +0200 -->
+<!--X-Message-Id: E1Gcy8S&#45;0008Ny&#45;IT@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r2666 - /branches/tensor_pdb/generic_fns/pdb.py -- October 26, 2006 - 07:51</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r2666 - /branches/tensor_pdb/generic_fns/pdb.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00101" class="tabs">Index by Date</a> | <a href="threads.html#00101" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00100.html">Date Prev</a>] [<a href="msg00102.html">Date Next</a>] [<a href="msg00100.html">Thread Prev</a>] [<a href="msg00102.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 26 Oct 2006 05:50:36 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00101.html">E1Gcy8S-0008Ny-IT@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on October 26, 2006 - 07:51:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Oct 26 07:50:36 2006
+New Revision: 2666
+
+URL: <a  href="http://svn.gna.org/viewcvs/relax?rev=2666&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=2666&amp;view=rev</a>
+Log:
+Created functions for calculating the center of mass of the selected residues.
+
+The function 'self.center_of_mass()' in the file 'generic_fns/pdb.py' has 
+been created to calculate
+the center of mass.  All unselected residues are skipped to allow hybrid 
+models, two fused runs of
+non-overlapping residues, to be handled.  Hence the center of mass will be 
+biased!
+
+The function 'self.atomic_mass()' has also been added to the file.  This 
+function returns the atomic
+mass corresponding to the supplied element string.
+
+
+Modified:
+    branches/tensor_pdb/generic_fns/pdb.py
+
+Modified: branches/tensor_pdb/generic_fns/pdb.py
+URL: 
+<a  href="http://svn.gna.org/viewcvs/relax/branches/tensor_pdb/generic_fns/pdb.py?rev=2666&amp;r1=2665&amp;r2=2666&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/tensor_pdb/generic_fns/pdb.py?rev=2666&amp;r1=2665&amp;r2=2666&amp;view=diff</a>
+==============================================================================
+--- branches/tensor_pdb/generic_fns/pdb.py (original)
++++ branches/tensor_pdb/generic_fns/pdb.py Thu Oct 26 07:50:36 2006
+@@ -37,6 +37,95 @@
+         self.print_flag = 1
+ 
+ 
++    def atomic_mass(self, element=None):
++        &quot;&quot;&quot;Return the atomic mass of the given element.&quot;&quot;&quot;
++
++        # Proton.
++        if element == 'H' or element == 'Q':
++            return 1.00794
++
++        # Carbon.
++        elif element == 'C':
++            return 12.0107
++
++        # Nitrogen.
++        elif element == 'N':
++            return 14.0067
++
++        # Oxygen.
++        elif element == 'O':
++            return 15.9994
++
++        # Sulphur.
++        elif element == 'S':
++            return 32.065
++
++        # Unknown.
++        else:
++            raise RelaxError, &quot;The mass of the element &quot; + `element` + &quot; has 
+not yet been programmed into relax.&quot;
++
++
++    def center_of_mass(self):
++        &quot;&quot;&quot;Calculate and return the center of mass of the structure.&quot;&quot;&quot;
++
++        # Print out.
++        print &quot;Calculating the center of mass.&quot;
++
++        # Initialise the center of mass.
++        R = zeros(3, Float64)
++
++        # Initialise the total mass.
++        M = 0.0
++
++        # Loop over the structures.
++        for struct in self.relax.data.pdb[self.run].structures:
++            # Protein.
++            if struct.peptide_chains:
++                chains = struct.peptide_chains
++
++            # RNA/DNA.
++            elif struct.nucleotide_chains:
++                chains = struct.nucleotide_chains
++
++            # Loop over the residues of the protein in the PDB file.
++            for res in chains[0].residues:
++                # Find the corresponding residue in 'self.relax.data'.
++                found = 0
++                for res_data in self.relax.data.res[self.run]:
++                    if res.number == res_data.num:
++                        found = 1
++                        break
++
++                # Doesn't exist.
++                if not found:
++                    continue
++
++                # Skip unselected residues.
++                if not res_data.select:
++                    continue
++
++                # Loop over the atoms of the residue.
++                for atom in res:
++                    # Atomic mass.
++                    mass = self.atomic_mass(atom.properties['element'])
++
++                    # Total mass.
++                    M = M + mass
++
++                    # Sum of mass * position.
++                    R = R + mass * atom.position.array
++
++        # Normalise.
++        R = R / M
++
++        # Final print out.
++        print &quot;    Total mass:      M = &quot; + `M`
++        print &quot;    Center of mass:  R = &quot; + `R`
++
++        # Return the center of mass.
++        return R
++
++
+     def create_tensor_pdb(self, run=None, file=None, dir=None, force=0):
+         &quot;&quot;&quot;The pdb loading function.&quot;&quot;&quot;
+ 
+@@ -60,6 +149,9 @@
+ 
+         # Open the PDB file for writing.
+         tensor_pdb_file = self.relax.IO.open_write_file(self.file, self.dir, 
+self.force)
++
++        # Calculate the center of mass.
++        R = self.center_of_mass()
+ 
+         # Close the PDB file.
+         tensor_pdb_file.close()
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Oct 26 08:40:07 2006</div>  
+</body>
+</html>

@@ -1,0 +1,206 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r23619 &#45; /branches/frame_order_cleanup/test_suite/shared_data/frame_order/cam/rotor/frame_order.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 03 Jun 2014 11:24:59 +0200 -->
+<!--X-Message-Id: E1Wrkxn&#45;00024O&#45;Nb@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r23619 - /branches/frame_order_cleanup/test_suite/shared_data/frame_order/cam/rotor/frame_order.py -- June 03, 2014 - 11:24</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r23619 - /branches/frame_order_cleanup/test_suite/shared_data/frame_order/cam/rotor/frame_order.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00006" class="tabs">Index by Date</a> | <a href="threads.html#00006" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00005.html">Date Prev</a>] [<a href="msg00007.html">Date Next</a>] [<a href="msg00005.html">Thread Prev</a>] [<a href="msg00007.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 03 Jun 2014 09:24:59 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00006.html">E1Wrkxn-00024O-Nb@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on June 03, 2014 - 11:24:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Jun  3 11:24:59 2014
+New Revision: 23619
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=23619&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=23619&amp;view=rev</a>
+Log:
+Updated the rotor CaM test data frame_order.py script for the parameter 
+reduction.
+
+The rotor axis {theta, phi} polar angles have been replaced by the single 
+axis alpha angle.  This
+now matches the script for the 2nd rotor model.
+
+
+Modified:
+    
+branches/frame_order_cleanup/test_suite/shared_data/frame_order/cam/rotor/frame_order.py
+
+Modified: 
+branches/frame_order_cleanup/test_suite/shared_data/frame_order/cam/rotor/frame_order.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/test_suite/shared_data/frame_order/cam/rotor/frame_order.py?rev=23619&amp;r1=23618&amp;r2=23619&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/test_suite/shared_data/frame_order/cam/rotor/frame_order.py?rev=23619&amp;r1=23618&amp;r2=23619&amp;view=diff</a>
+==============================================================================
+--- 
+branches/frame_order_cleanup/test_suite/shared_data/frame_order/cam/rotor/frame_order.py
+    (original)
++++ 
+branches/frame_order_cleanup/test_suite/shared_data/frame_order/cam/rotor/frame_order.py
+    Tue Jun  3 11:24:59 2014
+@@ -1,7 +1,46 @@
+ # Script for optimising the rotor frame order test model of CaM.
+ 
+ # Python module imports.
+-from numpy import array
++from numpy import array, cross, float64, zeros
++from numpy.linalg import norm
++
++# relax module imports.
++from lib.frame_order.rotor_axis import create_rotor_axis_alpha
++from lib.geometry.lines import closest_point_ax
++from lib.geometry.coord_transform import spherical_to_cartesian
++from lib.geometry.rotations import reverse_euler_zyz
++from lib.geometry.vectors import vector_angle
++from pipe_control.structure.mass import pipe_centre_of_mass
++
++
++def alpha_angle(pivot=None, com=None, axis=None):
++    &quot;&quot;&quot;Calculate and return the rotor alpha angle.&quot;&quot;&quot;
++
++    # The CoM-pivot axis.
++    com_piv = com - pivot
++    com_piv /= norm(com_piv)
++
++    # The mu_xy vector.
++    z_axis = array([0, 0, 1], float64)
++    mu_xy = cross(z_axis, com_piv)
++    mu_xy /= norm(mu_xy)
++
++    # The alpha angle.
++    return vector_angle(mu_xy, axis, com_piv)
++
++
++def shift_pivot(pivot_orig=None, com=None, axis=None):
++    &quot;&quot;&quot;Shift the pivot to the closest point on the rotor axis to the CoM.)&quot;&quot;&quot;
++
++    # The closest point.
++    pivot_new = closest_point_ax(line_pt=pivot_orig, axis=axis, point=com)
++
++    # Printout.
++    print(&quot;\n%-20s%s&quot; % (&quot;Original pivot:&quot;, pivot_orig))
++    print(&quot;%-20s%s&quot; % (&quot;New pivot:&quot;, pivot_new))
++
++    # Return the shifted pivot.
++    return pivot_new
+ 
+ 
+ # The real parameter values.
+@@ -10,6 +49,11 @@
+ AXIS_THETA = 0.9600799785953431
+ AXIS_PHI = 4.0322755062196229
+ CONE_SIGMA_MAX = 30.0 / 360.0 * 2.0 * pi
++
++# Reconstruct the rotation axis.
++AXIS = zeros(3, float64)
++spherical_to_cartesian([1, AXIS_THETA, AXIS_PHI], AXIS)
++print(&quot;Rotation axis: %s&quot; % AXIS)
+ 
+ # Create the data pipe.
+ pipe.create(pipe_name='frame order', pipe_type='frame order')
+@@ -71,7 +115,7 @@
+ frame_order.ref_domain('N')
+ 
+ # Set the initial pivot point.
+-pivot = array([ 37.254, 0.5, 16.7465])
++pivot = shift_pivot(pivot_orig=array([ 37.254, 0.5, 16.7465]), 
+com=pipe_centre_of_mass(verbosity=0), axis=AXIS)
+ frame_order.pivot(pivot, fix=True)
+ 
+ # Set the paramagnetic centre.
+@@ -87,8 +131,7 @@
+ value.set(param='ave_pos_alpha', val=AVE_POS_ALPHA)
+ value.set(param='ave_pos_beta', val=AVE_POS_BETA)
+ value.set(param='ave_pos_gamma', val=AVE_POS_GAMMA)
+-value.set(param='axis_theta', val=AXIS_THETA)
+-value.set(param='axis_phi', val=AXIS_PHI)
++value.set(param='axis_alpha', val=alpha_angle(pivot=pivot, 
+com=pipe_centre_of_mass(verbosity=0), axis=AXIS))
+ value.set(param='cone_sigma_max', val=CONE_SIGMA_MAX)
+ calc()
+ 
+@@ -105,6 +148,17 @@
+ # Optimise the pivot and model.
+ frame_order.pivot(pivot, fix=False)
+ minimise('simplex')
++
++# The distance from the optimised pivot and the rotation axis.
++opt_piv = array([cdp.pivot_x, cdp.pivot_y, cdp.pivot_z])
++print(&quot;\n\nOptimised pivot displacement: %s&quot; % norm(pivot - opt_piv))
++pt = closest_point_ax(line_pt=pivot, axis=AXIS, point=opt_piv)
++print(&quot;Distance from axis: %s\n&quot; % norm(pt - opt_piv))
++
++# Recreate the axis and compare to the original.
++opt_axis = create_rotor_axis_alpha(alpha=cdp.axis_alpha, pivot=opt_piv, 
+point=pipe_centre_of_mass(verbosity=0))
++print(&quot;Original axis:   %s&quot; % AXIS)
++print(&quot;Optimised axis:  %s&quot; % opt_axis)
+ 
+ # Test Monte Carlo simulations.
+ monte_carlo.setup(number=5)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Jun 03 11:40:01 2014</div>  
+</body>
+</html>

@@ -1,0 +1,145 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r23226 &#45; /branches/disp_speed/lib/dispersion/lm63.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 19 May 2014 03:20:52 +0200 -->
+<!--X-Message-Id: E1WmCG3&#45;00076H&#45;OM@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r23226 - /branches/disp_speed/lib/dispersion/lm63.py -- May 19, 2014 - 03:20</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r23226 - /branches/disp_speed/lib/dispersion/lm63.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00329" class="tabs">Index by Date</a> | <a href="threads.html#00329" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00328.html">Date Prev</a>] [<a href="msg00330.html">Date Next</a>] [<a href="msg00328.html">Thread Prev</a>] [<a href="msg00330.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 19 May 2014 01:20:51 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00329.html">E1WmCG3-00076H-OM@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on May 19, 2014 - 03:20:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Mon May 19 03:20:51 2014
+New Revision: 23226
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=23226&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=23226&amp;view=rev</a>
+Log:
+Speed-up of model LM63.
+
+task #7793: (<a  rel="nofollow" href="https://gna.org/task/?7793">https://gna.org/task/?7793</a>) Speed-up of dispersion models.
+
+Change in systemtest was:
+test_hansen_cpmg_data_auto_analysis
+13.731s -&gt; 9.971s
+
+test_hansen_cpmg_data_auto_analysis_r2eff
+13.370s -&gt; 9.510s
+
+test_hansen_cpmg_data_to_lm63
+3.254s -&gt; 2.080s
+
+Modified:
+    branches/disp_speed/lib/dispersion/lm63.py
+
+Modified: branches/disp_speed/lib/dispersion/lm63.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/disp_speed/lib/dispersion/lm63.py?rev=23226&amp;r1=23225&amp;r2=23226&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/disp_speed/lib/dispersion/lm63.py?rev=23226&amp;r1=23225&amp;r2=23226&amp;view=diff</a>
+==============================================================================
+--- branches/disp_speed/lib/dispersion/lm63.py  (original)
++++ branches/disp_speed/lib/dispersion/lm63.py  Mon May 19 03:20:51 2014
+@@ -64,7 +64,7 @@
+ &quot;&quot;&quot;
+ 
+ # Python module imports.
+-from math import tanh
++from numpy import isfinite, sum, tanh
+ 
+ 
+ def r2eff_LM63(r20=None, phi_ex=None, kex=None, cpmg_frqs=None, 
+back_calc=None, num_points=None):
+@@ -91,16 +91,14 @@
+     rex = phi_ex / kex
+     kex_4 = 4.0 / kex
+ 
+-    # Loop over the time points, back calculating the R2eff values.
++    # Calculate R2eff.
++    R2eff = r20 + rex * (1.0 - kex_4 * cpmg_frqs * tanh(kex / (4.0 * 
+cpmg_frqs)))
++
++    # Catch errors, taking a sum over array is the fastest way to check for
++    # +/- inf (infinity) and nan (not a number).
++    if not isfinite(sum(R2eff)):
++        R2eff = array([1e100]*num_points)
++
++    # Parse back the value to update the back_calc class object.
+     for i in range(num_points):
+-        # Catch zeros.
+-        if phi_ex == 0.0:
+-            back_calc[i] = r20
+-
+-        # Avoid divide by zero.
+-        elif kex == 0.0:
+-            back_calc[i] = 1e100
+-
+-        # The full formula.
+-        else:
+-            back_calc[i] = r20 + rex * (1.0 - kex_4 * cpmg_frqs[i] * 
+tanh(kex / (4.0 * cpmg_frqs[i])))
++        back_calc[i] = R2eff[i]
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon May 19 03:40:02 2014</div>  
+</body>
+</html>

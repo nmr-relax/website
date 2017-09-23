@@ -1,0 +1,157 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r23604 &#45; /trunk/lib/compat.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 29 May 2014 19:45:40 +0200 -->
+<!--X-Message-Id: E1Wq4Oa&#45;0004B6&#45;Ig@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r23604 - /trunk/lib/compat.py -- May 29, 2014 - 19:45</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r23604 - /trunk/lib/compat.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00707" class="tabs">Index by Date</a> | <a href="threads.html#00707" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00706.html">Date Prev</a>] [<a href="msg00708.html">Date Next</a>] [<a href="msg00706.html">Thread Prev</a>] [<a href="msg00708.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 29 May 2014 17:45:40 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00707.html">E1Wq4Oa-0004B6-Ig@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on May 29, 2014 - 19:45:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu May 29 19:45:39 2014
+New Revision: 23604
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=23604&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=23604&amp;view=rev</a>
+Log:
+Created the lib.compat.norm() compatibility function for numpy.linalg.norm().
+
+For numpy 1.8 and higher, the numpy.linalg.norm() function has introduced the 
+'axis' argument.  This
+is an incredibly fast way of determining the norm of an array of vectors.  
+This is used by the frame
+order analysis.
+
+However for older numpy versions, this causes the frame order analysis, and 
+many corresponding
+system and GUI tests to fail.  Therefore this new lib.compat.norm() function 
+has been designed to
+default to numpy.linalg.norm() if the axis argument is supported, or to 
+switch to the much slower
+numpy.apply_along_axis(numpy.linalg.norm, axis, x) call which is supported by 
+older numpy.
+
+
+Modified:
+    trunk/lib/compat.py
+
+Modified: trunk/lib/compat.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/lib/compat.py?rev=23604&amp;r1=23603&amp;r2=23604&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/lib/compat.py?rev=23604&amp;r1=23603&amp;r2=23604&amp;view=diff</a>
+==============================================================================
+--- trunk/lib/compat.py (original)
++++ trunk/lib/compat.py Thu May 29 19:45:39 2014
+@@ -110,6 +110,14 @@
+ else:
+     import pickle
+ 
++# Numpy.
++import numpy
++try:
++    numpy.linalg.norm(numpy.ones((3,3)), axis=1)
++    numpy_norm_axis = True
++except:
++    numpy_norm_axis = False
++
+ 
+ def bz2_open(file, mode='r'):
+     &quot;&quot;&quot;Abstract the numerous ways BZ2 files are handled in Python.
+@@ -217,6 +225,25 @@
+ 
+     # Return the file object.
+     return file_obj
++
++
++def norm(x, ord=None, axis=None):
++    &quot;&quot;&quot;Replacement numpy.linalg.norm() function to handle the axis argument 
+for old numpy.
++    @param x:       Input array.  If `axis` is None, `x` must be 1-D or 2-D.
++    @type x:        array_like
++    @keyword ord:   Order of the norm (see table under ``Notes``). inf means 
+numpy's `inf` object.
++    @type ord:      {non-zero int, inf, -inf, 'fro'}, optional
++    @keyword axis:  If `axis` is an integer, it specifies the axis of `x` 
+along which to compute the vector norms.  If `axis` is a 2-tuple, it 
+specifies the axes that hold 2-D matrices, and the matrix norms of these 
+matrices are computed.  If `axis` is None then either a vector norm (when `x` 
+is 1-D) or a matrix norm (when `x` is 2-D) is returned.
++    @type axis:     {int, 2-tuple of ints, None}, optional
++    &quot;&quot;&quot;
++
++    # The axis argument exists.
++    if numpy_norm_axis:
++        return numpy.linalg.norm(x, ord=ord, axis=axis)
++
++    # Support for older version (this is much slower).
++    else:
++        return numpy.apply_along_axis(numpy.linalg.norm, axis, x)
+ 
+ 
+ def sorted(data):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu May 29 20:00:03 2014</div>  
+</body>
+</html>

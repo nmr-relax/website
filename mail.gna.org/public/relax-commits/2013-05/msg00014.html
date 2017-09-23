@@ -1,0 +1,180 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r19625 &#45; /branches/relax_disp/specific_analyses/relax_disp.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 03 May 2013 11:11:56 +0200 -->
+<!--X-Message-Id: E1UYC20&#45;0006FP&#45;I3@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r19625 - /branches/relax_disp/specific_analyses/relax_disp.py -- May 03, 2013 - 11:11</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r19625 - /branches/relax_disp/specific_analyses/relax_disp.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00014" class="tabs">Index by Date</a> | <a href="threads.html#00014" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00013.html">Date Prev</a>] [<a href="msg00015.html">Date Next</a>] [<a href="msg00013.html">Thread Prev</a>] [<a href="msg00015.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 03 May 2013 09:11:56 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00014.html">E1UYC20-0006FP-I3@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on May 03, 2013 - 11:11:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri May  3 11:11:56 2013
+New Revision: 19625
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=19625&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=19625&amp;view=rev</a>
+Log:
+Started to implement the relaxation dispersion analysis specific calculate() 
+method.
+
+This will be used to calculate the R2eff/R1rho values for the fixed 
+relaxation time period data types
+and is equivalent to Sebastien Morin's relax_disp.calc_r2eff user function 
+deleted at r19580
+(see <a  rel="nofollow" href="http://thread.gmane.org/gmane.science.nmr.relax.scm/17336">http://thread.gmane.org/gmane.science.nmr.relax.scm/17336</a>).
+
+
+Modified:
+    branches/relax_disp/specific_analyses/relax_disp.py
+
+Modified: branches/relax_disp/specific_analyses/relax_disp.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp.py?rev=19625&amp;r1=19624&amp;r2=19625&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp.py?rev=19625&amp;r1=19624&amp;r2=19625&amp;view=diff</a>
+==============================================================================
+--- branches/relax_disp/specific_analyses/relax_disp.py (original)
++++ branches/relax_disp/specific_analyses/relax_disp.py Fri May  3 11:11:56 
+2013
+@@ -619,7 +619,7 @@
+ 
+         # CPMG type data.
+         if cdp.exp_type in CPMG_EXP:
+-            fields = unique_elements(cdp.cpmg_frqs_list.values())
++            fields = unique_elements(cdp.cpmg_frqs_list)
+         elif cdp.exp_type in R1RHO_EXP:
+             fields = unique_elements(cdp.spin_lock_nu1.values())
+         else:
+@@ -1494,6 +1494,60 @@
+                 yield spin, key
+ 
+ 
++    def calculate(self, spin_id=None, verbosity=1, sim_index=None):
++        &quot;&quot;&quot;Calculate the R2eff values for fixed relaxation time period data.
++
++        @keyword spin_id:   The spin identification string.
++        @type spin_id:      None or str
++        @keyword verbosity: The amount of information to print.  The higher 
+the value, the greater the verbosity.
++        @type verbosity:    int
++        @keyword sim_index: The MC simulation index (unused).
++        @type sim_index:    None
++        &quot;&quot;&quot;
++
++        # Test if the current pipe exists.
++        pipes.test()
++
++        # Test if sequence data is loaded.
++        if not exists_mol_res_spin_data():
++            raise RelaxNoSequenceError
++
++        # Test if the model has been set.
++        if not hasattr(cdp, 'exp_type'):
++            raise RelaxError(&quot;The relaxation dispersion experiment type has 
+not been specified.&quot;)
++
++        # Test if the model has been set.
++        if not hasattr(cdp, 'model'):
++            raise RelaxError(&quot;The relaxation dispersion model has not been 
+specified.&quot;)
++
++        # Test if the curve count exists.
++        if not hasattr(cdp, 'dispersion_points'):
++            if cdp.exp_type == 'cpmg':
++                raise RelaxError(&quot;The CPMG frequencies have not been set 
+up.&quot;)
++            elif cdp.exp_type == 'r1rho':
++                raise RelaxError(&quot;The spin-lock field strengths have not 
+been set up.&quot;)
++
++        # Only allow the fixed relaxation time period data types.
++        if cdp.exp_type not in FIXED_TIME_EXP:
++            raise RelaxError(&quot;The experiment '%s' is not of the fixed 
+relaxation time period data type, the R2eff/R1rho values cannot be directly 
+calculated.&quot; % cdp.exp_type)
++
++        # Loop over the spins.
++        for spin, spin_id in spin_loop(return_id=True, skip_desel=True):
++            # Skip spins which have no data.
++            if not hasattr(spin, 'intensities'):
++                continue
++
++            # Loop over each exponential curve.
++            print spin
++            for field in self._spectrometer_loop():
++                for disp_point in self._dispersion_point_loop():
++                    print field, disp_point
++
++
++
++
++
++
+     def create_mc_data(self, data_id):
+         &quot;&quot;&quot;Create the Monte Carlo peak intensity data.
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri May 03 11:20:01 2013</div>  
+</body>
+</html>

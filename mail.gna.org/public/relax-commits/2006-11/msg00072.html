@@ -1,0 +1,290 @@
+<!-- MHonArc v2.6.10 -->
+<!--X-Subject: r2776 &#45; in /branches/tensor_pdb: generic_fns/pdb.py prompt/pdb.py -->
+<!--X-From-R13: p.n.znpenvyqNyrrqf.np.hx -->
+<!--X-Date: Wed, 08 Nov 2006 19:20:46 +0100 -->
+<!--X-Message-Id: E1Ghs24&#45;0008FW&#45;8B@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r2776 - in /branches/tensor_pdb: generic_fns/pdb.py prompt/pdb.py -- November 08, 2006 - 19:20</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r2776 - in /branches/tensor_pdb: generic_fns/pdb.py prompt/pdb.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00072" class="tabs">Index by Date</a> | <a href="threads.html#00072" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00071.html">Date Prev</a>] [<a href="msg00073.html">Date Next</a>] [<a href="msg00071.html">Thread Prev</a>] [<a href="msg00073.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 08 Nov 2006 18:20:16 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00072.html">E1Ghs24-0008FW-8B@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>c . a . macraild</strong> on November 08, 2006 - 19:20:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: macraild
+Date: Wed Nov  8 19:20:15 2006
+New Revision: 2776
+
+URL: <a  href="http://svn.gna.org/viewcvs/relax?rev=2776&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=2776&amp;view=rev</a>
+Log:
+Preliminary implimentation of auto-scaling for viewing tensors.
+
+As discussed at:
+<a  href="https://mail.gna.org/public/relax-devel/2006-10/msg00204.html">https://mail.gna.org/public/relax-devel/2006-10/msg00204.html</a>
+
+This revision provides a simple scaling based on molecular mass.
+This option is selected with the scale='mass' option to the
+pdb.create_tensor_pdb() command
+
+
+Modified:
+    branches/tensor_pdb/generic_fns/pdb.py
+    branches/tensor_pdb/prompt/pdb.py
+
+Modified: branches/tensor_pdb/generic_fns/pdb.py
+URL: 
+<a  href="http://svn.gna.org/viewcvs/relax/branches/tensor_pdb/generic_fns/pdb.py?rev=2776&amp;r1=2775&amp;r2=2776&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/tensor_pdb/generic_fns/pdb.py?rev=2776&amp;r1=2775&amp;r2=2776&amp;view=diff</a>
+==============================================================================
+--- branches/tensor_pdb/generic_fns/pdb.py (original)
++++ branches/tensor_pdb/generic_fns/pdb.py Wed Nov  8 19:20:15 2006
+@@ -169,8 +169,21 @@
+         else:
+             raise RelaxError, &quot;The mass of the element &quot; + `element` + &quot; has 
+not yet been programmed into relax.&quot;
+ 
+-
+-    def centre_of_mass(self):
++    
++    def autoscale_tensor(self,method=None):
++        &quot;&quot;&quot;Automatically determine an appropriate scaling factor for display
++        of the diffusion tensor&quot;&quot;&quot;
++
++        if method == 'mass':
++            com, mass = self.centre_of_mass(return_mass=True)
++            scale = mass * 6.8e-11
++            return scale
++
++        warn(RelaxWarning(&quot;Autoscale method %s not implimented. Reverting to 
+scale=1.8e-6 A.s&quot; % method))
++        return 1.8e-6
++
++
++    def centre_of_mass(self, return_mass=False):
+         &quot;&quot;&quot;Calculate and return the centre of mass of the structure.&quot;&quot;&quot;
+ 
+         # Print out.
+@@ -228,7 +241,10 @@
+         print &quot;    Centre of mass:  R = &quot; + `R`
+ 
+         # Return the centre of mass.
+-        return R
++        if return_mass:
++            return R,M
++        else:
++            return R
+ 
+ 
+     def create_tensor_pdb(self, run=None, scale=1.8e-6, file=None, dir=None, 
+force=0):
+@@ -239,6 +255,10 @@
+         self.file = file
+         self.dir = dir
+         self.force = force
++        if scale == 'mass':
++            self.scale = self.autoscale_tensor(scale)
++        else:
++            self.scale = scale
+ 
+         # Test if the run exists.
+         if not run in self.relax.data.run_names:
+@@ -335,7 +355,7 @@
+                     vector = dot(self.relax.data.diff[self.run].tensor, 
+vector)
+ 
+                     # Scale the vector.
+-                    vector = vector * scale
++                    vector = vector * self.scale
+ 
+                     # Position relative to the centre of mass.
+                     pos = R + vector
+@@ -372,10 +392,10 @@
+             if self.relax.data.diff[self.run].type == 'spheroid':
+                 # Print out.
+                 print &quot;\nGenerating the unique axis of the diffusion tensor.&quot;
+-                print &quot;    Scaling factor:                      &quot; + `scale`
++                print &quot;    Scaling factor:                      &quot; + 
+`self.scale`
+ 
+                 # Create the axis.
+-                self.generate_spheroid_axes(scale=scale, chain_id=chain_id, 
+res_num=res_num, R=R)
++                self.generate_spheroid_axes(chain_id=chain_id, 
+res_num=res_num, R=R)
+ 
+                 # Simulations.
+                 if hasattr(self.relax.data.diff[self.run], 'tm_sim'):
+@@ -385,17 +405,17 @@
+                     # Create each MC simulation axis as a new residue.
+                     for i in 
+xrange(len(self.relax.data.diff[self.run].tm_sim)):
+                         res_num = res_num + 1
+-                        self.generate_spheroid_axes(scale=scale, 
+chain_id=chain_id, res_num=res_num, R=R, i=i)
++                        self.generate_spheroid_axes(chain_id=chain_id, 
+res_num=res_num, R=R, i=i)
+ 
+ 
+             # Create the three axes of the ellipsoid.
+             if self.relax.data.diff[self.run].type == 'ellipsoid':
+                 # Print out.
+                 print &quot;Generating the three axes of the ellipsoid.&quot;
+-                print &quot;    Scaling factor:                      &quot; + `scale`
++                print &quot;    Scaling factor:                      &quot; + 
+`self.scale`
+ 
+                 # Create the axes.
+-                self.generate_ellipsoid_axes(scale=scale, chain_id=chain_id, 
+res_num=res_num, R=R)
++                self.generate_ellipsoid_axes(chain_id=chain_id, 
+res_num=res_num, R=R)
+ 
+                 # Simulations.
+                 if hasattr(self.relax.data.diff[self.run], 'tm_sim'):
+@@ -405,7 +425,7 @@
+                     # Create each MC simulation axis as a new residue.
+                     for i in 
+xrange(len(self.relax.data.diff[self.run].tm_sim)):
+                         res_num = res_num + 1
+-                        self.generate_ellipsoid_axes(scale=scale, 
+chain_id=chain_id, res_num=res_num, R=R, i=i)
++                        self.generate_ellipsoid_axes(chain_id=chain_id, 
+res_num=res_num, R=R, i=i)
+ 
+ 
+             # Terminate the chain (the TER record).
+@@ -436,11 +456,9 @@
+         tensor_pdb_file.close()
+ 
+ 
+-    def generate_ellipsoid_axes(self, scale=None, chain_id=None, 
+res_num=None, R=None, i=None):
++    def generate_ellipsoid_axes(self, chain_id=None, res_num=None, R=None, 
+i=None):
+         &quot;&quot;&quot;Generate the AXS and SIM residues of the ellipsoidal PDB tensor 
+representation.
+ 
+-        @param scale:       The scaling factor (with the units of second 
+Angstroms).
+-        @type scale:        float
+         @param chain_id:    The chain identification code.
+         @type chain_id:     str
+         @param res_num:     The residue number.
+@@ -451,8 +469,10 @@
+         @type i:            int
+         @return:            None
+         &quot;&quot;&quot;
+-
++        
++        
+         # Alias the relevant data.
++        scale = self.scale
+         if i == None:
+             Dx = self.relax.data.diff[self.run].Dx
+             Dy = self.relax.data.diff[self.run].Dy
+@@ -527,11 +547,9 @@
+             print &quot;    Dz vector (scaled + shifted to R):   &quot; + `Dz_vect`
+ 
+ 
+-    def generate_spheroid_axes(self, scale=None, chain_id=None, 
+res_num=None, R=None, i=None):
++    def generate_spheroid_axes(self, chain_id=None, res_num=None, R=None, 
+i=None):
+         &quot;&quot;&quot;Generate the AXS and SIM residues of the spheroid PDB tensor 
+representation.
+ 
+-        @param scale:       The scaling factor (with the units of second 
+Angstroms).
+-        @type scale:        float
+         @param chain_id:    The chain identification code.
+         @type chain_id:     str
+         @param res_num:     The residue number.
+@@ -544,6 +562,7 @@
+         &quot;&quot;&quot;
+ 
+         # Alias the relevant data.
++        scale = self.scale
+         if i == None:
+             Dpar = self.relax.data.diff[self.run].Dpar
+             Dpar_unit = self.relax.data.diff[self.run].Dpar_unit
+
+Modified: branches/tensor_pdb/prompt/pdb.py
+URL: 
+<a  href="http://svn.gna.org/viewcvs/relax/branches/tensor_pdb/prompt/pdb.py?rev=2776&amp;r1=2775&amp;r2=2776&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/tensor_pdb/prompt/pdb.py?rev=2776&amp;r1=2775&amp;r2=2776&amp;view=diff</a>
+==============================================================================
+--- branches/tensor_pdb/prompt/pdb.py (original)
++++ branches/tensor_pdb/prompt/pdb.py Wed Nov  8 19:20:15 2006
+@@ -150,8 +150,8 @@
+             raise RelaxStrError, ('run', run)
+ 
+         # Scaling.
+-        if type(scale) != float and type(scale) != int:
+-            raise RelaxNumError, ('scaling factor', scale)
++        #if type(scale) != float and type(scale) != int:
++        #    raise RelaxNumError, ('scaling factor', scale)
+ 
+         # File name.
+         if type(file) != str:
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Nov 08 23:40:05 2006</div>  
+</body>
+</html>

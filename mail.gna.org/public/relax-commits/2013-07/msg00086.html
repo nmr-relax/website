@@ -1,0 +1,203 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r20344 &#45; in /branches/relax_disp: lib/dispersion/ns_2site_3d.py	target_functions/relax_disp.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 17 Jul 2013 10:55:11 +0200 -->
+<!--X-Message-Id: E1UzNVv&#45;0006Te&#45;5Q@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r20344 - in /branches/relax_disp: lib/dispersion/ns_2site_3d.py	target_functions/relax_disp.py -- July 17, 2013 - 10:55</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r20344 - in /branches/relax_disp: lib/dispersion/ns_2site_3d.py	target_functions/relax_disp.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00086" class="tabs">Index by Date</a> | <a href="threads.html#00086" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00085.html">Date Prev</a>] [<a href="msg00087.html">Date Next</a>] [<a href="msg00085.html">Thread Prev</a>] [<a href="msg00087.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 17 Jul 2013 08:55:11 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00086.html">E1UzNVv-0006Te-5Q@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on July 17, 2013 - 10:55:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Jul 17 10:55:10 2013
+New Revision: 20344
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=20344&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=20344&amp;view=rev</a>
+Log:
+Speed ups for the 'NS 2-site 3D' model.
+
+The pi-pulse propagator is created only once upon target function 
+initialisation rather than for
+each function call, each spin cluster, each magnetic field strength, each 
+dispersion point, and each
+CPMG block.
+
+
+Modified:
+    branches/relax_disp/lib/dispersion/ns_2site_3d.py
+    branches/relax_disp/target_functions/relax_disp.py
+
+Modified: branches/relax_disp/lib/dispersion/ns_2site_3d.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/lib/dispersion/ns_2site_3d.py?rev=20344&amp;r1=20343&amp;r2=20344&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_disp/lib/dispersion/ns_2site_3d.py?rev=20344&amp;r1=20343&amp;r2=20344&amp;view=diff</a>
+==============================================================================
+--- branches/relax_disp/lib/dispersion/ns_2site_3d.py (original)
++++ branches/relax_disp/lib/dispersion/ns_2site_3d.py Wed Jul 17 10:55:10 2013
+@@ -33,21 +33,24 @@
+ 
+ # Python module imports.
+ from math import fabs, log
++from numpy import dot
+ if dep_check.scipy_module:
+     from scipy.linalg import expm
+ 
+ # relax module imports.
+-from lib.dispersion.ns_matrices import r180x_3d, rcpmg_3d
++from lib.dispersion.ns_matrices import rcpmg_3d
+ 
+ 
+-def r2eff_ns_2site_3D(M0=None, r10a=0.0, r10b=0.0, r20a=None, r20b=None, 
+pA=None, dw=None, k_AB=None, k_BA=None, inv_tcpmg=None, tcp=None, 
+back_calc=None, num_points=None, power=None):
++def r2eff_ns_2site_3D(r180x=None, M0=None, r10a=0.0, r10b=0.0, r20a=None, 
+r20b=None, pA=None, dw=None, k_AB=None, k_BA=None, inv_tcpmg=None, tcp=None, 
+back_calc=None, num_points=None, power=None):
+     &quot;&quot;&quot;The 2-site numerical solution to the Bloch-McConnell equation.
+ 
+     This function calculates and stores the R2eff values.
+ 
+ 
++    @keyword r180x:         The X-axis pi-pulse propagator.
++    @type r180x:            numpy float64, rank-2, 7D array
+     @keyword M0:            This is a vector that contains the initial 
+magnetizations corresponding to the A and B state transverse magnetizations.
+-    @type M0:               numpy float64, rank-1, 2D array
++    @type M0:               numpy float64, rank-1, 7D array
+     @keyword r10a:          The R1 value for state A.
+     @type r10a:             float
+     @keyword r10b:          The R1 value for state B.
+@@ -89,12 +92,12 @@
+ 
+         # Loop over the CPMG elements, propagating the magnetisation.
+         for j in range(2*power[i]):
+-                       Mint = Rexpo * Mint
+-                       Mint = r180x_3d() * Mint
+-                       Mint = Rexpo * Mint
++            Mint = dot(Rexpo, Mint)
++            Mint = dot(r180x, Mint)
++            Mint = dot(Rexpo, Mint)
+ 
+         # The next lines calculate the R2eff using a two-point 
+approximation, i.e. assuming that the decay is mono-exponential.
+-        Mgx = fabs((Mint[1])/pA)
++        Mgx = fabs(Mint[1] / pA)
+         if Mgx == 0.0:
+             back_calc[i] = 1e99
+         else:
+
+Modified: branches/relax_disp/target_functions/relax_disp.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/target_functions/relax_disp.py?rev=20344&amp;r1=20343&amp;r2=20344&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_disp/target_functions/relax_disp.py?rev=20344&amp;r1=20343&amp;r2=20344&amp;view=diff</a>
+==============================================================================
+--- branches/relax_disp/target_functions/relax_disp.py (original)
++++ branches/relax_disp/target_functions/relax_disp.py Wed Jul 17 10:55:10 
+2013
+@@ -35,6 +35,7 @@
+ from lib.dispersion.m61b import r1rho_M61b
+ from lib.dispersion.ns_2site_3d import r2eff_ns_2site_3D
+ from lib.dispersion.ns_2site_star import r2eff_ns_2site_star
++from lib.dispersion.ns_matrices import r180x_3d
+ from lib.errors import RelaxError
+ from target_functions.chi2 import chi2
+ from specific_analyses.relax_disp.variables import MODEL_CR72, 
+MODEL_CR72_RED, MODEL_DPL94, MODEL_IT99, MODEL_LIST_FULL, MODEL_LM63, 
+MODEL_M61, MODEL_M61B, MODEL_NOREX, MODEL_NS_2SITE_3D, MODEL_NS_2SITE_STAR, 
+MODEL_NS_2SITE_STAR_RED, MODEL_R2EFF
+@@ -150,6 +151,10 @@
+             # The matrix that contains all the contributions to the 
+evolution, i.e. relaxation, exchange and chemical shift evolution.
+             self.R = zeros((2, 2), complex64)
+ 
++        # Pi-pulse propagators.
++        if model in [MODEL_NS_2SITE_3D]:
++            self.r180x = r180x_3d()
++
+         # This is a vector that contains the initial magnetizations 
+corresponding to the A and B state transverse magnetizations.
+         if model in [MODEL_NS_2SITE_STAR_RED, MODEL_NS_2SITE_STAR]:
+             self.M0 = zeros(2, float64)
+@@ -279,7 +284,7 @@
+                 dw_frq = dw[spin_index] * self.frqs[spin_index, frq_index]
+ 
+                 # Back calculate the R2eff values.
+-                r2eff_ns_2site_3D(M0=self.M0, r20a=R20A[r20_index], 
+r20b=R20B[r20_index], pA=pA, dw=dw_frq, k_AB=k_AB, k_BA=k_BA, 
+inv_tcpmg=self.inv_relax_time, tcp=self.tau_cpmg, 
+back_calc=self.back_calc[spin_index, frq_index], 
+num_points=self.num_disp_points, power=self.power)
++                r2eff_ns_2site_3D(r180x=self.r180x, M0=self.M0, 
+r20a=R20A[r20_index], r20b=R20B[r20_index], pA=pA, dw=dw_frq, k_AB=k_AB, 
+k_BA=k_BA, inv_tcpmg=self.inv_relax_time, tcp=self.tau_cpmg, 
+back_calc=self.back_calc[spin_index, frq_index], 
+num_points=self.num_disp_points, power=self.power)
+ 
+                 # For all missing data points, set the back-calculated value 
+to the measured values so that it has no effect on the chi-squared value.
+                 for point_index in range(self.num_disp_points):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Jul 17 11:20:02 2013</div>  
+</body>
+</html>

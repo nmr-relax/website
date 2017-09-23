@@ -1,0 +1,284 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r25246 &#45; /trunk/specific_analyses/relax_disp/estimate_r2eff.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 25 Aug 2014 15:22:58 +0200 -->
+<!--X-Message-Id: E1XLuEc&#45;0001d2&#45;FN@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r25246 - /trunk/specific_analyses/relax_disp/estimate_r2eff.py -- August 25, 2014 - 15:22</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r25246 - /trunk/specific_analyses/relax_disp/estimate_r2eff.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00380" class="tabs">Index by Date</a> | <a href="threads.html#00380" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00379.html">Date Prev</a>] [<a href="msg00381.html">Date Next</a>] [<a href="msg00379.html">Thread Prev</a>] [<a href="msg00381.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 25 Aug 2014 13:22:58 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00380.html">E1XLuEc-0001d2-FN@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on August 25, 2014 - 15:22:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Mon Aug 25 15:22:57 2014
+New Revision: 25246
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=25246&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=25246&amp;view=rev</a>
+Log:
+Implemented first try to minimise with minfx in estimate_r2eff() function.
+
+task #7822(<a  rel="nofollow" href="https://gna.org/task/index.php?7822">https://gna.org/task/index.php?7822</a>): Implement user function to 
+estimate R2eff and associated errors for exponential curve fitting.
+
+Modified:
+    trunk/specific_analyses/relax_disp/estimate_r2eff.py
+
+Modified: trunk/specific_analyses/relax_disp/estimate_r2eff.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/relax_disp/estimate_r2eff.py?rev=25246&amp;r1=25245&amp;r2=25246&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/relax_disp/estimate_r2eff.py?rev=25246&amp;r1=25245&amp;r2=25246&amp;view=diff</a>
+==============================================================================
+--- trunk/specific_analyses/relax_disp/estimate_r2eff.py        (original)
++++ trunk/specific_analyses/relax_disp/estimate_r2eff.py        Mon Aug 25 
+15:22:57 2014
+@@ -25,6 +25,7 @@
+ # Python module imports.
+ from copy import deepcopy
+ from numpy import asarray, diag, dot, exp, inf, log, sqrt, sum, zeros
++from minfx.generic import generic_minimise
+ from warnings import warn
+ 
+ # relax module imports.
+@@ -43,10 +44,14 @@
+ 
+ 
+ class Exponential:
+-    def __init__(self, num_params=2, num_times=None, values=None, sd=None, 
+relax_times=None, scaling_matrix=None):
+-        &quot;&quot;&quot;Relaxation dispersion target functions for optimisation.
++    def __init__(self, num_params=2, num_times=None, values=None, sd=None, 
+relax_times=None, scaling_matrix=None, constraints=None):
++        &quot;&quot;&quot;Relaxation dispersion target functions for minimisation.
+ 
+         This class contains minimisation functions for both minfx and 
+scipy.optimize.leastsq.
++        &quot;&quot;&quot;
++
++    def setup(self, num_params=2, num_times=None, values=None, sd=None, 
+relax_times=None, scaling_matrix=None, constraints=False, func_tol=1e-25, 
+grad_tol=None, max_iterations=10000000, verbosity=1):
++        &quot;&quot;&quot;Setup for minimisation with minfx.
+ 
+         @keyword num_param:         The number of parameters in the model.
+         @type num_param:            int
+@@ -60,6 +65,16 @@
+         @type relax_times:          numpy array
+         @keyword scaling_matrix:    The square and diagonal scaling matrix.
+         @type scaling_matrix:       numpy rank-2 float array
++        @keyword constraints:       If constraints should be used.
++        @type constraints:          bool
++        @keyword func_tol:          The function tolerance which, when 
+reached, terminates optimisation.  Setting this to None turns of the check.
++        @type func_tol:             None or float
++        @keyword grad_tol:          The gradient tolerance which, when 
+reached, terminates optimisation.  Setting this to None turns of the check.
++        @type grad_tol:             None or float
++        @keyword max_iterations:    The maximum number of iterations for the 
+algorithm.
++        @type max_iterations:       int
++        @keyword verbosity:         The amount of information to print.  The 
+higher the value, the greater the verbosity.
++        @type verbosity:            int
+         &quot;&quot;&quot;
+ 
+         # Store variables.
+@@ -75,6 +90,29 @@
+         self.scaling_flag = False
+         if self.scaling_matrix != None:
+             self.scaling_flag = True
++
++        # Settings to minfx.
++        self.func_tol = func_tol
++        self.grad_tol = grad_tol
++        self.max_iterations = max_iterations
++        self.verbosity = verbosity
++
++        # Define which constraints should be used.
++        self.constraints = constraints
++
++        if self.constraints:
++            self.min_algor = 'Log barrier'
++            self.min_options = ('simplex',)
++            self.A = array([ [ 1.,  0.],
++                        [-1.,  0.],
++                        [ 0.,  1.]] )
++            self.b = array([   0., -200.,    0.])
++
++        else:
++            self.min_algor = 'simplex'
++            self.min_options = ()
++            self.A = None
++            self.b = None
+ 
+         # Create the structure for holding the back-calculated R2eff values 
+(matching the dimensions of the values structure).
+         self.back_calc = deepcopy(self.values)
+@@ -204,8 +242,8 @@
+         # Return
+         return weights * (self.calc_exp(times, *params) - intensities)
+ 
+-
+-def estimate_r2eff(spin_id=None, ftol=1e-15, xtol=1e-15, maxfev=10000000, 
+factor=100.0, method='scipy.optimize.leastsq', verbosity=1):
++#scipy.optimize.leastsq
++def estimate_r2eff(spin_id=None, ftol=1e-15, xtol=1e-15, maxfev=10000000, 
+factor=100.0, method='minfx', verbosity=1):
+     &quot;&quot;&quot;Estimate r2eff and errors by exponential curve fitting with 
+scipy.optimize.leastsq.
+ 
+     scipy.optimize.leastsq is a wrapper around MINPACK's lmdif and lmder 
+algorithms.
+@@ -231,7 +269,7 @@
+     @type maxfev:               int
+     @keyword factor:            The initial step bound, parsed to leastsq.  
+It determines the initial step bound (''factor * || diag * x||'').  Should be 
+in the interval (0.1, 100).
+     @type factor:               float
+-    @keyword method:            The method to minimise and estimate errors.  
+Options are: 'scipy.optimize.leastsq'.
++    @keyword method:            The method to minimise and estimate errors.  
+Options are: 'scipy.optimize.leastsq' or 'minfx'.
+     @type method:               string
+     @keyword verbosity:         The amount of information to print.  The 
+higher the value, the greater the verbosity.
+     @type verbosity:            int
+@@ -244,8 +282,7 @@
+     scipy_settings = [ftol, xtol, maxfev, factor]
+ 
+     # Initialise target function class, to access functions.
+-    if method == 'scipy.optimize.leastsq':
+-        exp_class = Exponential()
++    exp_class = Exponential()
+ 
+     # Check if intensity errors have already been calculated by the user.
+     precalc = True
+@@ -318,6 +355,12 @@
+             # Get the result based on method.
+             if method == 'scipy.optimize.leastsq':
+                 results = minimise_leastsq(exp_class=exp_class, 
+scipy_settings=scipy_settings, values=values, errors=errors, times=times)
++            elif method == 'minfx':
++                # Initialise the function to minimise.
++                exp_class.setup(num_params=2, num_times=len(times), 
+values=values, sd=errors, relax_times=times, func_tol=ftol, 
+max_iterations=maxfev, verbosity=verbosity)
++
++                # Acquire results.
++                results = minimise_minfx(exp_class=exp_class, values=values, 
+errors=errors, times=times)
+             else:
+                 raise RelaxError(&quot;Method for minimisation not known. Try 
+setting: method='scipy.optimize.leastsq'.&quot;)
+ 
+@@ -478,3 +521,36 @@
+     # Return, including errors.
+     return results
+ 
++
++def minimise_minfx(exp_class=None, values=None, errors=None, times=None):
++    &quot;&quot;&quot;Estimate r2eff and errors by minimising with minfx.
++
++    @keyword exp_class:         The class instance object, which contains 
+functions to calculate with.
++    @type exp_class:            class
++    @keyword values:            The measured intensity values per time point.
++    @type values:               numpy array
++    @keyword errors:            The standard deviation of the measured 
+intensity values per time point.
++    @type errors:               numpy array
++    @keyword times:             The time points.
++    @type times:                numpy array
++    @return:                    Packed list with optimised parameter, 
+estimated parameter error, chi2, iter_count, f_count, g_count, h_count, 
+warning
++    @rtype:                     list
++    &quot;&quot;&quot;
++
++    # Initial guess for minimisation. Solved by linear least squares.
++    x0 = asarray(exp_class.estimate_x0_exp(intensities=values, times=times))
++
++    # Minimise with minfx.
++    results_minfx = generic_minimise(func=exp_class.func, args=(), x0=x0, 
+min_algor=exp_class.min_algor, min_options=exp_class.min_options, 
+func_tol=exp_class.func_tol, grad_tol=exp_class.grad_tol, 
+maxiter=exp_class.max_iterations, A=exp_class.A, b=exp_class.b, 
+full_output=True, print_flag=exp_class.verbosity)
++
++    # Unpack
++    param_vector, chi2, iter_count, f_count, g_count, h_count, warning = 
+results_minfx
++
++    # Set error to inf.
++    param_vector_error = [inf, inf]
++
++    # Pack to list.
++    results = [param_vector, param_vector_error, chi2, iter_count, f_count, 
+g_count, h_count, warning]
++
++    # Return, including errors.
++    return results
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Aug 25 15:40:02 2014</div>  
+</body>
+</html>

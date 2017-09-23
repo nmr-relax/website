@@ -1,0 +1,180 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r7481 &#45; /branches/pipe_refs/specific_fns/model_free/main.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 01 Oct 2008 14:17:51 +0200 -->
+<!--X-Message-Id: E1Kl0eM&#45;00061M&#45;Uh@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r7481 - /branches/pipe_refs/specific_fns/model_free/main.py -- October 01, 2008 - 14:17</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r7481 - /branches/pipe_refs/specific_fns/model_free/main.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00010" class="tabs">Index by Date</a> | <a href="threads.html#00010" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00009.html">Date Prev</a>] [<a href="msg00011.html">Date Next</a>] [<a href="msg00009.html">Thread Prev</a>] [<a href="msg00011.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 01 Oct 2008 12:17:50 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00010.html">E1Kl0eM-00061M-Uh@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on October 01, 2008 - 14:17:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Oct  1 14:17:50 2008
+New Revision: 7481
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=7481&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=7481&amp;view=rev</a>
+Log:
+Converted the deselect() method to the new design.
+
+
+Modified:
+    branches/pipe_refs/specific_fns/model_free/main.py
+
+Modified: branches/pipe_refs/specific_fns/model_free/main.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/pipe_refs/specific_fns/model_free/main.py?rev=7481&amp;r1=7480&amp;r2=7481&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/pipe_refs/specific_fns/model_free/main.py?rev=7481&amp;r1=7480&amp;r2=7481&amp;view=diff</a>
+==============================================================================
+--- branches/pipe_refs/specific_fns/model_free/main.py (original)
++++ branches/pipe_refs/specific_fns/model_free/main.py Wed Oct  1 14:17:50 
+2008
+@@ -872,6 +872,49 @@
+ 
+                 # Delete the data.
+                 delattr(spin, name)
++
++
++    def deselect(self, model_index, sim_index=None):
++        &quot;&quot;&quot;Deselect models or simulations.
++
++        @keyword model_index:   The model index.  This is zero for the 
+global models or equal to the
++                                global spin index (which covers the 
+molecule, residue, and spin
++                                indices).
++        @type model_index:      int
++        @keyword sim_index:     The Monte Carlo simulation index.  If None, 
+then models will be
++                                deselected, otherwise the given simulation 
+will.
++        @type sim_index:        int
++        &quot;&quot;&quot;
++
++        # Determine the model type.
++        model_type = self.determine_model_type()
++
++        # Local models.
++        if model_type == 'mf' or model_type == 'local_tm':
++            # Get the spin.
++            spin = return_spin_from_index(model_index)
++
++            # Spin deselection.
++            if sim_index == None:
++                spin.select = False
++
++            # Simulation deselection.
++            else:
++                spin.select_sim[sim_index] = False
++
++        # Global models.
++        else:
++            # Global model deselection.
++            if sim_index == None:
++                raise RelaxError, &quot;Cannot deselect the global model.&quot;
++
++            # Simulation deselection.
++            else:
++                # Get the current data pipe.
++                cdp = pipes.get_pipe()
++
++                # Deselect.
++                cdp.select_sim[sim_index] = False
+ 
+ 
+     def determine_model_type(self):
+@@ -3105,29 +3148,3 @@
+ 
+         # Don't skip.
+         return False
+-
+-
+-    def deselect(self, run, i, sim_index=None):
+-        &quot;&quot;&quot;Function for deselecting models or simulations.&quot;&quot;&quot;
+-
+-        # Arguments.
+-        self.run = run
+-
+-        # Determine the model type.
+-        model_type = self.determine_model_type()
+-
+-        # Simulation deselect.
+-        if sim_index != None:
+-            # Single instance.
+-            if model_type == 'mf' or model_type == 'local_tm':
+-                ds.res[self.run][i].select_sim[sim_index] = 0
+-
+-            # Multiple instances.
+-            else:
+-                ds.select_sim[self.run][sim_index] = 0
+-
+-        # Residue deselect.
+-        else:
+-            # Single residue.
+-            if model_type == 'mf' or model_type == 'local_tm':
+-                ds.res[self.run][i].select = 0
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Oct 01 14:20:01 2008</div>  
+</body>
+</html>

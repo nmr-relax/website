@@ -1,0 +1,183 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r21854 &#45; /trunk/specific_analyses/relax_disp/nessy.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Sat, 07 Dec 2013 17:38:28 +0100 -->
+<!--X-Message-Id: E1VpKtg&#45;0003Np&#45;8o@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r21854 - /trunk/specific_analyses/relax_disp/nessy.py -- December 07, 2013 - 17:38</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r21854 - /trunk/specific_analyses/relax_disp/nessy.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00132" class="tabs">Index by Date</a> | <a href="threads.html#00132" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00131.html">Date Prev</a>] [<a href="msg00133.html">Date Next</a>] [<a href="msg00131.html">Thread Prev</a>] [<a href="msg00133.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Sat, 07 Dec 2013 16:38:28 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00132.html">E1VpKtg-0003Np-8o@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on December 07, 2013 - 17:38:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Sat Dec  7 17:38:27 2013
+New Revision: 21854
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=21854&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=21854&amp;view=rev</a>
+Log:
+Fixes for bugs recently introduced to the relax_disp.nessy_input user 
+function.
+
+This was only a few commits ago so it doesn't affect relax 3.1.0.
+
+
+Modified:
+    trunk/specific_analyses/relax_disp/nessy.py
+
+Modified: trunk/specific_analyses/relax_disp/nessy.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/relax_disp/nessy.py?rev=21854&amp;r1=21853&amp;r2=21854&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/relax_disp/nessy.py?rev=21854&amp;r1=21853&amp;r2=21854&amp;view=diff</a>
+==============================================================================
+--- trunk/specific_analyses/relax_disp/nessy.py (original)
++++ trunk/specific_analyses/relax_disp/nessy.py Sat Dec  7 17:38:27 2013
+@@ -27,12 +27,13 @@
+ 
+ # relax module imports.
+ from lib.errors import RelaxError, RelaxNoSequenceError
++from lib.float import isNaN
+ from lib.io import mkdir_nofail, open_write_file
+ from lib.physical_constants import g1H, g15N
+ from pipe_control import pipes
+ from pipe_control.spectrometer import get_frequencies
+ from pipe_control.mol_res_spin import exists_mol_res_spin_data, spin_loop
+-from specific_analyses.relax_disp.disp_data import find_intensity_keys, 
+loop_exp_frq, loop_exp_frq_point_time, loop_point, 
+return_index_from_disp_point, return_index_from_frq
++from specific_analyses.relax_disp.disp_data import find_intensity_keys, 
+loop_exp_frq_offset, loop_exp_frq_point_time, loop_point, 
+return_index_from_disp_point, return_index_from_frq
+ 
+ 
+ def nessy_input(file='save.NESSY', dir=None, spin_id=None, force=False):
+@@ -58,10 +59,6 @@
+     # Test if the experiment type has been set.
+     if not hasattr(cdp, 'exp_type'):
+         raise RelaxError(&quot;The relaxation dispersion experiment type has not 
+been specified.&quot;)
+-
+-    # Test if the model has been set.
+-    if not hasattr(cdp, 'model_type'):
+-        raise RelaxError(&quot;The relaxation dispersion model has not been 
+specified.&quot;)
+ 
+     # Directory creation.
+     if dir != None:
+@@ -281,35 +278,32 @@
+                 raise RelaxError(&quot;A residue number of greater than 700 is 
+not supported in NESSY.&quot;)
+ 
+             # Loop over all spectrometer frequencies.
+-            for exp_type, frq in loop_exp_frq():
++            for exp_type, frq, offset, ei, mi, oi in 
+loop_exp_frq_offset(return_indices=True):
+                 # Loop over all dispersion points.
+-                mi = 0
+-                for point in loop_point(exp_type=exp_type, skip_ref=False):
+-                    # Indices and keys.
+-                    ei = return_index_from_frq(frq)
+-                    di = return_index_from_disp_point(point, 
+exp_type=exp_type)
++                di_new = 0
++                for point, di in loop_point(exp_type=exp_type, frq=frq, 
+offset=offset, skip_ref=False, return_indices=True):
++                    # The keys.
+                     keys = find_intensity_keys(exp_type=exp_type, frq=frq, 
+point=point, time=cdp.relax_time_list[0])
+ 
+                     # Convert the reference point for NESSY input.
+-                    if point == None:
++                    if point == None or isNaN(point):
+                         point = 0
+ 
+                     # Loop over the keys.
+                     for key in keys:
+                         # Another check.
+-                        if self.cpmg_data[ei][mi][res_index] != '':
++                        if self.cpmg_data[mi][di_new][res_index] != '':
+                             raise RelaxError(&quot;Only one spin system per 
+residue is supported in NESSY.&quot;)
+ 
+                         # Store the data (if it exists).
+                         if key in spin.intensities:
+-                            self.cpmg_data[ei][mi][res_index] = 
+str(spin.intensities[key])
++                            self.cpmg_data[mi][di_new][res_index] = 
+str(spin.intensities[key])
+ 
+                         # The CPMG frequency.
+-                        self.cpmg_frqs[ei][mi] = str(point)
++                        self.cpmg_frqs[mi][di_new] = str(point)
+ 
+                         # Increment the field index.
+-                        mi += 1
+-
++                        di_new += 1
+ 
+ 
+     def _assemble_experiment(self):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Sat Dec 07 18:00:02 2013</div>  
+</body>
+</html>

@@ -1,0 +1,322 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r19092 &#45; in /trunk: pipe_control/ pipe_control/opendx/	test_suite/unit_tests/_pipe_control/_opendx/ user_functions/ -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Sat, 23 Mar 2013 23:17:20 +0100 -->
+<!--X-Message-Id: E1UJWka&#45;0008LW&#45;CC@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r19092 - in /trunk: pipe_control/ pipe_control/opendx/	test_suite/unit_tests/_pipe_control/_opendx/ user_functions/ -- March 23, 2013 - 23:17</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r19092 - in /trunk: pipe_control/ pipe_control/opendx/	test_suite/unit_tests/_pipe_control/_opendx/ user_functions/</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00510" class="tabs">Index by Date</a> | <a href="threads.html#00510" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00509.html">Date Prev</a>] [<a href="msg00511.html">Date Next</a>] [<a href="msg00509.html">Thread Prev</a>] [<a href="msg00511.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Sat, 23 Mar 2013 22:17:20 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00510.html">E1UJWka-0008LW-CC@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on March 23, 2013 - 23:17:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Sat Mar 23 23:17:20 2013
+New Revision: 19092
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=19092&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=19092&amp;view=rev</a>
+Log:
+Converted the OpenDX package pipe_control.opendx into a module.
+
+As most code was shifted to lib.opendx, the code was small enough to merge 
+into one module.
+
+
+Added:
+    trunk/pipe_control/opendx.py
+      - copied, changed from r19091, trunk/pipe_control/opendx/base_map.py
+Removed:
+    trunk/pipe_control/opendx/
+    trunk/test_suite/unit_tests/_pipe_control/_opendx/
+Modified:
+    trunk/user_functions/dx.py
+
+Copied: trunk/pipe_control/opendx.py (from r19091, 
+trunk/pipe_control/opendx/base_map.py)
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/pipe_control/opendx.py?p2=trunk/pipe_control/opendx.py&amp;p1=trunk/pipe_control/opendx/base_map.py&amp;r1=19091&amp;r2=19092&amp;rev=19092&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/pipe_control/opendx.py?p2=trunk/pipe_control/opendx.py&amp;p1=trunk/pipe_control/opendx/base_map.py&amp;r1=19091&amp;r2=19092&amp;rev=19092&amp;view=diff</a>
+==============================================================================
+--- trunk/pipe_control/opendx/base_map.py (original)
++++ trunk/pipe_control/opendx.py Sat Mar 23 23:17:20 2013
+@@ -30,15 +30,70 @@
+ # relax module imports.
+ from pipe_control import diffusion_tensor
+ from pipe_control import pipes
++from pipe_control import value
+ from lib.errors import RelaxError, RelaxUnknownParamError
+ from lib.io import open_write_file
+ from lib.opendx.files import write_config, write_general, write_point, 
+write_program
+ from specific_analyses.setup import get_specific_fn
+ 
+ 
+-
+-
+-class Base_Map:
++def map(params=None, map_type='Iso3D', spin_id=None, inc=20, lower=None, 
+upper=None, axis_incs=10, file_prefix=&quot;map&quot;, dir=&quot;dx&quot;, point=None, 
+point_file=&quot;point&quot;, remap=None):
++    &quot;&quot;&quot;Map the space corresponding to the spin identifier and create the 
+OpenDX files.
++
++    @keyword params:        
++    @type params:           
++    @keyword map_type:      The type of map to create.  The available 
+options are:
++                                - 'Iso3D', a 3D isosurface visualisation of 
+the space.
++    @type map_type:         str
++    @keyword spin_id:       The spin identification string.
++    @type spin_id:          str
++    @keyword inc:           The resolution of the plot.  This is the number 
+of increments per
++                            dimension.
++    @type inc:              int
++    @keyword lower:         The lower bounds of the space to map.  If 
+supplied, this should be a
++                            list of floats, its length equal to the number 
+of parameters in the
++                            model.
++    @type lower:            None or list of float
++    @keyword upper:         The upper bounds of the space to map.  If 
+supplied, this should be a
++                            list of floats, its length equal to the number 
+of parameters in the
++                            model.
++    @type upper:            None or list of float
++    @keyword axis_incs:     The number of tick marks to display in the 
+OpenDX plot in each
++                            dimension.
++    @type axis_incs:        int
++    @keyword file_prefix:   The file prefix for all the created files.
++    @type file_prefix:      str
++    @keyword dir:           The directory to place the files into.
++    @type dir:              str or None
++    @keyword point:         If supplied, a red sphere will be placed at 
+these coordinates.
++    @type point:            None or list of float
++    @keyword point_file:    The file prefix for the point output files.
++    @type point_file:       str or None
++    @keyword remap:         A function which is used to remap the space.  
+The function should accept
++                            the parameter array (list of float) and return 
+an array of equal length
++                            (again list of float).
++    @type remap:            None or func
++    &quot;&quot;&quot;
++
++    # Check the args.
++    if inc &lt;= 1:
++        raise RelaxError(&quot;The increment value needs to be greater than 1.&quot;)
++    if axis_incs &lt;= 1:
++        raise RelaxError(&quot;The axis increment value needs to be greater than 
+1.&quot;)
++
++    # Space type.
++    if map_type.lower() == &quot;iso3d&quot;:
++        if len(params) != 3:
++            raise RelaxError(&quot;The 3D isosurface map requires a 3 parameter 
+model.&quot;)
++
++        # Create the map.
++        Map(params, spin_id, inc, lower, upper, axis_incs, file_prefix, dir, 
+point, point_file, remap)
++    else:
++        raise RelaxError(&quot;The map type '&quot; + map_type + &quot;' is not supported.&quot;)
++
++
++
++class Map:
+     &quot;&quot;&quot;The space mapping base class.&quot;&quot;&quot;
+ 
+     def __init__(self, params, spin_id, inc, lower, upper, axis_incs, 
+file_prefix, dir, point, point_file, remap):
+@@ -152,7 +207,7 @@
+         map_file = open_write_file(file_name=self.file_prefix, dir=self.dir, 
+force=True)
+ 
+         # Generate and write the text of the map.
+-        self.map_text(map_file)
++        self.map_3D_text(map_file)
+ 
+         # Close the file.
+         map_file.close()
+@@ -193,6 +248,80 @@
+ 
+             # Append the parameter name.
+             self.param_names.append(name)
++
++
++    def map_3D_text(self, map_file):
++        &quot;&quot;&quot;Function for creating the text of a 3D map.&quot;&quot;&quot;
++
++        # Initialise.
++        values = zeros(3, float64)
++        percent = 0.0
++        percent_inc = 100.0 / (self.inc + 1.0)**(self.n - 1.0)
++        print(&quot;%-10s%8.3f%-1s&quot; % (&quot;Progress:&quot;, percent, &quot;%&quot;))
++
++        # Fix the diffusion tensor.
++        unfix = False
++        if hasattr(cdp, 'diff_tensor') and not cdp.diff_tensor.fixed:
++            cdp.diff_tensor.fixed = True
++            unfix = True
++
++        # Initial value of the first parameter.
++        values[0] = self.bounds[0, 0]
++
++        # The model identifier.
++
++        # Loop over the first parameter.
++        for i in range((self.inc + 1)):
++            # Initial value of the second parameter.
++            values[1] = self.bounds[1, 0]
++
++            # Loop over the second parameter.
++            for j in range((self.inc + 1)):
++                # Initial value of the third parameter.
++                values[2] = self.bounds[2, 0]
++
++                # Loop over the third parameter.
++                for k in range((self.inc + 1)):
++                    # Set the parameter values.
++                    if self.spin_id:
++                        value.set(val=values, param=self.params, 
+spin_id=self.spin_id, force=True)
++                    else:
++                        value.set(val=values, param=self.params, force=True)
++
++                    # Calculate the function values.
++                    if self.spin_id:
++                        self.calculate(spin_id=self.spin_id, verbosity=0)
++                    else:
++                        self.calculate(verbosity=0)
++
++                    # Get the minimisation statistics for the model.
++                    if self.spin_id:
++                        k, n, chi2 = self.model_stats(spin_id=self.spin_id)
++                    else:
++                        k, n, chi2 = self.model_stats(model_info=0)
++
++                    # Set maximum value to 1e20 to stop the OpenDX server 
+connection from breaking.
++                    if chi2 &gt; 1e20:
++                        map_file.write(&quot;%30f\n&quot; % 1e20)
++                    else:
++                        map_file.write(&quot;%30f\n&quot; % chi2)
++
++                    # Increment the value of the third parameter.
++                    values[2] = values[2] + self.step_size[2]
++
++                # Progress incrementation and printout.
++                percent = percent + percent_inc
++                print(&quot;%-10s%8.3f%-8s%-8g&quot; % (&quot;Progress:&quot;, percent, &quot;%,  &quot; + 
+repr(values) + &quot;,  f(x): &quot;, chi2))
++
++                # Increment the value of the second parameter.
++                values[1] = values[1] + self.step_size[1]
++
++            # Increment the value of the first parameter.
++            values[0] = values[0] + self.step_size[0]
++
++        # Unfix the diffusion tensor.
++        if unfix:
++            cdp.diff_tensor.fixed = False
+ 
+ 
+     def map_axes(self):
+
+Modified: trunk/user_functions/dx.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/user_functions/dx.py?rev=19092&amp;r1=19091&amp;r2=19092&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/user_functions/dx.py?rev=19092&amp;r1=19091&amp;r2=19092&amp;view=diff</a>
+==============================================================================
+--- trunk/user_functions/dx.py (original)
++++ trunk/user_functions/dx.py Sat Mar 23 23:17:20 2013
+@@ -26,7 +26,7 @@
+ from pipe_control import diffusion_tensor
+ from graphics import WIZARD_IMAGE_PATH
+ import lib.opendx.execute
+-import pipe_control.opendx.main
++import pipe_control.opendx
+ from prompt.doc_string import regexp_doc
+ from specific_analyses.model_free import Model_free
+ from user_functions.data import Uf_info; uf_info = Uf_info()
+@@ -204,7 +204,7 @@
+ uf.desc[-1].add_paragraph(&quot;To map the model-free space 'm4' for residue 2, 
+spin N6 defined by the parameters {S2, te, Rex}, name the results 'test', and 
+to place the files in the current directory, use one of the following 
+commands:&quot;)
+ uf.desc[-1].add_prompt(&quot;relax&gt; dx.map(['s2', 'te', 'rex'], spin_id=':2@N6', 
+file_prefix='test', dir=None)&quot;)
+ uf.desc[-1].add_prompt(&quot;relax&gt; dx.map(params=['s2', 'te', 'rex'], 
+spin_id=':2@N6', inc=100, file_prefix='test', dir=None)&quot;)
+-uf.backend = pipe_control.opendx.main.map
++uf.backend = pipe_control.opendx.map
+ uf.menu_text = &quot;&amp;map&quot;
+ uf.gui_icon = &quot;relax.grid_search&quot;
+ uf.wizard_height_desc = 280
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Sat Mar 23 23:40:02 2013</div>  
+</body>
+</html>

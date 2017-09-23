@@ -1,0 +1,169 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r6672 &#45; /branches/rdc_analysis/generic_fns/structure/internal.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 04 Jul 2008 16:35:50 +0200 -->
+<!--X-Message-Id: E1KEmO6&#45;0007IZ&#45;3V@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r6672 - /branches/rdc_analysis/generic_fns/structure/internal.py -- July 04, 2008 - 16:35</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r6672 - /branches/rdc_analysis/generic_fns/structure/internal.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00063" class="tabs">Index by Date</a> | <a href="threads.html#00063" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00062.html">Date Prev</a>] [<a href="msg00064.html">Date Next</a>] [<a href="msg00062.html">Thread Prev</a>] [<a href="msg00064.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 04 Jul 2008 14:35:49 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00063.html">E1KEmO6-0007IZ-3V@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on July 04, 2008 - 16:35:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Jul  4 16:35:43 2008
+New Revision: 6672
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=6672&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=6672&amp;view=rev</a>
+Log:
+The internal PDB object atom_loop() method now can return the average atom 
+properties, if asked.
+
+
+Modified:
+    branches/rdc_analysis/generic_fns/structure/internal.py
+
+Modified: branches/rdc_analysis/generic_fns/structure/internal.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/rdc_analysis/generic_fns/structure/internal.py?rev=6672&amp;r1=6671&amp;r2=6672&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/rdc_analysis/generic_fns/structure/internal.py?rev=6672&amp;r1=6671&amp;r2=6672&amp;view=diff</a>
+==============================================================================
+--- branches/rdc_analysis/generic_fns/structure/internal.py (original)
++++ branches/rdc_analysis/generic_fns/structure/internal.py Fri Jul  4 
+16:35:43 2008
+@@ -24,7 +24,7 @@
+ &quot;&quot;&quot;Module containing the internal relax structural object.&quot;&quot;&quot;
+ 
+ # Python module imports.
+-from numpy import array, float64
++from numpy import array, float64, zeros
+ from re import search
+ from string import split, strip
+ 
+@@ -416,7 +416,55 @@
+ 
+         # Average properties mode.
+         if ave:
+-            pass
++            # Loop over all atoms.
++            for i in xrange(len(self.structural_data[0].atom_name)):
++                # Skip non-matching atoms.
++                if sel_obj and not 
+sel_obj.contains_spin(self.structural_data[0].atom_num[i], 
+self.structural_data[0].atom_name[i], self.structural_data[0].res_num[i], 
+self.structural_data[0].res_name[i]):
++                    continue
++
++                # Initialise.
++                model = None
++                mol_name = None
++                res_num = self.structural_data[0].res_num[i]
++                res_name = self.structural_data[0].res_name[i]
++                atom_num = self.structural_data[0].atom_num[i]
++                atom_name = self.structural_data[0].atom_name[i]
++                element = self.structural_data[0].element[i]
++                pos = zeros(3, float64)
++
++                # Loop over the structures.
++                for struct in self.structural_data:
++                    # Some sanity checks.
++                    if struct.atom_num[i] != atom_num:
++                        raise RelaxError, &quot;The loaded structures do not 
+contain the same atoms.  The average structural properties can not be 
+calculated.&quot;
++
++                    # Sum the atom positions.
++                    pos = pos + array([struct.x[i], struct.y[i], 
+struct.z[i]], float64)
++
++                # Average the position array.
++                pos = pos / len(self.structural_data)
++
++                # Build the tuple to be yielded.
++                atomic_tuple = ()
++                if model_num_flag:
++                    atomic_tuple = atomic_tuple + (model,)
++                if mol_name_flag:
++                    atomic_tuple = atomic_tuple + (mol_name,)
++                if res_num_flag:
++                    atomic_tuple = atomic_tuple + (res_num,)
++                if res_name_flag:
++                    atomic_tuple = atomic_tuple + (res_name,)
++                if atom_num_flag:
++                    atomic_tuple = atomic_tuple + (atom_num,)
++                if atom_name_flag:
++                    atomic_tuple = atomic_tuple + (atom_name,)
++                if element_flag:
++                    atomic_tuple = atomic_tuple + (element,)
++                if pos_flag:
++                    atomic_tuple = atomic_tuple + (pos,)
++
++                # Yield the information.
++                yield atomic_tuple
+ 
+         # Individual structure mode.
+         else:
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Jul 04 16:40:12 2008</div>  
+</body>
+</html>

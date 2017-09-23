@@ -1,0 +1,261 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r10588 &#45; /branches/bieri_gui/gui_bieri/analyses/auto_rx_base.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 29 Jan 2010 12:47:41 +0100 -->
+<!--X-Message-Id: E1NapK9&#45;0006LM&#45;L5@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r10588 - /branches/bieri_gui/gui_bieri/analyses/auto_rx_base.py -- January 29, 2010 - 12:47</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r10588 - /branches/bieri_gui/gui_bieri/analyses/auto_rx_base.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00490" class="tabs">Index by Date</a> | <a href="threads.html#00490" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00489.html">Date Prev</a>] [<a href="msg00491.html">Date Next</a>] [<a href="msg00489.html">Thread Prev</a>] [<a href="msg00491.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 29 Jan 2010 11:47:41 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00490.html">E1NapK9-0006LM-L5@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on January 29, 2010 - 12:47:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Jan 29 12:47:41 2010
+New Revision: 10588
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=10588&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=10588&amp;view=rev</a>
+Log:
+Complete rewrite of the add_r1_1() method, now called peak_list_add_action().
+
+This includes:
+    - The proper support for multiple file selections.
+    - Checks for too many peak lists.
+    - A new method called count_peak_lists() added.
+    - The refresh_peak_list_display() method written to update the GUI 
+element at any time.
+
+
+Modified:
+    branches/bieri_gui/gui_bieri/analyses/auto_rx_base.py
+
+Modified: branches/bieri_gui/gui_bieri/analyses/auto_rx_base.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/bieri_gui/gui_bieri/analyses/auto_rx_base.py?rev=10588&amp;r1=10587&amp;r2=10588&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/bieri_gui/gui_bieri/analyses/auto_rx_base.py?rev=10588&amp;r1=10587&amp;r2=10588&amp;view=diff</a>
+==============================================================================
+--- branches/bieri_gui/gui_bieri/analyses/auto_rx_base.py (original)
++++ branches/bieri_gui/gui_bieri/analyses/auto_rx_base.py Fri Jan 29 12:47:41 
+2010
+@@ -35,7 +35,7 @@
+ from gui_bieri.analyses.project import open_file
+ from gui_bieri.derived_wx_classes import StructureTextCtrl
+ from gui_bieri.filedialog import multi_openfile, opendir
+-from gui_bieri.message import exec_relax
++from gui_bieri.message import error_message, exec_relax
+ from gui_bieri.paths import ADD_ICON, CANCEL_ICON, IMAGE_PATH, REMOVE_ICON
+ 
+ 
+@@ -314,7 +314,7 @@
+         # The add button.
+         button = wx.BitmapButton(panel_main, -1, wx.Bitmap(ADD_ICON, 
+wx.BITMAP_TYPE_ANY))
+         button.SetMinSize((size_button[0], size_button[1]))
+-        self.gui.Bind(wx.EVT_BUTTON, self.add_r1_1, button)
++        self.gui.Bind(wx.EVT_BUTTON, self.peak_list_add_action, button)
+         sizer_buttons.Add(button, 0, wx.ADJUST_MINSIZE, 0)
+ 
+         # The remove single item button.
+@@ -369,44 +369,6 @@
+         box.Add(panel_main, 0, wx.EXPAND|wx.SHAPED, 0)
+ 
+ 
+-    def add_r1_1(self, event): # add a r1 peak list
+-
+-        if len(r1_list) &lt; 14:
+-            r1_entry = multi_openfile('Select R1 peak list file', 
+self.field_results_dir_copy.GetValue(), '*.*', 'all files (*.*)|*.*')
+-            if not r1_entry == None:
+-                r1_list.append(r1_entry)
+-
+-        if len(r1_list) &gt;= 1:
+-            self.r1_list_1.SetLabel(r1_list[0])
+-        if len(r1_list) &gt;= 2:
+-            self.r1_list_2.SetLabel(r1_list[1])
+-        if len(r1_list) &gt;= 3:
+-            self.r1_list_3.SetLabel(r1_list[2])
+-        if len(r1_list) &gt;= 4:
+-            self.r1_list_4.SetLabel(r1_list[3])
+-        if len(r1_list) &gt;= 5:
+-            self.r1_list_5.SetLabel(r1_list[4])
+-        if len(r1_list) &gt;= 6:
+-            self.r1_list_6.SetLabel(r1_list[5])
+-        if len(r1_list) &gt;= 7:
+-            self.r1_list_7.SetLabel(r1_list[6])
+-        if len(r1_list) &gt;= 8:
+-            self.r1_list_8.SetLabel(r1_list[7])
+-        if len(r1_list) &gt;= 9:
+-            self.r1_list_9.SetLabel(r1_list[8])
+-        if len(r1_list) &gt;= 10:
+-            self.r1_list_10.SetLabel(r1_list[9])
+-        if len(r1_list) &gt;= 11:
+-            self.r1_list_11.SetLabel(r1_list[10])
+-        if len(r1_list) &gt;= 12:
+-            self.r1_list_12.SetLabel(r1_list[11])
+-        if len(r1_list) &gt;= 13:
+-            self.r1_list_1_copy_11.SetLabel(r1_list[12])
+-        if len(r1_list) &gt;= 14:
+-            self.r1_list_14.SetLabel(r1_list[13])
+-        event.Skip()
+-
+-
+     def add_results_dir(self, box):
+         &quot;&quot;&quot;Create and add the results directory GUI element to the given box.
+ 
+@@ -547,6 +509,27 @@
+ 
+         # Return the box.
+         return box
++
++
++    def count_peak_lists(self):
++        &quot;&quot;&quot;Count the number of peak lists already loaded.
++
++        @return:    The number of loaded peak lists.
++        @rtype:     int
++        &quot;&quot;&quot;
++
++        # Loop over the GUI elements.
++        count = 0
++        for i in range(self.peak_list_count):
++            # Stop when blank.
++            if self.data.file_list[i] == '':
++                break
++
++            # Increment.
++            count = count + 1
++
++        # Return the count.
++        return count
+ 
+ 
+     def exec_r1_1(self, event): # start r2 calculation
+@@ -572,6 +555,61 @@
+         event.Skip()
+ 
+ 
++    def peak_list_add_action(self, event):
++        &quot;&quot;&quot;Add additional peak lists.
++
++        @param event:   The wx event.
++        @type event:    wx event
++        &quot;&quot;&quot;
++
++        # The current number of peak lists.
++        count = self.count_peak_lists()
++
++        # Full!
++        if count &gt; self.peak_list_count:
++            # Show an error dialog.
++            error_message(&quot;No more peak lists can be added, the maximum 
+number has been reached.&quot;)
++
++            # Terminate the event and finish.
++            event.Skip()
++            return
++
++        # Open the file selection dialog.
++        files = multi_openfile(msg='Select %s peak list file' % self.label, 
+filetype='*.*', default='all files (*.*)|*.*')
++
++        # No files selected, so terminate the event and exit.
++        if not files:
++            event.Skip()
++            return
++
++        # Too many files selected.
++        if len(files) + count &gt; self.peak_list_count:
++            # Show an error dialog.
++            error_message(&quot;Too many peak lists selected, the maximum number 
+has been exceeded.&quot;)
++
++            # Terminate the event and finish.
++            event.Skip()
++            return
++
++        # Store the files.
++        for i in range(len(files)):
++            self.data.file_list[count+i] = files[i]
++
++        # Refresh the GUI element.
++        self.refresh_peak_list_display()
++
++        # Terminate the event.
++        event.Skip()
++
++
++    def refresh_peak_list_display(self):
++        &quot;&quot;&quot;Refresh the display of peak list file names in the GUI element.&quot;&quot;&quot;
++
++        # Loop over all elements.
++        for i in range(self.peak_list_count):
++            self.field_rx_list[i].SetLabel(self.data.file_list[i])
++
++
+     def refresh_r1_1(self, event): # refresh r1 list no. 1
+         self.r1_list_1.SetLabel('')
+         self.r1_list_2.SetLabel('')
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Jan 29 13:00:02 2010</div>  
+</body>
+</html>

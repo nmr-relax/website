@@ -1,0 +1,270 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r19483 &#45; in /trunk: pipe_control/spectrum.py	user_functions/spectrum.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 16 Apr 2013 10:51:48 +0200 -->
+<!--X-Message-Id: E1US1cC&#45;0004w5&#45;Hc@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r19483 - in /trunk: pipe_control/spectrum.py	user_functions/spectrum.py -- April 16, 2013 - 10:51</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r19483 - in /trunk: pipe_control/spectrum.py	user_functions/spectrum.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00202" class="tabs">Index by Date</a> | <a href="threads.html#00202" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00201.html">Date Prev</a>] [<a href="msg00203.html">Date Next</a>] [<a href="msg00201.html">Thread Prev</a>] [<a href="msg00203.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 16 Apr 2013 08:51:48 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00202.html">E1US1cC-0004w5-Hc@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on April 16, 2013 - 10:51:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Apr 16 10:51:48 2013
+New Revision: 19483
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=19483&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=19483&amp;view=rev</a>
+Log:
+The spectrum.error_analysis user function can now be performed on a subset of 
+all spectra.
+
+The subset argument has been added to allow the error analysis to be 
+restricted to a subset of all
+loaded spectral data.
+
+
+Modified:
+    trunk/pipe_control/spectrum.py
+    trunk/user_functions/spectrum.py
+
+Modified: trunk/pipe_control/spectrum.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/pipe_control/spectrum.py?rev=19483&amp;r1=19482&amp;r2=19483&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/pipe_control/spectrum.py?rev=19483&amp;r1=19482&amp;r2=19483&amp;view=diff</a>
+==============================================================================
+--- trunk/pipe_control/spectrum.py (original)
++++ trunk/pipe_control/spectrum.py Tue Apr 16 10:51:48 2013
+@@ -60,9 +60,11 @@
+         spin.intensity_err = spin.baseplane_rmsd
+ 
+ 
+-def __errors_repl(verbosity=0):
++def __errors_repl(subset=None, verbosity=0):
+     &quot;&quot;&quot;Calculate the errors for peak intensities from replicated spectra.
+ 
++    @keyword subset:    The list of spectrum ID strings to restrict the 
+analysis to.
++    @type subset:       list of str
+     @keyword verbosity: The amount of information to print.  The higher the 
+value, the greater the verbosity.
+     @type verbosity:    int
+     &quot;&quot;&quot;
+@@ -82,8 +84,14 @@
+     cdp.sigma_I = {}
+     cdp.var_I = {}
+ 
++    # The subset.
++    subset_flag = False
++    if not subset:
++        subset_flag = True
++        subset = cdp.spectrum_ids
++
+     # Loop over the spectra.
+-    for id in cdp.spectrum_ids:
++    for id in subset:
+         # Skip non-replicated spectra.
+         if not repl[id]:
+             continue
+@@ -172,7 +180,10 @@
+     # Average across all spectra if there are time points with a single 
+spectrum.
+     if not all_repl:
+         # Print out.
+-        print(&quot;\nVariance averaging over all spectra.&quot;)
++        if subset_flag:
++            print(&quot;\nVariance averaging over the spectra subset.&quot;)
++        else:
++            print(&quot;\nVariance averaging over all spectra.&quot;)
+ 
+         # Initialise.
+         var_I = 0.0
+@@ -192,7 +203,7 @@
+         var_I = var_I / float(num_dups)
+ 
+         # Assign the average value to all time points.
+-        for id in cdp.spectrum_ids:
++        for id in subset:
+             cdp.var_I[id] = var_I
+ 
+         # Print out.
+@@ -213,7 +224,7 @@
+         spin.intensity_err = cdp.sigma_I
+ 
+ 
+-def __errors_volume_no_repl():
++def __errors_volume_no_repl(subset=None):
+     &quot;&quot;&quot;Calculate the errors for peak volumes when no spectra are 
+replicated.&quot;&quot;&quot;
+ 
+     # Loop over the spins and set the error to the RMSD of the base plane 
+noise.
+@@ -365,8 +376,12 @@
+             del spin.intensities[spectrum_id]
+ 
+ 
+-def error_analysis():
+-    &quot;&quot;&quot;Determine the peak intensity standard deviation.&quot;&quot;&quot;
++def error_analysis(subset=None):
++    &quot;&quot;&quot;Determine the peak intensity standard deviation.
++
++    @keyword subset:    The list of spectrum ID strings to restrict the 
+analysis to.
++    @type subset:       list of str
++    &quot;&quot;&quot;
+ 
+     # Test if the current pipe exists
+     pipes.test()
+@@ -378,6 +393,12 @@
+     # Test if spectra have been loaded.
+     if not hasattr(cdp, 'spectrum_ids'):
+         raise RelaxError(&quot;Error analysis is not possible, no spectra have 
+been loaded.&quot;)
++
++    # Check the IDs.
++    if subset:
++        for id in subset:
++            if id not in cdp.spectrum_ids:
++                raise RelaxError(&quot;The spectrum ID '%s' has not been loaded 
+into relax.&quot; % id)
+ 
+     # Peak height category.
+     if cdp.int_method == 'height':
+@@ -390,12 +411,14 @@
+             print(&quot;Replicated spectra:  Yes.&quot;)
+ 
+             # Set the errors.
+-            __errors_repl()
++            __errors_repl(subset=subset)
+ 
+         # No replicated spectra.
+         else:
+             # Print out.
+             print(&quot;Replicated spectra:  No.&quot;)
++            if subset:
++                print(&quot;Spectra ID subset ignored.&quot;)
+ 
+             # Set the errors.
+             __errors_height_no_repl()
+@@ -411,7 +434,7 @@
+             print(&quot;Replicated spectra:  Yes.&quot;)
+ 
+             # Set the errors.
+-            __errors_repl()
++            __errors_repl(subset=subset)
+ 
+         # No replicated spectra.
+         else:
+
+Modified: trunk/user_functions/spectrum.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/user_functions/spectrum.py?rev=19483&amp;r1=19482&amp;r2=19483&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/user_functions/spectrum.py?rev=19483&amp;r1=19482&amp;r2=19483&amp;view=diff</a>
+==============================================================================
+--- trunk/user_functions/spectrum.py (original)
++++ trunk/user_functions/spectrum.py Tue Apr 16 10:51:48 2013
+@@ -113,9 +113,19 @@
+ uf = uf_info.add_uf('spectrum.error_analysis')
+ uf.title = &quot;Perform an error analysis for peak intensities.&quot;
+ uf.title_short = &quot;Peak intensity error analysis.&quot;
++uf.add_keyarg(
++    name = &quot;subset&quot;,
++    py_type = &quot;str_list&quot;,
++    desc_short = &quot;subset spectrum IDs&quot;,
++    desc = &quot;The list of spectrum ID strings to restrict the error analysis 
+to.&quot;,
++    wiz_combo_iter = spectrum.get_ids,
++    wiz_read_only = True,
++    can_be_none = True
++)
+ # Description.
+ uf.desc.append(Desc_container())
+ uf.desc[-1].add_paragraph(&quot;This user function must only be called after all 
+peak intensities have been loaded and all other necessary spectral 
+information set.  This includes the baseplane RMSD and the number of points 
+used in volume integration, both of which are only used if spectra have not 
+been replicated.&quot;)
++uf.desc[-1].add_paragraph(&quot;The error analysis can be restricted to a subset 
+of the loaded spectral data.  This is useful, for example, if half the 
+spectra have been collected on one spectrometer and the other half on a 
+different spectrometer.&quot;)
+ uf.desc[-1].add_paragraph(&quot;Six different types of error analysis are 
+supported depending on whether peak heights or volumes are supplied, whether 
+noise is determined from replicated spectra or the RMSD of the baseplane 
+noise, and whether all spectra or only a subset have been duplicated.  These 
+are:&quot;)
+ table = uf_tables.add_table(label=&quot;table: peak intensity error analysis&quot;, 
+caption=&quot;The six peak intensity error analysis types.&quot;)
+ table.add_headings([&quot;Int type&quot;, &quot;Noise source&quot;, &quot;Error scope&quot;])
+@@ -156,7 +166,7 @@
+ uf.backend = spectrum.error_analysis
+ uf.menu_text = &quot;&amp;error_analysis&quot;
+ uf.gui_icon = &quot;oxygen.categories.applications-education&quot;
+-uf.wizard_height_desc = 550
++uf.wizard_height_desc = 530
+ uf.wizard_size = (1000, 700)
+ uf.wizard_image = WIZARD_IMAGE_PATH + 'spectrum' + sep + 'spectrum_200.png'
+ uf.wizard_apply_button = False
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Apr 16 11:00:02 2013</div>  
+</body>
+</html>

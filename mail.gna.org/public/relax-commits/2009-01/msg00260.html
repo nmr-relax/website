@@ -1,0 +1,159 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r8485 &#45; /branches/multi_structure/generic_fns/structure/internal.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 15 Jan 2009 18:30:09 +0100 -->
+<!--X-Message-Id: E1LNW2j&#45;0004rs&#45;4b@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r8485 - /branches/multi_structure/generic_fns/structure/internal.py -- January 15, 2009 - 18:30</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r8485 - /branches/multi_structure/generic_fns/structure/internal.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00260" class="tabs">Index by Date</a> | <a href="threads.html#00260" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00259.html">Date Prev</a>] [<a href="msg00261.html">Date Next</a>] [<a href="msg00259.html">Thread Prev</a>] [<a href="msg00261.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 15 Jan 2009 17:30:09 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00260.html">E1LNW2j-0004rs-4b@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on January 15, 2009 - 18:30:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Jan 15 18:30:08 2009
+New Revision: 8485
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=8485&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=8485&amp;view=rev</a>
+Log:
+The internal PDB reader now has rudimentary support for element determination 
+if that column is missing.
+
+
+Modified:
+    branches/multi_structure/generic_fns/structure/internal.py
+
+Modified: branches/multi_structure/generic_fns/structure/internal.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/multi_structure/generic_fns/structure/internal.py?rev=8485&amp;r1=8484&amp;r2=8485&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/multi_structure/generic_fns/structure/internal.py?rev=8485&amp;r1=8484&amp;r2=8485&amp;view=diff</a>
+==============================================================================
+--- branches/multi_structure/generic_fns/structure/internal.py (original)
++++ branches/multi_structure/generic_fns/structure/internal.py Thu Jan 15 
+18:30:08 2009
+@@ -28,7 +28,7 @@
+ import os
+ from os import F_OK, access
+ from re import search
+-from string import split, strip, upper
++from string import digits, split, strip, upper
+ from warnings import warn
+ 
+ # relax module imports.
+@@ -1321,6 +1321,29 @@
+             self.bonded[index2].append(index1)
+ 
+ 
++    def __det_pdb_element(self, atom_name):
++        &quot;&quot;&quot;Try to determine the element from the PDB atom name.
++
++        @param atom_name:   The PDB atom name.
++        @type atom_name:    str
++        @return:            The element name, or None if unsuccessful.
++        @rtype:             str or None
++        &quot;&quot;&quot;
++
++        # Strip away atom numbering, from the front and end.
++        element = strip(atom_name, digits)
++
++        # Allowed element list.
++        elements = ['H', 'C', 'N', 'O', 'F', 'P']
++
++        # Return the element, if in the list.
++        if element in elements:
++            return element
++
++        # Else, throw a warning.
++        warn(RelaxWarning(&quot;Cannot determine the element associated with atom 
+'%s'.&quot; % atom_name))
++
++
+     def fill_object_from_pdb(self, records):
+         &quot;&quot;&quot;Method for generating a complete Structure_container object from 
+the given PDB records.
+ 
+@@ -1339,7 +1362,13 @@
+ 
+             # Add the atom.
+             if record[0] == 'ATOM' or record[0] == 'HETATM':
+-                self.atom_add(pdb_record=record[0], atom_num=record[1], 
+atom_name=record[2], res_name=record[4], chain_id=record[5], 
+res_num=record[6], pos=[record[8], record[9], record[10]], 
+segment_id=record[13], element=record[14])
++                # Attempt at determining the element, if missing.
++                element = record[14]
++                if not element:
++                    element = self.__det_pdb_element(record[2])
++
++                # Add.
++                self.atom_add(pdb_record=record[0], atom_num=record[1], 
+atom_name=record[2], res_name=record[4], chain_id=record[5], 
+res_num=record[6], pos=[record[8], record[9], record[10]], 
+segment_id=record[13], element=element)
+ 
+             # Connect atoms.
+             if record[0] == 'CONECT':
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Jan 15 19:00:03 2009</div>  
+</body>
+</html>

@@ -1,0 +1,218 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r11665 &#45; /1.3/data/diff_tensor.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 17 Nov 2010 16:03:55 +0100 -->
+<!--X-Message-Id: E1PIjYB&#45;0002py&#45;4j@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r11665 - /1.3/data/diff_tensor.py -- November 17, 2010 - 16:03</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r11665 - /1.3/data/diff_tensor.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00002" class="tabs">Index by Date</a> | <a href="threads.html#00002" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00001.html">Date Prev</a>] [<a href="msg00003.html">Date Next</a>] [<a href="msg00001.html">Thread Prev</a>] [<a href="msg00003.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 17 Nov 2010 15:03:55 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00002.html">E1PIjYB-0002py-4j@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on November 17, 2010 - 16:03:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Nov 17 16:03:54 2010
+New Revision: 11665
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=11665&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=11665&amp;view=rev</a>
+Log:
+The rotation matrix for the spheroidal diffusion tensors is now correctly 
+generated.
+
+Again this is a fix for currently unused code (it will be used for BMRB 
+support though).
+
+
+Modified:
+    1.3/data/diff_tensor.py
+
+Modified: 1.3/data/diff_tensor.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/data/diff_tensor.py?rev=11665&amp;r1=11664&amp;r2=11665&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/data/diff_tensor.py?rev=11665&amp;r1=11664&amp;r2=11665&amp;view=diff</a>
+==============================================================================
+--- 1.3/data/diff_tensor.py (original)
++++ 1.3/data/diff_tensor.py Wed Nov 17 16:03:54 2010
+@@ -24,11 +24,13 @@
+ from copy import deepcopy
+ from re import search
+ from math import cos, sin
+-from numpy import float64, dot, identity, transpose, zeros
++from numpy import array, float64, dot, identity, transpose, zeros
+ from types import ListType
+ 
+ # relax module imports.
+ from data_classes import Element
++from maths_fns.coord_transform import spherical_to_cartesian
++from maths_fns.rotation_matrix import two_vect_to_R
+ from relax_errors import RelaxError
+ from relax_xml import fill_object_contents, xml_to_object
+ 
+@@ -295,8 +297,7 @@
+     Spherical diffusion
+     ===================
+ 
+-    As the orientation of the diffusion tensor within the structural frame 
+is undefined when the
+-    molecule diffuses as a sphere, the rotation matrix is simply the 
+identity matrix::
++    As the orientation of the diffusion tensor within the structural frame 
+is undefined when the molecule diffuses as a sphere, the rotation matrix is 
+simply the identity matrix::
+ 
+               | 1  0  0 |
+         R  =  | 0  1  0 |.
+@@ -306,19 +307,13 @@
+     Spheroidal diffusion
+     ====================
+ 
+-    The rotation matrix required to shift from the diffusion tensor frame to 
+the structural
+-    frame is equal to::
+-
+-              |  cos(theta) * cos(phi)  -sin(phi)   sin(theta) * cos(phi) |
+-        R  =  |  cos(theta) * sin(phi)   cos(phi)   sin(theta) * sin(phi) |.
+-              | -sin(theta)              0          cos(theta)            |
++    The rotation matrix required to shift from the diffusion tensor frame to 
+the structural frame is generated from the unique axis of the diffusion 
+tensor.
+ 
+ 
+     Ellipsoidal diffusion
+     =====================
+ 
+-    The rotation matrix required to shift from the diffusion tensor frame to 
+the structural
+-    frame is equal to::
++    The rotation matrix required to shift from the diffusion tensor frame to 
+the structural frame is equal to::
+ 
+         R  =  | Dx_unit  Dy_unit  Dz_unit |,
+ 
+@@ -351,25 +346,29 @@
+     # The rotation matrix for the spheroid.
+     elif diff_type == 'spheroid':
+         # Unpack the arguments.
+-        theta, phi, Dpar_unit = args
++        spheroid_type, theta, phi, Dpar_unit = args
+ 
+         # Initialise the rotation matrix.
+-        rotation = identity(3, float64)
+-
+-        # First row of the rotation matrix.
+-        rotation[0, 0] = cos(theta) * cos(phi)
+-        rotation[1, 0] = cos(theta) * sin(phi)
+-        rotation[2, 0] = -sin(theta)
+-
+-        # Second row of the rotation matrix.
+-        rotation[0, 1] = -sin(phi)
+-        rotation[1, 1] = cos(phi)
+-
+-        # Replace the last row of the rotation matrix with the Dpar unit 
+vector.
+-        rotation[:, 2] = Dpar_unit
+-
+-        # Return the tensor.
+-        return rotation
++        R = zeros((3, 3), float64)
++
++        # The unique axis in the diffusion frame.
++        if spheroid_type == 'prolate':
++            axis = array([0, 0, 1], float64)
++        else:
++            axis = array([1, 0, 0], float64)
++
++        # The spherical coordinate vector.
++        spher_vect = array([1, theta, phi], float64)
++
++        # The diffusion tensor axis in the PDB frame.
++        diff_axis = zeros(3, float64)
++        spherical_to_cartesian(spher_vect, diff_axis)
++
++        # The rotation matrix.
++        two_vect_to_R(diff_axis, axis, R)
++
++        # Return the rotation.
++        return R
+ 
+     # The rotation matrix for the ellipsoid.
+     elif diff_type == 'ellipsoid':
+@@ -536,7 +535,7 @@
+         yield ('Dratio',        ['tm', 'Da'],                   ['Dpar', 
+'Dper'])
+         yield ('Dpar_unit',     ['theta', 'phi'],               ['theta', 
+'phi'])
+         yield ('tensor_diag',   ['tm', 'Da'],                   ['type', 
+'Dpar', 'Dper'])
+-        yield ('rotation',      ['theta', 'phi'],               ['type', 
+'theta', 'phi', 'Dpar_unit'])
++        yield ('rotation',      ['theta', 'phi'],               ['type', 
+'spheroid_type', 'theta', 'phi', 'Dpar_unit'])
+         yield ('tensor',        ['tm', 'Da', 'theta', 'phi'],   ['rotation', 
+'tensor_diag'])
+ 
+     # Ellipsoidal diffusion.
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Nov 17 16:20:02 2010</div>  
+</body>
+</html>

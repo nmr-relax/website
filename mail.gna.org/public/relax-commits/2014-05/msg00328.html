@@ -1,0 +1,146 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r23225 &#45; /branches/disp_speed/lib/dispersion/m61.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 19 May 2014 03:20:50 +0200 -->
+<!--X-Message-Id: E1WmCG2&#45;00075k&#45;5n@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r23225 - /branches/disp_speed/lib/dispersion/m61.py -- May 19, 2014 - 03:20</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r23225 - /branches/disp_speed/lib/dispersion/m61.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00328" class="tabs">Index by Date</a> | <a href="threads.html#00328" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00327.html">Date Prev</a>] [<a href="msg00329.html">Date Next</a>] [<a href="msg00327.html">Thread Prev</a>] [<a href="msg00329.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 19 May 2014 01:20:50 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00328.html">E1WmCG2-00075k-5n@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on May 19, 2014 - 03:20:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Mon May 19 03:20:49 2014
+New Revision: 23225
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=23225&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=23225&amp;view=rev</a>
+Log:
+Speed-up for model M61.
+
+task #7793: (<a  rel="nofollow" href="https://gna.org/task/?7793">https://gna.org/task/?7793</a>) Speed-up of dispersion models.
+
+Change in speed is:
+test_m61_data_to_m61
+6.692s -&gt; 3.480s
+
+Modified:
+    branches/disp_speed/lib/dispersion/m61.py
+
+Modified: branches/disp_speed/lib/dispersion/m61.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/disp_speed/lib/dispersion/m61.py?rev=23225&amp;r1=23224&amp;r2=23225&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/disp_speed/lib/dispersion/m61.py?rev=23225&amp;r1=23224&amp;r2=23225&amp;view=diff</a>
+==============================================================================
+--- branches/disp_speed/lib/dispersion/m61.py   (original)
++++ branches/disp_speed/lib/dispersion/m61.py   Mon May 19 03:20:49 2014
+@@ -63,6 +63,9 @@
+     - U{relaxation dispersion page of the relax 
+website&lt;<a  rel="nofollow" href="http://www.nmr-relax.com/analyses/relaxation_dispersion.html#M61">http://www.nmr-relax.com/analyses/relaxation_dispersion.html#M61</a>&gt;}.
+ &quot;&quot;&quot;
+ 
++# Python module imports.
++from numpy import isfinite, sum
++
+ 
+ def r1rho_M61(r1rho_prime=None, phi_ex=None, kex=None, 
+spin_lock_fields2=None, back_calc=None, num_points=None):
+     &quot;&quot;&quot;Calculate the R2eff values for the M61 model.
+@@ -90,20 +93,17 @@
+     # The numerator.
+     numer = phi_ex * kex
+ 
+-    # Loop over the dispersion points, back calculating the R1rho values.
++    # Denominator.
++    denom = kex2 + spin_lock_fields2
++
++    # R1rho calculation.
++    R1rho = r1rho_prime + numer / denom
++
++    # Catch errors, taking a sum over array is the fastest way to check for
++    # +/- inf (infinity) and nan (not a number).
++    if not isfinite(sum(R1rho)):
++        R1rho = array([1e100]*num_points)
++
++    # Parse back the value to update the back_calc class object.
+     for i in range(num_points):
+-        # Catch zeros (to avoid pointless mathematical operations).
+-        if numer == 0.0:
+-            back_calc[i] = r1rho_prime
+-            continue
+-
+-        # Denominator.
+-        denom = kex2 + spin_lock_fields2[i]
+-
+-        # Avoid divide by zero.
+-        if denom == 0.0:
+-            back_calc[i] = 1e100
+-            continue
+-
+-        # R1rho calculation.
+-        back_calc[i] = r1rho_prime + numer / denom
++        back_calc[i] = R1rho[i]
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon May 19 03:40:02 2014</div>  
+</body>
+</html>

@@ -1,0 +1,225 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r23899 &#45; /branches/disp_spin_speed/lib/dispersion/tap03.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 13 Jun 2014 07:20:59 +0200 -->
+<!--X-Message-Id: E1WvJv8&#45;0003VL&#45;U4@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r23899 - /branches/disp_spin_speed/lib/dispersion/tap03.py -- June 13, 2014 - 07:20</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r23899 - /branches/disp_spin_speed/lib/dispersion/tap03.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00286" class="tabs">Index by Date</a> | <a href="threads.html#00286" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00285.html">Date Prev</a>] [<a href="msg00287.html">Date Next</a>] [<a href="msg00285.html">Thread Prev</a>] [<a href="msg00287.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 13 Jun 2014 05:20:58 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00286.html">E1WvJv8-0003VL-U4@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on June 13, 2014 - 07:20:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Fri Jun 13 07:20:57 2014
+New Revision: 23899
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=23899&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=23899&amp;view=rev</a>
+Log:
+Converted TAP03 model to use multi dimensional numpy arrays.
+
+Task #7807 (<a  rel="nofollow" href="https://gna.org/task/index.php?7807">https://gna.org/task/index.php?7807</a>): Speed-up of dispersion 
+models for Clustered analysis.
+
+Modified:
+    branches/disp_spin_speed/lib/dispersion/tap03.py
+
+Modified: branches/disp_spin_speed/lib/dispersion/tap03.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/disp_spin_speed/lib/dispersion/tap03.py?rev=23899&amp;r1=23898&amp;r2=23899&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/disp_spin_speed/lib/dispersion/tap03.py?rev=23899&amp;r1=23898&amp;r2=23899&amp;view=diff</a>
+==============================================================================
+--- branches/disp_spin_speed/lib/dispersion/tap03.py    (original)
++++ branches/disp_spin_speed/lib/dispersion/tap03.py    Fri Jun 13 07:20:57 
+2014
+@@ -60,7 +60,8 @@
+ &quot;&quot;&quot;
+ 
+ # Python module imports.
+-from numpy import arctan2, array, isfinite, min, sin, sqrt, sum
++from numpy import any, arctan2, array, isfinite, min, sin, sqrt, sum
++from numpy.ma import fix_invalid, masked_where
+ 
+ 
+ def r1rho_TAP03(r1rho_prime=None, omega=None, offset=None, pA=None, pB=None, 
+dw=None, kex=None, R1=0.0, spin_lock_fields=None, spin_lock_fields2=None, 
+back_calc=None, num_points=None):
+@@ -70,30 +71,34 @@
+ 
+ 
+     @keyword r1rho_prime:       The R1rho_prime parameter value (R1rho with 
+no exchange).
+-    @type r1rho_prime:          float
++    @type r1rho_prime:          numpy float array of rank 
+[NE][NS][[NM][NO][ND]
+     @keyword omega:             The chemical shift for the spin in rad/s.
+-    @type omega:                float
++    @type omega:                numpy float array of rank 
+[NE][NS][[NM][NO][ND]
+     @keyword offset:            The spin-lock offsets for the data.
+-    @type offset:               numpy rank-1 float array
++    @type offset:               numpy float array of rank 
+[NE][NS][[NM][NO][ND]
+     @keyword pA:                The population of state A.
+     @type pA:                   float
+     @keyword pB:                The population of state B.
+     @type pB:                   float
+     @keyword dw:                The chemical exchange difference between 
+states A and B in rad/s.
+-    @type dw:                   float
++    @type dw:                   numpy float array of rank 
+[NE][NS][[NM][NO][ND]
+     @keyword kex:               The kex parameter value (the exchange rate 
+in rad/s).
+     @type kex:                  float
+     @keyword R1:                The R1 relaxation rate.
+-    @type R1:                   float
++    @type R1:                   numpy float array of rank 
+[NE][NS][[NM][NO][ND]
+     @keyword spin_lock_fields:  The R1rho spin-lock field strengths (in 
+rad.s^-1).
+-    @type spin_lock_fields:     numpy rank-1 float array
++    @type spin_lock_fields:     numpy float array of rank 
+[NE][NS][[NM][NO][ND]
+     @keyword spin_lock_fields2: The R1rho spin-lock field strengths squared 
+(in rad^2.s^-2).  This is for speed.
+-    @type spin_lock_fields2:    numpy rank-1 float array
++    @type spin_lock_fields2:    numpy float array of rank 
+[NE][NS][[NM][NO][ND]
+     @keyword back_calc:         The array for holding the back calculated 
+R1rho values.  Each element corresponds to the combination of offset and spin 
+lock field.
+-    @type back_calc:            numpy rank-1 float array
++    @type back_calc:            numpy float array of rank 
+[NE][NS][[NM][NO][ND]
+     @keyword num_points:        The number of points on the dispersion 
+curve, equal to the length of the spin_lock_fields and back_calc arguments.
+-    @type num_points:           int
++    @type num_points:           numpy int array of rank [NE][NS][[NM][NO][ND]
+     &quot;&quot;&quot;
++
++    # Flag to tell if values should be replaced if it is zero.
++    t_gamma_neg = False
++    t_numer_zero = False
+ 
+     # Repetitive calculations (to speed up calculations).
+     Wa = omega                  # Larmor frequency [s^-1].
+@@ -117,9 +122,10 @@
+     gamma = 1.0 + phi_ex*(sigma2 - kex2 + spin_lock_fields2) / (sigma2 + 
+kex2 + spin_lock_fields2)**2
+ 
+     # Bad gamma.
+-    if min(gamma) &lt; 0.0:
+-        back_calc[:] = array([1e100]*num_points)
+-        return
++    mask_gamma_neg = gamma &lt; 0.0
++    if any(gamma):
++        t_gamma_neg = True
++        gamma[mask_gamma_neg] = 0.0
+ 
+     # Special omega values.
+     waeff2 = gamma*spin_lock_fields2 + da**2     # Effective field at A.
+@@ -138,19 +144,28 @@
+ 
+     # Catch zeros (to avoid pointless mathematical operations).
+     # This will result in no exchange, returning flat lines.
+-    if numer == 0.0:
+-        back_calc[:] = R1_cos_theta2 + R1rho_prime_sin_theta2
+-        return
++    if min(numer) == 0.0:
++        t_numer_zero = True
++        mask_numer_zero = masked_where(numer == 0.0, numer)
+ 
+     # Denominator.
+     denom = waeff2*wbeff2/weff2 + kex2 - 2.0*hat_sin_theta2*phi_ex + (1.0 - 
+gamma)*spin_lock_fields2
+  
+     # R1rho calculation.
+-    R1rho = R1_cos_theta2 + R1rho_prime_sin_theta2 + hat_sin_theta2 * numer 
+/ denom / gamma
++    back_calc[:] = R1_cos_theta2 + R1rho_prime_sin_theta2 + hat_sin_theta2 * 
+numer / denom / gamma
++
++    # Replace data in array.
++    # If gamma is negative.
++    if t_gamma_neg:
++        back_calc[mask_gamma_neg] = 1e100
++
++    # If numer is zero.
++    if t_numer_zero:
++        replace = R1_cos_theta2 + R1rho_prime_sin_theta2
++        back_calc[mask_numer_zero.mask] = replace[mask_numer_zero.mask]
+ 
+     # Catch errors, taking a sum over array is the fastest way to check for
+     # +/- inf (infinity) and nan (not a number).
+-    if not isfinite(sum(R1rho)):
+-        R1rho = array([1e100]*num_points)
+-
+-    back_calc[:] = R1rho
++    if not isfinite(sum(back_calc)):
++        # Replaces nan, inf, etc. with fill value.
++        fix_invalid(back_calc, copy=False, fill_value=1e100)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Jun 13 07:40:02 2014</div>  
+</body>
+</html>

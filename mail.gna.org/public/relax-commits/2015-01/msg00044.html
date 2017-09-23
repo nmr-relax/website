@@ -1,0 +1,198 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r27198 &#45; /trunk/pipe_control/pcs.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 16 Jan 2015 18:38:12 +0100 -->
+<!--X-Message-Id: E1YCAqZ&#45;00007P&#45;Fr@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r27198 - /trunk/pipe_control/pcs.py -- January 16, 2015 - 18:38</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r27198 - /trunk/pipe_control/pcs.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00044" class="tabs">Index by Date</a> | <a href="threads.html#00044" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00043.html">Date Prev</a>] [<a href="msg00045.html">Date Next</a>] [<a href="msg00043.html">Thread Prev</a>] [<a href="msg00045.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 16 Jan 2015 17:38:11 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00044.html">E1YCAqZ-00007P-Fr@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on January 16, 2015 - 18:38:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Jan 16 18:38:10 2015
+New Revision: 27198
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=27198&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=27198&amp;view=rev</a>
+Log:
+Improvements for the pcs.corr_plot user function - the plot range is now 
+determined by the data.
+
+
+Modified:
+    trunk/pipe_control/pcs.py
+
+Modified: trunk/pipe_control/pcs.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/pipe_control/pcs.py?rev=27198&amp;r1=27197&amp;r2=27198&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/pipe_control/pcs.py?rev=27198&amp;r1=27197&amp;r2=27198&amp;view=diff</a>
+==============================================================================
+--- trunk/pipe_control/pcs.py   (original)
++++ trunk/pipe_control/pcs.py   Fri Jan 16 18:38:10 2015
+@@ -1,6 +1,6 @@
+ 
+###############################################################################
+ #                                                                            
+ #
+-# Copyright (C) 2003-2014 Edward d'Auvergne                                  
+ #
++# Copyright (C) 2003-2015 Edward d'Auvergne                                  
+ #
+ #                                                                            
+ #
+ # This file is part of the program relax (<a  rel="nofollow" href="http://www.nmr-relax.com">http://www.nmr-relax.com</a>).         
+ #
+ #                                                                            
+ #
+@@ -24,7 +24,7 @@
+ 
+ # Python module imports.
+ from copy import deepcopy
+-from math import pi, sqrt
++from math import ceil, floor, pi, sqrt
+ from numpy import array, float64, int32, ones, std, zeros
+ from numpy.linalg import norm
+ from random import gauss
+@@ -39,8 +39,9 @@
+ from lib.periodic_table import periodic_table
+ from lib.physical_constants import pcs_constant
+ from lib.sequence import read_spin_data, write_spin_data
++from lib.software import grace
+ from lib.warnings import RelaxWarning, RelaxNoSpinWarning
+-from pipe_control import grace, pipes
++from pipe_control import pipes
+ from pipe_control.align_tensor import get_tensor_index, get_tensor_object, 
+opt_uses_align_data, opt_uses_tensor
+ from pipe_control.mol_res_spin import exists_mol_res_spin_data, 
+generate_spin_id_unique, is_pseudoatom, return_spin, spin_index_loop, 
+spin_loop
+ from pipe_control.pipes import check_pipe
+@@ -387,6 +388,8 @@
+             types.append(spin.element)
+ 
+     # Loop over the PCS data.
++    min_pcs = 1e100
++    max_pcs = -1e100
+     for align_id in cdp.pcs_ids:
+         # Loop over the spin types.
+         for i in range(len(types)):
+@@ -418,9 +421,23 @@
+                 # Skip if data is missing.
+                 if not hasattr(spin, 'pcs') or not hasattr(spin, 'pcs_bc') 
+or not align_id in spin.pcs or not align_id in spin.pcs_bc:
+                     continue
++                if spin.pcs[align_id] == None or spin.pcs_bc[align_id] == 
+None:
++                    continue
+ 
+                 # Append the data.
+                 data[-1].append([spin.pcs_bc[align_id], spin.pcs[align_id]])
++
++                # The minimum of all data sets.
++                if spin.pcs[align_id] &lt; min_pcs:
++                    min_pcs = spin.pcs[align_id]
++                if spin.pcs_bc[align_id] &lt; min_pcs:
++                    min_pcs = spin.pcs_bc[align_id]
++
++                # The maximum of all data sets.
++                if spin.pcs[align_id] &gt; max_pcs:
++                    max_pcs = spin.pcs[align_id]
++                if spin.pcs_bc[align_id] &gt; max_pcs:
++                    max_pcs = spin.pcs_bc[align_id]
+ 
+                 # Errors.
+                 if err_flag:
+@@ -434,6 +451,10 @@
+ 
+     # The data size.
+     size = len(data)
++
++    # Round the data limits.
++    max_pcs = ceil(max_pcs)
++    min_pcs = floor(min_pcs)
+ 
+     # Only one data set.
+     data = [data]
+@@ -453,7 +474,7 @@
+                 set_names.append(&quot;%s (%s)&quot; % (cdp.pcs_ids[i], types[j]))
+ 
+         # The header.
+-        grace.write_xy_header(file=file, title=title, subtitle=subtitle, 
+world=[[-10, -10, 10, 10]], sets=[size], set_names=[set_names], 
+linestyle=[[2]+[0]*size], data_type=['pcs_bc', 'pcs'], 
+axis_labels=[axis_labels], tick_major_spacing=[[1, 1]], tick_minor_count=[[9, 
+9]], legend_pos=[[1, 0.5]])
++        grace.write_xy_header(file=file, title=title, subtitle=subtitle, 
+world=[[min_pcs, min_pcs, max_pcs, max_pcs]], sets=[size], 
+set_names=[set_names], linestyle=[[2]+[0]*size], data_type=['pcs_bc', 'pcs'], 
+axis_labels=[axis_labels], tick_major_spacing=[[1, 1]], tick_minor_count=[[9, 
+9]], legend_pos=[[1, 0.5]])
+ 
+         # The main data.
+         grace.write_xy_data(data=data, file=file, graph_type=graph_type, 
+autoscale=False)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Jan 16 18:40:02 2015</div>  
+</body>
+</html>

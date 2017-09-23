@@ -1,0 +1,332 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r10957 &#45; /1.3/generic_fns/structure/geometric.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 09 Mar 2010 19:11:19 +0100 -->
+<!--X-Message-Id: E1Np3tn&#45;0007dH&#45;5o@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r10957 - /1.3/generic_fns/structure/geometric.py -- March 09, 2010 - 19:11</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r10957 - /1.3/generic_fns/structure/geometric.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00008" class="tabs">Index by Date</a> | <a href="threads.html#00008" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00007.html">Date Prev</a>] [<a href="msg00009.html">Date Next</a>] [<a href="msg00007.html">Thread Prev</a>] [<a href="msg00009.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 09 Mar 2010 18:11:18 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00008.html">E1Np3tn-0007dH-5o@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on March 09, 2010 - 19:11:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Mar  9 19:11:18 2010
+New Revision: 10957
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=10957&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=10957&amp;view=rev</a>
+Log:
+Converted generate_vector_dist() to use a limit checking function and 
+simplified the code.
+
+The angle arrays are now returned by uniform_vect_dist_spherical_angles() so 
+that
+generate_vector_dist() can use any spherical point distribution.  The 
+max_angle arg has been changed
+to limit_check so that any type of vector distribution can be created.
+
+
+Modified:
+    1.3/generic_fns/structure/geometric.py
+
+Modified: 1.3/generic_fns/structure/geometric.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/generic_fns/structure/geometric.py?rev=10957&amp;r1=10956&amp;r2=10957&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/generic_fns/structure/geometric.py?rev=10957&amp;r1=10956&amp;r2=10957&amp;view=diff</a>
+==============================================================================
+--- 1.3/generic_fns/structure/geometric.py (original)
++++ 1.3/generic_fns/structure/geometric.py Tue Mar  9 19:11:18 2010
+@@ -449,7 +449,7 @@
+     tensor_pdb_file.close()
+ 
+ 
+-def generate_vector_dist(mol=None, res_name=None, res_num=None, chain_id='', 
+centre=zeros(3, float64), R=eye(3), warp=eye(3), max_angle=None, scale=1.0, 
+inc=20):
++def generate_vector_dist(mol=None, res_name=None, res_num=None, chain_id='', 
+centre=zeros(3, float64), R=eye(3), warp=eye(3), limit_check=None, scale=1.0, 
+inc=20, debug=False):
+     &quot;&quot;&quot;Generate a uniformly distributed distribution of atoms on a warped 
+sphere.
+ 
+     The vectors from the function uniform_vect_dist_spherical_angles() are 
+used to generate the
+@@ -472,8 +472,8 @@
+     @type R:                3x3 numpy array
+     @keyword warp:          The optional 3x3 warping matrix.
+     @type warp:             3x3 numpy array
+-    @keyword max_angle:     The maximal polar angle, in rad, after which all 
+vectors are skipped.
+-    @type max_angle:        float
++    @keyword limit_check:   A function with determines the limits of the 
+distribution.  It should accept two arguments, the polar angle phi and the 
+azimuthal angle theta, and return True if the point is in the limits or False 
+if outside.
++    @type limit_check:      function
+     @keyword scale:         The scaling factor to stretch all rotated and 
+warped vectors by.
+     @type scale:            float
+     @keyword inc:           The number of increments or number of vectors 
+used to generate the outer
+@@ -487,42 +487,48 @@
+ 
+     # Get the uniform vector distribution.
+     print(&quot;    Creating the uniform vector distribution.&quot;)
+-    vectors = uniform_vect_dist_spherical_angles(inc=inc)
+-
+-    # Generate the increment values of v.
+-    v = zeros(inc/2+2, float64)
+-    val = 1.0 / float(inc/2)
+-    for i in xrange(1, inc/2+1):
+-        v[i] = float(i-1) * val + val/2.0
+-    v[-1] = 1.0
+-
+-    # Generate the distribution of spherical angles phi.
+-    phi = arccos(2.0 * v - 1.0)
+-
+-    # Loop over the angles and find the minimum latitudinal index.
+-    if max_angle == None:
+-        j_min = 0
+-    else:
+-        for j_min in xrange(len(phi)):
+-            if phi[j_min] &lt;= max_angle:
+-                break
+-
+-    # The number of j increments.
+-    num_j = inc/2+2 - j_min
++    vectors, theta, phi = uniform_vect_dist_spherical_angles(inc=inc)
++
++    # Init the arrays for stitching together.
++    edge = zeros(len(theta))
++    edge_index = zeros(len(theta), int)
++    edge_phi = zeros(len(theta), float64)
++    edge_atom = zeros(len(theta))
+ 
+     # Loop over the radial array of vectors (change in longitude).
+-    for i in range(inc):
++    for i in range(len(theta)):
++        # Debugging.
++        if debug:
++            print(&quot;i: %s; theta: %s&quot; % (i, theta[i]))
++
+         # Loop over the vectors of the radial array (change in latitude).
+-        for j in range(inc/2+2):
+-            # Skip the vector if the polar angle is greater than max_angle.
+-            if j &lt; j_min:
++        for j in range(len(phi)):
++            # Debugging.
++            if debug:
++                print(&quot;%sj: %s; phi: %s&quot; % (&quot; &quot;*4, j, phi[j]))
++
++            # Skip the vector if the point is outside of the limits.
++            if not limit_check(phi[j], theta[i]):
++                if debug:
++                    print(&quot;%sOut of cone.&quot; % (&quot; &quot;*8))
+                 continue
+ 
+-            # Index.
+-            index = i + j*inc
++            # Update the edge for this longitude.
++            if not edge[i]:
++                edge[i] = 1
++                edge_index[i] = j
++                edge_phi[i] = phi[j]
++                edge_atom[i] = atom_num
++
++                # Debugging.
++                if debug:
++                    print(&quot;%sEdge detected.&quot; % (&quot; &quot;*8))
++                    print(&quot;%sEdge index: %s&quot; % (&quot; &quot;*8, edge_index[i]))
++                    print(&quot;%sEdge phi pos: %s&quot; % (&quot; &quot;*8, edge_phi[i]))
++                    print(&quot;%sEdge atom: %s&quot; % (&quot; &quot;*8, edge_atom[i]))
+ 
+             # Rotate the vector into the diffusion frame.
+-            vector = dot(R, vectors[index])
++            vector = dot(R, vectors[i + j*len(theta)])
+ 
+             # Set the length of the vector to its diffusion rate within the 
+diffusion tensor geometric object.
+             vector = dot(warp, vector)
+@@ -533,20 +539,42 @@
+             # Position relative to the centre of mass.
+             pos = centre + vector
+ 
++            # Debugging.
++            if debug:
++                print(&quot;%sAdding atom %s.&quot; % (&quot; &quot;*8, 
+get_proton_name(atom_num)))
++
+             # Add the vector as a H atom of the TNS residue.
+             mol.atom_add(pdb_record='HETATM', atom_num=atom_num, 
+atom_name=get_proton_name(atom_num), res_name=res_name, chain_id=chain_id, 
+res_num=res_num, pos=pos, segment_id=None, element='H')
+ 
+-            # Connect to the previous atom (to generate the longitudinal 
+lines).
+-            if j &gt; j_min:
++            # Connect to the previous atom to generate the longitudinal 
+lines (except for the first point).
++            if j &gt; edge_index[i]:
++                # Debugging.
++                if debug:
++                    print(&quot;%sLongitude line, connecting %s to %s&quot; % (&quot; &quot;*8, 
+get_proton_name(atom_num), get_proton_name(atom_num-1)))
++
+                 mol.atom_connect(index1=atom_num-1, index2=atom_num-2)
+ 
+             # Connect across the radial arrays (to generate the latitudinal 
+lines).
+-            if i != 0:
+-                mol.atom_connect(index1=atom_num-1, index2=atom_num-1-num_j)
++            if i != 0 and j &gt;= edge_index[i-1]:
++                # The number of atoms back to the previous longitude.
++                num = len(phi) - edge_index[i]
++
++                # Debugging.
++                if debug:
++                    print(&quot;%sLatitude line, connecting %s to %s&quot; % (&quot; &quot;*8, 
+get_proton_name(atom_num), get_proton_name(atom_num-num)))
++
++                mol.atom_connect(index1=atom_num-1, index2=atom_num-1-num)
+ 
+             # Connect the last radial array to the first (to zip up the 
+geometric object and close the latitudinal lines).
+-            if i == inc-1:
+-                mol.atom_connect(index1=atom_num-1, 
+index2=origin_num-1+(j-j_min))
++            if i == len(theta)-1 and j &gt;= edge_index[0]:
++                # The number of atom in the first longitude line.
++                num = origin_num + j - edge_index[0]
++
++                # Debugging.
++                if debug:
++                    print(&quot;%sZipping up, connecting %s to %s&quot; % (&quot; &quot;*8, 
+get_proton_name(atom_num), get_proton_name(num)))
++
++                mol.atom_connect(index1=atom_num-1, index2=num-1)
+ 
+             # Increment the atom number.
+             atom_num = atom_num + 1
+@@ -707,9 +735,7 @@
+ def uniform_vect_dist_spherical_angles(inc=20):
+     &quot;&quot;&quot;Uniform distribution of vectors on a sphere using uniform spherical 
+angles.
+ 
+-    This function returns an array of unit vectors uniformly distributed 
+within 3D space.  To
+-    create the distribution, uniform spherical angles are used.  The two 
+spherical angles are
+-    defined as::
++    This function returns an array of unit vectors uniformly distributed 
+within 3D space.  To create the distribution, uniform spherical angles are 
+used.  The two spherical angles are defined as::
+ 
+         theta = 2.pi.u,
+         phi = cos^-1(2v - 1),
+@@ -719,21 +745,19 @@
+         u in [0, 1),
+         v in [0, 1].
+ 
+-    Because theta is defined between [0, pi] and phi is defined between [0, 
+2pi], for a uniform
+-    distribution u is only incremented half of 'inc'.  The unit vectors are 
+generated using the
+-    equation::
++    Because theta is defined between [0, pi] and phi is defined between [0, 
+2pi], for a uniform distribution u is only incremented half of 'inc'.  The 
+unit vectors are generated using the equation::
+ 
+                    | cos(theta) * sin(phi) |
+         vector  =  | sin(theta) * sin(phi) |.
+                    |      cos(phi)         |
+ 
+-    The vectors of this distribution generate both longitudinal and 
+latitudinal lines.
++    The vectors of this distribution generate both longitudinal and 
+latitudinal lines.  The arrays of angle distributions of theta and phi are 
+also returned.
+ 
+ 
+     @keyword inc:   The number of increments in the distribution.
+     @type inc:      int
+-    @return:        The distribution of vectors on a sphere.
+-    @rtype:         list of rank-1, 3D numpy arrays
++    @return:        The distribution of vectors on a sphere, the theta angle 
+array, and the phi angle array.
++    @rtype:         list of rank-1, 3D numpy arrays, array of float, array 
+of float
+     &quot;&quot;&quot;
+ 
+     # The inc argument must be an even number.
+@@ -778,5 +802,5 @@
+             # Append the vector.
+             vectors.append(array([x, y, z], float64))
+ 
+-    # Return the array of vectors.
+-    return vectors
++    # Return the array of vectors and angles.
++    return vectors, theta, phi
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Mar 09 19:40:01 2010</div>  
+</body>
+</html>

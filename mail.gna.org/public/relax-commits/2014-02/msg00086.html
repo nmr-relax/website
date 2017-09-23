@@ -1,0 +1,280 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r22194 &#45; in /branches/double_rotor:	specific_analyses/frame_order/optimisation.py	target_functions/frame_order.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 14 Feb 2014 17:54:32 +0100 -->
+<!--X-Message-Id: E1WEM24&#45;0006oz&#45;8e@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r22194 - in /branches/double_rotor:	specific_analyses/frame_order/optimisation.py	target_functions/frame_order.py -- February 14, 2014 - 17:54</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r22194 - in /branches/double_rotor:	specific_analyses/frame_order/optimisation.py	target_functions/frame_order.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00086" class="tabs">Index by Date</a> | <a href="threads.html#00086" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00085.html">Date Prev</a>] [<a href="msg00087.html">Date Next</a>] [<a href="msg00085.html">Thread Prev</a>] [<a href="msg00087.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 14 Feb 2014 16:54:32 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00086.html">E1WEM24-0006oz-8e@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on February 14, 2014 - 17:54:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Feb 14 17:54:31 2014
+New Revision: 22194
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=22194&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=22194&amp;view=rev</a>
+Log:
+Implemented the new frame order rotor model parameters in the target function.
+
+The parameters {axis_theta, axis_phi} have been replaced by the single 
+axis_alpha.  To support the
+new model construct, the CoM of the entire system is now passed into the 
+target function.
+
+
+Modified:
+    branches/double_rotor/specific_analyses/frame_order/optimisation.py
+    branches/double_rotor/target_functions/frame_order.py
+
+Modified: branches/double_rotor/specific_analyses/frame_order/optimisation.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/double_rotor/specific_analyses/frame_order/optimisation.py?rev=22194&amp;r1=22193&amp;r2=22194&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/double_rotor/specific_analyses/frame_order/optimisation.py?rev=22194&amp;r1=22193&amp;r2=22194&amp;view=diff</a>
+==============================================================================
+--- branches/double_rotor/specific_analyses/frame_order/optimisation.py 
+(original)
++++ branches/double_rotor/specific_analyses/frame_order/optimisation.py Fri 
+Feb 14 17:54:31 2014
+@@ -683,14 +683,18 @@
+     if not hasattr(cdp, 'num_int_pts'):
+         cdp.num_int_pts = 200000
+ 
++    # The centre of mass, for use in the rotor models.
++    com = pipe_centre_of_mass(verbosity=0)
++    com = array(com, float64)
++
+     # The centre of mass of the moving domain - to use as the centroid for 
+the average domain position rotation.
+     if cdp.ave_pos_pivot == 'com':
+-        com = pipe_centre_of_mass(atom_id=domain_moving(), verbosity=0)
++        ave_pos_pivot = pipe_centre_of_mass(atom_id=domain_moving(), 
+verbosity=0)
+         ave_pos_piv_sync = False
+ 
+     # The centre of mass of the moving domain - to use as the centroid for 
+the average domain position rotation.
+     if cdp.ave_pos_pivot == 'motional':
+-        com = pivot
++        ave_pos_pivot = pivot
+         ave_pos_piv_sync = True
+ 
+     # Print outs.
+@@ -709,7 +713,7 @@
+         sys.stdout.write(&quot;Base data: %s\n&quot; % repr(base_data))
+ 
+     # Set up the optimisation function.
+-    target = frame_order.Frame_order(model=cdp.model, 
+init_params=param_vector, full_tensors=full_tensors, 
+full_in_ref_frame=full_in_ref_frame, rdcs=rdcs, rdc_errors=rdc_err, 
+rdc_weights=rdc_weight, rdc_vect=rdc_vect, dip_const=rdc_const, pcs=pcs, 
+pcs_errors=pcs_err, pcs_weights=pcs_weight, atomic_pos=atomic_pos, temp=temp, 
+frq=frq, paramag_centre=paramag_centre, scaling_matrix=scaling_matrix, 
+ave_pos_pivot=com, ave_pos_piv_sync=ave_pos_piv_sync, 
+translation_opt=translation_opt, pivot=pivot, pivot2=pivot2, 
+pivot_opt=pivot_opt, num_int_pts=cdp.num_int_pts, quad_int=cdp.quad_int)
++    target = frame_order.Frame_order(model=cdp.model, 
+init_params=param_vector, full_tensors=full_tensors, 
+full_in_ref_frame=full_in_ref_frame, rdcs=rdcs, rdc_errors=rdc_err, 
+rdc_weights=rdc_weight, rdc_vect=rdc_vect, dip_const=rdc_const, pcs=pcs, 
+pcs_errors=pcs_err, pcs_weights=pcs_weight, atomic_pos=atomic_pos, temp=temp, 
+frq=frq, paramag_centre=paramag_centre, scaling_matrix=scaling_matrix, 
+com=com, ave_pos_pivot=ave_pos_pivot, ave_pos_piv_sync=ave_pos_piv_sync, 
+translation_opt=translation_opt, pivot=pivot, pivot2=pivot2, 
+pivot_opt=pivot_opt, num_int_pts=cdp.num_int_pts, quad_int=cdp.quad_int)
+ 
+     # Return the data.
+     return target, param_vector, data_types, scaling_matrix
+
+Modified: branches/double_rotor/target_functions/frame_order.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/double_rotor/target_functions/frame_order.py?rev=22194&amp;r1=22193&amp;r2=22194&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/double_rotor/target_functions/frame_order.py?rev=22194&amp;r1=22193&amp;r2=22194&amp;view=diff</a>
+==============================================================================
+--- branches/double_rotor/target_functions/frame_order.py (original)
++++ branches/double_rotor/target_functions/frame_order.py Fri Feb 14 17:54:31 
+2014
+@@ -25,7 +25,7 @@
+ # Python module imports.
+ from copy import deepcopy
+ from math import acos, pi, sqrt
+-from numpy import array, dot, float32, float64, ones, transpose, uint8, zeros
++from numpy import array, cross, dot, float32, float64, ones, transpose, 
+uint8, zeros
+ from numpy.linalg import norm
+ 
+ # relax module imports.
+@@ -46,7 +46,7 @@
+ from lib.frame_order.pseudo_ellipse_torsionless import 
+compile_2nd_matrix_pseudo_ellipse_torsionless, 
+pcs_numeric_int_pseudo_ellipse_torsionless, 
+pcs_numeric_int_pseudo_ellipse_torsionless_qrint
+ from lib.frame_order.rotor import compile_2nd_matrix_rotor, 
+pcs_numeric_int_rotor, pcs_numeric_int_rotor_qrint
+ from lib.geometry.coord_transform import spherical_to_cartesian
+-from lib.geometry.rotations import euler_to_R_zyz, two_vect_to_R
++from lib.geometry.rotations import axis_angle_to_R, euler_to_R_zyz, 
+two_vect_to_R
+ from lib.linear_algebra.kronecker_product import kron_prod
+ from lib.order import order_parameters
+ from lib.physical_constants import pcs_constant
+@@ -56,7 +56,7 @@
+ class Frame_order:
+     &quot;&quot;&quot;Class containing the target function of the optimisation of Frame 
+Order matrix components.&quot;&quot;&quot;
+ 
+-    def __init__(self, model=None, init_params=None, full_tensors=None, 
+full_in_ref_frame=None, rdcs=None, rdc_errors=None, rdc_weights=None, 
+rdc_vect=None, dip_const=None, pcs=None, pcs_errors=None, pcs_weights=None, 
+atomic_pos=None, temp=None, frq=None, paramag_centre=zeros(3), 
+scaling_matrix=None, num_int_pts=500, ave_pos_pivot=zeros(3), 
+ave_pos_piv_sync=True, translation_opt=False, pivot=None, pivot2=None, 
+pivot_opt=False, quad_int=True):
++    def __init__(self, model=None, init_params=None, full_tensors=None, 
+full_in_ref_frame=None, rdcs=None, rdc_errors=None, rdc_weights=None, 
+rdc_vect=None, dip_const=None, pcs=None, pcs_errors=None, pcs_weights=None, 
+atomic_pos=None, temp=None, frq=None, paramag_centre=zeros(3), 
+scaling_matrix=None, num_int_pts=500, com=None, ave_pos_pivot=zeros(3), 
+ave_pos_piv_sync=True, translation_opt=False, pivot=None, pivot2=None, 
+pivot_opt=False, quad_int=True):
+         &quot;&quot;&quot;Set up the target functions for the Frame Order theories.
+ 
+         @keyword model:             The name of the Frame Order model.
+@@ -95,6 +95,8 @@
+         @type scaling_matrix:       numpy rank-2 array
+         @keyword num_int_pts:       The number of points to use for the 
+numerical integration technique.
+         @type num_int_pts:          int
++        @keyword com:               The centre of mass of the system.  This 
+is used for defining the rotor model systems.
++        @type com:                  numpy 3D rank-1 array
+         @keyword ave_pos_pivot:     The pivot point to rotate all atoms 
+about to the average domain position.  For example this can be the centre of 
+mass of the moving domain.
+         @type ave_pos_pivot:        numpy 3D rank-1 array
+         @keyword ave_pos_piv_sync:  A flag which if True will cause pivot 
+point to rotate to the average domain position to be synchronised with the 
+motional pivot.  This will cause ave_pos_pivot argument to be ignored.
+@@ -134,6 +136,7 @@
+         self.paramag_centre = paramag_centre
+         self.total_num_params = len(init_params)
+         self.num_int_pts = num_int_pts
++        self.com = com
+         self.ave_pos_pivot = ave_pos_pivot
+         self.ave_pos_piv_sync = ave_pos_piv_sync
+         self.translation_opt = translation_opt
+@@ -405,6 +408,9 @@
+         # Initialise the Frame Order matrices.
+         self.frame_order_2nd = zeros((9, 9), float64)
+ 
++        # A rotation matrix for general use.
++        self.R = zeros((3, 3), float64)
++
+ 
+     def func_double_rotor(self, params):
+         &quot;&quot;&quot;Target function for the optimisation of the double rotor frame 
+order model.
+@@ -1879,18 +1885,23 @@
+         if self.translation_opt and self.pivot_opt:
+             self._param_pivot = params[:3]
+             self._translation_vector = params[3:6]
+-            ave_pos_alpha, ave_pos_beta, ave_pos_gamma, axis_theta, 
+axis_phi, sigma_max = params[6:]
++            ave_pos_alpha, ave_pos_beta, ave_pos_gamma, axis_alpha, 
+sigma_max = params[6:]
+         elif self.translation_opt:
+             self._translation_vector = params[:3]
+-            ave_pos_alpha, ave_pos_beta, ave_pos_gamma, axis_theta, 
+axis_phi, sigma_max = params[3:]
++            ave_pos_alpha, ave_pos_beta, ave_pos_gamma, axis_alpha, 
+sigma_max = params[3:]
+         elif self.pivot_opt:
+             self._param_pivot = params[:3]
+-            ave_pos_alpha, ave_pos_beta, ave_pos_gamma, axis_theta, 
+axis_phi, sigma_max = params[3:]
++            ave_pos_alpha, ave_pos_beta, ave_pos_gamma, axis_alpha, 
+sigma_max = params[3:]
+         else:
+-            ave_pos_alpha, ave_pos_beta, ave_pos_gamma, axis_theta, 
+axis_phi, sigma_max = params
+-
+-        # Generate the cone axis from the spherical angles.
+-        spherical_to_cartesian([1.0, axis_theta, axis_phi], self.cone_axis)
++            ave_pos_alpha, ave_pos_beta, ave_pos_gamma, axis_alpha, 
+sigma_max = params
++
++        # Generate the rotation axis from the CoM, pivot point, and alpha 
+angle.
++        r_compiv = array(self._param_pivot, float64) - self.com
++        r_compiv = r_compiv / norm(r_compiv)
++        mu_xy = cross(r_compiv, self.z_axis)
++        mu_xy = mu_xy / norm(mu_xy)
++        axis_angle_to_R(r_compiv, axis_alpha, self.R)
++        self.cone_axis = dot(self.R, mu_xy)
+ 
+         # Pre-calculate the eigenframe rotation matrix.
+         two_vect_to_R(self.z_axis, self.cone_axis, self.R_eigen)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Feb 17 09:40:02 2014</div>  
+</body>
+</html>

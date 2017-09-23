@@ -1,0 +1,307 @@
+<!-- MHonArc v2.6.10 -->
+<!--X-Subject: r3016 &#45; /1.3/data/diff_tensor.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Sun, 18 Feb 2007 00:48:54 +0100 -->
+<!--X-Message-Id: E1HIZI0&#45;0005v9&#45;Gk@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r3016 - /1.3/data/diff_tensor.py -- February 18, 2007 - 00:48</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r3016 - /1.3/data/diff_tensor.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00003" class="tabs">Index by Date</a> | <a href="threads.html#00003" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00002.html">Date Prev</a>] [<a href="msg00004.html">Date Next</a>] [<a href="msg00002.html">Thread Prev</a>] [<a href="msg00004.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Sat, 17 Feb 2007 23:48:24 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00003.html">E1HIZI0-0005v9-Gk@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on February 18, 2007 - 00:48:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Sun Feb 18 00:48:21 2007
+New Revision: 3016
+
+URL: <a  href="http://svn.gna.org/viewcvs/relax?rev=3016&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=3016&amp;view=rev</a>
+Log:
+Created the generator function 'dependency_generator()'.
+
+This generator is for looping over the list of target parameters to update 
+when a parameter is set.
+It replaces all the self._update_object() calls and simplifies the code.  It 
+will also be used for
+updating the Monte Carlo simulation data structures.
+
+
+Modified:
+    1.3/data/diff_tensor.py
+
+Modified: 1.3/data/diff_tensor.py
+URL: 
+<a  href="http://svn.gna.org/viewcvs/relax/1.3/data/diff_tensor.py?rev=3016&amp;r1=3015&amp;r2=3016&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/data/diff_tensor.py?rev=3016&amp;r1=3015&amp;r2=3016&amp;view=diff</a>
+==============================================================================
+--- 1.3/data/diff_tensor.py (original)
++++ 1.3/data/diff_tensor.py Sun Feb 18 00:48:21 2007
+@@ -28,6 +28,52 @@
+ from generic_fns.diffusion_tensor import calc_Diso, calc_Dpar, 
+calc_Dpar_unit, calc_Dper, calc_Dratio, calc_Dx, calc_Dx_unit, calc_Dy, 
+calc_Dy_unit, calc_Dz, calc_Dz_unit, calc_rotation, calc_tensor, 
+calc_tensor_diag
+ 
+ 
++
++def dependency_generator(diff_type):
++    &quot;&quot;&quot;Generator for the automatic updating the diffusion tensor data 
+structures.
++
++    The order of the yield statements is important!
++
++    @param diff_type:   The type of Brownian rotational diffusion.
++    @type diff_type:    str
++    @return:            This generator successively yields three objects, 
+the target object to
++                        update, the list of parameters which if modified 
+cause the target to be
++                        updated, and the list of parameters that the target 
+depends upon.
++    &quot;&quot;&quot;
++
++    # Spherical diffusion.
++    if diff_type == 'sphere':
++        yield ('Diso',          ['tm'], ['tm'])
++        yield ('tensor_diag',   ['tm'], ['type', 'Diso'])
++        yield ('rotation',      ['tm'], ['type'])
++        yield ('tensor',        ['tm'], ['rotation', 'tensor_diag'])
++
++    # Spheroidal diffusion.
++    elif diff_type == 'spheroid':
++        yield ('Diso',          ['tm'],                         ['tm'])
++        yield ('Dpar',          ['tm', 'Da'],                   ['Diso', 
+'Da'])
++        yield ('Dper',          ['tm', 'Da'],                   ['Diso', 
+'Da'])
++        yield ('Dratio',        ['tm', 'Da'],                   ['Dpar', 
+'Dper'])
++        yield ('Dpar_unit',     ['theta', 'phi'],               ['theta', 
+'phi'])
++        yield ('tensor_diag',   ['tm', 'Da'],                   ['type', 
+'Dpar', 'Dper'])
++        yield ('rotation',      ['theta', 'phi'],               ['type', 
+'theta', 'phi', 'Dpar_unit'])
++        yield ('tensor',        ['tm', 'Da', 'theta', 'phi'],   ['rotation', 
+'tensor_diag'])
++
++    # Ellipsoidal diffusion.
++    elif diff_type == 'ellipsoid':
++        yield ('Diso',          ['tm'],                                      
+   ['tm'])
++        yield ('Dx',            ['tm', 'Da', 'Dr'],                          
+   ['Diso', 'Da', 'Dr'])
++        yield ('Dy',            ['tm', 'Da', 'Dr'],                          
+   ['Diso', 'Da', 'Dr'])
++        yield ('Dz',            ['tm', 'Da'],                                
+   ['Diso', 'Da'])
++        yield ('Dx_unit',       ['alpha', 'beta', 'gamma'],                  
+   ['alpha', 'beta', 'gamma'])
++        yield ('Dy_unit',       ['alpha', 'beta', 'gamma'],                  
+   ['alpha', 'beta', 'gamma'])
++        yield ('Dz_unit',       ['alpha', 'beta'],                           
+   ['alpha', 'beta'])
++        yield ('tensor_diag',   ['tm', 'Da', 'Dr'],                          
+   ['type', 'Dx', 'Dy', 'Dz'])
++        yield ('rotation',      ['alpha', 'beta', 'gamma'],                  
+   ['type', 'Dx_unit', 'Dy_unit', 'Dz_unit'])
++        yield ('tensor',        ['tm', 'Da', 'Dr', 'alpha', 'beta', 
+'gamma'],   ['rotation', 'tensor_diag'])
++
++
++
+ # Diffusion tensor specific data.
+ #################################
+ 
+@@ -64,10 +110,6 @@
+ 
+             Dratio  =  Dpar / Dper.
+         &quot;&quot;&quot;
+-
+-        ######################
+-        # Set the attribute. #
+-        ######################
+ 
+         # Get the base parameter name and determine the object category 
+('val', 'err', or 'sim').
+         if search('_err$', name):
+@@ -104,77 +146,9 @@
+         if name in ['type', 'fixed', 'spheroid_type']:
+             return
+ 
+-
+-        ###############################
+-        # Update the data structures. #
+-        ###############################
+-
+-
+-        # Objects for all tensor types.
+-        ###############################
+-
+-        # The isotropic diffusion rate Diso.
+-        self._update_object(param_name, target='Diso', update_if_set=['tm'], 
+depends=['tm'], category=category)
+-
+-
+-        # Spherical diffusion.
+-        ######################
+-
+-        if self.type == 'sphere':
+-            # Update the diagonalised diffusion tensor (within the diffusion 
+frame).
+-            self._update_object(param_name, target='tensor_diag', 
+update_if_set=['tm'], depends=['type', 'Diso'], category=category)
+-
+-            # The rotation matrix (diffusion frame to structural frame).
+-            self._update_object(param_name, target='rotation', 
+update_if_set=['tm'], depends=['type'], category=category)
+-
+-            # The diffusion tensor (within the structural frame).
+-            self._update_object(param_name, target='tensor', 
+update_if_set=['tm'], depends=['rotation', 'tensor_diag'], category=category)
+-
+-
+-        # Spheroidal diffusion.
+-        #######################
+-
+-        elif self.type == 'spheroid':
+-            # Update Dpar, Dper, and Dratio.
+-            self._update_object(param_name, target='Dpar', 
+update_if_set=['tm', 'Da'], depends=['Diso', 'Da'], category=category)
+-            self._update_object(param_name, target='Dper', 
+update_if_set=['tm', 'Da'], depends=['Diso', 'Da'], category=category)
+-            self._update_object(param_name, target='Dratio', 
+update_if_set=['tm', 'Da'], depends=['Dpar', 'Dper'], category=category)
+-
+-            # Update the unit vector parallel to the axis.
+-            self._update_object(param_name, target='Dpar_unit', 
+update_if_set=['theta', 'phi'], depends=['theta', 'phi'], category=category)
+-
+-            # Update the diagonalised diffusion tensor (within the diffusion 
+frame).
+-            self._update_object(param_name, target='tensor_diag', 
+update_if_set=['tm', 'Da'], depends=['type', 'Dpar', 'Dper'], 
+category=category)
+-
+-            # The rotation matrix (diffusion frame to structural frame).
+-            self._update_object(param_name, target='rotation', 
+update_if_set=['theta', 'phi'], depends=['type', 'theta', 'phi', 
+'Dpar_unit'], category=category)
+-
+-            # The diffusion tensor (within the structural frame).
+-            self._update_object(param_name, target='tensor', 
+update_if_set=['tm', 'Da', 'theta', 'phi'], depends=['rotation', 
+'tensor_diag'], category=category)
+-
+-
+-        # Ellipsoidal diffusion.
+-        ########################
+-
+-        elif self.type == 'ellipsoid':
+-            # Update Dx, Dy, and Dz.
+-            self._update_object(param_name, target='Dx', 
+update_if_set=['tm', 'Da', 'Dr'], depends=['Diso', 'Da', 'Dr'], 
+category=category)
+-            self._update_object(param_name, target='Dy', 
+update_if_set=['tm', 'Da', 'Dr'], depends=['Diso', 'Da', 'Dr'], 
+category=category)
+-            self._update_object(param_name, target='Dz', 
+update_if_set=['tm', 'Da'], depends=['Diso', 'Da'], category=category)
+-
+-            # Update the unit vectors parallel to the axes.
+-            self._update_object(param_name, target='Dx_unit', 
+update_if_set=['alpha', 'beta', 'gamma'], depends=['alpha', 'beta', 'gamma'], 
+category=category)
+-            self._update_object(param_name, target='Dy_unit', 
+update_if_set=['alpha', 'beta', 'gamma'], depends=['alpha', 'beta', 'gamma'], 
+category=category)
+-            self._update_object(param_name, target='Dz_unit', 
+update_if_set=['beta', 'gamma'], depends=['beta', 'gamma'], category=category)
+-
+-            # Update the diagonalised diffusion tensor (within the diffusion 
+frame).
+-            self._update_object(param_name, target='tensor_diag', 
+update_if_set=['tm', 'Da', 'Dr'], depends=['type', 'Dx', 'Dy', 'Dz'], 
+category=category)
+-
+-            # The rotation matrix (diffusion frame to structural frame).
+-            self._update_object(param_name, target='rotation', 
+update_if_set=['alpha', 'beta', 'gamma'], depends=['type', 'Dx_unit', 
+'Dy_unit', 'Dz_unit'], category=category)
+-
+-            # The diffusion tensor (within the structural frame).
+-            self._update_object(param_name, target='tensor', 
+update_if_set=['tm', 'Da', 'Dr', 'alpha', 'beta', 'gamma'], 
+depends=['rotation', 'tensor_diag'], category=category)
++        # Update the data structures.
++        for target, update_if_set, depends in 
+dependency_generator(self.type):
++            self._update_object(param_name, target, update_if_set, depends, 
+category)
+ 
+ 
+     def _update_object(self, param_name, target, update_if_set, depends, 
+category):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Sun Feb 18 01:40:05 2007</div>  
+</body>
+</html>

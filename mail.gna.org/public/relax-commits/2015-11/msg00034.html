@@ -1,0 +1,190 @@
+<!-- MHonArc v2.6.19+ -->
+<!--X-Subject: r28104 &#45; /trunk/lib/structure/pca.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 25 Nov 2015 18:38:07 +0100 -->
+<!--X-Message-Id: E1a1e18&#45;0008FY&#45;RR@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r28104 - /trunk/lib/structure/pca.py -- November 25, 2015 - 18:38</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r28104 - /trunk/lib/structure/pca.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00034" class="tabs">Index by Date</a> | <a href="threads.html#00034" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00033.html">Date Prev</a>] [<a href="msg00035.html">Date Next</a>] [<a href="msg00033.html">Thread Prev</a>] [<a href="msg00035.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 25 Nov 2015 17:38:06 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00034.html">E1a1e18-0008FY-RR@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on November 25, 2015 - 18:38:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Nov 25 18:38:06 2015
+New Revision: 28104
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=28104&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=28104&amp;view=rev</a>
+Log:
+The PCA analysis in the relax library now calculates the per structure 
+projections along the PCs.
+
+Modified:
+    trunk/lib/structure/pca.py
+
+Modified: trunk/lib/structure/pca.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/lib/structure/pca.py?rev=28104&amp;r1=28103&amp;r2=28104&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/lib/structure/pca.py?rev=28104&amp;r1=28103&amp;r2=28104&amp;view=diff</a>
+==============================================================================
+--- trunk/lib/structure/pca.py  (original)
++++ trunk/lib/structure/pca.py  Wed Nov 25 18:38:06 2015
+@@ -23,7 +23,7 @@
+ &quot;&quot;&quot;Module for performing a principle component analysis (PCA).&quot;&quot;&quot;
+ 
+ # Python module imports.
+-from numpy import float64, outer, zeros
++from numpy import dot, float64, outer, sqrt, zeros
+ from numpy.linalg import eigh, svd
+ 
+ # relax library module imports.
+@@ -36,14 +36,15 @@
+ 
+     @keyword coord:         The list of coordinates of all models to 
+superimpose.  The first index is the models, the second is the atomic 
+positions, and the third is the xyz coordinates.
+     @type coord:            list of numpy rank-2, Nx3 arrays
+-    @return:                The covariance matrix.
+-    @rtype:                 numpy rank-2, 3N array
++    @return:                The covariance matrix and the deviation matrix.
++    @rtype:                 numpy rank-2 3Nx3N array, numpy rank-2 MxNx3 
+array
+     &quot;&quot;&quot;
+ 
+     # Init.
+     M = len(coord)
+     N = len(coord[0])
+     covariance_matrix = zeros((N*3, N*3), float64)
++    deviations = zeros((M, N, 3), float64)
+     mean_struct = zeros((N, 3), float64)
+ 
+     # Calculate the mean structure.
+@@ -52,16 +53,24 @@
+     # Loop over the models.
+     for i in range(M):
+         # The deviations from the mean.
+-        deviations = coord[i] - mean_struct
++        deviations[i] = coord[i] - mean_struct
+ 
+         # Sum the covariance element.
+-        covariance_matrix += outer(deviations, deviations)
++        covariance_matrix += outer(deviations[i], deviations[i])
+ 
+-    # Normalise.
++    # Average.
+     covariance_matrix /= M
+ 
+     # Return the matrix.
+-    return covariance_matrix
++    return covariance_matrix, deviations
++
++
++def calc_projections(coord=None, num_modes=4):
++    &quot;&quot;&quot;Calculate the PCA projections.
++
++    @keyword num_modes:     The number of PCA modes to calculate.
++    @type num_modes:        int
++    &quot;&quot;&quot;
+ 
+ 
+ def pca_analysis(coord=None, algorithm='eigen', num_modes=4):
+@@ -75,8 +84,12 @@
+     @type num_modes:        int
+     &quot;&quot;&quot;
+ 
++    # Init.
++    M = len(coord)
++    N = len(coord[0])
++
+     # Calculate the covariance matrix for the structures.
+-    covariance_matrix = calc_covariance_matrix(coord)
++    covariance_matrix, deviations = calc_covariance_matrix(coord)
+ 
+     # Perform an eigenvalue decomposition of the covariance matrix.
+     if algorithm == 'eigen':
+@@ -95,11 +108,16 @@
+     else:
+         raise RelaxError(&quot;The '%s' algorithm is unknown.  It should be 
+either 'eigen' or 'svd'.&quot; % algorithm)
+ 
+-    # Truncation to the desired number of modes.
+-    values = values[:num_modes]
+-    vectors = vectors[:,:num_modes]
+-
+     # Printout.
+     print(&quot;\nThe eigenvalues/singular values are:&quot;)
+     for i in range(num_modes):
+         print(&quot;Mode %i:  %10.5f&quot; % (i+1, values[i]))
++
++    # Calculate the projection for each structure.
++    proj = zeros((num_modes, M), float64)
++    for s in range(M):
++        for mode in range(num_modes):
++            proj[mode, s] = dot(vectors[:, mode], deviations[s].reshape(N*3))
++
++    # Truncation to the desired number of modes.
++    values = values[:num_modes]
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Nov 25 18:40:03 2015</div>  
+</body>
+</html>

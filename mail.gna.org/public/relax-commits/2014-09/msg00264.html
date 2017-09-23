@@ -1,0 +1,202 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r25758 &#45; /trunk/auto_analyses/relax_fit.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 11 Sep 2014 21:31:47 +0200 -->
+<!--X-Message-Id: E1XSA5r&#45;0002dr&#45;9p@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r25758 - /trunk/auto_analyses/relax_fit.py -- September 11, 2014 - 21:31</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r25758 - /trunk/auto_analyses/relax_fit.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00264" class="tabs">Index by Date</a> | <a href="threads.html#00264" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00263.html">Date Prev</a>] [<a href="msg00265.html">Date Next</a>] [<a href="msg00263.html">Thread Prev</a>] [<a href="msg00265.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 11 Sep 2014 19:31:47 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00264.html">E1XSA5r-0002dr-9p@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on September 11, 2014 - 21:31:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Thu Sep 11 21:31:46 2014
+New Revision: 25758
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=25758&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=25758&amp;view=rev</a>
+Log:
+Implemented a method to automatically find dublicates of spectrum in 
+exponential fit.
+
+This is to ease the user intervention for error analysis, if this has been 
+forgotten.
+
+Modified:
+    trunk/auto_analyses/relax_fit.py
+
+Modified: trunk/auto_analyses/relax_fit.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/auto_analyses/relax_fit.py?rev=25758&amp;r1=25757&amp;r2=25758&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/auto_analyses/relax_fit.py?rev=25758&amp;r1=25757&amp;r2=25758&amp;view=diff</a>
+==============================================================================
+--- trunk/auto_analyses/relax_fit.py    (original)
++++ trunk/auto_analyses/relax_fit.py    Thu Sep 11 21:31:46 2014
+@@ -24,8 +24,11 @@
+ 
+ # Python module imports.
+ from os import sep
++import sys
+ 
+ # relax module imports.
++from lib.text.sectioning import section
++from pipe_control.mol_res_spin import spin_loop
+ from pipe_control.pipes import cdp_name, has_pipe, switch
+ from prompt.interpreter import Interpreter
+ from status import Status; status = Status()
+@@ -104,7 +107,7 @@
+         &quot;&quot;&quot;Set up and run the curve-fitting.&quot;&quot;&quot;
+ 
+         # Peak intensity error analysis.
+-        self.interpreter.spectrum.error_analysis()
++        self.error_analysis()
+ 
+         # Set the relaxation curve type.
+         self.interpreter.relax_fit.select_model('exp')
+@@ -147,6 +150,78 @@
+         self.interpreter.state.save(state=self.file_root+'.save', 
+dir=self.results_dir, force=True)
+ 
+ 
++    def error_analysis(self):
++        &quot;&quot;&quot;Perform an error analysis of the peak intensities.&quot;&quot;&quot;
++
++        # Printout.
++        section(file=sys.stdout, text=&quot;Error analysis&quot;, prespace=2)
++
++        # Check if intensity errors have already been calculated by the user.
++        precalc = True
++        for spin in spin_loop(skip_desel=True):
++            # No structure.
++            if not hasattr(spin, 'peak_intensity_err'):
++                precalc = False
++                break
++
++            # Determine if a spectrum ID is missing from the list.
++            for id in cdp.spectrum_ids:
++                if id not in spin.peak_intensity_err:
++                    precalc = False
++                    break
++
++        # Skip.
++        if precalc:
++            print(&quot;Skipping the error analysis as it has already been 
+performed.&quot;)
++            return
++
++        # Check if there is replicates, and the user has not specified them.
++        if not hasattr(cdp, 'replicates'):
++            # Has dublicates
++            has_dub = False
++
++            # Collect all times, and matching spectrum id.
++            all_times = []
++            all_id = []
++            for s_id, time in cdp.relax_times.iteritems():
++                all_times.append(time)
++                all_id.append(s_id)
++
++            # Get the dublicates.
++            dublicates = map(lambda val: (val, [i for i in 
+xrange(len(all_times)) if all_times[i] == val]), all_times)
++
++            # Loop over the list of the mapping of times and duplications.
++            list_dub_mapping = []
++            for i, dub in enumerate(dublicates):
++                # Get current spectum id.
++                cur_spectrum_id = all_id[i]
++
++                # Get the tuple of time and indexes of duplications.
++                time, list_index_occur = dub
++
++                # Collect mapping of index to id.
++                id_list = []
++                if len(list_index_occur) &gt; 1:
++                    # There exist dublications.
++                    has_dub = True
++
++                    for list_index in list_index_occur:
++                        id_list.append(all_id[list_index])
++
++                # Store to list
++                list_dub_mapping.append((cur_spectrum_id, id_list))
++
++        # If there is dublication, then assign them.
++        if has_dub:
++            # Assign dublicates.
++            for spectrum_id, dub_pair in list_dub_mapping:
++                if len(dub_pair) &gt; 0:
++                    
+self.interpreter.spectrum.replicated(spectrum_ids=dub_pair)
++
++        # Run the error analysis.
++        self.interpreter.spectrum.error_analysis()
++
++
+     def check_vars(self):
+         &quot;&quot;&quot;Check that the user has set the variables correctly.&quot;&quot;&quot;
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Sep 11 21:40:02 2014</div>  
+</body>
+</html>

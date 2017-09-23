@@ -1,0 +1,206 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r7230 &#45; /branches/rdc_analysis/specific_fns/n_state_model.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 24 Sep 2008 14:21:18 +0200 -->
+<!--X-Message-Id: E1KiTMs&#45;0004wp&#45;GG@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r7230 - /branches/rdc_analysis/specific_fns/n_state_model.py -- September 24, 2008 - 14:21</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r7230 - /branches/rdc_analysis/specific_fns/n_state_model.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00002" class="tabs">Index by Date</a> | <a href="threads.html#00002" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00001.html">Date Prev</a>] [<a href="msg00003.html">Date Next</a>] [<a href="msg00001.html">Thread Prev</a>] [<a href="msg00003.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 24 Sep 2008 12:21:18 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00002.html">E1KiTMs-0004wp-GG@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on September 24, 2008 - 14:21:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Sep 24 14:21:18 2008
+New Revision: 7230
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=7230&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=7230&amp;view=rev</a>
+Log:
+Some bug fixes and added the ability to calculate the Q-factor values.
+
+
+Modified:
+    branches/rdc_analysis/specific_fns/n_state_model.py
+
+Modified: branches/rdc_analysis/specific_fns/n_state_model.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/rdc_analysis/specific_fns/n_state_model.py?rev=7230&amp;r1=7229&amp;r2=7230&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/rdc_analysis/specific_fns/n_state_model.py?rev=7230&amp;r1=7229&amp;r2=7230&amp;view=diff</a>
+==============================================================================
+--- branches/rdc_analysis/specific_fns/n_state_model.py (original)
++++ branches/rdc_analysis/specific_fns/n_state_model.py Wed Sep 24 14:21:18 
+2008
+@@ -409,17 +409,22 @@
+                     if not hasattr(spin, 'pcs_bc'):
+                         spin.pcs_bc = []
+ 
+-                    # Append the back calculated PCS.
+-                    spin.pcs_bc.append(model.deltaij_theta[i, pcs_index])
++                    # Append the back calculated PCS (in ppm).
++                    spin.pcs_bc.append(model.deltaij_theta[i, pcs_index]*1e6)
+ 
+                     # Increment the RDC index.
+                     pcs_index = pcs_index + 1
+ 
+                 # Spins with RDC data.
+-                if hasattr(spin, 'rdc'):
++                if hasattr(spin, 'rdc') and hasattr(spin, 'xh_vect'):
+                     # Initialise the data structure if necessary.
+                     if not hasattr(spin, 'rdc_bc'):
+                         spin.rdc_bc = []
++
++                    # No RDC.
++                    if spin.rdc[i] == None:
++                        spin.rdc_bc.append(None)
++                        continue
+ 
+                     # Append the back calculated PCS.
+                     spin.rdc_bc.append(model.Dij_theta[i, rdc_index])
+@@ -712,7 +717,7 @@
+         cdp = ds[ds.current_pipe]
+ 
+         # Q-factor list.
+-        cdp.q_factors = []
++        cdp.q_factors_rdc = []
+ 
+         # Loop over the alignments.
+         for i in xrange(len(ds[ds.current_pipe].align_tensors)):
+@@ -738,7 +743,57 @@
+ 
+             # The Q-factor for the alignment.
+             Q = sqrt(sse / D2_sum)
+-            cdp.q_factors.append(Q)
++            cdp.q_factors_rdc.append(Q)
++
++        # The total Q-factor.
++        cdp.q_rdc = 0.0
++        for Q in cdp.q_factors_rdc:
++            cdp.q_rdc = cdp.q_rdc + Q**2
++        cdp.q_rdc = cdp.q_rdc / len(cdp.q_factors_rdc)
++        cdp.q_rdc = sqrt(cdp.q_rdc)
++
++
++    def __q_factors_pcs(self):
++        &quot;&quot;&quot;Calculate the Q-factors for the PCS data.&quot;&quot;&quot;
++
++        # Alias the current data pipe.
++        cdp = ds[ds.current_pipe]
++
++        # Q-factor list.
++        cdp.q_factors_pcs = []
++
++        # Loop over the alignments.
++        for i in xrange(len(ds[ds.current_pipe].align_tensors)):
++            # Init.
++            pcs2_sum = 0.0
++            sse = 0.0
++
++            # Spin loop.
++            for spin in spin_loop():
++                # Skip deselected spins.
++                if not spin.select:
++                    continue
++
++                # Skip spins without PCS data.
++                if not hasattr(spin, 'pcs') or not hasattr(spin, 'pcs_bc') 
+or spin.pcs[i] == None:
++                    continue
++
++                # Sum of squares.
++                sse = sse + (spin.pcs[i] - spin.pcs_bc[i])**2
++
++                # Sum the PCSs squared (for normalisation).
++                pcs2_sum = pcs2_sum + spin.pcs[i]**2
++
++            # The Q-factor for the alignment.
++            Q = sqrt(sse / pcs2_sum)
++            cdp.q_factors_pcs.append(Q)
++
++        # The total Q-factor.
++        cdp.q_pcs = 0.0
++        for Q in cdp.q_factors_pcs:
++            cdp.q_pcs = cdp.q_pcs + Q**2
++        cdp.q_pcs = cdp.q_pcs / len(cdp.q_factors_pcs)
++        cdp.q_pcs = sqrt(cdp.q_pcs)
+ 
+ 
+     def __update_model(self):
+@@ -1266,7 +1321,12 @@
+             self.__minimise_bc_data(model)
+ 
+             # Calculate the RDC Q-factors.
+-            self.__q_factors_rdc()
++            if 'rdc' in data_types:
++                self.__q_factors_rdc()
++
++            # Calculate the PCS Q-factors.
++            if 'pcs' in data_types:
++                self.__q_factors_pcs()
+ 
+ 
+     def model_statistics(self, instance=None, spin_id=None, 
+global_stats=None):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Sep 24 14:40:03 2008</div>  
+</body>
+</html>

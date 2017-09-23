@@ -1,0 +1,146 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r26563 &#45; in /trunk/gui: analyses/wizard.py wizards/wiz_objects.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 13 Nov 2014 12:12:36 +0100 -->
+<!--X-Message-Id: E1XosKK&#45;0004Kw&#45;5R@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r26563 - in /trunk/gui: analyses/wizard.py wizards/wiz_objects.py -- November 13, 2014 - 12:12</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r26563 - in /trunk/gui: analyses/wizard.py wizards/wiz_objects.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00167" class="tabs">Index by Date</a> | <a href="threads.html#00167" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00166.html">Date Prev</a>] [<a href="msg00168.html">Date Next</a>] [<a href="msg00166.html">Thread Prev</a>] [<a href="msg00168.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 13 Nov 2014 11:12:36 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00167.html">E1XosKK-0004Kw-5R@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on November 13, 2014 - 12:12:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Nov 13 12:12:35 2014
+New Revision: 26563
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=26563&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=26563&amp;view=rev</a>
+Log:
+Redesigned how wizards are destroyed in the GUI.
+
+The relax wizard Destroy() method is now overridden.  This allows the buttons 
+in the wizard to be
+properly destroyed, as well as all wizard pages.  This should remove a lot of 
+GUI memory leaks.
+
+
+Modified:
+    trunk/gui/analyses/wizard.py
+    trunk/gui/wizards/wiz_objects.py
+
+Modified: trunk/gui/analyses/wizard.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/gui/analyses/wizard.py?rev=26563&amp;r1=26562&amp;r2=26563&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/gui/analyses/wizard.py?rev=26563&amp;r1=26562&amp;r2=26563&amp;view=diff</a>
+==============================================================================
+--- trunk/gui/analyses/wizard.py        (original)
++++ trunk/gui/analyses/wizard.py        Thu Nov 13 12:12:35 2014
+@@ -56,8 +56,6 @@
+     def Destroy(self):
+         &quot;&quot;&quot;Properly delete the wizard and all its elements.&quot;&quot;&quot;
+ 
+-        self.new_page.Destroy()
+-        self.pipe_page.Destroy()
+         self.wizard.Destroy()
+ 
+ 
+
+Modified: trunk/gui/wizards/wiz_objects.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/gui/wizards/wiz_objects.py?rev=26563&amp;r1=26562&amp;r2=26563&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/gui/wizards/wiz_objects.py?rev=26563&amp;r1=26562&amp;r2=26563&amp;view=diff</a>
+==============================================================================
+--- trunk/gui/wizards/wiz_objects.py    (original)
++++ trunk/gui/wizards/wiz_objects.py    Thu Nov 13 12:12:35 2014
+@@ -824,6 +824,26 @@
+         self._go_next(None)
+ 
+ 
++    def Destroy(self):
++        &quot;&quot;&quot;Override the default wx.Dialog.Destroy() method.&quot;&quot;&quot;
++
++        # Loop over each page, destroying it and all its elements to avoid 
+memory leaks.
++        for i in range(self._num_pages):
++            # Destroy the buttons.
++            for name in self._buttons[i]:
++                if hasattr(self._buttons[i][name], 'Destroy'):
++                    self._buttons[i][name].Destroy()
++                    self._buttons[i][name] = None
++
++            # Destroy each page.
++            if hasattr(self._pages[i], 'Destroy'):
++                self._pages[i].Destroy()
++                self._pages[i] = None
++
++        # Call the parent method to destroy the dialog.
++        wx.Dialog.Destroy(self)
++
++
+     def add_page(self, panel, apply_button=True, skip_button=False, 
+exec_on_next=True, proceed_on_error=True, uf_flush=False):
+         &quot;&quot;&quot;Add a new page to the wizard.
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Nov 13 13:40:02 2014</div>  
+</body>
+</html>

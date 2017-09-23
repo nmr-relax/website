@@ -1,0 +1,235 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r20695 &#45; in /branches/relax_disp: lib/dispersion/tp02.py	target_functions/relax_disp.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 27 Aug 2013 11:19:30 +0200 -->
+<!--X-Message-Id: E1VEFQw&#45;0001JG&#45;Qx@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r20695 - in /branches/relax_disp: lib/dispersion/tp02.py	target_functions/relax_disp.py -- August 27, 2013 - 11:19</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r20695 - in /branches/relax_disp: lib/dispersion/tp02.py	target_functions/relax_disp.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00212" class="tabs">Index by Date</a> | <a href="threads.html#00212" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00211.html">Date Prev</a>] [<a href="msg00213.html">Date Next</a>] [<a href="msg00211.html">Thread Prev</a>] [<a href="msg00213.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 27 Aug 2013 09:19:30 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00212.html">E1VEFQw-0001JG-Qx@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on August 27, 2013 - 11:19:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Aug 27 11:19:30 2013
+New Revision: 20695
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=20695&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=20695&amp;view=rev</a>
+Log:
+The TP02 model code is now in a semi functional state.
+
+The lib.dispersion code has been fixed to properly handle the data it 
+receives and the target
+function code has been updated to pass in the correct data.
+
+
+Modified:
+    branches/relax_disp/lib/dispersion/tp02.py
+    branches/relax_disp/target_functions/relax_disp.py
+
+Modified: branches/relax_disp/lib/dispersion/tp02.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/lib/dispersion/tp02.py?rev=20695&amp;r1=20694&amp;r2=20695&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_disp/lib/dispersion/tp02.py?rev=20695&amp;r1=20694&amp;r2=20695&amp;view=diff</a>
+==============================================================================
+--- branches/relax_disp/lib/dispersion/tp02.py (original)
++++ branches/relax_disp/lib/dispersion/tp02.py Tue Aug 27 11:19:30 2013
+@@ -36,7 +36,7 @@
+ from math import atan, cos, pi, sin
+ 
+ 
+-def r1rho_TP02(r1rho_prime=None, pA=None, pB=None, dw=None, kex=None, 
+theta=pi/2, R1=0.0, spin_lock_fields=None, back_calc=None, num_points=None):
++def r1rho_TP02(r1rho_prime=None, omega=None, pA=None, pB=None, dw=None, 
+kex=None, theta=pi/2, R1=0.0, spin_lock_fields=None, back_calc=None, 
+num_points=None):
+     &quot;&quot;&quot;Calculate the R1rho' values for the TP02 model.
+ 
+     See the module docstring for details.  This is the Trott and Palmer 
+(2002) equation according to Korzhnev (J. Biomol. NMR (2003), 26, 39-48).
+@@ -44,6 +44,8 @@
+ 
+     @keyword r1rho_prime:       The R1rho_prime parameter value (R1rho with 
+no exchange).
+     @type r1rho_prime:          float
++    @keyword omega:             The chemical shift for the spin in rad/s.
++    @type omega:                float
+     @keyword pA:                The population of state A.
+     @type pA:                   float
+     @keyword pB:                The population of state B.
+@@ -52,8 +54,8 @@
+     @type dw:                   float
+     @keyword kex:               The kex parameter value (the exchange rate 
+in rad/s).
+     @type kex:                  float
+-    @keyword theta:             The rotating frame tilt angle.
+-    @type theta:                float
++    @keyword theta:             The rotating frame tilt angles.  Each 
+element corresponds to one of the spin-lock fields.
++    @type theta:                numpy rank-1 float array
+     @keyword R1:                The R1 relaxation rate.
+     @type R1:                   float
+     @keyword spin_lock_fields:  The CPMG nu1 frequencies.
+@@ -65,17 +67,20 @@
+     &quot;&quot;&quot;
+ 
+     # Repetitive calculations (to speed up calculations).
+-    Wa = 0.0                    # Larmor frequency [s^-1].
+-    Wb = dw                     # Larmor frequency [s^-1].
+-    sin_theta2 = sin(theta)**2
+-    R1_cos_theta2 = R1 * cos(theta)**2
+-    R1rho_prime_sin_theta2 = r1rho_prime * sin_theta2
++    half_dw = dw / 2.0
++    Wa = omega - half_dw        # Larmor frequency [s^-1].
++    Wb = omega + half_dw        # Larmor frequency [s^-1].
+ 
+     # The numerator.
+     numer = pA * pB * dw**2 * kex
+ 
+     # Loop over the dispersion points, back calculating the R1rho values.
+     for i in range(num_points):
++        # Repetitive calculations (to speed up calculations).
++        sin_theta2 = sin(theta[i])**2
++        R1_cos_theta2 = R1 * cos(theta[i])**2
++        R1rho_prime_sin_theta2 = r1rho_prime * sin_theta2
++
+         # Catch zeros (to avoid pointless mathematical operations).
+         if numer == 0.0:
+             back_calc[i] = R1_cos_theta2 + R1rho_prime_sin_theta2
+@@ -83,6 +88,7 @@
+ 
+         # We assume that A resonates at 0 [s^-1], without loss of generality.
+         Wsl = spin_lock_fields[i] * 2.0 * pi     # Larmor frequency of spin 
+lock [s^-1].
++        w1 = spin_lock_fields[i] * 2.0 * pi     # Larmor frequency of spin 
+lock [s^-1].
+         W = pA*Wa + pB*Wb           # Pop-averaged Larmor frequency [s^-1].
+         da = Wa - Wsl               # Offset of spin-lock from A.
+         db = Wb - Wsl               # Offset of spin-lock from B.
+@@ -90,7 +96,6 @@
+         waeff2 = w1**2 + da**2      # Effective field at A.
+         wbeff2 = w1**2 + db**2      # Effective field at B.
+         weff2 = w1**2 + d**2        # Effective field at pop-average.
+-        theta = atan(w1/d) 
+ 
+         # Denominator.
+         denom = waeff2 * wbeff2 / weff2 + kex**2
+
+Modified: branches/relax_disp/target_functions/relax_disp.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/target_functions/relax_disp.py?rev=20695&amp;r1=20694&amp;r2=20695&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_disp/target_functions/relax_disp.py?rev=20695&amp;r1=20694&amp;r2=20695&amp;view=diff</a>
+==============================================================================
+--- branches/relax_disp/target_functions/relax_disp.py (original)
++++ branches/relax_disp/target_functions/relax_disp.py Tue Aug 27 11:19:30 
+2013
+@@ -99,8 +99,8 @@
+         @type spin_lock_nu1:        numpy rank-1 float array
+         @keyword chemical_shifts:   The chemical shifts for all spins in the 
+cluster in rad/s.  This is only used for off-resonance R1rho models.  The 
+first dimension is that of the spin cluster (each element corresponds to a 
+different spin in the block) and the second dimension is the spectrometer 
+field strength.  The ppm values are not used to save computation time, 
+therefore they must be converted to rad/s by the calling code.
+         @type chemical_shifts:      numpy rank-2 float array
+-        @keyword spin_lock_offsets: The structure of spin-lock offsets for 
+each data point.  This is only used for off-resonance R1rho models.  The 
+first dimension is the spectrometer field strength and the second is the 
+dispersion points.
+-        @type spin_lock_offsets:    numpy rank-2 float array
++        @keyword spin_lock_offsets: The structure of spin-lock offsets for 
+each spin, each field, and each data point.  This is only used for 
+off-resonance R1rho models.  The first dimension is that of the spin cluster 
+(each element corresponds to a different spin in the block), the second 
+dimension is the spectrometer field strength and the third is the dispersion 
+points.
++        @type spin_lock_offsets:    numpy rank-3 float array
+         @keyword tilt_angles:       The spin-lock rotating frame tilt angle 
+for each spin.  This is only used for off-resonance R1rho models.  The first 
+dimension is that of the spin cluster (each element corresponds to a 
+different spin in the block), the second dimension is the spectrometer field 
+strength, and the third is the dispersion points.
+         @type tilt_angles:          numpy rank-3 float array
+         @keyword relax_time:        The fixed time period for relaxation (in 
+seconds).
+@@ -959,7 +959,7 @@
+                 dw_frq = dw[spin_index] * self.frqs[spin_index, frq_index]
+ 
+                 # Back calculate the R1rho values.
+-                r1rho_TP02(r1rho_prime=R20[r20_index], 
+w=self.chemical_shifts[spin_index, frq_index], pA=pA, pB=pB, dw=dw_frq, 
+kex=kex, spin_lock_fields=self.spin_lock_nu1, 
+back_calc=self.back_calc[spin_index, frq_index], 
+num_points=self.num_disp_points)
++                r1rho_TP02(r1rho_prime=R20[r20_index], 
+omega=self.chemical_shifts[spin_index, frq_index], pA=pA, pB=pB, dw=dw_frq, 
+kex=kex, theta=self.tilt_angles[spin_index, frq_index], 
+spin_lock_fields=self.spin_lock_nu1, back_calc=self.back_calc[spin_index, 
+frq_index], num_points=self.num_disp_points)
+ 
+                 # For all missing data points, set the back-calculated value 
+to the measured values so that it has no effect on the chi-squared value.
+                 for point_index in range(self.num_disp_points):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Aug 27 12:40:02 2013</div>  
+</body>
+</html>

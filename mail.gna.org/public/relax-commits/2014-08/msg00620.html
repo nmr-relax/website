@@ -1,0 +1,208 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r25486 &#45; /trunk/test_suite/shared_data/curve_fitting/numeric_topology/estimate_errors_analyse.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Sun, 31 Aug 2014 20:56:54 +0200 -->
+<!--X-Message-Id: E1XOAJ4&#45;0004BD&#45;GC@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r25486 - /trunk/test_suite/shared_data/curve_fitting/numeric_topology/estimate_errors_analyse.py -- August 31, 2014 - 20:56</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r25486 - /trunk/test_suite/shared_data/curve_fitting/numeric_topology/estimate_errors_analyse.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00620" class="tabs">Index by Date</a> | <a href="threads.html#00620" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00619.html">Date Prev</a>] [<a href="msg00621.html">Date Next</a>] [<a href="msg00619.html">Thread Prev</a>] [<a href="msg00621.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Sun, 31 Aug 2014 18:56:54 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00620.html">E1XOAJ4-0004BD-GC@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on August 31, 2014 - 20:56:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Sun Aug 31 20:56:53 2014
+New Revision: 25486
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=25486&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=25486&amp;view=rev</a>
+Log:
+Added functionality to create peak lists, for virtual data.
+
+This is to compare the distribution of R2eff values made by boot strapping 
+and Monte-Carlo simulations.
+
+Rest of the analysis will be performed in relax.
+
+task #7822(<a  rel="nofollow" href="https://gna.org/task/index.php?7822">https://gna.org/task/index.php?7822</a>): Implement user function to 
+estimate R2eff and associated errors for exponential curve fitting.
+
+Modified:
+    
+trunk/test_suite/shared_data/curve_fitting/numeric_topology/estimate_errors_analyse.py
+
+Modified: 
+trunk/test_suite/shared_data/curve_fitting/numeric_topology/estimate_errors_analyse.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/test_suite/shared_data/curve_fitting/numeric_topology/estimate_errors_analyse.py?rev=25486&amp;r1=25485&amp;r2=25486&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/test_suite/shared_data/curve_fitting/numeric_topology/estimate_errors_analyse.py?rev=25486&amp;r1=25485&amp;r2=25486&amp;view=diff</a>
+==============================================================================
+--- 
+trunk/test_suite/shared_data/curve_fitting/numeric_topology/estimate_errors_analyse.py
+      (original)
++++ 
+trunk/test_suite/shared_data/curve_fitting/numeric_topology/estimate_errors_analyse.py
+      Sun Aug 31 20:56:53 2014
+@@ -6,6 +6,7 @@
+ #import pickle
+ import cPickle as pickle
+ from numpy import array, asarray, diag, ones, std, sqrt
++from os import getcwd, makedirs, path, sep
+ 
+ # Open data.
+ dic_s = pickle.load( open( &quot;estimate_errors_data_settings.cp&quot;, &quot;rb&quot; ) )
+@@ -24,7 +25,8 @@
+ all_errors = dic_s['all_errors']
+ 
+ # Make plots?
+-make_plots = True
++make_plots = False
++make_peak_lists = True
+ 
+ if make_plots:
+     from pylab import show, plot, legend, figure, title, subplots
+@@ -227,3 +229,74 @@
+ 
+ if make_plots:
+     show()
++
++if make_peak_lists:
++    # Create dir for peak lists.
++    peak_dir = getcwd() + sep + 'estimate_errors_peak_lists'
++    if not path.exists(peak_dir):
++        makedirs(peak_dir)
++
++    # Set which data to write for.
++    nt_max = 10
++    # Open data.
++    dic = pickle.load( open( &quot;estimate_errors_data_nt%i.cp&quot;%nt_max, &quot;rb&quot; ) )
++
++    # Loop over original intensity, or noise true data.
++    for ref_int in ['I', 'I_err']:
++        #for i in range(np):
++        for i in range(1):
++            if ref_int == 'I':
++                file_path = peak_dir + sep + &quot;ntmax_%i_disp_%i_ref.ser&quot; % 
+(nt_max, i)
++            else:
++                file_path = peak_dir + sep + &quot;ntmax_%i_disp_%i.ser&quot; % 
+(nt_max, i)
++    
++            wfile = open(file_path, 'w')
++    
++            wfile.write(&quot;REMARK SeriesTab Input:&quot; + &quot;\n&quot;)
++            wfile.write(&quot;REMARK Mode: Maximum Dimensions: 2&quot; + &quot;\n&quot;)
++            wfile.write(&quot;REMARK Input Region:    X +/- 0 X-ZF: 1&quot; + &quot;\n&quot;)
++            wfile.write(&quot;REMARK Analysis Region: X +/- 0&quot; + &quot;\n&quot;)
++            wfile.write(&quot;REMARK Input Region:    Y +/- 0 Y-ZF: 1&quot; + &quot;\n&quot;)
++            wfile.write(&quot;REMARK Analysis Region: Y +/- 0&quot; + &quot;\n&quot;)
++            wfile.write(&quot;&quot; + &quot;\n&quot;)
++            # Get number of intensities.
++    
++            nt = dic[i]['nt']
++            times = dic[i]['times']
++            errors = dic[i]['errors']
++            I = dic[i]['I']
++            I_err = dic[i]['I_err']
++            if ref_int == 'I':
++                I_val = I
++            else:
++                I_val = I_err
++    
++            Z_A_list = 'Z_A' + ' Z_A'.join(str(x) for x in range(nt))
++            f_list = &quot; &quot;.join(nt*['%7.4f'])
++            wfile.write(&quot;VARS   INDEX X_AXIS Y_AXIS X_PPM Y_PPM VOL ASS X1 
+X3 Y1 Y3 &quot; + Z_A_list + &quot;\n&quot;)
++            wfile.write(&quot;FORMAT %5d %9.3f %9.3f %8.3f %8.3f %+e %s %4d %4d 
+%4d %4d &quot; + f_list + &quot;\n&quot;)
++            wfile.write(&quot;&quot; + &quot;\n&quot;)
++            wfile.write(&quot;NULLVALUE -666&quot; + &quot;\n&quot;)
++            wfile.write(&quot;NULLSTRING *&quot; + &quot;\n&quot;)
++            wfile.write(&quot;&quot; + &quot;\n&quot;)
++    
++            # Write for all spins.
++            for spin in range(1, 2):
++                INDEX = spin
++                X_AXIS = 450.000 
++                Y_AXIS = 100.000
++                X_PPM = 8.000
++                Y_PPM = 120.000
++                VOL = I_err[0]
++                ASS = &quot;A%iN-HN&quot;%spin
++                X1 = 400
++                X3 = 403
++                Y1 = 75
++                Y3 = 77
++                I_val_mod = I_val / VOL
++                I_val_mod_str = &quot; &quot;.join(format(x, &quot;1.4f&quot;) for x in 
+I_val_mod)
++    
++                text = &quot;%5s   %3.3f   %3.3f   %2.3f  %3.3f %1.6e %8s  %3i  
+%3i  %3i  %3i  %s&quot; % (INDEX, X_AXIS, Y_AXIS, X_PPM, Y_PPM, VOL, ASS, X1, X3, 
+Y1, Y3, I_val_mod_str)
++                wfile.write(text + &quot;\n&quot;)
++
++            wfile.close()
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Sun Aug 31 21:00:02 2014</div>  
+</body>
+</html>

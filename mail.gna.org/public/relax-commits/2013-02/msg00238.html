@@ -1,0 +1,218 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r18566 &#45; /branches/frame_order_testing/specific_fns/frame_order.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 22 Feb 2013 14:15:14 +0100 -->
+<!--X-Message-Id: E1U8sT4&#45;00086u&#45;El@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r18566 - /branches/frame_order_testing/specific_fns/frame_order.py -- February 22, 2013 - 14:15</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r18566 - /branches/frame_order_testing/specific_fns/frame_order.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00238" class="tabs">Index by Date</a> | <a href="threads.html#00238" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00237.html">Date Prev</a>] [<a href="msg00239.html">Date Next</a>] [<a href="msg00237.html">Thread Prev</a>] [<a href="msg00239.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 22 Feb 2013 13:15:14 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00238.html">E1U8sT4-00086u-El@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on February 22, 2013 - 14:15:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Feb 22 14:15:13 2013
+New Revision: 18566
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=18566&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=18566&amp;view=rev</a>
+Log:
+Big set of fixes for the frame order analysis.
+
+RDC and PCS data for the non-moving domain are now not used in the analysis.  
+This was not a problem
+during development as the test models had no RDC and PCS data for the 
+non-moving domain.  Now the
+spin_loop() and interatom_loop() methods are called with the moving domain ID 
+string as the
+selection argument.  This avoids all non-moving domain data, as should happen 
+for the analysis.
+
+
+Modified:
+    branches/frame_order_testing/specific_fns/frame_order.py
+
+Modified: branches/frame_order_testing/specific_fns/frame_order.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_testing/specific_fns/frame_order.py?rev=18566&amp;r1=18565&amp;r2=18566&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_testing/specific_fns/frame_order.py?rev=18566&amp;r1=18565&amp;r2=18566&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_testing/specific_fns/frame_order.py (original)
++++ branches/frame_order_testing/specific_fns/frame_order.py Fri Feb 22 
+14:15:13 2013
+@@ -239,15 +239,16 @@
+ 
+         # Array of data types.
+         list = []
++        domain_id = cdp.domain[self._domain_moving()]
+ 
+         # RDC search.
+-        for interatom in interatomic_loop():
++        for interatom in interatomic_loop(selection1=domain_id):
+             if hasattr(interatom, 'rdc'):
+                 list.append('rdc')
+                 break
+ 
+         # PCS search.
+-        for spin in spin_loop():
++        for spin in spin_loop(selection=domain_id):
+             if hasattr(spin, 'pcs'):
+                 list.append('pcs')
+                 break
+@@ -628,9 +629,10 @@
+ 
+         # Initialise.
+         atomic_pos = []
++        domain_id = cdp.domain[self._domain_moving()]
+ 
+         # Store the atomic positions.
+-        for spin, spin_id in spin_loop(return_id=True):
++        for spin, spin_id in spin_loop(selection=domain_id, return_id=True):
+             # Skip deselected spins.
+             if not spin.select:
+                 continue
+@@ -729,9 +731,9 @@
+                 raise RelaxError(&quot;The spectrometer frequency for the 
+alignment ID '%s' has not been set.&quot; % align_id)
+ 
+             # Spin loop over the domain.
+-            id = cdp.domain[self._domain_moving()]
++            domain_id = cdp.domain[self._domain_moving()]
+             j = 0
+-            for spin in spin_loop(id):
++            for spin in spin_loop(selection=domain_id):
+                 # Skip deselected spins.
+                 if not spin.select:
+                     continue
+@@ -799,9 +801,10 @@
+         unit_vect = []
+         rdc_const = []
+         absolute = []
++        domain_id = cdp.domain[self._domain_moving()]
+ 
+         # The unit vectors and RDC constants.
+-        for interatom in interatomic_loop():
++        for interatom in interatomic_loop(selection1=domain_id):
+             # Get the spins.
+             spin1 = return_spin(interatom.spin_id1)
+             spin2 = return_spin(interatom.spin_id2)
+@@ -875,8 +878,8 @@
+             absolute.append([])
+ 
+             # Interatom loop over the domain.
+-            id = cdp.domain[self._domain_moving()]
+-            for interatom in interatomic_loop(id):
++            domain_id = cdp.domain[self._domain_moving()]
++            for interatom in interatomic_loop(domain_id):
+                 # Get the spins.
+                 spin1 = return_spin(interatom.spin_id1)
+                 spin2 = return_spin(interatom.spin_id2)
+@@ -1275,9 +1278,9 @@
+                 pcs_flag = True
+ 
+             # Spin loop over the domain.
+-            id = cdp.domain[self._domain_moving()]
++            domain_id = cdp.domain[self._domain_moving()]
+             pcs_index = 0
+-            for spin in spin_loop(id):
++            for spin in spin_loop(domain_id):
+                 # Skip deselected spins.
+                 if not spin.select:
+                     continue
+@@ -1296,7 +1299,7 @@
+ 
+             # Interatomic data container loop.
+             rdc_index = 0
+-            for interatom in interatomic_loop(id):
++            for interatom in interatomic_loop(domain_id):
+                 # Get the spins.
+                 spin1 = return_spin(interatom.spin_id1)
+                 spin2 = return_spin(interatom.spin_id2)
+@@ -1650,10 +1653,10 @@
+         &quot;&quot;&quot;
+ 
+         # The moving domain ID.
+-        id = cdp.domain[self._domain_moving()]
++        domain_id = cdp.domain[self._domain_moving()]
+ 
+         # Loop over the interatomic data containers for the moving domain 
+(for the RDC data).
+-        for interatom in interatomic_loop(id):
++        for interatom in interatomic_loop(selection1=domain_id):
+             # Get the spins.
+             spin1 = return_spin(interatom.spin_id1)
+             spin2 = return_spin(interatom.spin_id2)
+@@ -1668,7 +1671,7 @@
+                 yield ['rdc', interatom.spin_id1, interatom.spin_id2, 
+align_id]
+ 
+         # Loop over the spin containers for the moving domain (for the PCS 
+data).
+-        for spin, spin_id in spin_loop(id, return_id=True):
++        for spin, spin_id in spin_loop(selection=domain_id, return_id=True):
+             # Skip deselected spins.
+             if not spin.select:
+                 continue
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Feb 22 15:00:01 2013</div>  
+</body>
+</html>

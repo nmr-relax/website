@@ -1,0 +1,312 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r15129 &#45;	/branches/frame_order_testing/generic_fns/structure/scientific.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 03 Jan 2012 16:16:56 +0100 -->
+<!--X-Message-Id: E1Ri66i&#45;0007IK&#45;DQ@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r15129 -	/branches/frame_order_testing/generic_fns/structure/scientific.py -- January 03, 2012 - 16:16</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r15129 -	/branches/frame_order_testing/generic_fns/structure/scientific.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00013" class="tabs">Index by Date</a> | <a href="threads.html#00013" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00012.html">Date Prev</a>] [<a href="msg00014.html">Date Next</a>] [<a href="msg00012.html">Thread Prev</a>] [<a href="msg00014.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 03 Jan 2012 15:16:56 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00013.html">E1Ri66i-0007IK-DQ@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on January 03, 2012 - 16:16:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Jan  3 16:16:56 2012
+New Revision: 15129
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=15129&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=15129&amp;view=rev</a>
+Log:
+Updated the scientific PDB reader atom_loop() method to match the changes to 
+the API.
+
+
+Modified:
+    branches/frame_order_testing/generic_fns/structure/scientific.py
+
+Modified: branches/frame_order_testing/generic_fns/structure/scientific.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_testing/generic_fns/structure/scientific.py?rev=15129&amp;r1=15128&amp;r2=15129&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_testing/generic_fns/structure/scientific.py?rev=15129&amp;r1=15128&amp;r2=15129&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_testing/generic_fns/structure/scientific.py 
+(original)
++++ branches/frame_order_testing/generic_fns/structure/scientific.py Tue Jan  
+3 16:16:56 2012
+@@ -1,6 +1,6 @@
+ 
+###############################################################################
+ #                                                                            
+ #
+-# Copyright (C) 2003-2010 Edward d'Auvergne                                  
+ #
++# Copyright (C) 2003-2012 Edward d'Auvergne                                  
+ #
+ #                                                                            
+ #
+ # This file is part of the program relax.                                    
+ #
+ #                                                                            
+ #
+@@ -190,78 +190,110 @@
+                                     element name (str), and atomic position 
+(array of len 3).
+         &quot;&quot;&quot;
+ 
++        # Check that the structure is loaded.
++        if not len(self.structural_data):
++            raise RelaxNoPdbError
++
+         # Generate the selection object.
+-        sel_obj = Selection(atom_id)
+-
+-        # Model loop.
+-        for model in self.model_loop():
+-            # Loop over the molecules.
+-            for mol_index in range(len(model.mol)):
+-                mol = model.mol[mol_index]
+-
+-                # Skip non-matching molecules.
+-                if sel_obj and not sel_obj.contains_mol(mol.mol_name):
+-                    continue
+-
+-                # Loop over the residues.
+-                for res, res_num, res_name, res_index in 
+self.__residue_loop(mol, sel_obj):
+-                    # Loop over the atoms of the residue.
+-                    atom_index = -1
+-                    for atom in res:
+-                        # Atom number, name, index, and element type.
+-                        atom_num = atom.properties['serial_number']
+-                        atom_name = atom.name
+-                        element = atom.properties['element']
+-                        atom_index = atom_index + 1
+-
+-                        # Skip non-matching atoms.
+-                        if sel_obj and not sel_obj.contains_spin(atom_num, 
+atom_name, res_num, res_name, mol.mol_name):
+-                            continue
+-
+-                        # The atom position.
++        sel_obj = None
++        if atom_id:
++            sel_obj = Selection(atom_id)
++
++        # Obtain all data from the first model (except the position data).
++        model = self.structural_data[0]
++
++        # Loop over the molecules.
++        for mol_index in range(len(model.mol)):
++            mol = model.mol[mol_index]
++
++            # Skip non-matching molecules.
++            if sel_obj and not sel_obj.contains_mol(mol.mol_name):
++                continue
++
++            # Loop over the residues.
++            for res, res_num, res_name, res_index in 
+self.__residue_loop(mol, sel_obj):
++                # Loop over the atoms of the residue.
++                atom_index = -1
++                for atom in res:
++                    # Atom number, name, index, and element type.
++                    atom_num = atom.properties['serial_number']
++                    atom_name = atom.name
++                    element = atom.properties['element']
++                    atom_index = atom_index + 1
++
++                    # Skip non-matching atoms.
++                    if sel_obj and not sel_obj.contains_spin(atom_num, 
+atom_name, res_num, res_name, mol.mol_name):
++                        continue
++
++                    # The atom position.
++                    if pos_flag:
++                        # Average the position.
+                         if ave:
+                             pos = self.__ave_atom_pos(mol_index, res_index, 
+atom_index)
++
++                        # All positions.
+                         else:
+-                            pos = atom.position.array
+-
+-                        # The molecule name.
+-                        mol_name = mol.mol_name
+-
+-                        # Replace empty variables with None.
+-                        if not mol.mol_name:
+-                            mol_name = None
+-                        if not res_num:
+-                            res_num = None
+-                        if not res_name:
+-                            res_name = None
+-                        if not atom_num:
+-                            atom_num = None
+-                        if not atom_name:
+-                            atom_name = None
+-
+-                        # Build the tuple to be yielded.
+-                        atomic_tuple = ()
+-                        if mol_name_flag:
+-                            atomic_tuple = atomic_tuple + (mol_name,)
+-                        if res_num_flag:
+-                            atomic_tuple = atomic_tuple + (res_num,)
+-                        if res_name_flag:
+-                            atomic_tuple = atomic_tuple + (res_name,)
+-                        if atom_num_flag:
+-                            atomic_tuple = atomic_tuple + (atom_num,)
+-                        if atom_name_flag:
+-                            atomic_tuple = atomic_tuple + (atom_name,)
+-                        if element_flag:
+-                            atomic_tuple = atomic_tuple + (element,)
+-                        if pos_flag:
+-                            atomic_tuple = atomic_tuple + (pos,)
+-
+-                        # Yield the information.
+-                        yield atomic_tuple
+-
+-            # Break out of the loop if the ave flag is set, as data from 
+only one model is used.
+-            if ave:
+-                break
++                            # Initialise.
++                            pos = []
++
++                            # Loop over the models.
++                            for j in range(len(self.structural_data)):
++                                # A single model.
++                                if model_num != None and 
+self.structural_data[j].num != model_num:
++                                    continue
++
++                                # Alias.
++                                mol2 = self.structural_data[j].mol[mol_index]
++
++                                # The residue.
++                                if mol2.mol_type != 'other':
++                                    res = mol2.data.residues[res_index]
++                                else:
++                                    res = mol2.data[res_index]
++
++                                # The atom.
++                                atom = res[atom_index]
++
++                                # Append the position.
++                                pos.append(atom.position.array)
++
++                            # Convert.
++                            pos = array(pos, float64)
++
++                    # The molecule name.
++                    mol_name = mol.mol_name
++
++                    # Replace empty variables with None.
++                    if not mol.mol_name:
++                        mol_name = None
++                    if not res_num:
++                        res_num = None
++                    if not res_name:
++                        res_name = None
++                    if not atom_num:
++                        atom_num = None
++                    if not atom_name:
++                        atom_name = None
++
++                    # Build the tuple to be yielded.
++                    atomic_tuple = ()
++                    if mol_name_flag:
++                        atomic_tuple = atomic_tuple + (mol_name,)
++                    if res_num_flag:
++                        atomic_tuple = atomic_tuple + (res_num,)
++                    if res_name_flag:
++                        atomic_tuple = atomic_tuple + (res_name,)
++                    if atom_num_flag:
++                        atomic_tuple = atomic_tuple + (atom_num,)
++                    if atom_name_flag:
++                        atomic_tuple = atomic_tuple + (atom_name,)
++                    if element_flag:
++                        atomic_tuple = atomic_tuple + (element,)
++                    if pos_flag:
++                        atomic_tuple = atomic_tuple + (pos,)
++
++                    # Yield the information.
++                    yield atomic_tuple
+ 
+ 
+     def attached_atom(self, atom_id=None, attached_atom=None, model=None):
+@@ -348,9 +380,9 @@
+         pos = zeros(3, float64)
+ 
+         # Loop over the models.
+-        for model in self.model_loop():
++        for j in range(len(self.structural_data)):
+             # The exact molecule.
+-            mol = model.mol[mol_index]
++            mol = self.structural_data[j].mol[mol_index]
+ 
+             # The residue.
+             if mol.mol_type != 'other':
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Jan 03 16:40:02 2012</div>  
+</body>
+</html>

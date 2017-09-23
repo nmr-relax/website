@@ -1,0 +1,325 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r25746 &#45; /branches/frame_order_cleanup/specific_analyses/frame_order/uf.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 11 Sep 2014 19:16:54 +0200 -->
+<!--X-Message-Id: E1XS7zJ&#45;00021Z&#45;Tc@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r25746 - /branches/frame_order_cleanup/specific_analyses/frame_order/uf.py -- September 11, 2014 - 19:16</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r25746 - /branches/frame_order_cleanup/specific_analyses/frame_order/uf.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00252" class="tabs">Index by Date</a> | <a href="threads.html#00252" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00251.html">Date Prev</a>] [<a href="msg00253.html">Date Next</a>] [<a href="msg00251.html">Thread Prev</a>] [<a href="msg00253.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 11 Sep 2014 17:16:53 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00252.html">E1XS7zJ-00021Z-Tc@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on September 11, 2014 - 19:16:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Sep 11 19:16:52 2014
+New Revision: 25746
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=25746&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=25746&amp;view=rev</a>
+Log:
+Added support for the isotopic cone models to the frame_order.permute_axes 
+user function.
+
+This is a simpler setup, but it uses the same permutation algorithm as 
+derived for the
+pseudo-ellipse models.  Instead of setting the x and y cone angles 
+separately, they are instead
+averaged.  And as the cone axis is undefined in the xy plane, the axis has 
+been randomly selected as
+being the axis perpendicular to both the z-axis and the reference frame 
+x-axis.
+
+
+Modified:
+    branches/frame_order_cleanup/specific_analyses/frame_order/uf.py
+
+Modified: branches/frame_order_cleanup/specific_analyses/frame_order/uf.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/specific_analyses/frame_order/uf.py?rev=25746&amp;r1=25745&amp;r2=25746&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/specific_analyses/frame_order/uf.py?rev=25746&amp;r1=25745&amp;r2=25746&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/specific_analyses/frame_order/uf.py    
+(original)
++++ branches/frame_order_cleanup/specific_analyses/frame_order/uf.py    Thu 
+Sep 11 19:16:52 2014
+@@ -23,19 +23,22 @@
+ &quot;&quot;&quot;Module for all of the frame order specific user functions.&quot;&quot;&quot;
+ 
+ # Python module imports.
+-from numpy import array, float64, ones, transpose, zeros
++from math import pi
++from numpy import array, cross, float64, ones, transpose, zeros
++from numpy.linalg import norm
+ from warnings import warn
+ 
+ # relax module imports.
+ from lib.arg_check import is_float_array
+ from lib.check_types import is_float
+ from lib.errors import RelaxError, RelaxFault
++from lib.geometry.coord_transform import cartesian_to_spherical, 
+spherical_to_cartesian
+ from lib.geometry.rotations import euler_to_R_zyz, R_to_euler_zyz
+ from lib.warnings import RelaxWarning
+ from pipe_control import pipes
+ from specific_analyses.frame_order.geometric import create_ave_pos, 
+create_distribution, create_geometric_rep
+ from specific_analyses.frame_order.parameters import update_model
+-from specific_analyses.frame_order.variables import MODEL_LIST, 
+MODEL_PSEUDO_ELLIPSE, MODEL_PSEUDO_ELLIPSE_TORSIONLESS, MODEL_RIGID
++from specific_analyses.frame_order.variables import MODEL_ISO_CONE, 
+MODEL_ISO_CONE_FREE_ROTOR, MODEL_ISO_CONE_TORSIONLESS, MODEL_LIST, 
+MODEL_LIST_FREE_ROTORS, MODEL_LIST_ISO_CONE, MODEL_LIST_PSEUDO_ELLIPSE, 
+MODEL_LIST_RESTRICTED_TORSION, MODEL_PSEUDO_ELLIPSE, 
+MODEL_PSEUDO_ELLIPSE_TORSIONLESS, MODEL_RIGID
+ 
+ 
+ def num_int_pts(num=200000):
+@@ -109,34 +112,74 @@
+     &quot;&quot;&quot;
+ 
+     # Check that the model is valid.
+-    if cdp.model not in [MODEL_PSEUDO_ELLIPSE, 
+MODEL_PSEUDO_ELLIPSE_TORSIONLESS]:
+-        raise RelaxError(&quot;The permutation of the motional eigenframe is only 
+valid for the '%s' and '%s' frame order models.&quot; % (MODEL_PSEUDO_ELLIPSE, 
+MODEL_PSEUDO_ELLIPSE_TORSIONLESS))
++    allowed = MODEL_LIST_ISO_CONE + MODEL_LIST_PSEUDO_ELLIPSE
++    if cdp.model not in allowed:
++        raise RelaxError(&quot;The permutation of the motional eigenframe is only 
+valid for the frame order models %s.&quot; % allowed)
+ 
+     # Check that the model parameters are setup.
+-    if not hasattr(cdp, 'cone_theta_y') or not is_float(cdp.cone_theta_y):
+-        raise RelaxError(&quot;The parameter values are not set up.&quot;)
++    if cdp.model in MODEL_LIST_ISO_CONE:
++        if not hasattr(cdp, 'cone_theta') or not is_float(cdp.cone_theta):
++            raise RelaxError(&quot;The parameter values are not set up.&quot;)
++    else:
++        if not hasattr(cdp, 'cone_theta_y') or not 
+is_float(cdp.cone_theta_y):
++            raise RelaxError(&quot;The parameter values are not set up.&quot;)
++
++    # The iso cones only have one permutation.
++    if cdp.model in MODEL_LIST_ISO_CONE and permutation == 'B':
++        raise RelaxError(&quot;The isotropic cones only have one permutation.&quot;)
+ 
+     # The angles.
+     cone_sigma_max = 0.0
+-    if cdp.model == MODEL_PSEUDO_ELLIPSE:
++    if cdp.model in MODEL_LIST_RESTRICTED_TORSION:
+         cone_sigma_max = cdp.cone_sigma_max
+-    angles = array([cdp.cone_theta_x, cdp.cone_theta_y, cone_sigma_max], 
+float64)
++    elif cdp.model in MODEL_LIST_FREE_ROTORS:
++        cone_sigma_max = pi
++    if cdp.model in MODEL_LIST_ISO_CONE:
++        angles = array([cdp.cone_theta, cdp.cone_theta, cone_sigma_max], 
+float64)
++    else:
++        angles = array([cdp.cone_theta_x, cdp.cone_theta_y, cone_sigma_max], 
+float64)
+     x, y, z = angles
+ 
+-    # Generate the eigenframe of the motion.
+-    frame = zeros((3, 3), float64)
+-    euler_to_R_zyz(cdp.eigen_alpha, cdp.eigen_beta, cdp.eigen_gamma, frame)
+-
+-    # Start printout.
+-    print(&quot;\nOriginal parameters:&quot;)
+-    print(&quot;%-20s %20.10f&quot; % (&quot;cone_theta_x&quot;, cdp.cone_theta_x))
+-    print(&quot;%-20s %20.10f&quot; % (&quot;cone_theta_y&quot;, cdp.cone_theta_y))
+-    print(&quot;%-20s %20.10f&quot; % (&quot;cone_sigma_max&quot;, cone_sigma_max))
+-    print(&quot;%-20s %20.10f&quot; % (&quot;eigen_alpha&quot;, cdp.eigen_alpha))
+-    print(&quot;%-20s %20.10f&quot; % (&quot;eigen_beta&quot;, cdp.eigen_beta))
+-    print(&quot;%-20s %20.10f&quot; % (&quot;eigen_gamma&quot;, cdp.eigen_gamma))
+-    print(&quot;%-20s\n%s&quot; % (&quot;eigenframe&quot;, frame))
+-    print(&quot;\nPermutation '%s':&quot; % permutation)
++    # The system for the isotropic cones.
++    if cdp.model in MODEL_LIST_ISO_CONE:
++        # Reconstruct the rotation axis.
++        axis = zeros(3, float64)
++        spherical_to_cartesian([1, cdp.axis_theta, cdp.axis_phi], axis)
++
++        # Create a full normalised axis system.
++        x_ax = array([1, 0, 0], float64)
++        y_ax = cross(axis, x_ax)
++        y_ax /= norm(y_ax)
++        x_ax = cross(y_ax, axis)
++        x_ax /= norm(x_ax)
++        axes = transpose(array([x_ax, y_ax, axis], float64))
++
++        # Start printout.
++        print(&quot;\nOriginal parameters:&quot;)
++        print(&quot;%-20s %20.10f&quot; % (&quot;cone_theta&quot;, cdp.cone_theta))
++        print(&quot;%-20s %20.10f&quot; % (&quot;cone_sigma_max&quot;, cone_sigma_max))
++        print(&quot;%-20s %20.10f&quot; % (&quot;axis_theta&quot;, cdp.axis_theta))
++        print(&quot;%-20s %20.10f&quot; % (&quot;axis_phi&quot;, cdp.axis_phi))
++        print(&quot;%-20s\n%s&quot; % (&quot;cone axis&quot;, axis))
++        print(&quot;%-20s\n%s&quot; % (&quot;full axis system&quot;, axes))
++        print(&quot;\nPermutation '%s':&quot; % permutation)
++
++    # The system for the pseudo-ellipses.
++    else:
++        # Generate the eigenframe of the motion.
++        frame = zeros((3, 3), float64)
++        euler_to_R_zyz(cdp.eigen_alpha, cdp.eigen_beta, cdp.eigen_gamma, 
+frame)
++
++        # Start printout.
++        print(&quot;\nOriginal parameters:&quot;)
++        print(&quot;%-20s %20.10f&quot; % (&quot;cone_theta_x&quot;, cdp.cone_theta_x))
++        print(&quot;%-20s %20.10f&quot; % (&quot;cone_theta_y&quot;, cdp.cone_theta_y))
++        print(&quot;%-20s %20.10f&quot; % (&quot;cone_sigma_max&quot;, cone_sigma_max))
++        print(&quot;%-20s %20.10f&quot; % (&quot;eigen_alpha&quot;, cdp.eigen_alpha))
++        print(&quot;%-20s %20.10f&quot; % (&quot;eigen_beta&quot;, cdp.eigen_beta))
++        print(&quot;%-20s %20.10f&quot; % (&quot;eigen_gamma&quot;, cdp.eigen_gamma))
++        print(&quot;%-20s\n%s&quot; % (&quot;eigenframe&quot;, frame))
++        print(&quot;\nPermutation '%s':&quot; % permutation)
+ 
+     # The axis inversion structure.
+     inv = ones(3, float64)
+@@ -164,6 +207,7 @@
+         if permutation == 'A':
+             perm_angles = [0, 2, 1]
+             perm_axes   = [2, 1, 0]
++            inv[perm_axes[2]] = -1.0
+         else:
+             perm_angles = [2, 1, 0]
+             perm_axes   = [0, 2, 1]
+@@ -192,27 +236,48 @@
+     print(&quot;%-20s %-20s&quot; % (&quot;Axes permutation&quot;, perm_axes))
+ 
+     # Permute the angles.
+-    cdp.cone_theta_x = angles[perm_angles[0]]
+-    cdp.cone_theta_y = angles[perm_angles[1]]
+-    if cdp.model == MODEL_PSEUDO_ELLIPSE:
++    if cdp.model in MODEL_LIST_ISO_CONE:
++        cdp.cone_theta = (angles[perm_angles[0]] + angles[perm_angles[1]]) / 
+2.0
++    else:
++        cdp.cone_theta_x = angles[perm_angles[0]]
++        cdp.cone_theta_y = angles[perm_angles[1]]
++    if cdp.model in MODEL_LIST_RESTRICTED_TORSION:
+         cdp.cone_sigma_max = angles[perm_angles[2]]
+-
+-    # Permute the axes.
+-    frame_new = transpose(array([inv[0]*frame[:, perm_axes[0]], 
+inv[1]*frame[:, perm_axes[1]], inv[2]*frame[:, perm_axes[2]]], float64))
+-
+-    # Convert the permuted frame to Euler angles and store them.
+-    cdp.eigen_alpha, cdp.eigen_beta, cdp.eigen_gamma = 
+R_to_euler_zyz(frame_new)
++    elif cdp.model in MODEL_LIST_FREE_ROTORS:
++        cdp.cone_sigma_max = pi
++
++    # Permute the axes (iso cone).
++    if cdp.model in MODEL_LIST_ISO_CONE:
++        # Convert the y-axis to spherical coordinates (the x-axis would be 
+ok too, or any vector in the x-y plane due to symmetry of the original 
+permutation).
++        axis_new = axes[:, 1]
++        r, cdp.axis_theta, cdp.axis_phi = cartesian_to_spherical(axis_new)
++
++    # Permute the axes (pseudo-ellipses).
++    else:
++        frame_new = transpose(array([inv[0]*frame[:, perm_axes[0]], 
+inv[1]*frame[:, perm_axes[1]], inv[2]*frame[:, perm_axes[2]]], float64))
++
++        # Convert the permuted frame to Euler angles and store them.
++        cdp.eigen_alpha, cdp.eigen_beta, cdp.eigen_gamma = 
+R_to_euler_zyz(frame_new)
+ 
+     # End printout.
+-    print(&quot;\nPermuted parameters:&quot;)
+-    print(&quot;%-20s %20.10f&quot; % (&quot;cone_theta_x&quot;, cdp.cone_theta_x))
+-    print(&quot;%-20s %20.10f&quot; % (&quot;cone_theta_y&quot;, cdp.cone_theta_y))
+-    if cdp.model == MODEL_PSEUDO_ELLIPSE:
+-        print(&quot;%-20s %20.10f&quot; % (&quot;cone_sigma_max&quot;, cdp.cone_sigma_max))
+-    print(&quot;%-20s %20.10f&quot; % (&quot;eigen_alpha&quot;, cdp.eigen_alpha))
+-    print(&quot;%-20s %20.10f&quot; % (&quot;eigen_beta&quot;, cdp.eigen_beta))
+-    print(&quot;%-20s %20.10f&quot; % (&quot;eigen_gamma&quot;, cdp.eigen_gamma))
+-    print(&quot;%-20s\n%s&quot; % (&quot;eigenframe&quot;, frame_new))
++    if cdp.model in MODEL_LIST_ISO_CONE:
++        print(&quot;\nPermuted parameters:&quot;)
++        print(&quot;%-20s %20.10f&quot; % (&quot;cone_theta&quot;, cdp.cone_theta))
++        if cdp.model == MODEL_ISO_CONE:
++            print(&quot;%-20s %20.10f&quot; % (&quot;cone_sigma_max&quot;, cdp.cone_sigma_max))
++        print(&quot;%-20s %20.10f&quot; % (&quot;axis_theta&quot;, cdp.axis_theta))
++        print(&quot;%-20s %20.10f&quot; % (&quot;axis_phi&quot;, cdp.axis_phi))
++        print(&quot;%-20s\n%s&quot; % (&quot;cone axis&quot;, axis_new))
++    else:
++        print(&quot;\nPermuted parameters:&quot;)
++        print(&quot;%-20s %20.10f&quot; % (&quot;cone_theta_x&quot;, cdp.cone_theta_x))
++        print(&quot;%-20s %20.10f&quot; % (&quot;cone_theta_y&quot;, cdp.cone_theta_y))
++        if cdp.model == MODEL_PSEUDO_ELLIPSE:
++            print(&quot;%-20s %20.10f&quot; % (&quot;cone_sigma_max&quot;, cdp.cone_sigma_max))
++        print(&quot;%-20s %20.10f&quot; % (&quot;eigen_alpha&quot;, cdp.eigen_alpha))
++        print(&quot;%-20s %20.10f&quot; % (&quot;eigen_beta&quot;, cdp.eigen_beta))
++        print(&quot;%-20s %20.10f&quot; % (&quot;eigen_gamma&quot;, cdp.eigen_gamma))
++        print(&quot;%-20s\n%s&quot; % (&quot;eigenframe&quot;, frame_new))
+ 
+ 
+ def pivot(pivot=None, order=1, fix=False):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Sep 11 19:20:02 2014</div>  
+</body>
+</html>

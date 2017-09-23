@@ -1,0 +1,199 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r14802 &#45; /1.3/specific_fns/model_free/mf_minimise.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 05 Oct 2011 22:12:48 +0200 -->
+<!--X-Message-Id: E1RBXpg&#45;0006jd&#45;VE@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r14802 - /1.3/specific_fns/model_free/mf_minimise.py -- October 05, 2011 - 22:12</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r14802 - /1.3/specific_fns/model_free/mf_minimise.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00034" class="tabs">Index by Date</a> | <a href="threads.html#00034" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00033.html">Date Prev</a>] [<a href="msg00035.html">Date Next</a>] [<a href="msg00033.html">Thread Prev</a>] [<a href="msg00035.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 05 Oct 2011 20:12:48 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00034.html">E1RBXpg-0006jd-VE@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on October 05, 2011 - 22:12:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Oct  5 22:12:48 2011
+New Revision: 14802
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=14802&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=14802&amp;view=rev</a>
+Log:
+Fix for bug #18790 - the negative relaxation data errors.
+
+The cause of this is unknown, as similar data is already checked in the test 
+suite.  Now the
+relaxation data is not looked at if it or its error is None.  This type of 
+data worked perfectly
+before!  A very strange bug!
+
+
+Modified:
+    1.3/specific_fns/model_free/mf_minimise.py
+
+Modified: 1.3/specific_fns/model_free/mf_minimise.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/specific_fns/model_free/mf_minimise.py?rev=14802&amp;r1=14801&amp;r2=14802&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/specific_fns/model_free/mf_minimise.py?rev=14802&amp;r1=14801&amp;r2=14802&amp;view=diff</a>
+==============================================================================
+--- 1.3/specific_fns/model_free/mf_minimise.py (original)
++++ 1.3/specific_fns/model_free/mf_minimise.py Wed Oct  5 22:12:48 2011
+@@ -1059,13 +1059,16 @@
+             if not hasattr(spin, 'ri_data') or not hasattr(spin, 
+'ri_data_err'):
+                 continue
+ 
+-            # The relaxation data.
++            # Make sure that the errors are strictly positive numbers.
+             for ri_id in cdp.ri_ids:
+-                # Make sure that the errors are strictly positive numbers.
+-                if spin.ri_data_err[ri_id] == 0.0:
+-                    raise RelaxError(&quot;Zero error for spin '%s' for the 
+relaxation data ID '%s', minimisation not possible.&quot; % (data_store.spin_id, 
+ri_id))
+-                elif spin.ri_data_err[ri_id] &lt; 0.0:
+-                    raise RelaxError(&quot;Negative error of %s for spin '%s' for 
+the relaxation data ID '%s', minimisation not possible.&quot; % 
+(spin.ri_data_err[ri_id], data_store.spin_id, ri_id))
++                # Alias.
++                err = spin.ri_data_err[ri_id]
++
++                # Checks.
++                if err != None and err == 0.0:
++                    raise RelaxError(&quot;Zero error for spin '%s' for the 
+relaxation data ID '%s', minimisation not possible.&quot; % (errid))
++                elif err != None and err &lt; 0.0:
++                    raise RelaxError(&quot;Negative error of %s for spin '%s' for 
+the relaxation data ID '%s', minimisation not possible.&quot; % (err, 
+data_store.spin_id, ri_id))
+ 
+             # The relaxation data optimisation structures.
+             data = self._relax_data_opt_structs(spin, sim_index=sim_index)
+@@ -1162,12 +1165,20 @@
+         for ri_id in cdp.ri_ids:
+             # The Rx data.
+             if sim_index == None:
+-                ri_data.append(spin.ri_data[ri_id])
+-            else:
+-                ri_data.append(spin.ri_data_sim[ri_id][sim_index])
++                data = spin.ri_data[ri_id]
++            else:
++                data = spin.ri_data_sim[ri_id][sim_index]
+ 
+             # The errors.
+-            ri_data_err.append(spin.ri_data_err[ri_id])
++            err = spin.ri_data_err[ri_id]
++
++            # Missing data, so don't add it.
++            if data == None or err == None:
++                continue
++
++            # Append the data and error.
++            ri_data.append(data)
++            ri_data_err.append(err)
+ 
+             # The labels.
+             ri_labels.append(cdp.ri_type[ri_id])
+@@ -1183,7 +1194,7 @@
+             noe_r1_table.append(None)
+ 
+         # The number of data sets.
+-        num_ri = len(cdp.ri_ids)
++        num_ri = len(ri_data)
+ 
+         # Fill the NOE to R1 mapping table.
+         for i in range(num_ri):
+@@ -1250,7 +1261,7 @@
+             raise RelaxNoPdbError
+ 
+         # Loop over the spins.
+-        for spin in spin_loop(spin_id):
++        for spin, id in spin_loop(spin_id, return_id=True):
+             # Skip deselected spins.
+             if not spin.select:
+                 continue
+@@ -1290,10 +1301,14 @@
+ 
+             # Make sure that the errors are strictly positive numbers.
+             for ri_id in cdp.ri_ids:
+-                if spin.ri_data_err[ri_id] == 0.0:
+-                    raise RelaxError(&quot;Zero error for spin '&quot; + 
+repr(spin.num) + &quot; &quot; + spin.name + &quot;', calculation not possible.&quot;)
+-                elif spin.ri_data_err[ri_id] &lt; 0.0:
+-                    raise RelaxError(&quot;Negative error for spin '&quot; + 
+repr(spin.num) + &quot; &quot; + spin.name + &quot;', calculation not possible.&quot;)
++                # Alias.
++                err = spin.ri_data_err[ri_id]
++
++                # Checks.
++                if err != None and err == 0.0:
++                    raise RelaxError(&quot;Zero error for spin '%s' for the 
+relaxation data ID '%s', minimisation not possible.&quot; % (id, ri_id))
++                elif err != None and err &lt; 0.0:
++                    raise RelaxError(&quot;Negative error of %s for spin '%s' for 
+the relaxation data ID '%s', minimisation not possible.&quot; % (err, id, ri_id))
+ 
+             # Create the initial parameter vector.
+             param_vector = self._assemble_param_vector(spin=spin, 
+sim_index=sim_index)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Oct 06 10:20:02 2011</div>  
+</body>
+</html>

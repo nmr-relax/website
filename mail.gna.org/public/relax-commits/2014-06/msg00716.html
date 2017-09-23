@@ -1,0 +1,177 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r24329 &#45; /branches/frame_order_cleanup/lib/frame_order/double_rotor.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 26 Jun 2014 14:27:55 +0200 -->
+<!--X-Message-Id: E1X08mR&#45;0000t0&#45;Fr@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r24329 - /branches/frame_order_cleanup/lib/frame_order/double_rotor.py -- June 26, 2014 - 14:27</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r24329 - /branches/frame_order_cleanup/lib/frame_order/double_rotor.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00716" class="tabs">Index by Date</a> | <a href="threads.html#00716" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00715.html">Date Prev</a>] [<a href="msg00717.html">Date Next</a>] [<a href="msg00715.html">Thread Prev</a>] [<a href="msg00717.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 26 Jun 2014 12:27:55 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00716.html">E1X08mR-0000t0-Fr@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on June 26, 2014 - 14:27:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Jun 26 14:27:55 2014
+New Revision: 24329
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=24329&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=24329&amp;view=rev</a>
+Log:
+Attempt at implementing the 2nd degree frame order matrix for the double 
+rotor model.
+
+This is required for the RDC.
+
+
+Modified:
+    branches/frame_order_cleanup/lib/frame_order/double_rotor.py
+
+Modified: branches/frame_order_cleanup/lib/frame_order/double_rotor.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/frame_order/double_rotor.py?rev=24329&amp;r1=24328&amp;r2=24329&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/frame_order/double_rotor.py?rev=24329&amp;r1=24328&amp;r2=24329&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/lib/frame_order/double_rotor.py        
+(original)
++++ branches/frame_order_cleanup/lib/frame_order/double_rotor.py        Thu 
+Jun 26 14:27:55 2014
+@@ -31,7 +31,7 @@
+ from lib.frame_order.matrix_ops import rotate_daeg
+ 
+ 
+-def compile_2nd_matrix_double_rotor(matrix, Rx2_eigen, smax, smaxb):
++def compile_2nd_matrix_double_rotor(matrix, Rx2_eigen, smax1, smax2):
+     &quot;&quot;&quot;Generate the rotated 2nd degree Frame Order matrix for the double 
+rotor model.
+ 
+     The cone axis is assumed to be parallel to the z-axis in the eigenframe.
+@@ -41,35 +41,49 @@
+     @type matrix:       numpy 9D, rank-2 array
+     @param Rx2_eigen:   The Kronecker product of the eigenframe rotation 
+matrix with itself.
+     @type Rx2_eigen:    numpy 9D, rank-2 array
+-    @param smax:        The maximum torsion angle for the first rotor.
+-    @type smax:         float
+-    @param smaxb:       The maximum torsion angle for the second rotor.
+-    @type smaxb:        float
++    @param smax1:       The maximum torsion angle for the first rotor.
++    @type smax1:        float
++    @param smax2:       The maximum torsion angle for the second rotor.
++    @type smax2:        float
+     &quot;&quot;&quot;
+ 
+     # Zeros.
+     matrix[:] = 0.0
+ 
+     # Repetitive trig calculations.
+-    sinc_smax = sinc(smax/pi)
+-    sinc_2smax = sinc(2.0*smax/pi)
++    sinc_smax1 = sinc(smax1/pi)
++    sinc_2smax1 = sinc(2.0*smax1/pi)
++    sinc_2smax1p1 = sinc_2smax1 + 1.0
++    sinc_2smax1n1 = sinc_2smax1 - 1.0
++    sinc_smax2 = sinc(smax2/pi)
++    sinc_2smax2 = sinc(2.0*smax2/pi)
++    sinc_2smax2p1 = sinc_2smax2 + 1.0
++    sinc_2smax2n1 = sinc_2smax2 - 1.0
+ 
+     # Diagonal.
+-    matrix[0, 0] = (sinc_2smax + 1.0) / 2.0
+-    matrix[1, 1] = matrix[0, 0]
+-    matrix[2, 2] = sinc_smax
+-    matrix[3, 3] = matrix[0, 0]
+-    matrix[4, 4] = matrix[0, 0]
+-    matrix[5, 5] = matrix[2, 2]
++    matrix[0, 0] = sinc_2smax1 + 1.0
++    matrix[1, 1] = 2.0 * sinc_smax1 * sinc_smax2
++    matrix[2, 2] = sinc_smax2 * sinc_2smax1p1
++    matrix[3, 3] = matrix[1, 1]
++    matrix[4, 4] = sinc_2smax2p1
++    matrix[5, 5] = sinc_smax1 * sinc_2smax2p1
+     matrix[6, 6] = matrix[2, 2]
+-    matrix[7, 7] = matrix[2, 2]
+-    matrix[8, 8] = 1.0
++    matrix[7, 7] = matrix[5, 5]
++    matrix[8, 8] = 0.5 * sinc_2smax1p1 * sinc_2smax2p1
+ 
+     # Off diagonal set 1.
+-    matrix[0, 4] = matrix[4, 0] = -(sinc_2smax - 1.0) / 2.0
++    matrix[4, 0] = 0.5 * sinc_2smax1n1 * sinc_2smax2n1
++    matrix[0, 8] = -sinc_2smax1n1
++    matrix[8, 0] = -0.5 * sinc_2smax1n1 * sinc_2smax2p1
++    matrix[4, 8] = -0.5 * sinc_2smax1p1 * sinc_2smax2n1
++    matrix[8, 4] = -sinc_2smax2n1
+ 
+     # Off diagonal set 2.
+-    matrix[1, 3] = matrix[3, 1] = -matrix[0, 4]
++    matrix[2, 6] = matrix[6, 2] = sinc_smax2 * sinc_2smax1n1
++    matrix[5, 7] = matrix[7, 5] = sinc_smax1 * sinc_2smax2n1
++
++    # Divide by 2.
++    multiply(0.5, matrix, matrix)
+ 
+     # Rotate and return the frame order matrix.
+     return rotate_daeg(matrix, Rx2_eigen)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Jun 26 14:40:02 2014</div>  
+</body>
+</html>

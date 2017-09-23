@@ -1,0 +1,457 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r19873 &#45; in /branches/relax_disp/specific_analyses/relax_disp:	__init__.py disp_data.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 05 Jun 2013 18:57:33 +0200 -->
+<!--X-Message-Id: E1UkH1g&#45;0006Mm&#45;Uq@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r19873 - in /branches/relax_disp/specific_analyses/relax_disp:	__init__.py disp_data.py -- June 05, 2013 - 18:57</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r19873 - in /branches/relax_disp/specific_analyses/relax_disp:	__init__.py disp_data.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00062" class="tabs">Index by Date</a> | <a href="threads.html#00062" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00061.html">Date Prev</a>] [<a href="msg00063.html">Date Next</a>] [<a href="msg00061.html">Thread Prev</a>] [<a href="msg00063.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 05 Jun 2013 16:57:32 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00062.html">E1UkH1g-0006Mm-Uq@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on June 05, 2013 - 18:57:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Jun  5 18:57:32 2013
+New Revision: 19873
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=19873&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=19873&amp;view=rev</a>
+Log:
+Added support for model selection to the relaxation dispersion specific 
+analysis package.
+
+This involved redesigning the model_loop() method.  Instead of yielding both 
+the spin containers and
+the spin IDs, now only spin IDs are yielded.  This is important as the model 
+loop is used
+independently of the data pipes.  Hence the spin containers cannot be yielded 
+as multiple pipes are
+compared within the model loop.  The auxiliary method 
+_spin_ids_to_containers(spin_ids) has been
+added to obtain the list of spin containers from the list of spin IDs.
+
+To support model selection, the methods duplicate_data(), model_desc() and 
+model_statistics() have
+been added, and model_type() aliased to the common _model_type_local() method.
+
+
+Modified:
+    branches/relax_disp/specific_analyses/relax_disp/__init__.py
+    branches/relax_disp/specific_analyses/relax_disp/disp_data.py
+
+Modified: branches/relax_disp/specific_analyses/relax_disp/__init__.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp/__init__.py?rev=19873&amp;r1=19872&amp;r2=19873&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp/__init__.py?rev=19873&amp;r1=19872&amp;r2=19873&amp;view=diff</a>
+==============================================================================
+--- branches/relax_disp/specific_analyses/relax_disp/__init__.py (original)
++++ branches/relax_disp/specific_analyses/relax_disp/__init__.py Wed Jun  5 
+18:57:32 2013
+@@ -40,6 +40,7 @@
+ from random import gauss
+ from re import match, search
+ import sys
++from types import MethodType
+ 
+ # relax module imports.
+ from dep_check import C_module_exp_fn
+@@ -51,7 +52,7 @@
+ from lib.software.grace import write_xy_data, write_xy_header
+ from lib.statistics import std
+ from lib.text.sectioning import subsection
+-from pipe_control import pipes
++from pipe_control import pipes, sequence
+ from pipe_control.mol_res_spin import exists_mol_res_spin_data, return_spin, 
+spin_loop
+ from pipe_control.result_files import add_result_file
+ from specific_analyses.api_base import API_base
+@@ -79,6 +80,7 @@
+ 
+         # Place methods into the API.
+         self.data_init = self._data_init_spin
++        self.model_type = self._model_type_local
+         self.return_conversion_factor = self._return_no_conversion_factor
+         self.return_value = self._return_value_general
+         self.set_param_values = self._set_param_values_spin
+@@ -849,6 +851,27 @@
+         self._model_setup(model, params)
+ 
+ 
++    def _spin_ids_to_containers(self, spin_ids):
++        &quot;&quot;&quot;Take the list of spin IDs and return the corresponding spin 
+containers.
++
++        This is useful for handling the data from the model_loop() method.
++
++
++        @param spin_ids:    The list of spin ID strings.
++        @type spin_ids:     list of str
++        @return:            The list of spin containers.
++        @rtype:             list of SpinContainer instances
++        &quot;&quot;&quot;
++
++        # Loop over the IDs and fetch the container.
++        spins = []
++        for id in spin_ids:
++            spins.append(return_spin(id))
++
++        # Return the containers.
++        return spins
++
++
+     def base_data_loop(self):
+         &quot;&quot;&quot;Custom generator method for looping over the base data.
+ 
+@@ -1022,6 +1045,88 @@
+ 
+         # Return the MC data.
+         return values
++
++
++    def duplicate_data(self, pipe_from=None, pipe_to=None, model_info=None, 
+global_stats=False, verbose=True):
++        &quot;&quot;&quot;Duplicate the data specific to a single model.
++
++        @keyword pipe_from:     The data pipe to copy the data from.
++        @type pipe_from:        str
++        @keyword pipe_to:       The data pipe to copy the data to.
++        @type pipe_to:          str
++        @keyword model_info:    The model index from model_info().
++        @type model_info:       int
++        @keyword global_stats:  The global statistics flag.
++        @type global_stats:     bool
++        @keyword verbose:       A flag which if True will cause info to be 
+printed out.
++        @type verbose:          bool
++        &quot;&quot;&quot;
++
++        # First create the pipe_to data pipe, if it doesn't exist, but don't 
+switch to it.
++        if not pipes.has_pipe(pipe_to):
++            pipes.create(pipe_to, pipe_type='relax_disp', switch=False)
++
++        # Get the data pipes.
++        dp_from = pipes.get_pipe(pipe_from)
++        dp_to = pipes.get_pipe(pipe_to)
++
++        # Duplicate all non-sequence specific data.
++        for data_name in dir(dp_from):
++            # Skip the container objects.
++            if data_name in ['mol', 'interatomic', 'structure', 'exp_info']:
++                continue
++
++            # Skip special objects.
++            if search('^_', data_name) or data_name in 
+list(dp_from.__class__.__dict__.keys()):
++                continue
++
++            # Get the original object.
++            data_from = getattr(dp_from, data_name)
++
++            # The data already exists.
++            if hasattr(dp_to, data_name):
++                # Get the object in the target pipe.
++                data_to = getattr(dp_to, data_name)
++
++                # The data must match!
++                if data_from != data_to:
++                    raise RelaxError(&quot;The object &quot; + repr(data_name) + &quot; is 
+not consistent between the pipes &quot; + repr(pipe_from) + &quot; and &quot; + 
+repr(pipe_to) + &quot;.&quot;)
++
++                # Skip the data.
++                continue
++
++            # Duplicate the data.
++            setattr(dp_to, data_name, deepcopy(data_from))
++
++        # No sequence data, so skip the rest.
++        if dp_from.mol.is_empty():
++            return
++
++        # Duplicate the sequence data if it doesn't exist.
++        if dp_to.mol.is_empty():
++            sequence.copy(pipe_from=pipe_from, pipe_to=pipe_to, 
+preserve_select=True, verbose=verbose)
++
++        # Loop over the cluster.
++        for id in model_info:
++            # The original spin container.
++            spin = return_spin(id, pipe=pipe_from)
++
++            # Duplicate the spin specific data.
++            for name in dir(spin):
++                # Skip special objects.
++                if search('^__', name):
++                    continue
++
++                # Get the object.
++                obj = getattr(spin, name)
++
++                # Skip methods.
++                if isinstance(obj, MethodType):
++                    continue
++
++                # Duplicate the object.
++                new_obj = deepcopy(getattr(spin, name))
++                
+setattr(dp_to.mol[spin._mol_index].res[spin._res_index].spin[spin._spin_index],
+ name, new_obj)
+ 
+ 
+     def grid_search(self, lower=None, upper=None, inc=None, 
+constraints=True, verbosity=1, sim_index=None):
+@@ -1117,7 +1222,10 @@
+             num_time_pts = cdp.num_time_pts
+ 
+         # Loop over the spin blocks.
+-        for spins, spin_ids in self.model_loop():
++        for spin_ids in self.model_loop():
++            # The spin containers.
++            spins = self._spin_ids_to_containers(spin_ids)
++
+             # The R2eff/R1rho data.
+             values, errors, missing, frqs = return_r2eff_arrays(spins=spins, 
+spin_ids=spin_ids, fields=cdp.spectrometer_frq_list, 
+field_count=cdp.spectrometer_frq_count)
+ 
+@@ -1253,6 +1361,19 @@
+                         spin.r2eff_bc[key] = model.back_calc[spin_index, 
+frq_index, disp_pt_index]
+ 
+ 
++    def model_desc(self, model_info):
++        &quot;&quot;&quot;Return a description of the model.
++
++        @param model_info:  The model index from model_info().
++        @type model_info:   int
++        @return:            The model description.
++        @rtype:             str
++        &quot;&quot;&quot;
++
++        # The model loop is over the spin clusters, so return a description 
+of the cluster.
++        return &quot;The spin cluster %s.&quot; % model_info
++
++
+     def model_loop(self):
+         &quot;&quot;&quot;Loop over the spin groupings for one model applied to multiple 
+spins.
+ 
+@@ -1261,8 +1382,44 @@
+         &quot;&quot;&quot;
+ 
+         # The cluster loop.
+-        for info in loop_cluster():
+-            yield info
++        for spin_ids in loop_cluster():
++            yield spin_ids
++
++
++    def model_statistics(self, model_info=None, spin_id=None, 
+global_stats=None):
++        &quot;&quot;&quot;Return the k, n, and chi2 model statistics.
++
++        k - number of parameters.
++        n - number of data points.
++        chi2 - the chi-squared value.
++
++
++        @keyword model_info:    The model index from model_info().
++        @type model_info:       None or int
++        @keyword spin_id:       The spin identification string.  This is 
+ignored in the N-state model.
++        @type spin_id:          None or str
++        @keyword global_stats:  A parameter which determines if global or 
+local statistics are returned.  For the N-state model, this argument is 
+ignored.
++        @type global_stats:     None or bool
++        @return:                The optimisation statistics, in tuple 
+format, of the number of parameters (k), the number of data points (n), and 
+the chi-squared value (chi2).
++        @rtype:                 tuple of (int, int, float)
++        &quot;&quot;&quot;
++
++        # Unpack the data.
++        spin_ids = model_info
++        spins = self._spin_ids_to_containers(spin_ids)
++
++        # Take the number of parameters from the first spin.
++        k = len(spins[0].params)
++
++        # The number of points and chi-squared is the sum from all spins.
++        n = 0
++        chi2 = 0.0
++        for spin in spins:
++            n += len(spin.r2eff)
++            chi2 += spin.chi2
++
++        # Return the values.
++        return k, n, chi2
+ 
+ 
+     def overfit_deselect(self, data_check=True, verbose=True):
+@@ -1370,7 +1527,8 @@
+         &quot;&quot;&quot;
+ 
+         # Unpack the data.
+-        spins, spin_ids = model_info
++        spin_ids = model_info
++        spins = self._spin_ids_to_containers(spin_ids)
+ 
+         # Convert the parameter index.
+         param_name, spin_index = param_index_to_param_info(index=index, 
+spins=spins, names=self.data_names(set='params'))
+@@ -1403,7 +1561,8 @@
+         &quot;&quot;&quot;
+ 
+         # Unpack the data.
+-        spins, spin_ids = model_info
++        spin_ids = model_info
++        spins = self._spin_ids_to_containers(spin_ids)
+ 
+         # Loop over the spins, storing the structure for each spin.
+         for spin in spins:
+@@ -1471,7 +1630,8 @@
+         &quot;&quot;&quot;
+ 
+         # Unpack the data.
+-        spins, spin_ids = model_info
++        spin_ids = model_info
++        spins = self._spin_ids_to_containers(spin_ids)
+ 
+         # The number of parameters.
+         total_param_num = param_num(spins=spins)
+@@ -1514,7 +1674,8 @@
+         &quot;&quot;&quot;
+ 
+         # Unpack the data.
+-        spins, spin_ids = model_info
++        spin_ids = model_info
++        spins = self._spin_ids_to_containers(spin_ids)
+ 
+         # Return the array from the first spin, as this array will be 
+identical for all spins in the cluster.
+         return spins[0].select_sim
+
+Modified: branches/relax_disp/specific_analyses/relax_disp/disp_data.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp/disp_data.py?rev=19873&amp;r1=19872&amp;r2=19873&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp/disp_data.py?rev=19873&amp;r1=19872&amp;r2=19873&amp;view=diff</a>
+==============================================================================
+--- branches/relax_disp/specific_analyses/relax_disp/disp_data.py (original)
++++ branches/relax_disp/specific_analyses/relax_disp/disp_data.py Wed Jun  5 
+18:57:32 2013
+@@ -176,19 +176,15 @@
+ def loop_cluster():
+     &quot;&quot;&quot;Loop over the spin groupings for one model applied to multiple spins.
+ 
+-    @return:    The list of spins per block will be yielded, as well as the 
+list of spin IDs.
+-    @rtype:     tuple of list of SpinContainer instances and list of spin IDs
++    @return:    The list of spin IDs per block will be yielded.
++    @rtype:     list of str
+     &quot;&quot;&quot;
+ 
+     # No clustering, so loop over the sequence.
+     if not hasattr(cdp, 'clustering'):
+-        for spin, spin_id in spin_loop(return_id=True):
+-            # Skip deselected spins.
+-            if not spin.select:
+-                continue
+-
+-            # Return the spin container as a stop-gap measure.
+-            yield [spin], [spin_id]
++        for spin, spin_id in spin_loop(return_id=True, skip_desel=True):
++            # Return the spin ID as a list.
++            yield [spin_id]
+ 
+     # Loop over the clustering.
+     else:
+@@ -199,22 +195,17 @@
+                 continue
+ 
+             # Create the spin container and ID lists.
+-            spin_list = []
+             spin_id_list = []
+             for spin_id in cdp.clustering[key]:
+-                spin_list.append(return_spin(spin_id))
+                 spin_id_list.append(spin_id)
+ 
+             # Yield the cluster.
+-            yield spin_list, spin_id_list
++            yield spin_id_list
+ 
+         # The free spins.
+         for spin_id in cdp.clustering['free spins']:
+-            # Get the spin container.
+-            spin = return_spin(spin_id)
+-
+             # Yield each spin individually.
+-            yield [spin], [spin_id]
++            yield [spin_id]
+ 
+ 
+ def loop_frq():
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Jun 05 19:00:01 2013</div>  
+</body>
+</html>

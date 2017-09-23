@@ -1,0 +1,158 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r6198 &#45; /1.3/specific_fns/relax_fit.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 21 May 2008 22:13:19 +0200 -->
+<!--X-Message-Id: E1JyugZ&#45;0004GY&#45;1h@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r6198 - /1.3/specific_fns/relax_fit.py -- May 21, 2008 - 22:13</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r6198 - /1.3/specific_fns/relax_fit.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00183" class="tabs">Index by Date</a> | <a href="threads.html#00183" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00182.html">Date Prev</a>] [<a href="msg00184.html">Date Next</a>] [<a href="msg00182.html">Thread Prev</a>] [<a href="msg00184.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 21 May 2008 20:13:18 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00183.html">E1JyugZ-0004GY-1h@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on May 21, 2008 - 22:13:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed May 21 22:13:15 2008
+New Revision: 6198
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=6198&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=6198&amp;view=rev</a>
+Log:
+Updated the assemble_scaling_matrix() method to the new design.
+
+
+Modified:
+    1.3/specific_fns/relax_fit.py
+
+Modified: 1.3/specific_fns/relax_fit.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/specific_fns/relax_fit.py?rev=6198&amp;r1=6197&amp;r2=6198&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/specific_fns/relax_fit.py?rev=6198&amp;r1=6197&amp;r2=6198&amp;view=diff</a>
+==============================================================================
+--- 1.3/specific_fns/relax_fit.py (original)
++++ 1.3/specific_fns/relax_fit.py Wed May 21 22:13:15 2008
+@@ -98,36 +98,47 @@
+         return array(param_vector, float64)
+ 
+ 
+-    def assemble_scaling_matrix(self, spin=spin, scaling=True):
+-        &quot;&quot;&quot;Function for creating the scaling matrix.&quot;&quot;&quot;
++    def assemble_scaling_matrix(self, spin=None, scaling=True):
++        &quot;&quot;&quot;Create and return the scaling matrix.
++
++        @keyword spin:          The spin data container.
++        @type spin:             SpinContainer instance
++        @keyword scaling:       A flag which if false will cause the 
+identity matrix to be returned.
++        @type scaling:          bool
++        @return:                The diagonal and square scaling matrix.
++        @rtype:                 numpy diagonal matrix
++        &quot;&quot;&quot;
+ 
+         # Initialise.
+-        self.scaling_matrix = identity(len(self.param_vector), float64)
++        scaling_matrix = identity(len(spin.params), float64)
+         i = 0
+ 
+         # No diagonal scaling.
+         if not scaling:
+-            return
+-
+-        # Alias the residue specific data structure.
+-        data = relax_data_store.res[self.run][index]
++            return scaling_matrix
++
++        # Alias the current data pipe.
++        cdp = relax_data_store[relax_data_store.current_pipe]
+ 
+         # Loop over the parameters.
+-        for i in xrange(len(data.params)):
++        for i in xrange(len(spin.params)):
+             # Relaxation rate.
+-            if data.params[i] == 'Rx':
++            if spin.params[i] == 'Rx':
+                 pass
+ 
+             # Intensity scaling.
+-            elif search('^i', data.params[i]):
++            elif search('^i', spin.params[i]):
+                 # Find the position of the first time point.
+-                pos = 
+relax_data_store.relax_times[self.run].index(min(relax_data_store.relax_times[self.run]))
++                pos = cdp.relax_times.index(min(cdp.relax_times))
+ 
+                 # Scaling.
+-                self.scaling_matrix[i, i] = 1.0 / 
+average(data.intensities[pos])
++                scaling_matrix[i, i] = 1.0 / average(spin.intensities[pos])
+ 
+             # Increment i.
+             i = i + 1
++
++        # Return the scaling matrix.
++        return scaling_matrix
+ 
+ 
+     def assign_function(self, spin=None, intensity=None):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed May 21 22:40:17 2008</div>  
+</body>
+</html>

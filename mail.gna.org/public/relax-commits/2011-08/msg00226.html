@@ -1,0 +1,341 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r14246 &#45; /branches/gui_testing/generic_fns/pipes.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 08 Aug 2011 09:59:07 +0200 -->
+<!--X-Message-Id: E1QqKjr&#45;0002hS&#45;7F@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r14246 - /branches/gui_testing/generic_fns/pipes.py -- August 08, 2011 - 09:59</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r14246 - /branches/gui_testing/generic_fns/pipes.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00226" class="tabs">Index by Date</a> | <a href="threads.html#00226" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00225.html">Date Prev</a>] [<a href="msg00227.html">Date Next</a>] [<a href="msg00225.html">Thread Prev</a>] [<a href="msg00227.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 08 Aug 2011 07:59:07 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00226.html">E1QqKjr-0002hS-7F@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on August 08, 2011 - 09:59:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Mon Aug  8 09:59:06 2011
+New Revision: 14246
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=14246&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=14246&amp;view=rev</a>
+Log:
+All of the acquire() and release() calls to status.pipe_lock are now within 
+&quot;try ... finally&quot; blocks.
+
+This ensures that the lock will be released at the end.
+
+
+Modified:
+    branches/gui_testing/generic_fns/pipes.py
+
+Modified: branches/gui_testing/generic_fns/pipes.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/gui_testing/generic_fns/pipes.py?rev=14246&amp;r1=14245&amp;r2=14246&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/gui_testing/generic_fns/pipes.py?rev=14246&amp;r1=14245&amp;r2=14246&amp;view=diff</a>
+==============================================================================
+--- branches/gui_testing/generic_fns/pipes.py (original)
++++ branches/gui_testing/generic_fns/pipes.py Mon Aug  8 09:59:06 2011
+@@ -54,18 +54,19 @@
+     if pipe_to in list(ds.keys()):
+         raise RelaxPipeError(pipe_to)
+ 
+-    # Acquire the pipe lock.
+-    status.pipe_lock.acquire()
+-
+-    # The current data pipe.
+-    if pipe_from == None:
+-        pipe_from = cdp_name()
+-
+-    # Copy the data.
+-    ds[pipe_to] = ds[pipe_from].__clone__()
+-
+-    # Release the lock.
+-    status.pipe_lock.release()
++    # Acquire the pipe lock (data modifying function), and make sure it is 
+finally released.
++    status.pipe_lock.acquire()
++    try:
++        # The current data pipe.
++        if pipe_from == None:
++            pipe_from = cdp_name()
++
++        # Copy the data.
++        ds[pipe_to] = ds[pipe_from].__clone__()
++
++    # Release the lock.
++    finally:
++        status.pipe_lock.release()
+ 
+     # Notify observers that a pipe change has occurred.
+     status.observers.pipe_alteration.notify()
+@@ -106,14 +107,15 @@
+     if pipe_type == 'frame order' and not scipy_module:
+         raise RelaxError(&quot;The frame order analysis is not available.  Please 
+install the scipy Python package.&quot;)
+ 
+-    # Acquire the pipe lock.
+-    status.pipe_lock.acquire()
+-
+-    # Add the data pipe.
+-    ds.add(pipe_name=pipe_name, pipe_type=pipe_type, switch=switch)
+-
+-    # Release the lock.
+-    status.pipe_lock.release()
++    # Acquire the pipe lock (data modifying function), and make sure it is 
+finally released.
++    status.pipe_lock.acquire()
++    try:
++        # Add the data pipe.
++        ds.add(pipe_name=pipe_name, pipe_type=pipe_type, switch=switch)
++
++    # Release the lock.
++    finally:
++        status.pipe_lock.release()
+ 
+ 
+ def cdp_name():
+@@ -133,33 +135,34 @@
+     @type pipe_name:    str
+     &quot;&quot;&quot;
+ 
+-    # Acquire the pipe lock.
+-    status.pipe_lock.acquire()
+-
+-    # Pipe name is supplied.
+-    if pipe_name != None:
+-        # Test if the data pipe exists.
+-        test(pipe_name)
+-
+-        # Convert to a list.
+-        pipes = [pipe_name]
+-
+-    # All pipes.
+-    else:
+-        pipes = ds.keys()
+-
+-    # Loop over the pipes.
+-    for pipe in pipes:
+-        # Delete the data pipe.
+-        del ds[pipe]
+-
+-        # Set the current data pipe to None if it is the deleted data pipe.
+-        if ds.current_pipe == pipe:
+-            ds.current_pipe = None
+-            __builtin__.cdp = None
+-
+-    # Release the lock.
+-    status.pipe_lock.release()
++    # Acquire the pipe lock (data modifying function), and make sure it is 
+finally released.
++    status.pipe_lock.acquire()
++    try:
++        # Pipe name is supplied.
++        if pipe_name != None:
++            # Test if the data pipe exists.
++            test(pipe_name)
++
++            # Convert to a list.
++            pipes = [pipe_name]
++
++        # All pipes.
++        else:
++            pipes = ds.keys()
++
++        # Loop over the pipes.
++        for pipe in pipes:
++            # Delete the data pipe.
++            del ds[pipe]
++
++            # Set the current data pipe to None if it is the deleted data 
+pipe.
++            if ds.current_pipe == pipe:
++                ds.current_pipe = None
++                __builtin__.cdp = None
++
++    # Release the lock.
++    finally:
++        status.pipe_lock.release()
+ 
+     # Notify observers that the switch has occurred.
+     status.observers.pipe_alteration.notify()
+@@ -168,24 +171,25 @@
+ def display():
+     &quot;&quot;&quot;Print the details of all the data pipes.&quot;&quot;&quot;
+ 
+-    # Acquire the pipe lock.
+-    status.pipe_lock.acquire()
+-
+-    # Heading.
+-    print((&quot;%-20s%-20s%-20s&quot; % (&quot;Data pipe name&quot;, &quot;Data pipe type&quot;, 
+&quot;Current&quot;)))
+-
+-    # Loop over the data pipes.
+-    for pipe_name in ds:
+-        # The current data pipe.
+-        current = ''
+-        if pipe_name == cdp_name():
+-            current = '*'
+-
+-        # Print out.
+-        print(&quot;%-20s%-20s%-20s&quot; % (&quot;'&quot;+pipe_name+&quot;'&quot;, get_type(pipe_name), 
+current))
+-
+-    # Release the lock.
+-    status.pipe_lock.release()
++    # Acquire the pipe lock, and make sure it is finally released.
++    status.pipe_lock.acquire()
++    try:
++        # Heading.
++        print((&quot;%-20s%-20s%-20s&quot; % (&quot;Data pipe name&quot;, &quot;Data pipe type&quot;, 
+&quot;Current&quot;)))
++
++        # Loop over the data pipes.
++        for pipe_name in ds:
++            # The current data pipe.
++            current = ''
++            if pipe_name == cdp_name():
++                current = '*'
++
++            # Print out.
++            print(&quot;%-20s%-20s%-20s&quot; % (&quot;'&quot;+pipe_name+&quot;'&quot;, 
+get_type(pipe_name), current))
++
++    # Release the lock.
++    finally:
++        status.pipe_lock.release()
+ 
+ 
+ def get_pipe(name=None):
+@@ -252,21 +256,22 @@
+     @rtype:         PipeContainer instance or tuple of PipeContainer 
+instance and str if name=True
+     &quot;&quot;&quot;
+ 
+-    # Acquire the pipe lock.
+-    status.pipe_lock.acquire()
+-
+-    # Loop over the keys.
+-    for key in list(ds.keys()):
+-        # Return the pipe and name.
+-        if name:
+-            yield ds[key], key
+-
+-        # Return just the pipe.
+-        else:
+-            yield ds[key]
+-
+-    # Release the lock.
+-    status.pipe_lock.release()
++    # Acquire the pipe lock, and make sure it is finally released.
++    status.pipe_lock.acquire()
++    try:
++        # Loop over the keys.
++        for key in list(ds.keys()):
++            # Return the pipe and name.
++            if name:
++                yield ds[key], key
++
++            # Return just the pipe.
++            else:
++                yield ds[key]
++
++    # Release the lock.
++    finally:
++        status.pipe_lock.release()
+ 
+ 
+ def pipe_names():
+@@ -286,18 +291,19 @@
+     @type pipe_name:    str
+     &quot;&quot;&quot;
+ 
+-    # Acquire the pipe lock.
+-    status.pipe_lock.acquire()
+-
+-    # Test if the data pipe exists.
+-    test(pipe_name)
+-
+-    # Switch the current data pipe.
+-    ds.current_pipe = pipe_name
+-    __builtin__.cdp = get_pipe()
+-
+-    # Release the lock.
+-    status.pipe_lock.release()
++    # Acquire the pipe lock (data modifying function), and make sure it is 
+finally released.
++    status.pipe_lock.acquire()
++    try:
++        # Test if the data pipe exists.
++        test(pipe_name)
++
++        # Switch the current data pipe.
++        ds.current_pipe = pipe_name
++        __builtin__.cdp = get_pipe()
++
++    # Release the lock.
++    finally:
++        status.pipe_lock.release()
+ 
+     # Notify observers that the switch has occurred.
+     status.observers.pipe_alteration.notify()
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Aug 08 10:20:02 2011</div>  
+</body>
+</html>

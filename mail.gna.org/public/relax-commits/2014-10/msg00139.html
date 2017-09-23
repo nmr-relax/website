@@ -1,0 +1,217 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r26243 &#45; /trunk/pipe_control/opendx.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 10 Oct 2014 17:05:26 +0200 -->
+<!--X-Message-Id: E1Xcbl0&#45;0001dh&#45;7d@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r26243 - /trunk/pipe_control/opendx.py -- October 10, 2014 - 17:05</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r26243 - /trunk/pipe_control/opendx.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00139" class="tabs">Index by Date</a> | <a href="threads.html#00139" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00138.html">Date Prev</a>] [<a href="msg00140.html">Date Next</a>] [<a href="msg00138.html">Thread Prev</a>] [<a href="msg00140.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 10 Oct 2014 15:05:26 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00139.html">E1Xcbl0-0001dh-7d@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on October 10, 2014 - 17:05:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Fri Oct 10 17:05:25 2014
+New Revision: 26243
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=26243&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=26243&amp;view=rev</a>
+Log:
+Added the write out of parameters and chi2 values, when creating a dx_map.
+
+Task #7860(<a  rel="nofollow" href="https://gna.org/task/index.php?7860">https://gna.org/task/index.php?7860</a>): When dx_map is issued, 
+create a parameter file which maps parameters to chi2 value.
+
+Modified:
+    trunk/pipe_control/opendx.py
+
+Modified: trunk/pipe_control/opendx.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/pipe_control/opendx.py?rev=26243&amp;r1=26242&amp;r2=26243&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/pipe_control/opendx.py?rev=26243&amp;r1=26242&amp;r2=26243&amp;view=diff</a>
+==============================================================================
+--- trunk/pipe_control/opendx.py        (original)
++++ trunk/pipe_control/opendx.py        Fri Oct 10 17:05:25 2014
+@@ -25,12 +25,13 @@
+ 
+ 
+ # Python module imports.
++from copy import deepcopy
+ from numpy import float64, array, zeros
+ from time import asctime, localtime
+ 
+ # relax module imports.
+ from lib.errors import RelaxError
+-from lib.io import open_write_file
++from lib.io import open_write_file, write_data
+ from extern.numpy_future import percentile
+ from lib.software.opendx.files import write_config, write_general, 
+write_point, write_program
+ from pipe_control import value
+@@ -107,6 +108,9 @@
+         self.dir = dir
+         self.point_file = point_file
+ 
++        # Define nested listed, which holds parameter values and chi2 value.
++        self.par_chi2_vals = []
++
+         # The specific analysis API object.
+         self.api = return_api()
+ 
+@@ -163,6 +167,9 @@
+         # Generate the map.
+         self.create_map()
+ 
++        ## Generate the file with parameters and associated chi2 value.
++        self.create_par_chi2()
++
+         # Default the chi2 surface values, for Innermost, Inner, Middle and 
+Outer Isosurface.
+         if chi_surface == None:
+             all_chi2 = array(self.all_chi, float64)
+@@ -202,6 +209,56 @@
+         map_file.close()
+ 
+ 
++    def create_par_chi2(self):
++        &quot;&quot;&quot;Function for creating file with parameters and the chi2 value.&quot;&quot;&quot;
++
++        # Print out.
++        print(&quot;\nCreating the file with parameters and the chi2 value.&quot;)
++
++        # Open the file.
++        par_file = open_write_file(file_name=self.file_prefix+'.par', 
+dir=self.dir, force=True)
++
++        # Copy the nested list to sort it.
++        par_chi2_vals_sort = deepcopy(self.par_chi2_vals)
++
++        # Then sort the value.
++        par_chi2_vals_sort.sort(key=lambda values: values[4])
++
++        # Collect the data structure, which is a list of list of strings.
++        data = []
++        for i, line in enumerate(self.par_chi2_vals):
++            line_sort = par_chi2_vals_sort[i]
++
++            # Convert values to strings.
++            line_str = [&quot;%3.5f&quot;%j for j in line]
++            line_sort_str = [&quot;%3.5f&quot;%j for j in line_sort]
++
++            # Convert the index from float to index.
++            line_str[0] = &quot;%i&quot; % line[0]
++            line_sort_str[0] = &quot;%i&quot; % line_sort[0]
++
++            # Merge the two lists and append to data.
++            data_list = line_str + line_sort_str
++            data.append(data_list)
++
++        # Make the headings.
++        headings = ['i'] + self.params + ['chi2']
++        headings += headings
++
++        # Add &quot;_sort&quot; to headings.
++        headings[5] = headings[5] + &quot;_sort&quot;
++        headings[6] = headings[6] + &quot;_sort&quot;
++        headings[7] = headings[7] + &quot;_sort&quot;
++        headings[8] = headings[8] + &quot;_sort&quot;
++        headings[9] = headings[9] + &quot;_sort&quot;
++
++        # Write the parameters and chi2 values to file.
++        write_data(out=par_file, headings=headings, data=data)
++
++        # Close the file.
++        par_file.close()
++
++
+     def get_date(self):
+         &quot;&quot;&quot;Function for creating a date string.&quot;&quot;&quot;
+ 
+@@ -228,6 +285,9 @@
+ 
+         # Initial value of the first parameter.
+         values[0] = self.bounds[0, 0]
++
++        # Define counter
++        counter = 0
+ 
+         # Loop over the first parameter.
+         for i in range((self.inc + 1)):
+@@ -268,6 +328,12 @@
+                         # Save all values of chi2. To help find reasonale 
+level for the Innermost, Inner, Middle and Outer Isosurface.
+                         all_chi.append(chi2)
+ 
++                    # Assign value to nested list.
++                    self.par_chi2_vals.append([counter, values[0], 
+values[1], values[2], chi2])
++
++                    # Add to counter.
++                    counter += 1
++
+                     # Increment the value of the third parameter.
+                     values[2] = values[2] + self.step_size[2]
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Oct 10 17:20:02 2014</div>  
+</body>
+</html>

@@ -1,0 +1,267 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r13562 &#45; /branches/gui_testing/gui/analyses/auto_rx_base.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 12 Jul 2011 18:22:32 +0200 -->
+<!--X-Message-Id: E1QgfjE&#45;0003dL&#45;NL@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r13562 - /branches/gui_testing/gui/analyses/auto_rx_base.py -- July 12, 2011 - 18:22</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r13562 - /branches/gui_testing/gui/analyses/auto_rx_base.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00205" class="tabs">Index by Date</a> | <a href="threads.html#00205" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00204.html">Date Prev</a>] [<a href="msg00206.html">Date Next</a>] [<a href="msg00204.html">Thread Prev</a>] [<a href="msg00206.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 12 Jul 2011 16:22:32 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00205.html">E1QgfjE-0003dL-NL@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on July 12, 2011 - 18:22:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Jul 12 18:22:32 2011
+New Revision: 13562
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=13562&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=13562&amp;view=rev</a>
+Log:
+Updated the automatic Rx analysis page to match that of the NOE.
+
+This includes creating the data pipe when the analysis is created, replacing 
+the sequence file,
+structure file, and unresolved elements with the spin loader GUI element, and 
+registering the spin
+loader for update upon user function completion.
+
+
+Modified:
+    branches/gui_testing/gui/analyses/auto_rx_base.py
+
+Modified: branches/gui_testing/gui/analyses/auto_rx_base.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/gui_testing/gui/analyses/auto_rx_base.py?rev=13562&amp;r1=13561&amp;r2=13562&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/gui_testing/gui/analyses/auto_rx_base.py?rev=13562&amp;r1=13561&amp;r2=13562&amp;view=diff</a>
+==============================================================================
+--- branches/gui_testing/gui/analyses/auto_rx_base.py (original)
++++ branches/gui_testing/gui/analyses/auto_rx_base.py Tue Jul 12 18:22:32 2011
+@@ -26,7 +26,7 @@
+ 
+ # Python module imports.
+ from os import sep
+-from string import replace
++from string import lower, replace
+ import sys
+ import time
+ import wx
+@@ -46,7 +46,7 @@
+ from gui.derived_wx_classes import StructureTextCtrl
+ from gui.filedialog import opendir
+ from gui.message import error_message, missing_data
+-from gui.misc import add_border
++from gui.misc import add_border, gui_to_str, str_to_gui
+ from gui import paths
+ from gui.settings import load_sequence
+ 
+@@ -94,6 +94,10 @@
+             ds.relax_gui.analyses[data_index].ncyc = []
+             ds.relax_gui.analyses[data_index].relax_times = []
+             ds.relax_gui.analyses[data_index].save_dir = self.gui.launch_dir
++            ds.relax_gui.analyses[data_index].results_list = []
++
++            # Create the data pipe.
++            self.gui.user_functions.interpreter.pipe.create(pipe_name, 
+'relax_fit')
+ 
+         # Alias the data.
+         self.data = ds.relax_gui.analyses[data_index]
+@@ -111,6 +115,9 @@
+ 
+         # Build and pack the main sizer box, then add it to the automatic 
+model-free analysis frame.
+         self.build_main_box(box_centre)
++
++        # Register the method for updating the spin count for the completion 
+of user functions.
++        self.gui.user_functions.register_observer(self.data.pipe_name, 
+self.update_spin_count)
+ 
+ 
+     def assemble_data(self):
+@@ -215,19 +222,13 @@
+         self.add_title(box, &quot;Setup for %s relaxation analysis&quot; % self.label)
+ 
+         # Add the frequency selection GUI element.
+-        self.field_nmr_frq = self.add_text_sel_element(box, self.parent, 
+text=&quot;NMR Frequency [MHz]&quot;, default=str(self.data.frq))
++        self.field_nmr_frq = self.add_text_sel_element(box, self.parent, 
+text=&quot;NMR Frequency [MHz]&quot;, default=self.data.frq, tooltip=&quot;This label is 
+added to the output files.  For example if the label is '600', %s values will 
+be located in the file '%s.600.out'.&quot; % (self.label, lower(self.label)))
+ 
+         # Add the results directory GUI element.
+         self.field_results_dir = self.add_text_sel_element(box, self.parent, 
+text=&quot;Results directory&quot;, icon=paths.icon_16x16.open_folder, 
+default=self.data.save_dir, fn=self.results_directory, button=True)
+ 
+-        # Add the sequence file selection GUI element.
+-        self.field_sequence = self.add_text_sel_element(box, self.parent, 
+text=&quot;Sequence file&quot;, default=str(self.gui.sequence_file_msg), 
+fn=self.load_sequence, editable=False, button=True)
+-
+-        # Add the structure file selection GUI element.
+-        self.field_structure = self.add_text_sel_element(box, self.parent, 
+text=&quot;Sequence from PDB structure file&quot;, 
+default=self.gui.structure_file_pdb_msg, control=StructureTextCtrl, 
+fn='open_file', editable=False, button=True)
+-
+-        # Add the unresolved spins GUI element.
+-        self.field_unresolved = self.add_text_sel_element(box, self.parent, 
+text=&quot;Unresolved residues&quot;)
++        # Add the spin GUI element.
++        self.add_spin_systems(box, self.parent)
+ 
+         # Add the peak list selection GUI element, with spacing.
+         box.AddSpacer(10)
+@@ -241,6 +242,13 @@
+         return box
+ 
+ 
++    def delete(self):
++        &quot;&quot;&quot;Unregister the spin count from the user functions.&quot;&quot;&quot;
++
++        # Remove.
++        self.gui.user_functions.unregister_observer(self.data.pipe_name)
++
++
+     def execute(self, event):
+         &quot;&quot;&quot;Set up, execute, and process the automatic Rx analysis.
+ 
+@@ -252,6 +260,7 @@
+         status = Status()
+         if status.exec_lock.locked():
+             error_message(&quot;relax is currently executing.&quot;, &quot;relax execution 
+lock&quot;)
++            event.Skip()
+             return
+ 
+         # Synchronise the frame data to the relax data store.
+@@ -278,6 +287,20 @@
+         self.thread = Execute_rx(self.gui, data, self.data_index, 
+thread=thread)
+         self.thread.start()
+ 
++        # Terminate the event.
++        event.Skip()
++
++
++    def launch_spin_editor(self, event):
++        &quot;&quot;&quot;The spin editor GUI element.
++
++        @param event:   The wx event.
++        @type event:    wx event
++        &quot;&quot;&quot;
++
++        # Show the molecule, residue, and spin tree window.
++        self.gui.show_tree(None)
++
+ 
+     def load_sequence(self, event):
+         &quot;&quot;&quot;The sequence loading GUI element.
+@@ -332,35 +355,15 @@
+ 
+         # The frequency.
+         if upload:
+-            self.data.frq = str(self.field_nmr_frq.GetValue())
+-        elif hasattr(self.data, 'frq'):
+-            self.field_nmr_frq.SetValue(str(self.data.frq))
++            self.data.frq = gui_to_str(self.field_nmr_frq.GetValue())
++        else:
++            self.field_nmr_frq.SetValue(str_to_gui(self.data.frq))
+ 
+         # The results directory.
+         if upload:
+-            self.data.save_dir = str(self.field_results_dir.GetValue())
+-        elif hasattr(self.data, 'save_dir'):
+-            self.field_results_dir.SetValue(str(self.data.save_dir))
+-
+-        # The sequence file.
+-        if upload:
+-            file = str(self.field_sequence.GetValue())
+-            if file != self.gui.sequence_file_msg:
+-                self.data.sequence_file = str(self.field_sequence.GetValue())
+-        elif hasattr(self.data, 'sequence_file'):
+-            self.field_sequence.SetValue(str(self.data.sequence_file))
+-
+-        # The structure file.
+-        if upload:
+-            self.data.structure_file = str(self.field_structure.GetValue())
+-        elif hasattr(self.data, 'structure_file'):
+-            self.field_structure.SetValue(str(self.data.structure_file))
+-
+-        # Unresolved residues.
+-        if upload:
+-            self.data.unresolved = str(self.field_unresolved.GetValue())
+-        elif hasattr(self.data, 'unresolved'):
+-            self.field_unresolved.SetValue(str(self.data.unresolved))
++            self.data.save_dir = 
+gui_to_str(self.field_results_dir.GetValue())
++        else:
++            self.field_results_dir.SetValue(str_to_gui(self.data.save_dir))
+ 
+         # The peak lists and relaxation times.
+         self.peak_intensity.sync_ds(upload)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Jul 12 18:40:01 2011</div>  
+</body>
+</html>

@@ -1,0 +1,301 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r27069 &#45; in /trunk: pipe_control/structure/main.py test_suite/system_tests/structure.py user_functions/structure.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 11 Dec 2014 09:25:07 +0100 -->
+<!--X-Message-Id: E1Xyz3b&#45;0002YJ&#45;7I@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r27069 - in /trunk: pipe_control/structure/main.py test_suite/system_tests/structure.py user_functions/structure.py -- December 11, 2014 - 09:25</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r27069 - in /trunk: pipe_control/structure/main.py test_suite/system_tests/structure.py user_functions/structure.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00192" class="tabs">Index by Date</a> | <a href="threads.html#00192" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00191.html">Date Prev</a>] [<a href="msg00193.html">Date Next</a>] [<a href="msg00191.html">Thread Prev</a>] [<a href="msg00193.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 11 Dec 2014 08:25:07 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00192.html">E1Xyz3b-0002YJ-7I@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on December 11, 2014 - 09:25:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Dec 11 09:25:06 2014
+New Revision: 27069
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=27069&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=27069&amp;view=rev</a>
+Log:
+Converted the structure.find_pivot user function to the new 
+pipes/models/molecules/atom_id design.
+
+This allows the motional pivot algorithm to work on atomic coordinates from 
+different data pipes,
+different structural models, and different molecules.  The change allows the
+Structure.test_find_pivot_molecules system test to now pass, as missing 
+atomic data is now correctly
+handled.  The user function backend uses the new 
+pipe_control.structure.main.assemble_coordinates()
+function.
+
+The Structure.test_find_pivot and Structure.test_find_pivot_molecules system 
+tests have been updated
+for the user function argument changes.
+
+
+Modified:
+    trunk/pipe_control/structure/main.py
+    trunk/test_suite/system_tests/structure.py
+    trunk/user_functions/structure.py
+
+Modified: trunk/pipe_control/structure/main.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/pipe_control/structure/main.py?rev=27069&amp;r1=27068&amp;r2=27069&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/pipe_control/structure/main.py?rev=27069&amp;r1=27068&amp;r2=27069&amp;view=diff</a>
+==============================================================================
+--- trunk/pipe_control/structure/main.py        (original)
++++ trunk/pipe_control/structure/main.py        Thu Dec 11 09:25:06 2014
+@@ -112,7 +112,7 @@
+     @type pipes:            None or list of str
+     @keyword models:        The list of models to for each data pipe 
+superimpose.  The number of elements must match the pipes argument.  If set 
+to None, then all models will be used.
+     @type models:           list of lists of int or None
+-    @keyword molecules:     The molecule names to include in the alignment 
+and superimposition.
++    @keyword molecules:     The molecule names to include in the alignment 
+and superimposition.  The number of elements must match the pipes argument.
+     @type molecules:        None or list of str
+     @keyword atom_id:       The molecule, residue, and atom identifier 
+string.  This matches the spin ID string format.
+     @type atom_id:          str or None
+@@ -616,13 +616,15 @@
+                 cdp.structure.displacements._calculate(model_from=i, 
+model_to=j, coord_from=array(coord_from), coord_to=array(coord_to), 
+centroid=centroid)
+ 
+ 
+-def find_pivot(models=None, molecules=None, atom_id=None, init_pos=None, 
+func_tol=1e-5, box_limit=200):
++def find_pivot(pipes=None, models=None, molecules=None, atom_id=None, 
+init_pos=None, func_tol=1e-5, box_limit=200):
+     &quot;&quot;&quot;Find the pivoted motion of a set of structural models or structures.
+ 
+-    @keyword models:    The list of models to use.  If set to None, then all 
+models will be used.
+-    @type models:       list of int or None
+-    @keyword molecules: The list of molecules to find the pivoted motion 
+for.  This overrides the models.
+-    @type molecules:    None or list of str
++    @keyword pipes:     The data pipes to use in the motional pivot 
+algorithm.
++    @type pipes:        None or list of str
++    @keyword models:    The list of models to use.  The number of elements 
+must match the pipes argument.  If set to None, then all models will be used.
++    @type models:       None or list of lists of int
++    @keyword molecules: The list of molecules to find the pivoted motion 
+for.  The number of elements must match the pipes argument.
++    @type molecules:    None or list of lists of str
+     @keyword atom_id:   The molecule, residue, and atom identifier string.  
+This matches the spin ID string format.
+     @type atom_id:      str or None
+     @keyword init_pos:  The starting pivot position for the pivot point 
+optimisation.
+@@ -641,60 +643,8 @@
+         init_pos = zeros(3, float64)
+     init_pos = array(init_pos)
+ 
+-    # The selection object.
+-    selection = cdp.structure.selection(atom_id=atom_id)
+-
+-    # Motional pivot between models.
+-    if molecules == None:
+-        # Validate the models.
+-        cdp.structure.validate_models()
+-
+-        # Create a list of all models.
+-        if models == None:
+-            models = []
+-            for model in cdp.structure.model_loop():
+-                models.append(model.num)
+-
+-        # Assemble the atomic coordinates of all models.
+-        coord = []
+-        for model in models:
+-            coord.append([])
+-            for pos in cdp.structure.atom_loop(selection=selection, 
+model_num=model, pos_flag=True):
+-                coord[-1].append(pos[0])
+-            coord[-1] = array(coord[-1])
+-        coord = array(coord)
+-
+-    # Motional pivot between molecules.
+-    else:
+-        # No models allowed.
+-        if cdp.structure.num_models() &gt; 1:
+-            raise RelaxError(&quot;When calculating the RMSD between different 
+molecules, no models are allowed to be present.&quot;)
+-
+-        # Assemble the atomic coordinates of all models.
+-        coord = []
+-        current_mol = ''
+-        for mol_name, pos in cdp.structure.atom_loop(selection=selection, 
+mol_name_flag=True, pos_flag=True):
+-            # No molecule match, so skip.
+-            if mol_name not in molecules:
+-                continue
+-
+-            # A new molecule.
+-            if mol_name != current_mol:
+-                # Change the current molecule name.
+-                current_mol = mol_name
+-
+-                # Extend the coordinates.
+-                coord.append([])
+-
+-            # Append the coordinate.
+-            coord[-1].append(pos[0])
+-
+-        # Numpy conversion.
+-        for i in range(len(coord)):
+-            coord[i] = array(coord[i])
+-
+-        # The models list.
+-        models = list(range(len(molecules)))
++    # Assemble the atomic coordinates and obtain the corresponding element 
+information.
++    coord = assemble_coordinates(pipes=pipes, molecules=molecules, 
+models=models, atom_id=atom_id)
+ 
+     # Linear constraints for the pivot position (between -1000 and 1000 
+Angstrom).
+     A = zeros((6, 3), float64)
+@@ -706,7 +656,7 @@
+         b[2*i+1] = -box_limit
+ 
+     # The target function.
+-    finder = Pivot_finder(models, coord)
++    finder = Pivot_finder(list(range(len(coord))), coord)
+     results = generic_minimise(func=finder.func, x0=init_pos, min_algor='Log 
+barrier', min_options=('simplex',), A=A, b=b, func_tol=func_tol, print_flag=1)
+ 
+     # No result.
+
+Modified: trunk/test_suite/system_tests/structure.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/test_suite/system_tests/structure.py?rev=27069&amp;r1=27068&amp;r2=27069&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/test_suite/system_tests/structure.py?rev=27069&amp;r1=27068&amp;r2=27069&amp;view=diff</a>
+==============================================================================
+--- trunk/test_suite/system_tests/structure.py  (original)
++++ trunk/test_suite/system_tests/structure.py  Thu Dec 11 09:25:06 2014
+@@ -3187,7 +3187,7 @@
+         self.interpreter.structure.rotate(R=R, atom_id='#Z', origin=pivot)
+ 
+         # Find the pivot.
+-        self.interpreter.structure.find_pivot(molecules=['X', 'Y', 'Z'], 
+init_pos=[0.95, 2.05, 3.02], func_tol=1e-7)
++        self.interpreter.structure.find_pivot(molecules=[['X', 'Y', 'Z']], 
+init_pos=[0.95, 2.05, 3.02], func_tol=1e-7)
+ 
+         # Check the pivot.
+         self.assertAlmostEqual(cdp.structure.pivot[0], pivot[0], 3)
+
+Modified: trunk/user_functions/structure.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/user_functions/structure.py?rev=27069&amp;r1=27068&amp;r2=27069&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/user_functions/structure.py?rev=27069&amp;r1=27068&amp;r2=27069&amp;view=diff</a>
+==============================================================================
+--- trunk/user_functions/structure.py   (original)
++++ trunk/user_functions/structure.py   Thu Dec 11 09:25:06 2014
+@@ -665,17 +665,26 @@
+ uf.title = &quot;Find the pivot point of the motion of a set of structures.&quot;
+ uf.title_short = &quot;Pivot search.&quot;
+ uf.add_keyarg(
++    name = &quot;pipes&quot;,
++    py_type = &quot;str_list&quot;,
++    desc_short = &quot;data pipes&quot;,
++    desc = &quot;The data pipes to use in the motional pivot algorithm.&quot;,
++    wiz_combo_iter = pipe_names,
++    wiz_read_only = False,
++    can_be_none = True
++)
++uf.add_keyarg(
+     name = &quot;models&quot;,
+-    py_type = &quot;int_list&quot;,
+-    desc_short = &quot;model list&quot;,
+-    desc = &quot;The list of models to use.&quot;,
++    py_type = &quot;int_list_of_lists&quot;,
++    desc_short = &quot;model list for each data pipe&quot;,
++    desc = &quot;The list of models for each data pipe to use in the motional 
+pivot algorithm.  The number of elements must match the pipes argument.  If 
+no models are given, then all will be used.&quot;,
+     can_be_none = True
+ )
+ uf.add_keyarg(
+     name = &quot;molecules&quot;,
+-    py_type = &quot;str_list&quot;,
+-    desc_short = &quot;molecule list&quot;,
+-    desc = &quot;The optional molecule list to perform the optimisation on rather 
+than the models.  Only atoms with identical residue name and number and atom 
+name will be used.&quot;,
++    py_type = &quot;str_list_of_lists&quot;,
++    desc_short = &quot;molecule list for each data pipe&quot;,
++    desc = &quot;The list of molecules for each data pipe to use in the motional 
+pivot algorithm.  This allows differently named molecules in the same or 
+different data pipes to be used.  The number of elements must match the pipes 
+argument.  If no molecules are given, then all will be used.&quot;,
+     can_be_none = True
+ )
+ uf.add_keyarg(
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Dec 11 10:00:02 2014</div>  
+</body>
+</html>

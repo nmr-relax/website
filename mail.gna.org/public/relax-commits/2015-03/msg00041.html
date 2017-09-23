@@ -1,0 +1,239 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r27763 &#45; /trunk/test_suite/system_tests/rdc.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 03 Mar 2015 17:34:40 +0100 -->
+<!--X-Message-Id: E1YSpmJ&#45;00082H&#45;JU@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r27763 - /trunk/test_suite/system_tests/rdc.py -- March 03, 2015 - 17:34</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r27763 - /trunk/test_suite/system_tests/rdc.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00041" class="tabs">Index by Date</a> | <a href="threads.html#00041" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00040.html">Date Prev</a>] [<a href="msg00042.html">Date Next</a>] [<a href="msg00040.html">Thread Prev</a>] [<a href="msg00042.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 03 Mar 2015 16:34:39 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00041.html">E1YSpmJ-00082H-JU@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on March 03, 2015 - 17:34:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Mar  3 17:34:39 2015
+New Revision: 27763
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=27763&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=27763&amp;view=rev</a>
+Log:
+Created the Rdc.test_corr_plot system test to check the rdc.corr_plot user 
+function.
+
+This shows that this poorly tested function works correctly.
+
+
+Modified:
+    trunk/test_suite/system_tests/rdc.py
+
+Modified: trunk/test_suite/system_tests/rdc.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/test_suite/system_tests/rdc.py?rev=27763&amp;r1=27762&amp;r2=27763&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/test_suite/system_tests/rdc.py?rev=27763&amp;r1=27762&amp;r2=27763&amp;view=diff</a>
+==============================================================================
+--- trunk/test_suite/system_tests/rdc.py        (original)
++++ trunk/test_suite/system_tests/rdc.py        Tue Mar  3 17:34:39 2015
+@@ -25,6 +25,7 @@
+ 
+ # Python module imports.
+ from os import sep
++from tempfile import mktemp
+ 
+ # relax module imports.
+ from data_store import Relax_data_store; ds = Relax_data_store()
+@@ -64,6 +65,111 @@
+ 
+         # Q factors.
+         self.interpreter.rdc.calc_q_factors()
++
++
++    def test_corr_plot(self):
++        &quot;&quot;&quot;Test the operation of the rdc.corr_plot user function.&quot;&quot;&quot;
++
++        # Create a data pipe.
++        self.interpreter.pipe.create('orig', 'N-state')
++
++        # Data directory.
++        dir = status.install_path + 
+sep+'test_suite'+sep+'shared_data'+sep+'align_data'+sep
++
++        # Load the spins.
++        self.interpreter.sequence.read(file='tb.txt', dir=dir, spin_id_col=1)
++        self.interpreter.sequence.attach_protons()
++        self.interpreter.sequence.display()
++
++        # Load the RDCs.
++        self.interpreter.rdc.read(align_id='tb', file='tb.txt', dir=dir, 
+spin_id1_col=1, spin_id2_col=2, data_col=3, error_col=4)
++        self.interpreter.sequence.display()
++
++        # Create back-calculated RDC values from the real values.
++        for interatom in interatomic_loop():
++            if hasattr(interatom, 'rdc'):
++                if not hasattr(interatom, 'rdc_bc'):
++                    interatom.rdc_bc = {}
++                interatom.rdc_bc['tb'] = interatom.rdc['tb'] + 1.0
++
++        # Correlation plot.
++        ds.tmpfile = mktemp()
++        self.interpreter.rdc.corr_plot(format='grace', title='Test', 
+subtitle='Test2', file=ds.tmpfile, dir=None, force=True)
++
++        # The expected file contents.
++        real_contents = [
++            &quot;@version 50121&quot;,
++            &quot;@page size 842, 595&quot;,
++            &quot;@with g0&quot;,
++            &quot;@    world -27.0, -27.0, 16.0, 16.0&quot;,
++            &quot;@    view 0.15, 0.15, 1.28, 0.85&quot;,
++            &quot;@    title \&quot;Test\&quot;&quot;,
++            &quot;@    subtitle \&quot;Test2\&quot;&quot;,
++            &quot;@    xaxis  label \&quot;Back-calculated RDC (Hz)\&quot;&quot;,
++            &quot;@    xaxis  label char size 1.00&quot;,
++            &quot;@    xaxis  tick major 10&quot;,
++            &quot;@    xaxis  tick major size 0.50&quot;,
++            &quot;@    xaxis  tick major linewidth 0.5&quot;,
++            &quot;@    xaxis  tick minor ticks 9&quot;,
++            &quot;@    xaxis  tick minor linewidth 0.5&quot;,
++            &quot;@    xaxis  tick minor size 0.25&quot;,
++            &quot;@    xaxis  ticklabel char size 0.70&quot;,
++            &quot;@    yaxis  label \&quot;Measured RDC (Hz)\&quot;&quot;,
++            &quot;@    yaxis  label char size 1.00&quot;,
++            &quot;@    yaxis  tick major 10&quot;,
++            &quot;@    yaxis  tick major size 0.50&quot;,
++            &quot;@    yaxis  tick major linewidth 0.5&quot;,
++            &quot;@    yaxis  tick minor ticks 9&quot;,
++            &quot;@    yaxis  tick minor linewidth 0.5&quot;,
++            &quot;@    yaxis  tick minor size 0.25&quot;,
++            &quot;@    yaxis  ticklabel char size 0.70&quot;,
++            &quot;@    legend on&quot;,
++            &quot;@    legend 1, 0.5&quot;,
++            &quot;@    legend box fill pattern 1&quot;,
++            &quot;@    legend char size 1.0&quot;,
++            &quot;@    frame linewidth 0.5&quot;,
++            &quot;@    s0 symbol 1&quot;,
++            &quot;@    s0 symbol size 0.45&quot;,
++            &quot;@    s0 symbol linewidth 0.5&quot;,
++            &quot;@    s0 errorbar size 0.5&quot;,
++            &quot;@    s0 errorbar linewidth 0.5&quot;,
++            &quot;@    s0 errorbar riser linewidth 0.5&quot;,
++            &quot;@    s0 line linestyle 2&quot;,
++            &quot;@    s1 symbol 2&quot;,
++            &quot;@    s1 symbol size 0.45&quot;,
++            &quot;@    s1 symbol linewidth 0.5&quot;,
++            &quot;@    s1 errorbar size 0.5&quot;,
++            &quot;@    s1 errorbar linewidth 0.5&quot;,
++            &quot;@    s1 errorbar riser linewidth 0.5&quot;,
++            &quot;@    s1 line linestyle 0&quot;,
++            &quot;@    s1 legend \&quot;tb\&quot;&quot;,
++            &quot;@target G0.S0&quot;,
++            &quot;@type xydy&quot;,
++            &quot;-100                           -100.000000000000000           
+0.000000000000000             &quot;,
++            &quot;100                            100.000000000000000            
+0.000000000000000             &quot;,
++            &quot;&amp;&quot;,
++            &quot;@target G0.S1&quot;,
++            &quot;@type xydy&quot;,
++            &quot;-25.2501958629                 -26.250195862900000            
+1.000000000000000                                            \&quot;# 
+#CaM:5@N-#CaM:5@H\&quot;&quot;,
++            &quot;10.9308176694                  9.930817669420000              
+1.000000000000000                                            \&quot;# 
+#CaM:6@N-#CaM:6@H\&quot;&quot;,
++            &quot;8.26317614156                  7.263176141560000              
+1.000000000000000                                            \&quot;# 
+#CaM:7@N-#CaM:7@H\&quot;&quot;,
++            &quot;-0.24840526981                 -1.248405269810000             
+0.000000000000000                                            \&quot;# 
+#CaM:8@N-#CaM:8@H\&quot;&quot;,
++            &quot;6.31803314334                  5.318033143340000              
+1.000000000000000                                            \&quot;# 
+#CaM:9@N-#CaM:9@H\&quot;&quot;,
++            &quot;15.0362909456                  14.036290945599999             
+1.000000000000000                                            \&quot;# 
+#CaM:10@N-#CaM:10@H\&quot;&quot;,
++            &quot;2.33652530397                  1.336525303970000              
+0.000000000000000                                            \&quot;# 
+#CaM:11@N-#CaM:11@H\&quot;&quot;,
++            &quot;-0.6021670281                  -1.602167028100000             
+0.000000000000000                                            \&quot;# 
+#CaM:12@N-#CaM:12@H\&quot;&quot;,
++            &quot;&amp;&quot;,
++        ]
++
++        # Check the data.
++        print(&quot;\nChecking the Grace file contents.&quot;)
++        file = open(ds.tmpfile)
++        lines = file.readlines()
++        file.close()
++        self.assertEqual(len(real_contents), len(lines))
++        for i in range(len(lines)):
++            print(lines[i][:-1])
++            self.assertEqual(real_contents[i], lines[i][:-1])
+ 
+ 
+     def test_rdc_copy(self):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Mar 03 18:00:02 2015</div>  
+</body>
+</html>

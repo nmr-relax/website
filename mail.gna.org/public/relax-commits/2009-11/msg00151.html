@@ -1,0 +1,273 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r10013 &#45; in /1.3/specific_fns: api_common.py consistency_tests.py	jw_mapping.py relax_fit.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Sun, 29 Nov 2009 15:20:16 +0100 -->
+<!--X-Message-Id: E1NEkdL&#45;0001BR&#45;Qt@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r10013 - in /1.3/specific_fns: api_common.py consistency_tests.py	jw_mapping.py relax_fit.py -- November 29, 2009 - 15:20</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r10013 - in /1.3/specific_fns: api_common.py consistency_tests.py	jw_mapping.py relax_fit.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00151" class="tabs">Index by Date</a> | <a href="threads.html#00151" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00150.html">Date Prev</a>] [<a href="msg00152.html">Date Next</a>] [<a href="msg00150.html">Thread Prev</a>] [<a href="msg00152.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Sun, 29 Nov 2009 14:20:15 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00151.html">E1NEkdL-0001BR-Qt@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on November 29, 2009 - 15:20:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Sun Nov 29 15:20:13 2009
+New Revision: 10013
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=10013&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=10013&amp;view=rev</a>
+Log:
+Created the common API method _set_param_values_spin().
+
+A number of modules are now using this method.
+
+
+Modified:
+    1.3/specific_fns/api_common.py
+    1.3/specific_fns/consistency_tests.py
+    1.3/specific_fns/jw_mapping.py
+    1.3/specific_fns/relax_fit.py
+
+Modified: 1.3/specific_fns/api_common.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/specific_fns/api_common.py?rev=10013&amp;r1=10012&amp;r2=10013&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/specific_fns/api_common.py?rev=10013&amp;r1=10012&amp;r2=10013&amp;view=diff</a>
+==============================================================================
+--- 1.3/specific_fns/api_common.py (original)
++++ 1.3/specific_fns/api_common.py Sun Nov 29 15:20:13 2009
+@@ -27,6 +27,7 @@
+ from copy import deepcopy
+ 
+ # relax module imports.
++import arg_check
+ from generic_fns.mol_res_spin import count_spins, exists_mol_res_spin_data, 
+return_spin, spin_loop
+ from relax_errors import RelaxError, RelaxLenError, RelaxNoSequenceError
+ 
+@@ -329,6 +330,40 @@
+             inc = inc + 1
+ 
+ 
++    def _set_param_values_spin(self, param=None, value=None, spin_id=None, 
+force=True):
++        &quot;&quot;&quot;Set the spin specific parameter values.
++
++        @keyword param:     The parameter name.
++        @type param:        str
++        @keyword value:     The parameter value.
++        @type value:        number
++        @keyword spin_id:   The spin identification string, only used for 
+spin specific parameters.
++        @type spin_id:      None or str
++        @keyword force:     A flag which if True will cause current values 
+to be overwritten.  If False, a RelaxError will raised if the parameter value 
+is already set.
++        @type force:        bool
++        &quot;&quot;&quot;
++
++        # Checks.
++        arg_check.is_str(param, 'parameter name')
++        arg_check.is_num(value, 'parameter value')
++
++        # Get the object's name.
++        obj_name = self.return_data_name(param)
++
++        # Is the parameter is valid?
++        if not obj_name:
++            raise RelaxError(&quot;The parameter '%s' is not valid for this data 
+pipe type.&quot; % param)
++
++        # Spin loop.
++        for spin in spin_loop(spin_id):
++            # Skip deselected spins.
++            if not spin.select:
++                continue
++
++            # Set the parameter.
++            setattr(spin, obj_name, value)
++
++
+     def _set_selected_sim_spin(self, model_info, select_sim):
+         &quot;&quot;&quot;Set the simulation selection flag (spin system specific).
+ 
+
+Modified: 1.3/specific_fns/consistency_tests.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/specific_fns/consistency_tests.py?rev=10013&amp;r1=10012&amp;r2=10013&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/specific_fns/consistency_tests.py?rev=10013&amp;r1=10012&amp;r2=10013&amp;view=diff</a>
+==============================================================================
+--- 1.3/specific_fns/consistency_tests.py (original)
++++ 1.3/specific_fns/consistency_tests.py Sun Nov 29 15:20:13 2009
+@@ -25,7 +25,8 @@
+ from re import search
+ 
+ # relax module imports.
+-from specific_fns.api_base import API_base
++from api_base import API_base
++from api_common import API_common
+ from generic_fns.mol_res_spin import exists_mol_res_spin_data, return_spin, 
+spin_loop
+ from generic_fns import pipes
+ from maths_fns.consistency_tests import Consistency
+@@ -33,8 +34,15 @@
+ from relax_errors import RelaxError, RelaxFuncSetupError, 
+RelaxNoSequenceError, RelaxNoValueError, RelaxProtonTypeError, 
+RelaxSpinTypeError
+ 
+ 
+-class Consistency_tests(API_base):
++class Consistency_tests(API_base, API_common):
+     &quot;&quot;&quot;Class containing functions specific to consistency testing.&quot;&quot;&quot;
++
++    def __init__(self):
++        &quot;&quot;&quot;Initialise the class by placing API_common methods into the 
+API.&quot;&quot;&quot;
++
++        # Place methods into the API.
++        self.set_param_values = self._set_param_values_spin
++
+ 
+     def _set_frq(self, frq=None):
+         &quot;&quot;&quot;Function for selecting which relaxation data to use in the 
+consistency tests.&quot;&quot;&quot;
+
+Modified: 1.3/specific_fns/jw_mapping.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/specific_fns/jw_mapping.py?rev=10013&amp;r1=10012&amp;r2=10013&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/specific_fns/jw_mapping.py?rev=10013&amp;r1=10012&amp;r2=10013&amp;view=diff</a>
+==============================================================================
+--- 1.3/specific_fns/jw_mapping.py (original)
++++ 1.3/specific_fns/jw_mapping.py Sun Nov 29 15:20:13 2009
+@@ -24,7 +24,8 @@
+ from re import search
+ 
+ # relax module imports.
+-from specific_fns.api_base import API_base
++from api_base import API_base
++from api_common import API_common
+ from generic_fns.mol_res_spin import exists_mol_res_spin_data, return_spin, 
+spin_loop
+ from generic_fns import pipes
+ from maths_fns.jw_mapping import Mapping
+@@ -32,8 +33,15 @@
+ from relax_errors import RelaxError, RelaxFuncSetupError, 
+RelaxNoSequenceError, RelaxNoValueError, RelaxProtonTypeError, 
+RelaxSpinTypeError
+ 
+ 
+-class Jw_mapping(API_base):
++class Jw_mapping(API_base, API_common):
+     &quot;&quot;&quot;Class containing functions specific to reduced spectral density 
+mapping.&quot;&quot;&quot;
++
++    def __init__(self):
++        &quot;&quot;&quot;Initialise the class by placing API_common methods into the 
+API.&quot;&quot;&quot;
++
++        # Place methods into the API.
++        self.set_param_values = self._set_param_values_spin
++
+ 
+     def _set_frq(self, frq=None):
+         &quot;&quot;&quot;Function for selecting which relaxation data to use in the J(w) 
+mapping.&quot;&quot;&quot;
+
+Modified: 1.3/specific_fns/relax_fit.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/specific_fns/relax_fit.py?rev=10013&amp;r1=10012&amp;r2=10013&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/specific_fns/relax_fit.py?rev=10013&amp;r1=10012&amp;r2=10013&amp;view=diff</a>
+==============================================================================
+--- 1.3/specific_fns/relax_fit.py (original)
++++ 1.3/specific_fns/relax_fit.py Sun Nov 29 15:20:13 2009
+@@ -31,8 +31,9 @@
+ from re import match, search
+ 
+ # relax module imports.
++from api_base import API_base
++from api_common import API_common
+ from dep_check import C_module_exp_fn
+-from specific_fns.api_base import API_base
+ from generic_fns import pipes
+ from generic_fns.mol_res_spin import exists_mol_res_spin_data, 
+generate_spin_id, return_spin, spin_loop
+ from relax_errors import RelaxError, RelaxFuncSetupError, RelaxLenError, 
+RelaxNoModelError, RelaxNoSequenceError
+@@ -42,8 +43,15 @@
+     from maths_fns.relax_fit import setup, func, dfunc, d2func, back_calc_I
+ 
+ 
+-class Relax_fit(API_base):
++class Relax_fit(API_base, API_common):
+     &quot;&quot;&quot;Class containing functions for relaxation curve fitting.&quot;&quot;&quot;
++
++    def __init__(self):
++        &quot;&quot;&quot;Initialise the class by placing API_common methods into the 
+API.&quot;&quot;&quot;
++
++        # Place methods into the API.
++        self.set_param_values = self._set_param_values_spin
++
+ 
+     def _assemble_param_vector(self, spin=None, sim_index=None):
+         &quot;&quot;&quot;Assemble the exponential curve parameter vector (as a numpy 
+array).
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Sun Nov 29 15:40:02 2009</div>  
+</body>
+</html>

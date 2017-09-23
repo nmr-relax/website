@@ -1,0 +1,311 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r25977 &#45; in /trunk: lib/structure/internal/object.py pipe_control/structure/main.py specific_analyses/frame_order/uf.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 23 Sep 2014 18:43:57 +0200 -->
+<!--X-Message-Id: E1XWTC1&#45;0001wm&#45;6U@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r25977 - in /trunk: lib/structure/internal/object.py pipe_control/structure/main.py specific_analyses/frame_order/uf.py -- September 23, 2014 - 18:43</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r25977 - in /trunk: lib/structure/internal/object.py pipe_control/structure/main.py specific_analyses/frame_order/uf.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00483" class="tabs">Index by Date</a> | <a href="threads.html#00483" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00482.html">Date Prev</a>] [<a href="msg00484.html">Date Next</a>] [<a href="msg00482.html">Thread Prev</a>] [<a href="msg00484.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 23 Sep 2014 16:43:57 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00483.html">E1XWTC1-0001wm-6U@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on September 23, 2014 - 18:43:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Sep 23 18:43:56 2014
+New Revision: 25977
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=25977&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=25977&amp;view=rev</a>
+Log:
+Converted the rotate() and translate() structural object methods to use the 
+new selection object.
+
+The atom_id arguments have been replaced with selection arguments.  Therefore 
+all parts of relax
+which call these methods must first call selection() to obtain the 
+Internal_selection instance.
+
+
+Modified:
+    trunk/lib/structure/internal/object.py
+    trunk/pipe_control/structure/main.py
+    trunk/specific_analyses/frame_order/uf.py
+
+Modified: trunk/lib/structure/internal/object.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/lib/structure/internal/object.py?rev=25977&amp;r1=25976&amp;r2=25977&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/lib/structure/internal/object.py?rev=25977&amp;r1=25976&amp;r2=25977&amp;view=diff</a>
+==============================================================================
+--- trunk/lib/structure/internal/object.py      (original)
++++ trunk/lib/structure/internal/object.py      Tue Sep 23 18:43:56 2014
+@@ -2278,7 +2278,7 @@
+                 mol.file_model = orig_model_num[i]
+ 
+ 
+-    def rotate(self, R=None, origin=None, model=None, atom_id=None):
++    def rotate(self, R=None, origin=None, model=None, selection=None):
+         &quot;&quot;&quot;Rotate the structural information about the given origin.
+ 
+         @keyword R:         The forwards rotation matrix.
+@@ -2287,40 +2287,27 @@
+         @type origin:       numpy 3D, rank-1 array
+         @keyword model:     The model to rotate.  If None, all models will 
+be rotated.
+         @type model:        int
+-        @keyword atom_id:   The molecule, residue, and atom identifier 
+string.  Only atoms matching this selection will be used.
+-        @type atom_id:      str or None
+-        &quot;&quot;&quot;
+-
+-        # Generate the selection object.
+-        sel_obj = None
+-        if atom_id:
+-            sel_obj = Selection(atom_id)
++        @keyword selection: The internal structural selection object.  This 
+is obtained by calling the selection() method with the atom ID string.
++        @type selection:    lib.structure.internal.Internal_selection 
+instance
++        &quot;&quot;&quot;
+ 
+         # Loop over the models.
+         for model_cont in self.model_loop(model):
+-            # Loop over the molecules.
+-            for mol in model_cont.mol:
+-                # Skip non-matching molecules.
+-                if sel_obj and not sel_obj.contains_mol(mol.mol_name):
+-                    continue
+-
+-                # Loop over the atoms.
+-                for i in range(len(mol.atom_num)):
+-                    # Skip non-matching atoms.
+-                    if sel_obj and not 
+sel_obj.contains_spin(mol.atom_num[i], mol.atom_name[i], mol.res_num[i], 
+mol.res_name[i], mol.mol_name):
+-                        continue
+-
+-                    # The origin to atom vector.
+-                    vect = array([mol.x[i], mol.y[i], mol.z[i]], float64) - 
+origin
+-
+-                    # Rotation.
+-                    rot_vect = dot(R, vect)
+-
+-                    # The new position.
+-                    pos = rot_vect + origin
+-                    mol.x[i] = pos[0]
+-                    mol.y[i] = pos[1]
+-                    mol.z[i] = pos[2]
++            # Loop over all molecules and atoms in the selection.
++            for mol_index, i in selection.loop():
++                mol = model_cont.mol[mol_index]
++
++                # The origin to atom vector.
++                vect = array([mol.x[i], mol.y[i], mol.z[i]], float64) - 
+origin
++
++                # Rotation.
++                rot_vect = dot(R, vect)
++
++                # The new position.
++                pos = rot_vect + origin
++                mol.x[i] = pos[0]
++                mol.y[i] = pos[1]
++                mol.z[i] = pos[2]
+ 
+ 
+     def selection(self, atom_id=None):
+@@ -2353,7 +2340,7 @@
+             # Skip non-matching molecules.
+             if sel_obj and not sel_obj.contains_mol(mol.mol_name):
+                 continue
+-            
++
+             # Add the molecule index.
+             selection.add_mol(mol_index=mol_index)
+ 
+@@ -2422,40 +2409,27 @@
+             target.append(file_root(file) + '_mol' + repr(mol_num))
+ 
+ 
+-    def translate(self, T=None, model=None, atom_id=None):
++    def translate(self, T=None, model=None, selection=None):
+         &quot;&quot;&quot;Displace the structural information by the given translation 
+vector.
+ 
+         @keyword T:         The translation vector.
+         @type T:            numpy 3D, rank-1 array
+         @keyword model:     The model to rotate.  If None, all models will 
+be rotated.
+         @type model:        int
+-        @keyword atom_id:   The molecule, residue, and atom identifier 
+string.  Only atoms matching this selection will be used.
+-        @type atom_id:      str or None
+-        &quot;&quot;&quot;
+-
+-        # Generate the selection object.
+-        sel_obj = None
+-        if atom_id:
+-            sel_obj = Selection(atom_id)
++        @keyword selection: The internal structural selection object.  This 
+is obtained by calling the selection() method with the atom ID string.
++        @type selection:    lib.structure.internal.Internal_selection 
+instance
++        &quot;&quot;&quot;
+ 
+         # Loop over the models.
+         for model_cont in self.model_loop(model):
+-            # Loop over the molecules.
+-            for mol in model_cont.mol:
+-                # Skip non-matching molecules.
+-                if sel_obj and not sel_obj.contains_mol(mol.mol_name):
+-                    continue
+-
+-                # Loop over the atoms.
+-                for i in range(len(mol.atom_num)):
+-                    # Skip non-matching atoms.
+-                    if sel_obj and not 
+sel_obj.contains_spin(mol.atom_num[i], mol.atom_name[i], mol.res_num[i], 
+mol.res_name[i], mol.mol_name):
+-                        continue
+-
+-                    # Translate.
+-                    mol.x[i] = mol.x[i] + T[0]
+-                    mol.y[i] = mol.y[i] + T[1]
+-                    mol.z[i] = mol.z[i] + T[2]
++            # Loop over all molecules and atoms in the selection.
++            for mol_index, i in selection.loop():
++                mol = model_cont.mol[mol_index]
++
++                # Translate.
++                mol.x[i] = mol.x[i] + T[0]
++                mol.y[i] = mol.y[i] + T[1]
++                mol.z[i] = mol.z[i] + T[2]
+ 
+ 
+     def to_xml(self, doc, element):
+
+Modified: trunk/pipe_control/structure/main.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/pipe_control/structure/main.py?rev=25977&amp;r1=25976&amp;r2=25977&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/pipe_control/structure/main.py?rev=25977&amp;r1=25976&amp;r2=25977&amp;view=diff</a>
+==============================================================================
+--- trunk/pipe_control/structure/main.py        (original)
++++ trunk/pipe_control/structure/main.py        Tue Sep 23 18:43:56 2014
+@@ -818,7 +818,8 @@
+     origin = array(origin, float64)
+ 
+     # Call the specific code.
+-    cdp.structure.rotate(R=R, origin=origin, model=model, atom_id=atom_id)
++    selection = cdp.structure.selection(atom_id=atom_id)
++    cdp.structure.rotate(R=R, origin=origin, model=model, 
+selection=selection)
+ 
+ 
+ def set_vector(spin=None, xh_vect=None):
+@@ -922,7 +923,8 @@
+     T = array(T, float64)
+ 
+     # Call the specific code.
+-    cdp.structure.translate(T=T, model=model, atom_id=atom_id)
++    selection = cdp.structure.selection(atom_id=atom_id)
++    cdp.structure.translate(T=T, model=model, selection=selection)
+ 
+ 
+ def vectors(spin_id1=None, spin_id2=None, model=None, verbosity=1, ave=True, 
+unit=True):
+
+Modified: trunk/specific_analyses/frame_order/uf.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/frame_order/uf.py?rev=25977&amp;r1=25976&amp;r2=25977&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/frame_order/uf.py?rev=25977&amp;r1=25976&amp;r2=25977&amp;view=diff</a>
+==============================================================================
+--- trunk/specific_analyses/frame_order/uf.py   (original)
++++ trunk/specific_analyses/frame_order/uf.py   Tue Sep 23 18:43:56 2014
+@@ -99,6 +99,9 @@
+     # Make a copy of the structural object (so as to preserve the original 
+structure).
+     structure = deepcopy(cdp.structure)
+ 
++    # The internal structural selection object.
++    selection = structure.selection(atom_id=domain_moving())
++
+     # First rotate the moving domain to the average position.
+     R = zeros((3, 3), float64)
+     if hasattr(cdp, 'ave_pos_alpha'):
+@@ -109,11 +112,11 @@
+         origin = pipe_centre_of_mass(atom_id=domain_moving(), verbosity=0)
+     else:
+         origin = array([cdp.pivot_x, cdp.pivot_y, cdp.pivot_z])
+-    structure.rotate(R=R, origin=origin, atom_id=domain_moving())
++    structure.rotate(R=R, origin=origin, selection=selection)
+ 
+     # Then translate the moving domain.
+     if not translation_fixed():
+-        structure.translate(T=[cdp.ave_pos_x, cdp.ave_pos_y, cdp.ave_pos_z], 
+atom_id=domain_moving())
++        structure.translate(T=[cdp.ave_pos_x, cdp.ave_pos_y, cdp.ave_pos_z], 
+selection=selection)
+ 
+     # Write out the PDB file.
+     file = open_write_file(file_name=file, dir=dir, force=force)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Sep 23 19:00:04 2014</div>  
+</body>
+</html>

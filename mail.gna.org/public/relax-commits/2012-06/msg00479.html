@@ -1,0 +1,232 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r17034 &#45; /branches/interatomic/specific_fns/jw_mapping.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 22 Jun 2012 16:50:09 +0200 -->
+<!--X-Message-Id: E1Si5BZ&#45;0003EH&#45;Eh@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r17034 - /branches/interatomic/specific_fns/jw_mapping.py -- June 22, 2012 - 16:50</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r17034 - /branches/interatomic/specific_fns/jw_mapping.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00479" class="tabs">Index by Date</a> | <a href="threads.html#00479" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00478.html">Date Prev</a>] [<a href="msg00480.html">Date Next</a>] [<a href="msg00478.html">Thread Prev</a>] [<a href="msg00480.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 22 Jun 2012 14:50:09 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00479.html">E1Si5BZ-0003EH-Eh@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on June 22, 2012 - 16:50:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Jun 22 16:50:09 2012
+New Revision: 17034
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=17034&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=17034&amp;view=rev</a>
+Log:
+Converted the J(w) mapping specific analysis code to the interatomic data 
+design.
+
+
+Modified:
+    branches/interatomic/specific_fns/jw_mapping.py
+
+Modified: branches/interatomic/specific_fns/jw_mapping.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/interatomic/specific_fns/jw_mapping.py?rev=17034&amp;r1=17033&amp;r2=17034&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/interatomic/specific_fns/jw_mapping.py?rev=17034&amp;r1=17033&amp;r2=17034&amp;view=diff</a>
+==============================================================================
+--- branches/interatomic/specific_fns/jw_mapping.py (original)
++++ branches/interatomic/specific_fns/jw_mapping.py Fri Jun 22 16:50:09 2012
+@@ -27,6 +27,7 @@
+ # relax module imports.
+ from api_base import API_base
+ from api_common import API_common
++from generic_fns.interatomic import interatomic_loop, return_interatom
+ from generic_fns.mol_res_spin import exists_mol_res_spin_data, return_spin, 
+spin_loop
+ from generic_fns import pipes
+ from maths_fns.jw_mapping import Mapping
+@@ -108,33 +109,47 @@
+             raise RelaxNoSequenceError
+ 
+         # Test if the CSA and bond length values have been set.
+-        for spin in spin_loop(spin_id):
++        for spin, id in spin_loop(spin_id, return_id=True):
+             # Skip deselected spins.
+             if not spin.select:
+                 continue
+ 
++            # Test if the nuclear isotope type has been set.
++            if not hasattr(spin, 'isotope'):
++                raise RelaxSpinTypeError
++
+             # Test if the CSA value has been set.
+             if not hasattr(spin, 'csa') or spin.csa == None:
+                 raise RelaxNoValueError(&quot;CSA&quot;)
+ 
+-            # Test if the bond length has been set.
+-            if not hasattr(spin, 'r') or spin.r == None:
+-                raise RelaxNoValueError(&quot;bond length&quot;)
+-
+-            # Test if the spin type has been set.
+-            if not hasattr(spin, 'heteronuc_type'):
+-                raise RelaxSpinTypeError
+-
+-            # Test if the type attached proton has been set.
+-            if not hasattr(spin, 'proton_type'):
+-                raise RelaxProtonTypeError
++            # Test the interatomic data.
++            interatoms = return_interatom(id)
++            for interatom in interatoms:
++                # No relaxation mechanism.
++                if not interatom.dipole_pair:
++                    continue
++
++                # The interacting spin.
++                if id != interatom.spin_id1:
++                    spin_id2 = interatom.spin_id1
++                else:
++                    spin_id2 = interatom.spin_id2
++                spin2 = return_spin(spin_id2)
++
++                # Test if the nuclear isotope type has been set.
++                if not hasattr(spin2, 'isotope'):
++                    raise RelaxSpinTypeError
++
++                # Test if the interatomic distance has been set.
++                if not hasattr(interatom, 'r') or interatom.r == None:
++                    raise RelaxNoValueError(&quot;interatomic distance&quot;, 
+spin_id=spin_id, spin_id2=spin_id2)
+ 
+         # Frequency index.
+         if cdp.jw_frq not in cdp.frq.values():
+             raise RelaxError(&quot;No relaxation data corresponding to the 
+frequency &quot; + repr(cdp.jw_frq) + &quot; has been loaded.&quot;)
+ 
+         # Reduced spectral density mapping.
+-        for spin in spin_loop(spin_id):
++        for spin, id in spin_loop(spin_id, return_id=True):
+             # Skip deselected spins.
+             if not spin.select:
+                 continue
+@@ -175,11 +190,32 @@
+             if r1 == None or r2 == None or noe == None:
+                 continue
+ 
++            # Loop over the interatomic data.
++            interatoms = return_interatom(id)
++            for i in range(len(interatoms)):
++                # No relaxation mechanism.
++                if not interatoms[i].dipole_pair:
++                    continue
++
++                # The surrounding spins.
++                if id != interatoms[i].spin_id1:
++                    spin_id2 = interatoms[i].spin_id1
++                else:
++                    spin_id2 = interatoms[i].spin_id2
++                spin2 = return_spin(spin_id2)
++
++                # Gyromagnetic ratios.
++                gx = return_gyromagnetic_ratio(spin.isotope)
++                gh = return_gyromagnetic_ratio(spin2.isotope)
++
++                # The interatomic distance.
++                r = interatoms[i].r
++
+             # Initialise the function to calculate.
+-            self.jw = Mapping(frq=cdp.jw_frq, 
+gx=return_gyromagnetic_ratio(spin.heteronuc_type), 
+gh=return_gyromagnetic_ratio(spin.proton_type), mu0=mu0, h_bar=h_bar)
++            self.jw = Mapping(frq=cdp.jw_frq, gx=gx, gh=gh, mu0=mu0, 
+h_bar=h_bar)
+ 
+             # Calculate the spectral density values.
+-            j0, jwx, jwh = self.jw.func(r=spin.r, csa=spin.csa, r1=r1, 
+r2=r2, noe=noe)
++            j0, jwx, jwh = self.jw.func(r=r, csa=spin.csa, r1=r1, r2=r2, 
+noe=noe)
+ 
+             # Reduced spectral density values.
+             if sim_index == None:
+@@ -231,10 +267,7 @@
+     default_value_doc.add_paragraph(&quot;These default values are found in the 
+file 'physical_constants.py'.&quot;)
+     _table = uf_tables.add_table(label=&quot;table: J(w) default values&quot;, 
+caption=&quot;Reduced spectral density mapping default values.&quot;)
+     _table.add_headings([&quot;Data type&quot;, &quot;Object name&quot;, &quot;Value&quot;])
+-    _table.add_row([&quot;Bond length&quot;, &quot;'r'&quot;, &quot;1.02 * 1e-10&quot;])
+     _table.add_row([&quot;CSA&quot;, &quot;'csa'&quot;, &quot;-172 * 1e-6&quot;])
+-    _table.add_row([&quot;Heteronucleus type&quot;, &quot;'heteronuc_type'&quot;, &quot;'15N'&quot;])
+-    _table.add_row([&quot;Proton type&quot;, &quot;'proton_type'&quot;, &quot;'1H'&quot;])
+     default_value_doc.add_table(_table.label)
+ 
+ 
+@@ -279,10 +312,7 @@
+     _table.add_row([&quot;J(0)&quot;, &quot;'j0'&quot;])
+     _table.add_row([&quot;J(wX)&quot;, &quot;'jwx'&quot;])
+     _table.add_row([&quot;J(wH)&quot;, &quot;'jwh'&quot;])
+-    _table.add_row([&quot;Bond length&quot;, &quot;'r'&quot;])
+     _table.add_row([&quot;CSA&quot;, &quot;'csa'&quot;])
+-    _table.add_row([&quot;Heteronucleus type&quot;, &quot;'heteronuc_type'&quot;])
+-    _table.add_row([&quot;Proton type&quot;, &quot;'proton_type'&quot;])
+     return_data_name_doc.add_table(_table.label)
+ 
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Jun 22 17:00:02 2012</div>  
+</body>
+</html>

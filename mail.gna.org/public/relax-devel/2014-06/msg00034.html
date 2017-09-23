@@ -1,0 +1,224 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: [bug #22146] Unpacking of R2A and R2B is performed wrong for clustered "full" dispersion models -->
+<!--X-From-R13: "Febryf S. Zvaarg" &#60;@A&#45;DSBZK.W@HOZWR&#45;ORRDSEENtan.bet> -->
+<!--X-Date: Fri, 06 Jun 2014 11:08:59 +0200 -->
+<!--X-Message-Id: 20140606&#45;090858.sv20529.63087@gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>[bug #22146] Unpacking of R2A and R2B is performed wrong for clustered &quot;full&quot; dispersion models -- June 06, 2014 - 11:08</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />[bug #22146] Unpacking of R2A and R2B is performed wrong for clustered &quot;full&quot; dispersion models</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00034" class="tabs">Index by Date</a> | <a href="threads.html#00034" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00033.html">Date Prev</a>] [<a href="msg00035.html">Date Next</a>] [<a href="msg00029.html">Thread Prev</a>] [<a href="msg00035.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: &quot;Troels E. Linnet&quot; &lt;tlinnet@xxxxxxxxxxxxx&gt;, relax-devel@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 06 Jun 2014 11:08:58 +0200</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00034.html">20140606-090858.sv20529.63087@gna.org</a>&gt;</li>
+<li class="menuitem">
+<em>References</em>: </li>
+<li class="menuitem">
+<em>User-agent</em>: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.114 Safari/537.36</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>Troels E. Linnet</strong> on June 06, 2014 - 11:08:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">URL:
+  &lt;<a  rel="nofollow" href="http://gna.org/bugs/?22146">http://gna.org/bugs/?22146</a>&gt;
+
+                 Summary: Unpacking of R2A and R2B is performed wrong for
+clustered &quot;full&quot; dispersion models 
+                 Project: relax
+            Submitted by: tlinnet
+            Submitted on: Fri 06 Jun 2014 09:08:58 AM UTC
+                Category: relax's source code
+Specific analysis category: Relaxation dispersion
+                Priority: 9 - Immediate
+                Severity: 4 - Important
+                  Status: None
+             Assigned to: None
+         Originator Name: 
+        Originator Email: 
+             Open/Closed: Open
+                 Release: Repository: trunk
+         Discussion Lock: Any
+        Operating System: All systems
+
+    _______________________________________________________
+
+Details:
+
+The unpacking of the R2A and R2B parameters in the &quot;full&quot; model is performed
+wrong.
+This will happen performing a clustered analysis, using one of the &quot;full&quot;
+models.
+
+This bug affect all analysis performed running with a &quot;full&quot; model, with
+clustered residues.
+
+The bug is located in the target function:
+./target_functions/relax_disp.py
+
+For all the &quot;func_MODEL_full&quot;, the unpacking of:
+R20A = params[:self.end_index[0]]
+R20B = params[self.end_index[0]:self.end_index[1]]
+
+This is wrong, since the &quot;params&quot; list, is ordered:
+[spin, spin, spin, [dw], pA, kex], where spin = [nr_frq*r2a, nr_frq*r2b]
+
+This ordering happens in:
+./specific_analysis/relax_disp/parameters.py
+in the loop_parameters.py
+
+A possible solutions i shown below.
+This alter the unpacking of the parameters.
+
+An example of profiling_cr72.py is attached.
+This can be downloaded, and run in base folder of relax:
+./profiling_cr72.py .
+
+This is with 3 frq, and 3 spins.
+
+The current implementations would unpack:
+('R20A', array([  2.,   2.,   2.,   4.,   4.,   4.,  12.,  12.,  12.]), 9)
+('R20B', array([ 14.,  14.,  14.,  22.,  22.,  22.,  24.,  24.,  24.]), 9)
+
+R2A is 2, 12, 22 for the spins 0-3 
+R2B is, 4, 14, 24 for the spins 0-3
+
+The suggested unpacking loop, unpacks to:
+('R20A', array([  2.,   2.,   2.,  12.,  12.,  12.,  22.,  22.,  22.]), 9)
+('R20B', array([  4.,   4.,   4.,  14.,  14.,  14.,  24.,  24.,  24.]), 9)
+
+
+-------
+from numpy import array, concatenate, delete, index_exp
+import numpy
+
+p = array([  1.000000000000000e+01, 1.000000000000000e+01,
+1.100000000000000e+01
+, 1.100000000000000e+01, 1.000000000000000e+01, 1.000000000000000e+01
+, 1.100000000000000e+01, 1.100000000000000e+01, 1.000000000000000e+00
+, 1.000000000000000e+00, 9.000000000000000e-01, 1.000000000000000e+03])
+
+e = [4, 8, 10]
+
+# Now
+r2a = p[:e[0]]
+print r2a
+r2b = p[e[0]:e[1]]
+print r2b
+dw = p[e[1]:e[2]]
+print dw
+pA = p[e[2]]
+print pA
+kex = p[e[2]+1]
+print kex
+
+print &quot;new&quot;
+ns = 2
+nf = 2
+
+ml = p[:e[1]]
+
+R20A = array([])
+R20B = array([])
+for i in range(0, ns):
+    # Array sorted per [spin, spin, spin], where spin = [nr_frq*r2a,
+nr_frq*r2b]
+    spin_AB = ml[:nf*2]
+    ml = delete(ml, numpy.s_[:nf*2])
+    R20A = concatenate([R20A, spin_AB[:nf] ])
+    R20B = concatenate([R20B, spin_AB[nf:] ])
+
+print R20A
+print R20B
+print dw
+print pA
+print kex
+
+
+
+    _______________________________________________________
+
+File Attachments:
+
+
+-------------------------------------------------------
+Date: Fri 06 Jun 2014 09:08:58 AM UTC  Name: profiling_cr72.py  Size: 17kB  
+By: tlinnet
+
+&lt;<a  rel="nofollow" href="http://gna.org/bugs/download.php?file_id=20938">http://gna.org/bugs/download.php?file_id=20938</a>&gt;
+
+    _______________________________________________________
+
+Reply to this item at:
+
+  &lt;<a  rel="nofollow" href="http://gna.org/bugs/?22146">http://gna.org/bugs/?22146</a>&gt;
+
+_______________________________________________
+  Message sent via/by Gna!
+  <a  rel="nofollow" href="http://gna.org/">http://gna.org/</a>
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<ul><li><strong>Follow-Ups</strong>:
+<ul>
+<li><strong><a name="00067" href="msg00067.html">[bug #22146] Unpacking of R2A and R2B is performed wrong for clustered &quot;full&quot; dispersion models</a></strong>
+<ul><li><em>From:</em> Troels E. Linnet</li></ul></li>
+<li><strong><a name="00035" href="msg00035.html">Re: [bug #22146] Unpacking of R2A and R2B is performed wrong for clustered &quot;full&quot; dispersion models</a></strong>
+<ul><li><em>From:</em> Edward d'Auvergne</li></ul></li>
+</ul></li></ul>
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Jun 06 18:20:11 2014</div>  
+</body>
+</html>

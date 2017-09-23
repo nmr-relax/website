@@ -1,0 +1,262 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r20997 &#45; in /branches/relax_disp:	specific_analyses/relax_disp/catia.py user_functions/relax_disp.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 13 Sep 2013 11:53:38 +0200 -->
+<!--X-Message-Id: E1VKQ4I&#45;0006Zi&#45;HY@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r20997 - in /branches/relax_disp:	specific_analyses/relax_disp/catia.py user_functions/relax_disp.py -- September 13, 2013 - 11:53</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r20997 - in /branches/relax_disp:	specific_analyses/relax_disp/catia.py user_functions/relax_disp.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00262" class="tabs">Index by Date</a> | <a href="threads.html#00262" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00261.html">Date Prev</a>] [<a href="msg00263.html">Date Next</a>] [<a href="msg00261.html">Thread Prev</a>] [<a href="msg00263.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 13 Sep 2013 09:53:38 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00262.html">E1VKQ4I-0006Zi-HY@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on September 13, 2013 - 11:53:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Sep 13 11:53:38 2013
+New Revision: 20997
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=20997&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=20997&amp;view=rev</a>
+Log:
+Implemented the relax_disp.catia_execute user function.
+
+This is modelled on the palmer.execute user function.
+
+
+Modified:
+    branches/relax_disp/specific_analyses/relax_disp/catia.py
+    branches/relax_disp/user_functions/relax_disp.py
+
+Modified: branches/relax_disp/specific_analyses/relax_disp/catia.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp/catia.py?rev=20997&amp;r1=20996&amp;r2=20997&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp/catia.py?rev=20997&amp;r1=20996&amp;r2=20997&amp;view=diff</a>
+==============================================================================
+--- branches/relax_disp/specific_analyses/relax_disp/catia.py (original)
++++ branches/relax_disp/specific_analyses/relax_disp/catia.py Fri Sep 13 
+11:53:38 2013
+@@ -22,16 +22,88 @@
+ # Module docstring.
+ &quot;&quot;&quot;Functions for interfacing with Flemming Hansen's CATIA program.&quot;&quot;&quot;
+ 
++# Dependencies.
++import dep_check
++
+ # Python module imports.
+-from os import sep
++from os import F_OK, access, chdir, getcwd, sep
++PIPE, Popen = None, None
++if dep_check.subprocess_module:
++    from subprocess import PIPE, Popen
++import sys
+ 
+ # relax module imports.
+-from lib.errors import RelaxError
+-from lib.io import mkdir_nofail, open_write_file
++from lib.errors import RelaxError, RelaxDirError
++from lib.io import mkdir_nofail, open_write_file, test_binary
+ from pipe_control import pipes
+ from pipe_control.mol_res_spin import check_mol_res_spin_data, spin_loop
+ from specific_analyses.relax_disp.checks import check_model_type, 
+check_spectra_id_setup
+ from specific_analyses.relax_disp.disp_data import loop_frq, loop_point, 
+return_param_key_from_data
++
++
++def catia_execute(file='Fit.catia', dir=None, binary=None):
++    &quot;&quot;&quot;Create the CATIA input files.
++
++    @keyword file:          The main CATIA execution file.
++    @type file:             str
++    @keyword dir:           The optional directory to place the files into.  
+If None, then the files will be placed into the current directory.
++    @type dir:              str or None
++    @keyword binary:        The name of the CATIA binary file.  This can 
+include the path to the binary.
++    @type binary:           str
++    &quot;&quot;&quot;
++
++    # The current directory.
++    orig_dir = getcwd()
++
++    # Test the binary file string corresponds to a valid executable.
++    test_binary(binary)
++
++    # The directory.
++    if dir == None:
++        dir = orig_dir
++    if not access(dir, F_OK):
++        raise RelaxDirError('CATIA', dir)
++
++    # Change to the directory with the CATIA input files.
++    chdir(dir)
++
++    # Catch failures and return to the correct directory.
++    try:
++        # Execute CATIA.
++        cmd = binary + ' &lt; Fit.catia'
++        pipe = Popen(cmd, shell=True, stdin=PIPE, stdout=PIPE, stderr=PIPE, 
+close_fds=False)
++
++        # Close the pipe.
++        pipe.stdin.close()
++
++        # Write to stdout.
++        for line in pipe.stdout.readlines():
++            # Decode Python 3 byte arrays.
++            if hasattr(line, 'decode'):
++                line = line.decode()
++
++            # Write.
++            sys.stdout.write(line)
++
++        # Write to stderr.
++        for line in pipe.stderr.readlines():
++            # Decode Python 3 byte arrays.
++            if hasattr(line, 'decode'):
++                line = line.decode()
++
++            # Write.
++            sys.stderr.write(line)
++
++    # Failure.
++    except:
++        # Change back to the original directory.
++        chdir(orig_dir)
++
++        # Reraise the error.
++        raise
++
++    # Change back to the original directory.
++    chdir(orig_dir)
+ 
+ 
+ def catia_input(file='Fit.catia', dir=None, output_dir='output', 
+force=False):
+
+Modified: branches/relax_disp/user_functions/relax_disp.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/user_functions/relax_disp.py?rev=20997&amp;r1=20996&amp;r2=20997&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_disp/user_functions/relax_disp.py?rev=20997&amp;r1=20996&amp;r2=20997&amp;view=diff</a>
+==============================================================================
+--- branches/relax_disp/user_functions/relax_disp.py (original)
++++ branches/relax_disp/user_functions/relax_disp.py Fri Sep 13 11:53:38 2013
+@@ -36,7 +36,7 @@
+ from graphics import ANALYSIS_IMAGE_PATH, WIZARD_IMAGE_PATH
+ from pipe_control import pipes, spectrum
+ from pipe_control.mol_res_spin import get_spin_ids
+-from specific_analyses.relax_disp.catia import catia_input
++from specific_analyses.relax_disp.catia import catia_execute, catia_input
+ from specific_analyses.relax_disp.cpmgfit import cpmgfit_execute, 
+cpmgfit_input
+ from specific_analyses.relax_disp.disp_data import cpmg_frq, exp_type, 
+plot_disp_curves, plot_exp_curves, relax_time, spin_lock_field, 
+spin_lock_offset
+ from specific_analyses.relax_disp.nessy import nessy_input
+@@ -53,6 +53,41 @@
+ uf_class.title = &quot;Class for relaxation curve fitting.&quot;
+ uf_class.menu_text = &quot;&amp;relax_disp&quot;
+ uf_class.gui_icon = &quot;relax.relax_disp&quot;
++
++
++# The relax_disp.catia_execute user function.
++uf = uf_info.add_uf('relax_disp.catia_execute')
++uf.title = &quot;Perform a relaxation dispersion optimisation using Flemming 
+Hansen's CATIA.&quot;
++uf.title_short = &quot;CATIA execution.&quot;
++uf.add_keyarg(
++    name = &quot;dir&quot;,
++    py_type = &quot;str&quot;,
++    arg_type = &quot;dir sel&quot;,
++    desc_short = &quot;directory name&quot;,
++    desc = &quot;The directory containing all of the CATIA input files.&quot;,
++    can_be_none = True
++)
++uf.add_keyarg(
++    name = &quot;binary&quot;,
++    default = &quot;catia&quot;,
++    py_type = &quot;str&quot;,
++    arg_type = &quot;file sel&quot;,
++    desc_short = &quot;CATIA executable file&quot;,
++    desc = &quot;The name of the executable CATIA program file.&quot;,
++    wiz_filesel_style = FD_OPEN,
++    wiz_filesel_preview = False
++)
++# Description.
++uf.desc.append(Desc_container())
++uf.desc[-1].add_paragraph(&quot;CATIA will be executed as&quot;)
++uf.desc[-1].add_prompt(&quot;$ catia &lt; Fit.catia&quot;)
++uf.desc[-1].add_paragraph(&quot;If you would like to use a different CATIA 
+executable file, change the binary name to the appropriate file name.  If the 
+file is not located within the environment's path, include the full path in 
+front of the binary file name.&quot;)
++uf.backend = catia_execute
++uf.gui_icon = &quot;oxygen.categories.applications-education&quot;
++uf.menu_text = &quot;catia_e&amp;xecute&quot;
++uf.wizard_size = (800, 600)
++uf.wizard_apply_button = False
++uf.wizard_image = ANALYSIS_IMAGE_PATH + 'relax_disp_200x200.png'
+ 
+ 
+ # The relax_disp.catia_input user function.
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Sep 13 12:00:01 2013</div>  
+</body>
+</html>

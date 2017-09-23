@@ -1,0 +1,195 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r25394 &#45; /trunk/specific_analyses/relax_disp/estimate_r2eff.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 28 Aug 2014 17:31:57 +0200 -->
+<!--X-Message-Id: E1XN1g4&#45;0007Ih&#45;Sk@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r25394 - /trunk/specific_analyses/relax_disp/estimate_r2eff.py -- August 28, 2014 - 17:31</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r25394 - /trunk/specific_analyses/relax_disp/estimate_r2eff.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00528" class="tabs">Index by Date</a> | <a href="threads.html#00528" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00527.html">Date Prev</a>] [<a href="msg00529.html">Date Next</a>] [<a href="msg00527.html">Thread Prev</a>] [<a href="msg00529.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 28 Aug 2014 15:31:56 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00528.html">E1XN1g4-0007Ih-Sk@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on August 28, 2014 - 17:31:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Thu Aug 28 17:31:56 2014
+New Revision: 25394
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=25394&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=25394&amp;view=rev</a>
+Log:
+Added to back-end of R2eff estimate module, to be able to switch between the 
+function Jacobian or the chi2 Jacobian.
+
+task #7822(<a  rel="nofollow" href="https://gna.org/task/index.php?7822">https://gna.org/task/index.php?7822</a>): Implement user function to 
+estimate R2eff and associated errors for exponential curve fitting.
+
+Modified:
+    trunk/specific_analyses/relax_disp/estimate_r2eff.py
+
+Modified: trunk/specific_analyses/relax_disp/estimate_r2eff.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/relax_disp/estimate_r2eff.py?rev=25394&amp;r1=25393&amp;r2=25394&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/relax_disp/estimate_r2eff.py?rev=25394&amp;r1=25393&amp;r2=25394&amp;view=diff</a>
+==============================================================================
+--- trunk/specific_analyses/relax_disp/estimate_r2eff.py        (original)
++++ trunk/specific_analyses/relax_disp/estimate_r2eff.py        Thu Aug 28 
+17:31:56 2014
+@@ -59,9 +59,42 @@
+     from scipy.optimize import leastsq
+ 
+ 
+-def estimate_r2eff_err(spin_id=None, epsrel=0.0, verbosity=1):
++def func_exp_chi2_grad(params=None, values=None, errors=None, times=None):
++    &quot;&quot;&quot;Target function for the gradient (Jacobian matrix) of func_exp_chi2() 
+to minfx, for exponential fit .
++
++    @param params:      The vector of parameter values.
++    @type params:       numpy rank-1 float array
++    @keyword values:    The measured intensity values per time point.
++    @type values:       numpy array
++    @keyword errors:    The standard deviation of the measured intensity 
+values per time point.
++    @type errors:       numpy array
++    @keyword times:     The time points.
++    @type times:        numpy array
++    @return:            The Jacobian matrix with 'm' rows of function 
+derivatives per 'n' columns of parameters.
++    @rtype:             numpy array
++    &quot;&quot;&quot;
++
++    # Unpack the parameter values.
++    r2eff = params[0]
++    i0 = params[1]
++
++    # Make partial derivative, with respect to r2eff.
++    d_chi2_d_r2eff = 2.0 * i0 * times * ( -i0 * exp( -r2eff * times) + 
+values) * exp( -r2eff * times ) / errors**2
++
++    # Make partial derivative, with respect to i0.
++    d_chi2_d_i0 = - 2.0 * ( -i0 * exp( -r2eff * times) + values) * exp( 
+-r2eff * times) / errors**2
++
++    # Define Jacobian as m rows with function derivatives and n columns of 
+parameters.
++    jacobian_matrix_exp_chi2 = transpose(array( [d_chi2_d_r2eff , 
+d_chi2_d_i0] ) )
++
++    return jacobian_matrix_exp_chi2
++
++
++def estimate_r2eff_err(chi2_jacobian=False, spin_id=None, epsrel=0.0, 
+verbosity=1):
+     &quot;&quot;&quot;This will estimate the R2eff and i0 errors from the covariance matrix 
+Qxx.  Qxx is calculated from the Jacobian matrix and the optimised parameters.
+ 
++    @keyword chi2_jacobian: If the Jacobian derived from the chi2 function, 
+should be used instead of the Jacobian from the exponential function.
++    @type chi2_jacobian:    bool
+     @keyword spin_id:       The spin identification string.
+     @type spin_id:          str
+     @param epsrel:          Any columns of R which satisfy |R_{kk}| &lt;= 
+epsrel |R_{11}| are considered linearly-dependent and are excluded from the 
+covariance matrix, where the corresponding rows and columns of the covariance 
+matrix are set to zero.
+@@ -110,7 +143,7 @@
+             i0 = getattr(cur_spin, 'i0')[param_key]
+ 
+             # Pack data
+-            param_vector = [r2eff, i0]
++            params = [r2eff, i0]
+ 
+             # The peak intensities, errors and times.
+             values = []
+@@ -128,13 +161,18 @@
+ 
+             # Initialise data in C code.
+             scaling_list = [1.0, 1.0]
+-            setup(num_params=len(param_vector), num_times=len(times), 
+values=values, sd=errors, relax_times=times, scaling_matrix=scaling_list)
+-
+-            # Calculate the direct exponential Jacobian matrix from C code.
+-            jacobian_matrix_exp = transpose(asarray( jacobian(param_vector) 
+) )
++            setup(num_params=len(params), num_times=len(times), 
+values=values, sd=errors, relax_times=times, scaling_matrix=scaling_list)
++
++            if chi2_jacobian:
++                jacobian_matrix_exp = func_exp_chi2_grad(params=params, 
+values=values, errors=errors, times=times)
++                weights = ones(errors.shape)
++            else:
++                # Calculate the direct exponential Jacobian matrix from C 
+code.
++                jacobian_matrix_exp = transpose(asarray( jacobian(params) ) )
++                weights = 1. / errors**2
+ 
+             # Get the co-variance
+-            pcov = multifit_covar(J=jacobian_matrix_exp, weights=1/errors**2)
++            pcov = multifit_covar(J=jacobian_matrix_exp, weights=weights)
+ 
+             # To compute one standard deviation errors on the parameters, 
+take the square root of the diagonal covariance.
+             param_vector_error = sqrt(diag(pcov))
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Aug 28 17:40:02 2014</div>  
+</body>
+</html>

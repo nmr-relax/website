@@ -1,0 +1,213 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r22049 &#45; in /trunk/lib/structure/internal: models.py object.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 27 Jan 2014 18:54:08 +0100 -->
+<!--X-Message-Id: E1W7qNs&#45;0003Pk&#45;Is@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r22049 - in /trunk/lib/structure/internal: models.py object.py -- January 27, 2014 - 18:54</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r22049 - in /trunk/lib/structure/internal: models.py object.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00096" class="tabs">Index by Date</a> | <a href="threads.html#00096" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00095.html">Date Prev</a>] [<a href="msg00097.html">Date Next</a>] [<a href="msg00095.html">Thread Prev</a>] [<a href="msg00097.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 27 Jan 2014 17:54:08 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00096.html">E1W7qNs-0003Pk-Is@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on January 27, 2014 - 18:54:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Mon Jan 27 18:54:08 2014
+New Revision: 22049
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=22049&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=22049&amp;view=rev</a>
+Log:
+Large speed up for the internal structural object for when many models are 
+present.
+
+The new ModelList.current_models object keeps track of all the models already 
+present in the
+structural object.  This simplifies the checks of the pack_structs() internal 
+structural object
+method by removing expensive looping.  This allows the loading of PDB files 
+to continue to be fast
+even with many tens or hundreds of thousands of models already loaded.
+
+
+Modified:
+    trunk/lib/structure/internal/models.py
+    trunk/lib/structure/internal/object.py
+
+Modified: trunk/lib/structure/internal/models.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/lib/structure/internal/models.py?rev=22049&amp;r1=22048&amp;r2=22049&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/lib/structure/internal/models.py?rev=22049&amp;r1=22048&amp;r2=22049&amp;view=diff</a>
+==============================================================================
+--- trunk/lib/structure/internal/models.py (original)
++++ trunk/lib/structure/internal/models.py Mon Jan 27 18:54:08 2014
+@@ -1,6 +1,6 @@
+-###############################################################################
+-#                                                                            
+ #
+-# Copyright (C) 2008-2013 Edward d'Auvergne                                  
+ #
++0##############################################################################
++#                                                                            
+ #
++# Copyright (C) 2008-2014 Edward d'Auvergne                                  
+ #
+ #                                                                            
+ #
+ # This file is part of the program relax (<a  rel="nofollow" href="http://www.nmr-relax.com">http://www.nmr-relax.com</a>).         
+ #
+ #                                                                            
+ #
+@@ -36,6 +36,16 @@
+ 
+     Here different models are defined as the same molecule but with 
+different conformations.
+     &quot;&quot;&quot;
++
++    def __init__(self):
++        &quot;&quot;&quot;Set up the class.&quot;&quot;&quot;
++
++        # Execute the base class method.
++        super(ModelList, self).__init__()
++
++        # The current model list (used for speed).
++        self.current_models = []
++
+ 
+     def __repr__(self):
+         &quot;&quot;&quot;The string representation of the object.
+@@ -71,6 +81,9 @@
+ 
+             # Append an empty ModelContainer.
+             self.append(ModelContainer(model_num))
++
++        # Update the current model list.
++        self.current_models.append(model_num)
+ 
+         # Store the model indices.
+         if not hasattr(self, 'model_indices'):
+
+Modified: trunk/lib/structure/internal/object.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/lib/structure/internal/object.py?rev=22049&amp;r1=22048&amp;r2=22049&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/lib/structure/internal/object.py?rev=22049&amp;r1=22048&amp;r2=22049&amp;view=diff</a>
+==============================================================================
+--- trunk/lib/structure/internal/object.py (original)
++++ trunk/lib/structure/internal/object.py Mon Jan 27 18:54:08 2014
+@@ -2107,32 +2107,34 @@
+             raise RelaxError(&quot;Failure of the mapping of new molecule names, 
+%s new molecule names verses %s molecules in the structural data.&quot; % 
+(len(set_mol_name), len(data_matrix[0])))
+ 
+         # Test that the target models and structures are absent, and get the 
+already existing model numbers.
+-        current_models = []
+-        for i in range(len(self.structural_data)):
+-            # Create a list of current models.
+-            current_models.append(self.structural_data[i].num)
++        for i in range(len(set_model_num)):
++            # Merging flag is set, so skip the checks.
++            if merge:
++                continue
++
++            # A new model, so no need to check.
++            if not set_model_num[i] in self.structural_data.current_models:
++                continue
+ 
+             # Loop over the structures.
+-            for j in range(len(self.structural_data[i].mol)):
+-                if not merge and self.structural_data[i].num in 
+set_model_num and self.structural_data[i].mol[j].mol_name in set_mol_name:
++            index = 
+self.structural_data.current_models.index(set_model_num[i])
++            for j in range(len(self.structural_data[index].mol)):
++                if self.structural_data[index].mol[j].mol_name in 
+set_mol_name:
+                     raise RelaxError(&quot;The molecule '%s' of model %s already 
+exists.&quot; % (self.structural_data[i].mol[j].mol_name, 
+self.structural_data[i].num))
+ 
+         # Loop over the models.
+         for i in range(len(set_model_num)):
+             # The model doesn't currently exist.
+-            if set_model_num[i] not in current_models:
++            if set_model_num[i] not in self.structural_data.current_models:
+                 # Create the model.
+                 self.structural_data.add_item(set_model_num[i])
+ 
+-                # Add the model number to the current_models list.
+-                current_models.append(set_model_num[i])
+-
+                 # Get the model.
+                 model = self.structural_data[-1]
+ 
+             # Otherwise get the pre-existing model.
+             else:
+-                model = 
+self.structural_data[current_models.index(set_model_num[i])]
++                model = 
+self.structural_data[self.structural_data.current_models.index(set_model_num[i])]
+ 
+             # Loop over the molecules.
+             for j in range(len(set_mol_name)):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Jan 27 19:00:01 2014</div>  
+</body>
+</html>

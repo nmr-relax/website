@@ -1,0 +1,191 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r5172 &#45; /1.3/specific_fns/model_free/mf_minimise.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Sun, 23 Mar 2008 01:42:30 +0100 -->
+<!--X-Message-Id: E1JdEIA&#45;0006CF&#45;33@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r5172 - /1.3/specific_fns/model_free/mf_minimise.py -- March 23, 2008 - 01:42</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r5172 - /1.3/specific_fns/model_free/mf_minimise.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00055" class="tabs">Index by Date</a> | <a href="threads.html#00055" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00054.html">Date Prev</a>] [<a href="msg00056.html">Date Next</a>] [<a href="msg00054.html">Thread Prev</a>] [<a href="msg00056.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Sun, 23 Mar 2008 00:42:29 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00055.html">E1JdEIA-0006CF-33@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on March 23, 2008 - 01:42:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Sun Mar 23 01:42:29 2008
+New Revision: 5172
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=5172&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=5172&amp;view=rev</a>
+Log:
+Shifted the grid search limits, diagonal scaling, and grid size test into new 
+separate methods.
+
+
+Modified:
+    1.3/specific_fns/model_free/mf_minimise.py
+
+Modified: 1.3/specific_fns/model_free/mf_minimise.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/1.3/specific_fns/model_free/mf_minimise.py?rev=5172&amp;r1=5171&amp;r2=5172&amp;view=diff">http://svn.gna.org/viewcvs/relax/1.3/specific_fns/model_free/mf_minimise.py?rev=5172&amp;r1=5171&amp;r2=5172&amp;view=diff</a>
+==============================================================================
+--- 1.3/specific_fns/model_free/mf_minimise.py (original)
++++ 1.3/specific_fns/model_free/mf_minimise.py Sun Mar 23 01:42:29 2008
+@@ -509,27 +509,11 @@
+                 # Get the spin specific configuration.
+                 m = self.grid_search_config_spin(min_options, spin, inc, m)
+ 
+-        # Set the lower and upper bounds if these are supplied.
+-        if lower != None:
+-            for j in xrange(n):
+-                if lower[j] != None:
+-                    min_options[j][1] = lower[j]
+-        if upper != None:
+-            for j in xrange(n):
+-                if upper[j] != None:
+-                    min_options[j][2] = upper[j]
+-
+         # Test if the grid is too large.
+-        grid_size = 1
+-        for i in xrange(len(min_options)):
+-            grid_size = grid_size * min_options[i][0]
+-        if type(grid_size) == long:
+-            raise RelaxError, &quot;A grid search of size &quot; + `grid_size` + &quot; is 
+too large.&quot;
+-
+-        # Diagonal scaling of minimisation options.
+-        for j in xrange(len(min_options)):
+-            min_options[j][1] = min_options[j][1] / scaling_matrix[j, j]
+-            min_options[j][2] = min_options[j][2] / scaling_matrix[j, j]
++        self.test_grid_size(min_options)
++
++        # Complete the grid search configuration.
++        self.grid_search_config_fin(min_options, lower, upper, 
+scaling_matrix)
+ 
+         # Minimisation.
+         self.minimise(min_algor='grid', min_options=min_options, 
+constraints=constraints, verbosity=verbosity, sim_index=sim_index)
+@@ -584,6 +568,37 @@
+ 
+         # Return the parameter index.
+         return m
++
++
++    def grid_search_config_fin(min_options, lower, upper, scaling_matrix):
++        &quot;&quot;&quot;Complete the grid search configuration.
++
++        @param min_options:     The grid search configuration details.
++        @type min_options:      list of lists (n, 3)
++        @param lower:           The lower bounds of the grid search which 
+must be equal to the
++                                number of parameters in the model.
++        @type lower:            array of numbers
++        @param upper:           The upper bounds of the grid search which 
+must be equal to the
++                                number of parameters in the model.
++        @type upper:            array of numbers
++        @param scaling_matrix:  The scaling matrix.
++        @type scaling_matrix:   numpy matrix
++        &quot;&quot;&quot;
++
++        # Set the lower and upper bounds if these are supplied.
++        if lower != None:
++            for i in xrange(n):
++                if lower[i] != None:
++                    min_options[i][1] = lower[i]
++        if upper != None:
++            for i in xrange(n):
++                if upper[i] != None:
++                    min_options[i][2] = upper[i]
++
++        # Diagonal scaling of minimisation options.
++        for i in xrange(len(min_options)):
++            min_options[i][1] = min_options[i][1] / scaling_matrix[i, i]
++            min_options[i][2] = min_options[i][2] / scaling_matrix[i, i]
+ 
+ 
+     def grid_search_config_spin(min_options, spin, inc, m):
+@@ -1146,3 +1161,18 @@
+ 
+                     # Warning.
+                     cdp.warning = warning
++
++
++    def test_grid_size(min_options):
++        &quot;&quot;&quot;Test the size of the grid search.
++
++        @param min_options: The grid search configuration.
++        @type min_options:  list
++        @raises RelaxError: If the grid size corresponds to a long int.
++        &quot;&quot;&quot;
++
++        grid_size = 1
++        for i in xrange(len(min_options)):
++            grid_size = grid_size * min_options[i][0]
++        if type(grid_size) == long:
++            raise RelaxError, &quot;A grid search of size &quot; + `grid_size` + &quot; is 
+too large.&quot;
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Sun Mar 23 02:00:15 2008</div>  
+</body>
+</html>

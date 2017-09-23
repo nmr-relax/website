@@ -1,0 +1,209 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r18887 &#45; /trunk/generic_fns/structure/internal.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 19 Mar 2013 16:50:27 +0100 -->
+<!--X-Message-Id: E1UHynz&#45;000761&#45;9k@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r18887 - /trunk/generic_fns/structure/internal.py -- March 19, 2013 - 16:50</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r18887 - /trunk/generic_fns/structure/internal.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00305" class="tabs">Index by Date</a> | <a href="threads.html#00305" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00304.html">Date Prev</a>] [<a href="msg00306.html">Date Next</a>] [<a href="msg00304.html">Thread Prev</a>] [<a href="msg00306.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 19 Mar 2013 15:50:27 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00305.html">E1UHynz-000761-9k@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on March 19, 2013 - 16:50:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Mar 19 16:50:27 2013
+New Revision: 18887
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=18887&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=18887&amp;view=rev</a>
+Log:
+Implemented the Internal._trim_sheet() internal structural object method.
+
+This is also now used by the structure.delete user function to remove sheet 
+metadata for residues
+which no longer exist.
+
+
+Modified:
+    trunk/generic_fns/structure/internal.py
+
+Modified: trunk/generic_fns/structure/internal.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/generic_fns/structure/internal.py?rev=18887&amp;r1=18886&amp;r2=18887&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/generic_fns/structure/internal.py?rev=18887&amp;r1=18886&amp;r2=18887&amp;view=diff</a>
+==============================================================================
+--- trunk/generic_fns/structure/internal.py (original)
++++ trunk/generic_fns/structure/internal.py Tue Mar 19 16:50:27 2013
+@@ -916,6 +916,65 @@
+ 
+         # Return the modified helix.
+         return helix
++
++
++    def _trim_sheet(self, sheet=None, trim_res_list=[], res_data=None):
++        &quot;&quot;&quot;Trim the given sheet based on the list of deleted residue numbers.
++
++        @keyword sheet:         The single sheet metadata structure.
++        @type sheet:            list
++        @keyword trim_res_list: The list of residue numbers which no longer 
+exist.
++        @type trim_res_list:    list of int
++        @keyword res_data:      The dictionary of residue names with residue 
+numbers as keys.
++        @type res_data:         dict of str
++        @return:                The trimmed sheet metadata structure, or 
+None if the whole sheet is to be deleted.
++        @rtype:                 list or None
++        &quot;&quot;&quot;
++
++        # Unpack the sheet residue numbers.
++        start_res = sheet[5]
++        end_res = sheet[9]
++
++        # The reverse residue list.
++        trim_res_list_rev = deepcopy(trim_res_list)
++        trim_res_list_rev.reverse()
++
++        # The sheet residues.
++        sheet_res = list(range(start_res, end_res+1))
++
++        # Trim forwards.
++        for res_num in trim_res_list:
++            if res_num == start_res:
++                # Remove the residue.
++                sheet_res.pop(0)
++
++                # No sheet left.
++                if len(sheet_res) == 0:
++                    break
++
++                # Realias the starting residue.
++                start_res = sheet_res[0]
++
++        # No sheet left.
++        if len(sheet_res) == 0:
++            return None
++
++        # Trim backwards.
++        for res_num in trim_res_list_rev:
++            if res_num == end_res:
++                sheet_res.pop(-1)
++                end_res = sheet_res[-1]
++
++        # Replace the starting and ending residues.
++        if start_res != sheet[5]:
++            sheet[5] = start_res
++            sheet[3] = res_data[start_res]
++        if end_res != sheet[9]:
++            sheet[9] = end_res
++            sheet[7] = res_data[end_res]
++
++        # Return the modified sheet.
++        return sheet
+ 
+ 
+     def add_atom(self, mol_name=None, atom_name=None, res_name=None, 
+res_num=None, pos=[None, None, None], element=None, atom_num=None, 
+chain_id=None, segment_id=None, pdb_record=None):
+@@ -1387,8 +1446,10 @@
+             if not len(del_res_nums):
+                 return
+ 
++            # Fix the deleted residue number order.
++            del_res_nums.reverse()
++
+             # Handle the helix metadata.
+-            del_res_nums.reverse()
+             del_helix_indices = []
+             for i in range(len(self.helices)):
+                 # Trim the helix.
+@@ -1406,6 +1467,25 @@
+             del_helix_indices.reverse()
+             for i in del_helix_indices:
+                 self.helices.pop(i)
++
++            # Handle the sheet metadata.
++            del_sheet_indices = []
++            for i in range(len(self.sheets)):
++                # Trim the sheet.
++                sheet = self._trim_sheet(sheet=self.sheets[i], 
+trim_res_list=del_res_nums, res_data=res_data)
++
++                # Trimmed sheet.
++                if sheet != None:
++                    self.sheets[i] = sheet
++
++                # No sheet left.
++                else:
++                    del_sheet_indices.append(i)
++
++            # Loop over the reverse sheet indices and pop out the data.
++            del_sheet_indices.reverse()
++            for i in del_sheet_indices:
++                self.sheets.pop(i)
+ 
+ 
+     def get_molecule(self, molecule, model=None):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Mar 19 17:20:02 2013</div>  
+</body>
+</html>

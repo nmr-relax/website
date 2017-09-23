@@ -1,0 +1,252 @@
+<!-- MHonArc v2.6.10 -->
+<!--X-Subject: r2679 &#45; in /branches/tensor_pdb: generic_fns/pdb.py prompt/pdb.py -->
+<!--X-From-R13: rqjneq.qnhiretarNtznvy.pbz -->
+<!--X-Date: Sun, 29 Oct 2006 03:42:49 +0100 -->
+<!--X-Message-Id: E1Ge0ct&#45;0002R0&#45;36@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r2679 - in /branches/tensor_pdb: generic_fns/pdb.py prompt/pdb.py -- October 29, 2006 - 03:42</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r2679 - in /branches/tensor_pdb: generic_fns/pdb.py prompt/pdb.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00114" class="tabs">Index by Date</a> | <a href="threads.html#00114" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00113.html">Date Prev</a>] [<a href="msg00115.html">Date Next</a>] [<a href="msg00113.html">Thread Prev</a>] [<a href="msg00115.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Sun, 29 Oct 2006 02:42:18 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00114.html">E1Ge0ct-0002R0-36@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward . dauvergne</strong> on October 29, 2006 - 03:42:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Sun Oct 29 03:42:18 2006
+New Revision: 2679
+
+URL: <a  href="http://svn.gna.org/viewcvs/relax?rev=2679&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=2679&amp;view=rev</a>
+Log:
+The length of the vector representing the unique axis of the spheroid is now 
+proportional to Dpar.
+
+To calculate the new vector, the Dpar unit vector is multiplied by the 
+eigenvalue Dpar.  It is also
+multiplied by the scaling factor 'scale'.  This scaling factor comes from the 
+prompt interface user
+function 'pdb.create_tensor_pdb()' which defaults to 1.8e-6.  The result is 
+that the correlation
+times translate to:
+
+3 ns -&gt; 100 Angstrom
+10 ns -&gt; 30 Angstrom
+30 ns -&gt; 10 Angstrom
+
+The docstring of the 'pdb.create_tensor_pdb()' user function has been 
+expanded to include a
+description of the scaling factor and how the size of the tensor geometric 
+object is larger for
+smaller objects.
+
+
+Modified:
+    branches/tensor_pdb/generic_fns/pdb.py
+    branches/tensor_pdb/prompt/pdb.py
+
+Modified: branches/tensor_pdb/generic_fns/pdb.py
+URL: 
+<a  href="http://svn.gna.org/viewcvs/relax/branches/tensor_pdb/generic_fns/pdb.py?rev=2679&amp;r1=2678&amp;r2=2679&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/tensor_pdb/generic_fns/pdb.py?rev=2679&amp;r1=2678&amp;r2=2679&amp;view=diff</a>
+==============================================================================
+--- branches/tensor_pdb/generic_fns/pdb.py (original)
++++ branches/tensor_pdb/generic_fns/pdb.py Sun Oct 29 03:42:18 2006
+@@ -127,11 +127,12 @@
+         return R
+ 
+ 
+-    def create_tensor_pdb(self, run=None, file=None, dir=None, force=0):
++    def create_tensor_pdb(self, run=None, scale=1.8e-6, file=None, dir=None, 
+force=0):
+         &quot;&quot;&quot;The pdb loading function.&quot;&quot;&quot;
+ 
+         # Arguments.
+         self.run = run
++        self.scale = scale
+         self.file = file
+         self.dir = dir
+         self.force = force
+@@ -189,15 +190,21 @@
+             # The Dpar unit vector.
+             Dpar_unit = self.relax.data.diff[self.run].Dpar_unit
+ 
++            # The Dpar vector.
++            Dpar_vect = Dpar_unit * self.relax.data.diff[self.run].Dpar * 
+scale
++
+             # Position relative to the center of mass.
+-            pos = R + Dpar_unit
++            pos = R + Dpar_vect
+ 
+             # Add the position as a HETATM.
+-            hetatm.append(R + self.relax.data.diff[self.run].Dpar_unit)
++            hetatm.append(pos)
+ 
+             # Print out.
++            print &quot;    Scaling factor:              &quot; + `scale`
+             print &quot;    Unit vector:                 &quot; + `Dpar_unit`
++            print &quot;    Dpar vector (scaled):        &quot; + `Dpar_vect`
+             print &quot;    Relative to center of mass:  &quot; + `pos`
++            print
+ 
+ 
+         # Connectivities.
+
+Modified: branches/tensor_pdb/prompt/pdb.py
+URL: 
+<a  href="http://svn.gna.org/viewcvs/relax/branches/tensor_pdb/prompt/pdb.py?rev=2679&amp;r1=2678&amp;r2=2679&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/tensor_pdb/prompt/pdb.py?rev=2679&amp;r1=2678&amp;r2=2679&amp;view=diff</a>
+==============================================================================
+--- branches/tensor_pdb/prompt/pdb.py (original)
++++ branches/tensor_pdb/prompt/pdb.py Sun Oct 29 03:42:18 2006
+@@ -38,7 +38,7 @@
+         self.__relax__ = relax
+ 
+ 
+-    def create_tensor_pdb(self, run=None, file='tensor.pdb', dir=None, 
+force=0):
++    def create_tensor_pdb(self, run=None, scale=1.8e-6, file='tensor.pdb', 
+dir=None, force=0):
+         &quot;&quot;&quot;Create a PDB file to represent the diffusion tensor.
+ 
+         Keyword Arguments
+@@ -46,6 +46,8 @@
+ 
+         run:  The run to assign the structure to.
+ 
++        scale:  Value to scale the diffusion rates into Angstroms.
++
+         file:  The name of the PDB file.
+ 
+         dir:  The directory where the file is located.
+@@ -58,15 +60,29 @@
+ 
+         This function creates a PDB file containing artificial structures 
+which represent the
+         diffusion tensor.  A structure must have previously been read.  The 
+diffusion tensor is
+-        represented by an ellipsoidal, spheroidal, or spherical geometric 
+centered at the center of
+-        mass.  This diffusion tensor PDB file can subsequently read into any 
+molecular viewer.
+-
++        represented by an ellipsoidal, spheroidal, or spherical geometric 
+object with its origin
++        located at the center of mass.  This diffusion tensor PDB file can 
+subsequently read into
++        any molecular viewer.
++
++        As the units of the Brownian rotational diffusion tensor is the rate 
+of diffusion measured
++        in inverse seconds, the size of the tensor geometric object is hence 
+proportional to the
++        rate and not the correlation times.  Hence the larger the geometric 
+object, the faster the
++        diffusion of a molecule.  For example the diffusion tensor of a 
+water molecule is much
++        larger than the diffusion tensor of a macromolecule.
++
++        The scaling argument can be used to vary the size of the tensor 
+geometric object.  The
++        default value is 1.8e-6.  For spherical diffusion with a global 
+correlation time of 10 ns
++        (this is equivalent to a Diso diffusion rate of 1.66e7 s^-1), the 
+radius of the sphere then
++        be equal to 30 Angstrom.  When the global correlation time is 30 ns, 
+the radius is 10
++        Angstrom.  If the global correlation time is 3ns, the radius will be 
+100 Angstrom (hence the
++        scaling may need to be adjusted).
+         &quot;&quot;&quot;
+ 
+         # Function intro text.
+         if self.__relax__.interpreter.intro:
+             text = sys.ps3 + &quot;pdb.create_tensor_pdb(&quot;
+             text = text + &quot;run=&quot; + `run`
++            text = text + &quot;, scale=&quot; + `scale`
+             text = text + &quot;, file=&quot; + `file`
+             text = text + &quot;, dir=&quot; + `dir`
+             text = text + &quot;, force=&quot; + `force` + &quot;)&quot;
+@@ -76,6 +92,10 @@
+         if type(run) != str:
+             raise RelaxStrError, ('run', run)
+ 
++        # Scaling.
++        if type(scale) != float and type(scale) != int:
++            raise RelaxNumError, ('scaling factor', scale)
++
+         # File name.
+         if type(file) != str:
+             raise RelaxStrError, ('file name', file)
+@@ -89,7 +109,7 @@
+             raise RelaxBinError, ('force flag', force)
+ 
+         # Execute the functional code.
+-        self.__relax__.generic.pdb.create_tensor_pdb(run=run, file=file, 
+dir=dir, force=force)
++        self.__relax__.generic.pdb.create_tensor_pdb(run=run, scale=scale, 
+file=file, dir=dir, force=force)
+ 
+ 
+     def read(self, run=None, file=None, dir=None, model=None, load_seq=1):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Sun Oct 29 04:00:09 2006</div>  
+</body>
+</html>

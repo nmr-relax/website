@@ -1,0 +1,187 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r15047 &#45; /branches/frame_order_testing/specific_fns/frame_order.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 07 Dec 2011 18:14:31 +0100 -->
+<!--X-Message-Id: E1RYL4h&#45;0001gD&#45;Ag@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r15047 - /branches/frame_order_testing/specific_fns/frame_order.py -- December 07, 2011 - 18:14</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r15047 - /branches/frame_order_testing/specific_fns/frame_order.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00034" class="tabs">Index by Date</a> | <a href="threads.html#00034" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00033.html">Date Prev</a>] [<a href="msg00035.html">Date Next</a>] [<a href="msg00033.html">Thread Prev</a>] [<a href="msg00035.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 07 Dec 2011 17:14:31 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00034.html">E1RYL4h-0001gD-Ag@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on December 07, 2011 - 18:14:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Dec  7 18:14:30 2011
+New Revision: 15047
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=15047&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=15047&amp;view=rev</a>
+Log:
+Created the new _pivot_fixed() method for the frame order analysis.
+
+This is to determine if the pivot point is fixed or not during optimisation.
+
+
+Modified:
+    branches/frame_order_testing/specific_fns/frame_order.py
+
+Modified: branches/frame_order_testing/specific_fns/frame_order.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_testing/specific_fns/frame_order.py?rev=15047&amp;r1=15046&amp;r2=15047&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_testing/specific_fns/frame_order.py?rev=15047&amp;r1=15046&amp;r2=15047&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_testing/specific_fns/frame_order.py (original)
++++ branches/frame_order_testing/specific_fns/frame_order.py Wed Dec  7 
+18:14:30 2011
+@@ -95,7 +95,7 @@
+         param_vect = []
+ 
+         # Pivot point.
+-        if 'pcs' in self._base_data_types():
++        if not self._pivot_fixed():
+             for i in range(3):
+                 param_vect.append(cdp.pivot[i])
+ 
+@@ -193,7 +193,7 @@
+             return scaling_matrix
+ 
+         # The pivot point.
+-        if 'pcs' in data_types:
++        if not self._pivot_fixed():
+             for i in range(3):
+                 scaling_matrix[i, i] = 1e2
+ 
+@@ -902,7 +902,7 @@
+         data_types = self._base_data_types()
+ 
+         # The pivot point.
+-        if 'pcs' in data_types:
++        if not self._pivot_fixed():
+             num += 3
+ 
+         # Average domain position parameters.
+@@ -954,6 +954,23 @@
+         # Convert to floats.
+         for i in range(3):
+             cdp.pivot[i] = float(cdp.pivot[i])
++
++
++    def _pivot_fixed(self):
++        &quot;&quot;&quot;Determine if the pivot is fixed or not.
++
++        @return:    The answer to the question.
++        @rtype:     bool
++        &quot;&quot;&quot;
++
++        # The PCS is loaded.
++        if 'pcs' in self._base_data_types():
++            # The fixed flag is not set.
++            if hasattr(cdp, 'pivot_fixed') and not cdp.pivot_fixed:
++                return False
++
++        # The point is fixed.
++        return True
+ 
+ 
+     def _ref_domain(self, ref=None):
+@@ -1064,9 +1081,9 @@
+             rdcs, rdc_err, rdc_weight, rdc_vect, rdc_const = 
+self._minimise_setup_rdcs(sim_index=sim_index)
+ 
+         # Pivot optimisation.
+-        pivot_opt = False
+-        if 'pcs' in data_types:
+-            pivot_opt = True
++        pivot_opt = True
++        if self.pivot_fixed():
++            pivot_opt = False
+ 
+         # Set up the optimisation function.
+         target = frame_order.Frame_order(model=cdp.model, 
+init_params=param_vector, full_tensors=full_tensors, 
+full_in_ref_frame=full_in_ref_frame, rdcs=rdcs, rdc_errors=rdc_err, 
+rdc_weights=rdc_weight, rdc_vect=rdc_vect, rdc_const=rdc_const, pcs=pcs, 
+pcs_errors=pcs_err, pcs_weights=pcs_weight, pcs_atoms=pcs_atoms, temp=temp, 
+frq=frq, paramag_centre=paramag_centre, scaling_matrix=scaling_matrix, 
+pivot_opt=pivot_opt)
+@@ -1110,7 +1127,7 @@
+         cdp.params = []
+ 
+         # The pivot parameters.
+-        if 'pcs' in self._base_data_types():
++        if not self.pivot_fixed():
+             cdp.params.append('pivot_x')
+             cdp.params.append('pivot_y')
+             cdp.params.append('pivot_z')
+@@ -1181,7 +1198,7 @@
+             raise RelaxNaNError('chi-squared')
+ 
+         # Pivot point.
+-        if 'pcs' in self._base_data_types():
++        if not self._pivot_fixed():
+             # Store the pivot.
+             cdp.pivot = param_vector[:3]
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Dec 07 18:20:02 2011</div>  
+</body>
+</html>

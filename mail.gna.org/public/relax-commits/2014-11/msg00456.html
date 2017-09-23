@@ -1,0 +1,153 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r26852 &#45; /trunk/specific_analyses/relax_fit/api.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Sat, 29 Nov 2014 18:58:18 +0100 -->
+<!--X-Message-Id: E1XumHi&#45;0006Zb&#45;Nj@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r26852 - /trunk/specific_analyses/relax_fit/api.py -- November 29, 2014 - 18:58</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r26852 - /trunk/specific_analyses/relax_fit/api.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00456" class="tabs">Index by Date</a> | <a href="threads.html#00456" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00455.html">Date Prev</a>] [<a href="msg00457.html">Date Next</a>] [<a href="msg00455.html">Thread Prev</a>] [<a href="msg00457.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Sat, 29 Nov 2014 17:58:18 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00456.html">E1XumHi-0006Zb-Nj@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on November 29, 2014 - 18:58:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Sat Nov 29 18:58:17 2014
+New Revision: 26852
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=26852&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=26852&amp;view=rev</a>
+Log:
+Improved the checking in the relaxation curve-fitting analysis.
+
+The new specific_analyses.relax_fit.checks.check_model_setup() function is 
+now called prior to
+minimisation and in the get_param_names() API method to prevent Python errors 
+from occurring due to
+missing data structures.  In addition, the pipe_control.mol_res_spin module 
+function
+exists_mol_res_spin_data() has been replaced with check_mol_res_spin_data().
+
+
+Modified:
+    trunk/specific_analyses/relax_fit/api.py
+
+Modified: trunk/specific_analyses/relax_fit/api.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/relax_fit/api.py?rev=26852&amp;r1=26851&amp;r2=26852&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/relax_fit/api.py?rev=26852&amp;r1=26851&amp;r2=26852&amp;view=diff</a>
+==============================================================================
+--- trunk/specific_analyses/relax_fit/api.py    (original)
++++ trunk/specific_analyses/relax_fit/api.py    Sat Nov 29 18:58:17 2014
+@@ -37,9 +37,10 @@
+ from lib.errors import RelaxError, RelaxNoModelError, RelaxNoSequenceError
+ from lib.text.sectioning import subsection
+ from lib.warnings import RelaxDeselectWarning
+-from pipe_control.mol_res_spin import exists_mol_res_spin_data, return_spin, 
+spin_loop
++from pipe_control.mol_res_spin import check_mol_res_spin_data, return_spin, 
+spin_loop
+ from specific_analyses.api_base import API_base
+ from specific_analyses.api_common import API_common
++from specific_analyses.relax_fit.checks import check_model_setup
+ from specific_analyses.relax_fit.optimisation import back_calc
+ from specific_analyses.relax_fit.parameter_object import Relax_fit_params
+ from specific_analyses.relax_fit.parameters import assemble_param_vector, 
+disassemble_param_vector, linear_constraints
+@@ -214,6 +215,9 @@
+         @return:                The vector of parameter names.
+         @rtype:                 list of str
+         &quot;&quot;&quot;
++
++        # Check that the model is setup.
++        check_model_setup()
+ 
+         # Unpack the data.
+         spin, spin_id = model_info
+@@ -292,9 +296,8 @@
+         @type inc:                  list of lists of int
+         &quot;&quot;&quot;
+ 
+-        # Test if sequence data is loaded.
+-        if not exists_mol_res_spin_data():
+-            raise RelaxNoSequenceError
++        # Checks.
++        check_mol_res_spin_data()
+ 
+         # Loop over the sequence.
+         model_index = 0
+@@ -474,9 +477,9 @@
+         if verbose:
+             print(&quot;\nOver-fit spin deselection:&quot;)
+ 
+-        # Test the sequence data exists.
+-        if not exists_mol_res_spin_data():
+-            raise RelaxNoSequenceError
++        # Checks.
++        check_mol_res_spin_data()
++        check_model_setup()
+ 
+         # Loop over spin data.
+         deselect_flag = False
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Sat Nov 29 19:20:03 2014</div>  
+</body>
+</html>

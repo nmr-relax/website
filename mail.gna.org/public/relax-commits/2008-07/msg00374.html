@@ -1,0 +1,143 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r6979 &#45; /branches/rdc_analysis/maths_fns/n_state_model.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 25 Jul 2008 14:12:22 +0200 -->
+<!--X-Message-Id: E1KMM9m&#45;0005tY&#45;Cy@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r6979 - /branches/rdc_analysis/maths_fns/n_state_model.py -- July 25, 2008 - 14:12</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r6979 - /branches/rdc_analysis/maths_fns/n_state_model.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00374" class="tabs">Index by Date</a> | <a href="threads.html#00374" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00373.html">Date Prev</a>] [<a href="msg00375.html">Date Next</a>] [<a href="msg00373.html">Thread Prev</a>] [<a href="msg00375.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 25 Jul 2008 12:12:22 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00374.html">E1KMM9m-0005tY-Cy@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on July 25, 2008 - 14:12:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Jul 25 14:12:21 2008
+New Revision: 6979
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=6979&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=6979&amp;view=rev</a>
+Log:
+Created the pc partial derivative part of the RDC gradient.
+
+
+Modified:
+    branches/rdc_analysis/maths_fns/n_state_model.py
+
+Modified: branches/rdc_analysis/maths_fns/n_state_model.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/rdc_analysis/maths_fns/n_state_model.py?rev=6979&amp;r1=6978&amp;r2=6979&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/rdc_analysis/maths_fns/n_state_model.py?rev=6979&amp;r1=6978&amp;r2=6979&amp;view=diff</a>
+==============================================================================
+--- branches/rdc_analysis/maths_fns/n_state_model.py (original)
++++ branches/rdc_analysis/maths_fns/n_state_model.py Fri Jul 25 14:12:21 2008
+@@ -27,7 +27,7 @@
+ # relax module imports.
+ from alignment_tensor import dAi_dAxx, dAi_dAyy, dAi_dAxy, dAi_dAxz, 
+dAi_dAyz, to_tensor
+ from chi2 import chi2, dchi2_element, d2chi2_element
+-from rdc import ave_rdc_tensor, ave_rdc_tensor_dDij_dAmn
++from rdc import ave_rdc_tensor, ave_rdc_tensor_dDij_dAmn, rdc_tensor
+ from rotation_matrix import R_euler_zyz
+ 
+ 
+@@ -509,7 +509,6 @@
+         @rtype:         numpy rank-1 array
+         &quot;&quot;&quot;
+ 
+-        print &quot;\nGrad call&quot;
+         # Scaling.
+         if self.scaling_flag:
+             params = dot(params, self.scaling_matrix)
+@@ -529,7 +528,21 @@
+                 self.dDij_theta[i*5+3, i, j] = 
+ave_rdc_tensor_dDij_dAmn(self.dip_const[j], self.mu[j], self.N, self.dA[3], 
+weights=self.probs)
+                 self.dDij_theta[i*5+4, i, j] = 
+ave_rdc_tensor_dDij_dAmn(self.dip_const[j], self.mu[j], self.N, self.dA[4], 
+weights=self.probs)
+ 
+-        print self.dDij_theta
++            # Construct the pc partial derivative part of the RDC gradient, 
+looping over each state.
++            for c in xrange(self.N - 1):
++                # Index in the parameter array.
++                param_index = self.num_align_params + c
++
++                # Loop over the spins.
++                for j in xrange(self.num_spins):
++                    # Calculate the RDC for state c (this is the pc partial 
+derivative).
++                    self.dDij_theta[param_index, i, j] = 
+rdc_tensor(self.dip_const[j], self.mu[j, c], self.A[i])
++
++        # Debugging print out.
++        for k in xrange(self.total_num_params):
++            print &quot;\nParam: &quot; + `k`
++            print self.dDij_theta[k]
++
+         # Diagonal scaling.
+         if self.scaling_flag:
+             self.dchi2 = dot(self.dchi2, self.scaling_matrix)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Jul 25 14:20:10 2008</div>  
+</body>
+</html>

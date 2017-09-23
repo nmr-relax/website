@@ -1,0 +1,261 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: Re: r13165 &#45; in /branches/xyz: data/mol_res_spin.py	generic_fns/structure/main.py -->
+<!--X-From-R13: "Sqjneq q'Ohiretar" <rqjneqNaze&#45;erynk.pbz> -->
+<!--X-Date: Wed, 22 Jun 2011 17:51:30 +0200 -->
+<!--X-Message-Id: BANLkTinmry3AC7nJpN9QOc_VEgKZw6S0gQ@mail.gmail.com -->
+<!--X-Content-Type: text/plain -->
+<!--X-Reference: E1QZP57&#45;00019c&#45;WB@subversion.gna.org -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>Re: r13165 - in /branches/xyz: data/mol_res_spin.py	generic_fns/structure/main.py -- June 22, 2011 - 17:51</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />Re: r13165 - in /branches/xyz: data/mol_res_spin.py	generic_fns/structure/main.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00226" class="tabs">Index by Date</a> | <a href="threads.html#00226" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00225.html">Date Prev</a>] [<a href="msg00227.html">Date Next</a>] [<a href="msg00224.html">Thread Prev</a>] [<a href="msg00227.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-devel@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 22 Jun 2011 17:50:58 +0200</li>
+<li class="menuitem">
+<em>Dkim-signature</em>: v=1; a=rsa-sha256; c=relaxed/relaxed; d=gmail.com; s=gamma;	h=domainkey-signature:mime-version:sender:in-reply-to:references:date	:x-google-sender-auth:message-id:subject:from:to:content-type	:content-transfer-encoding;	bh=GLg6/x3DDYa9xz9iAHX6ZlTvArzo0kC6m26m726vzxo=;	b=cGWgD1b/8JH5nHqvNb/A25ifhzlzGqw8I3ahaKXnyR8ieoCvS4KuN1HknsoH1y/uBp	SNGB9ZB7zFKvl/SO4Tw6GBG4xOmOBCt/dqurU9ZXWDdM5K2rU057CzefctwKWVpX50Zw	UAFVPfOZQj/ifa+WxxHN2WoAhkhO8ayZamfwY=</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00226.html">BANLkTinmry3AC7nJpN9QOc_VEgKZw6S0gQ@mail.gmail.com</a>&gt;</li>
+<li class="menuitem">
+<em>References</em>: &lt;E1QZP57-00019c-WB@xxxxxxxxxxxxxxxxxx&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>Edward d'Auvergne</strong> on June 22, 2011 - 17:51:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Hi,
+
+I would suggest we do this a bit differently.  This change could break
+other parts of relax, and the issue is simply in the
+generic_fns.structure.main.load_spins() function.  This function is
+not very well designed.  What needs to be done is to have a similar
+check as was done with the molecule:
+
+        # Get the molecule container corresponding to the molecule name.
+        mol_cont = None
+        if mol_name:
+            # Update the ID string.
+            id = id + '#' + mol_name
+
+            # The container.
+            mol_cont = return_molecule(id)
+
+This is the idea for the residue container as well.  Then the unnamed
+residue container will be returned, and again similar checks to
+rename/renumber it can be performed as in the molecule container case:
+
+        # Add the molecule if it doesn't exist.
+        if mol_cont == None:
+            # Get the unnamed molecule, assuming there is only one.
+            mol_cont = return_molecule()
+
+            # Got something!
+            if mol_cont != None:
+                # Rename the molecule container if the mol name is
+given and the sole container is unnamed.
+                if mol_cont.name == None and mol_name:
+                    # Print out.
+                    print((&quot;Renaming the unnamed sole molecule
+container to '%s'.&quot; % mol_name))
+
+                    # Set the name.
+                    mol_cont.name = mol_name
+
+            # Nothing exists yet.
+            else:
+                # Add the molecule.
+                cdp.mol.add_item(mol_name=mol_name)
+
+                # Get the container.
+                mol_cont = cdp.mol[-1]
+
+
+The same idea can be applied to the residue container.  Note that in
+relax, the spin data is structured as mol-res-spin.  If there is no
+residues, then all the spins will be in the first residue container
+which has no name or number.  I have noticed that some organic
+molecules in certain 3D structure formats are defined as having
+different residues for different parts of the molecule.  So in most
+cases, organic molecules will have no residues and fit into the
+undefined residue container, but sometimes also be spread across a
+number of residue containers.  In the XYZ structure file as there are
+no residues, all spins will be in this initial unnamed and unnumbered
+residue container.
+
+If you would like to try redesigning load_spins() rather than this
+modification, you will first need to revert this change.  You can do
+that by typing:
+
+$ svn merge -r13165:13164 .
+
+This needs to be done on a clean copy of the branch (svn st shows
+nothing changed), and then you commit the change.  See
+<a  rel="nofollow" href="https://mail.gna.org/public/relax-commits/2011-01/msg00329.html">https://mail.gna.org/public/relax-commits/2011-01/msg00329.html</a> for an
+example commit message (it only goes up to the 'Modified' line).  Note
+the repetition of the 'svn merge' command.  This is important to be
+sure that the correct revision has been reverted.
+
+Cheers,
+
+Edward
+
+
+
+
+
+On 22 June 2011 17:11,  &lt;hasu@xxxxxxxxxxxxxxxxx&gt; wrote:
+</pre><blockquote class="blockquote"><pre style="margin: 0em;">Author: han87
+Date: Wed Jun 22 17:11:05 2011
+New Revision: 13165
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=13165&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=13165&amp;view=rev</a>
+Log:
+Debugging the user function load_spins() and add_item().
+
+In the function load_spins() in generic_fns/structure/main.py a parameter 
+'res_num_exist' was added to check whether in the structural data the 
+residue number exists or not. Normally in the pdb file there is a residue 
+number and in the xyz file not. And then this parameter was used as a flag 
+in the add_item() to avoid the Error message 'RelaxError(&quot;The residue 
+number '&quot; + repr(res_num) + &quot;' already exists in the sequence.&quot;)' in case 
+for xyz file when residue number does not exist.
+
+Modified:
+   branches/xyz/data/mol_res_spin.py
+   branches/xyz/generic_fns/structure/main.py
+
+Modified: branches/xyz/data/mol_res_spin.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/xyz/data/mol_res_spin.py?rev=13165&amp;r1=13164&amp;r2=13165&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/xyz/data/mol_res_spin.py?rev=13165&amp;r1=13164&amp;r2=13165&amp;view=diff</a>
+==============================================================================
+--- branches/xyz/data/mol_res_spin.py (original)
++++ branches/xyz/data/mol_res_spin.py Wed Jun 22 17:11:05 2011
+@@ -458,7 +458,7 @@
+        return text
+
+
+-    def add_item(self, res_name=None, res_num=None):
++    def add_item(self, res_name=None, res_num=None, res_num_exist=None):
+        &quot;&quot;&quot;Append an empty ResidueContainer to the ResidueList.&quot;&quot;&quot;
+
+        # If no residue data exists, replace the empty first residue with 
+this residue.
+@@ -478,7 +478,8 @@
+                # No residue numbers.
+                else:
+                    if self[i].name == res_name:
+-                        raise RelaxError(&quot;The unnumbered residue name '&quot; + 
+repr(res_name) + &quot;' already exists.&quot;)
++                        if res_num_exist==False:
++                            raise RelaxError(&quot;The unnumbered residue name 
+'&quot; + repr(res_name) + &quot;' already exists.&quot;)
+
+            # Append a new ResidueContainer.
+            self.append(ResidueContainer(res_name, res_num))
+
+Modified: branches/xyz/generic_fns/structure/main.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/xyz/generic_fns/structure/main.py?rev=13165&amp;r1=13164&amp;r2=13165&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/xyz/generic_fns/structure/main.py?rev=13165&amp;r1=13164&amp;r2=13165&amp;view=diff</a>
+==============================================================================
+--- branches/xyz/generic_fns/structure/main.py (original)
++++ branches/xyz/generic_fns/structure/main.py Wed Jun 22 17:11:05 2011
+@@ -175,6 +175,7 @@
+    res_names = []
+    spin_nums = []
+    spin_names = []
++    res_num_exist = False
+
+    # Loop over all atoms of the spin_id selection.
+    model_index = -1
+@@ -185,6 +186,10 @@
+            model_index = model_index + 1
+            last_model = model_num
+
++        # Check whether the res_num exists
++        if not res_num:
++            res_num_exist = True
++
+        # Remove the '+' regular expression character from the mol, res, 
+and spin names!
+        if mol_name and search('\+', mol_name):
+            mol_name = replace(mol_name, '+', '')
+@@ -237,7 +242,7 @@
+        # Add the residue if it doesn't exist.
+        if res_cont == None:
+            # Add the residue.
+-            mol_cont.res.add_item(res_name=res_name, res_num=res_num)
++            mol_cont.res.add_item(res_name=res_name, res_num=res_num, 
+res_num_exist=res_num_exist)
+
+            # Get the container.
+            res_cont = mol_cont.res[-1]
+
+
+_______________________________________________
+relax (<a  rel="nofollow" href="http://nmr-relax.com">http://nmr-relax.com</a>)
+
+This is the relax-commits mailing list
+relax-commits@xxxxxxx
+
+To unsubscribe from this list, get a password
+reminder, or change your subscription options,
+visit the list information page at
+<a  rel="nofollow" href="https://mail.gna.org/listinfo/relax-commits">https://mail.gna.org/listinfo/relax-commits</a>
+
+</pre></blockquote><pre style="margin: 0em;">
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Jun 22 18:00:15 2011</div>  
+</body>
+</html>

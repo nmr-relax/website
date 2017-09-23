@@ -1,0 +1,215 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r16909 &#45; /trunk/generic_fns/mol_res_spin.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 14 Jun 2012 14:54:56 +0200 -->
+<!--X-Message-Id: E1Sf9Zg&#45;0001be&#45;O7@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r16909 - /trunk/generic_fns/mol_res_spin.py -- June 14, 2012 - 14:54</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r16909 - /trunk/generic_fns/mol_res_spin.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00354" class="tabs">Index by Date</a> | <a href="threads.html#00354" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00353.html">Date Prev</a>] [<a href="msg00355.html">Date Next</a>] [<a href="msg00353.html">Thread Prev</a>] [<a href="msg00355.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 14 Jun 2012 12:54:56 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00354.html">E1Sf9Zg-0001be-O7@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on June 14, 2012 - 14:54:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Jun 14 14:54:56 2012
+New Revision: 16909
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=16909&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=16909&amp;view=rev</a>
+Log:
+Started to fill up the spin ID look up table.
+
+The index_molecule() and index_residue() functions have been added to 
+determine the MoleculeList and
+ResidueList indices of given molecules and residues.  These are used by the 
+create_spin for
+efficiency and to allow the indices (together with the spin index and spin ID 
+string) to be
+assembled into the look up table.  This table is not used anywhere yet.
+
+
+Modified:
+    trunk/generic_fns/mol_res_spin.py
+
+Modified: trunk/generic_fns/mol_res_spin.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/generic_fns/mol_res_spin.py?rev=16909&amp;r1=16908&amp;r2=16909&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/generic_fns/mol_res_spin.py?rev=16909&amp;r1=16908&amp;r2=16909&amp;view=diff</a>
+==============================================================================
+--- trunk/generic_fns/mol_res_spin.py (original)
++++ trunk/generic_fns/mol_res_spin.py Thu Jun 14 14:54:56 2012
+@@ -1150,12 +1150,20 @@
+     # Acquire the spin lock (data modifying function), and make sure it is 
+finally released.
+     status.spin_lock.acquire(sys._getframe().f_code.co_name)
+     try:
+-        # Create the molecule and residue if they do not exist.
+-        if not return_molecule(generate_spin_id(mol_name=mol_name)):
++        # Create the molecule if it does not exist.
++        mol_index = index_molecule(mol_name)
++        if mol_index == None:
+             create_molecule(mol_name=mol_name)
+-        res_cont = return_residue(generate_spin_id(mol_name=mol_name, 
+res_num=res_num, res_name=res_name))
+-        if res_cont == None:
+-            res_cont = create_residue(mol_name=mol_name, res_num=res_num, 
+res_name=res_name)
++            mol_index = len(cdp.mol) - 1
++
++        # Create the residue if it does not exist.
++        res_index = index_residue(res_num=res_num, res_name=res_name, 
+mol_index=mol_index)
++        if res_index == None:
++            create_residue(mol_name=mol_name, res_num=res_num, 
+res_name=res_name)
++            res_index = len(cdp.mol[mol_index].res) - 1
++
++        # Alias the residue.
++        res_cont = cdp.mol[mol_index].res[res_index]
+ 
+         # Rename the spin, if only a single one exists and it is empty.
+         if len(res_cont.spin) == 1 and res_cont.spin[0].is_empty():
+@@ -1167,6 +1175,13 @@
+         else:
+             res_cont.spin.add_item(spin_num=spin_num, spin_name=spin_name)
+             spin_cont = res_cont.spin[-1]
++
++        # The spin index and id.
++        spin_index = len(res_cont.spin) - 1
++        spin_id = generate_spin_id(mol_name=mol_name, res_num=res_num, 
+res_name=res_name, spin_num=spin_num, spin_name=spin_name)
++
++        # Add the spin ID and indices to the lookup table.
++        cdp.mol.lookup_table[spin_id] = [mol_index, res_index, spin_index]
+ 
+     # Release the lock.
+     finally:
+@@ -1706,6 +1721,64 @@
+ 
+     # Return the IDs.
+     return spin_ids
++
++
++def index_molecule(mol_name=None):
++    &quot;&quot;&quot;Return the index of the molecule of the given name.
++
++    @keyword mol_name:  The name of the molecule.
++    @type mol_name:     str
++    @return:            The index of the molecule, if it exists.
++    @rtype:             int or None
++    &quot;&quot;&quot;
++
++    # Loop over the molecules.
++    i = 0
++    for mol in cdp.mol:
++        # A match.
++        if mol.name == mol_name:
++            return i
++
++        # Increment the index.
++        i += 1
++
++    # Nothing found.
++    return None
++
++
++def index_residue(res_num=None, res_name=None, mol_index=None):
++    &quot;&quot;&quot;Return the index of the residue.
++
++    @keyword res_num:   The number of the residue.
++    @type res_num:      int
++    @keyword res_name:  The name of the residue.
++    @type res_name:     str
++    @keyword mol_index: The index of the molecule.
++    @type mol_index:    str
++    @return:            The index of the residue, if it exists.
++    @rtype:             int or None
++    &quot;&quot;&quot;
++
++    # Single unnamed residue.
++    if len(cdp.mol[mol_index].res) == 1 and res_num == 
+cdp.mol[mol_index].res[0].num and res_name == cdp.mol[mol_index].res[0].name:
++        return 0
++
++    # Loop over the residues.
++    i = 0
++    for res in cdp.mol[mol_index].res:
++        # A unique number match.
++        if res_num != None and res.num == res_num:
++            return i
++
++        # Match names, if no number is given.
++        if res_num == None and res_name != None and res.name == res_name:
++            return i
++
++        # Increment the index.
++        i += 1
++
++    # Nothing found.
++    return None
+ 
+ 
+ def last_residue_num(selection=None):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Jun 14 16:00:02 2012</div>  
+</body>
+</html>

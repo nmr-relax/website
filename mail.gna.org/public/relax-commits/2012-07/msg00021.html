@@ -1,0 +1,255 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r17135 &#45; in /branches/interatomic: generic_fns/bmrb.py	generic_fns/relax_data.py specific_fns/model_free/bmrb.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 02 Jul 2012 19:59:33 +0200 -->
+<!--X-Message-Id: E1SlkuL&#45;0006FU&#45;1N@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r17135 - in /branches/interatomic: generic_fns/bmrb.py	generic_fns/relax_data.py specific_fns/model_free/bmrb.py -- July 02, 2012 - 19:59</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r17135 - in /branches/interatomic: generic_fns/bmrb.py	generic_fns/relax_data.py specific_fns/model_free/bmrb.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00021" class="tabs">Index by Date</a> | <a href="threads.html#00021" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00020.html">Date Prev</a>] [<a href="msg00022.html">Date Next</a>] [<a href="msg00020.html">Thread Prev</a>] [<a href="msg00022.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 02 Jul 2012 17:59:32 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00021.html">E1SlkuL-0006FU-1N@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on July 02, 2012 - 19:59:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Mon Jul  2 19:59:32 2012
+New Revision: 17135
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=17135&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=17135&amp;view=rev</a>
+Log:
+More BMRB fixes for the interatomic data design.
+
+
+Modified:
+    branches/interatomic/generic_fns/bmrb.py
+    branches/interatomic/generic_fns/relax_data.py
+    branches/interatomic/specific_fns/model_free/bmrb.py
+
+Modified: branches/interatomic/generic_fns/bmrb.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/interatomic/generic_fns/bmrb.py?rev=17135&amp;r1=17134&amp;r2=17135&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/interatomic/generic_fns/bmrb.py?rev=17135&amp;r1=17134&amp;r2=17135&amp;view=diff</a>
+==============================================================================
+--- branches/interatomic/generic_fns/bmrb.py (original)
++++ branches/interatomic/generic_fns/bmrb.py Mon Jul  2 19:59:32 2012
+@@ -32,7 +32,7 @@
+ from data.exp_info import ExpInfo
+ import dep_check
+ from generic_fns import exp_info
+-from generic_fns.mol_res_spin import create_spin, generate_spin_id, 
+return_residue, return_spin
++from generic_fns.mol_res_spin import create_spin, generate_spin_id, 
+return_residue, return_spin, set_spin_element, set_spin_isotope
+ from generic_fns.pipes import cdp_name
+ from info import Info_box
+ from relax_errors import RelaxError, RelaxFileError, 
+RelaxFileOverwriteError, RelaxNoModuleInstallError, RelaxNoPipeError
+@@ -53,7 +53,7 @@
+     write(file=sys.stdout, version=version)
+ 
+ 
+-def generate_sequence(N=0, spin_ids=None, spin_nums=None, spin_names=None, 
+res_nums=None, res_names=None, mol_names=None):
++def generate_sequence(N=0, spin_ids=None, spin_nums=None, spin_names=None, 
+res_nums=None, res_names=None, mol_names=None, isotopes=None, elements=None):
+     &quot;&quot;&quot;Generate the sequence data from the BRMB information.
+ 
+     @keyword N:             The number of spins.
+@@ -70,6 +70,10 @@
+     @type res_names:        list of str or None
+     @keyword mol_names:     The list of molecule names.
+     @type mol_names:        list of str or None
++    @keyword isotopes:      The optional list of isotope types.
++    @type isotopes:         list of str or None
++    @keyword elements:      The optional list of element types.
++    @type elements:         list of str or None
+     &quot;&quot;&quot;
+ 
+     # The blank data.
+@@ -97,7 +101,15 @@
+             continue
+ 
+         # Create the spin.
+-        create_spin(spin_num=spin_nums[i], spin_name=spin_names[i], 
+res_num=res_nums[i], res_name=res_names[i], mol_name=mol_names[i])
++        spin = create_spin(spin_num=spin_nums[i], spin_name=spin_names[i], 
+res_num=res_nums[i], res_name=res_names[i], mol_name=mol_names[i])
++
++        # Set the spin isotope and element.
++        spin_id = spin._spin_ids[0]
++        if elements:
++            set_spin_element(spin_id=spin_id, element=elements[i], 
+force=True)
++        if isotopes and elements:
++            isotope = &quot;%s%s&quot; % (isotopes[i], elements[i])
++            set_spin_isotope(spin_id=spin_id, isotope=isotope, force=True)
+ 
+ 
+ def list_sample_conditions(star):
+
+Modified: branches/interatomic/generic_fns/relax_data.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/interatomic/generic_fns/relax_data.py?rev=17135&amp;r1=17134&amp;r2=17135&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/interatomic/generic_fns/relax_data.py?rev=17135&amp;r1=17134&amp;r2=17135&amp;view=diff</a>
+==============================================================================
+--- branches/interatomic/generic_fns/relax_data.py (original)
++++ branches/interatomic/generic_fns/relax_data.py Mon Jul  2 19:59:32 2012
+@@ -34,7 +34,7 @@
+ # relax module imports.
+ from data import Relax_data_store; ds = Relax_data_store()
+ from data.exp_info import ExpInfo
+-from generic_fns import bmrb
++from generic_fns import bmrb, dipole_pair
+ from generic_fns.interatomic import create_interatom, return_interatom, 
+return_interatom_list
+ from generic_fns.mol_res_spin import Selection, create_spin, 
+exists_mol_res_spin_data, find_index, generate_spin_id, get_molecule_names, 
+return_spin, return_spin_from_selection, spin_index_loop, spin_loop
+ from generic_fns import pipes
+@@ -175,7 +175,25 @@
+         mol_names = bmrb.molecule_names(data, N)
+ 
+         # Generate the sequence if needed.
+-        bmrb.generate_sequence(N, spin_names=data['atom_names'], 
+res_nums=data['res_nums'], res_names=data['res_names'], mol_names=mol_names)
++        bmrb.generate_sequence(N, spin_names=data['atom_names'], 
+res_nums=data['res_nums'], res_names=data['res_names'], mol_names=mol_names, 
+isotopes=data['isotope'], elements=data['atom_types'])
++
++        # The attached protons.
++        if data.has_key('atom_names_2'):
++            # Generate the proton spins.
++            bmrb.generate_sequence(N, spin_names=data['atom_names_2'], 
+res_nums=data['res_nums'], res_names=data['res_names'], mol_names=mol_names, 
+isotopes=data['isotope_2'], elements=data['atom_types_2'])
++
++            # Define the dipolar interaction.
++            for i in range(len(data['atom_names'])):
++                # The spin IDs.
++                spin_id1 = generate_spin_id(spin_name=data['atom_names'][i], 
+res_num=data['res_nums'][i], res_name=data['res_names'][i], 
+mol_name=mol_names[i])
++                spin_id2 = 
+generate_spin_id(spin_name=data['atom_names_2'][i], 
+res_num=data['res_nums'][i], res_name=data['res_names'][i], 
+mol_name=mol_names[i])
++
++                # Check if the container exists.
++                if return_interatom(spin_id1=spin_id1, spin_id2=spin_id2):
++                    continue
++
++                # Define.
++                dipole_pair.define(spin_id1=spin_id1, spin_id2=spin_id2, 
+verbose=False)
+ 
+         # The data and error.
+         vals = data['data']
+@@ -212,7 +230,7 @@
+                         errors[i] = errors[i] * vals[i]**2
+ 
+         # Pack the data.
+-        pack_data(ri_id, ri_type, frq, vals, errors, mol_names=mol_names, 
+res_nums=data['res_nums'], res_names=data['res_names'], spin_nums=None, 
+spin_names=data['atom_names'], gen_seq=True)
++        pack_data(ri_id, ri_type, frq, vals, errors, mol_names=mol_names, 
+res_nums=data['res_nums'], res_names=data['res_names'], spin_nums=None, 
+spin_names=data['atom_names'], gen_seq=True, verbose=False)
+ 
+         # Store the temperature calibration and control.
+         if data['temp_calibration']:
+
+Modified: branches/interatomic/specific_fns/model_free/bmrb.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/interatomic/specific_fns/model_free/bmrb.py?rev=17135&amp;r1=17134&amp;r2=17135&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/interatomic/specific_fns/model_free/bmrb.py?rev=17135&amp;r1=17134&amp;r2=17135&amp;view=diff</a>
+==============================================================================
+--- branches/interatomic/specific_fns/model_free/bmrb.py (original)
++++ branches/interatomic/specific_fns/model_free/bmrb.py Mon Jul  2 19:59:32 
+2012
+@@ -440,7 +440,7 @@
+         # Store the spin specific data in lists for later use.
+         for spin, mol_name, res_num, res_name, spin_id in 
+spin_loop(full_info=True, return_id=True):
+             # Skip the protons.
+-            if spin.name == 'H':
++            if spin.name == 'H' or (hasattr(spin, 'element') and 
+spin.element == 'H'):
+                 warn(RelaxWarning(&quot;Skipping the proton spin '%s'.&quot; % 
+spin_id))
+                 continue
+ 
+@@ -451,7 +451,7 @@
+                 raise RelaxError(&quot;For the BMRB, the residue of spin '%s' 
+must be named.&quot; % spin_id)
+             if spin.name == None:
+                 raise RelaxError(&quot;For the BMRB, the spin '%s' must be 
+named.&quot; % spin_id)
+-            if spin.isotope == None:
++            if not hasattr(spin, 'isotope') or spin.isotope == None:
+                 raise RelaxError(&quot;For the BMRB, the spin isotope type of 
+'%s' must be specified.&quot; % spin_id)
+             if not hasattr(spin, 'element') or spin.element == None:
+                 raise RelaxError(&quot;For the BMRB, the spin element type of 
+'%s' must be specified.  Please use the spin user function for setting the 
+element type.&quot; % spin_id)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Jul 02 20:40:01 2012</div>  
+</body>
+</html>

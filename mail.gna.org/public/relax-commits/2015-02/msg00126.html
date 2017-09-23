@@ -1,0 +1,151 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r27561 &#45; /trunk/specific_analyses/n_state_model/data.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 05 Feb 2015 18:47:41 +0100 -->
+<!--X-Message-Id: E1YJQWj&#45;0006cB&#45;Mf@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r27561 - /trunk/specific_analyses/n_state_model/data.py -- February 05, 2015 - 18:47</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r27561 - /trunk/specific_analyses/n_state_model/data.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00126" class="tabs">Index by Date</a> | <a href="threads.html#00126" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00125.html">Date Prev</a>] [<a href="msg00127.html">Date Next</a>] [<a href="msg00125.html">Thread Prev</a>] [<a href="msg00127.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 05 Feb 2015 17:47:41 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00126.html">E1YJQWj-0006cB-Mf@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on February 05, 2015 - 18:47:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Feb  5 18:47:41 2015
+New Revision: 27561
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=27561&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=27561&amp;view=rev</a>
+Log:
+Big bug fix for the N-state model num_data_points() function.
+
+This is from the specific_analyses.n_state_model.data module.  This code was 
+very much out of date.
+It was expecting an ancient behaviour where the spin container 'pcs' variable 
+and interatomic data
+container 'rdc' where lists of floats.  However these were converted many 
+years ago to dictionaries
+with keys set to the alignment IDs.  The result was that no RDCs nor PCSs 
+were counted as a base
+data point, so the function would in most cases return a value of zero.
+
+
+Modified:
+    trunk/specific_analyses/n_state_model/data.py
+
+Modified: trunk/specific_analyses/n_state_model/data.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/n_state_model/data.py?rev=27561&amp;r1=27560&amp;r2=27561&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/n_state_model/data.py?rev=27561&amp;r1=27560&amp;r2=27561&amp;view=diff</a>
+==============================================================================
+--- trunk/specific_analyses/n_state_model/data.py       (original)
++++ trunk/specific_analyses/n_state_model/data.py       Thu Feb  5 18:47:41 
+2015
+@@ -1,6 +1,6 @@
+ 
+###############################################################################
+ #                                                                            
+ #
+-# Copyright (C) 2007-2014 Edward d'Auvergne                                  
+ #
++# Copyright (C) 2007-2015 Edward d'Auvergne                                  
+ #
+ #                                                                            
+ #
+ # This file is part of the program relax (<a  rel="nofollow" href="http://www.nmr-relax.com">http://www.nmr-relax.com</a>).         
+ #
+ #                                                                            
+ #
+@@ -26,6 +26,7 @@
+ from numpy.linalg import norm
+ 
+ # relax module imports.
++from lib.check_types import is_float
+ from lib.errors import RelaxError
+ from pipe_control.interatomic import interatomic_loop
+ from pipe_control.mol_res_spin import return_spin, spin_loop
+@@ -145,8 +146,8 @@
+         # PCS data (skipping array elements set to None).
+         if 'pcs' in data_types:
+             if hasattr(spin, 'pcs'):
+-                for pcs in spin.pcs:
+-                    if isinstance(pcs, float):
++                for id in spin.pcs:
++                    if is_float(spin.pcs[id]):
+                         n = n + 1
+ 
+     # Interatomic data loop.
+@@ -154,8 +155,8 @@
+         # RDC data (skipping array elements set to None).
+         if 'rdc' in data_types:
+             if hasattr(interatom, 'rdc'):
+-                for rdc in interatom.rdc:
+-                    if isinstance(rdc, float):
++                for id in interatom.rdc:
++                    if is_float(interatom.rdc[id]):
+                         n = n + 1
+ 
+     # Alignment tensors.
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Feb 05 19:00:02 2015</div>  
+</body>
+</html>

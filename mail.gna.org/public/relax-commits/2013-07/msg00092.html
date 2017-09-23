@@ -1,0 +1,165 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r20350 &#45; /trunk/devel_scripts/wiki_ftpdump.sh -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 17 Jul 2013 13:58:11 +0200 -->
+<!--X-Message-Id: E1UzQN1&#45;0000du&#45;HL@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r20350 - /trunk/devel_scripts/wiki_ftpdump.sh -- July 17, 2013 - 13:58</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r20350 - /trunk/devel_scripts/wiki_ftpdump.sh</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00092" class="tabs">Index by Date</a> | <a href="threads.html#00092" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00091.html">Date Prev</a>] [<a href="msg00093.html">Date Next</a>] [<a href="msg00091.html">Thread Prev</a>] [<a href="msg00093.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 17 Jul 2013 11:58:11 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00092.html">E1UzQN1-0000du-HL@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on July 17, 2013 - 13:58:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Jul 17 13:58:11 2013
+New Revision: 20350
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=20350&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=20350&amp;view=rev</a>
+Log:
+Added the script from Troels Linnet for backing up the relax wiki via FTP.
+
+This is from the post 
+<a  rel="nofollow" href="http://article.gmane.org/gmane.science.nmr.relax.devel/4168">http://article.gmane.org/gmane.science.nmr.relax.devel/4168</a>.
+
+
+Added:
+    trunk/devel_scripts/wiki_ftpdump.sh   (with props)
+
+Added: trunk/devel_scripts/wiki_ftpdump.sh
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/devel_scripts/wiki_ftpdump.sh?rev=20350&amp;view=auto">http://svn.gna.org/viewcvs/relax/trunk/devel_scripts/wiki_ftpdump.sh?rev=20350&amp;view=auto</a>
+==============================================================================
+--- trunk/devel_scripts/wiki_ftpdump.sh (added)
++++ trunk/devel_scripts/wiki_ftpdump.sh Wed Jul 17 13:58:11 2013
+@@ -1,0 +1,55 @@
++#!/bin/bash
++# -*- coding: UTF-8 -*-
++# Script for dumping ftp server automatically using cron.
++
++# exec test
++exec_test () {
++[ $? -eq 0 ] &amp;&amp; echo &quot;-- Command successfully executed&quot; || echo &quot;-- Command 
+failed; exit 1&quot;
++}
++
++# Filenames
++dbhost=&quot;web3.gigahost.dk&quot;
++# The following two fields are kept secret, to prevent abuse.
++# Please contact Troels Linnet at: tlinnet _at_ gmail dot com, for access.
++dbuser=&quot;secret&quot;
++dbpwd=&quot;secret&quot;
++
++mydate=`date '+%Y%m%d_%H%M'`
++mytime=`date '+%T %Y%m%d'`
++backupfolder=&quot;${HOME}/backup/ftpdump&quot;
++backupfoldermirror=&quot;${backupfolder}/mirror&quot;
++backupfoldercurrent=&quot;${backupfolder}/current&quot;
++mkdir -p $backupfolder $backupfoldermirror $backupfoldercurrent
++
++# Logging
++exec 3&gt;&amp;1 4&gt;&amp;2
++trap 'exec 2&gt;&amp;4 1&gt;&amp;3' 0 1 2 3
++exec 1&gt;&gt;${backupfolder}/ftpdump.log 2&gt;&amp;1
++# Everything below will go to the log file
++
++dump_base () {
++echo &quot;###########################&quot;
++echo &quot;STARTING on: $mytime&quot;
++echo &quot;Mirror syncing...&quot;
++cd $backupfoldermirror
++lftp -e &quot;open <a  rel="nofollow" href="ftp://${dbuser}:${dbpwd}@${dbhost}">ftp://${dbuser}:${dbpwd}@${dbhost}</a> &amp;&amp; mirror --no-perms 
+--exclude-glob backup_scripts/ --exclude-glob cache/ --exclude-glob 
+LocalSettings.php --parallel=10 &amp;&amp; bye&quot;
++}
++
++compress_base () {
++echo &quot;Compressing current...&quot;
++DIFF=`diff -q -r $backupfoldermirror $backupfoldercurrent`
++echo -e &quot;Difference between sync and current is:\n$DIFF&quot;
++DIFFARR=($DIFF)
++LENDIFFARR=${#DIFFARR[@]}
++if [ &quot;$LENDIFFARR&quot; -gt &quot;0&quot; ]
++then
++rm -rf $backupfoldercurrent
++cp -p -r $backupfoldermirror $backupfoldercurrent
++tar -zcf ${backupfolder}/ftpdump_${mydate}.tar.gz $backupfoldercurrent/
++fi
++}
++
++dump_base ; exec_test
++compress_base ; exec_test
++
++echo &quot;Done, quit!&quot;
+
+Propchange: trunk/devel_scripts/wiki_ftpdump.sh
+------------------------------------------------------------------------------
+    svn:eol-style = native
+
+Propchange: trunk/devel_scripts/wiki_ftpdump.sh
+------------------------------------------------------------------------------
+    svn:executable = *
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Jul 17 14:00:02 2013</div>  
+</body>
+</html>

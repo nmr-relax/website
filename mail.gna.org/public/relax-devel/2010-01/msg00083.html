@@ -1,0 +1,153 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: Re: A global working directory. -->
+<!--X-From-R13: "Sqjneq q'Ohiretar" <rqjneqNaze&#45;erynk.pbz> -->
+<!--X-Date: Wed, 27 Jan 2010 09:46:44 +0100 -->
+<!--X-Message-Id: 7f080ed11001270045u59837b66g962015c10753560b@mail.gmail.com -->
+<!--X-Content-Type: text/plain -->
+<!--X-Reference: 7f080ed11001260201r74606aa7u39df8a52c473b27e@mail.gmail.com -->
+<!--X-Reference: 4B5F5E25.9010103@gmx.ch -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>Re: A global working directory. -- January 27, 2010 - 09:46</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />Re: A global working directory.</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00083" class="tabs">Index by Date</a> | <a href="threads.html#00083" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00082.html">Date Prev</a>] [<a href="msg00084.html">Date Next</a>] [<a href="msg00080.html">Thread Prev</a>] [<a href="msg00079.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: Michael Bieri &lt;michael.bieri@xxxxxx&gt;</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 27 Jan 2010 09:45:58 +0100</li>
+<li class="menuitem">
+<em>Cc</em>: relax-devel@xxxxxxx</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00083.html">7f080ed11001270045u59837b66g962015c10753560b@mail.gmail.com</a>&gt;</li>
+<li class="menuitem">
+<em>References</em>: &lt;7f080ed11001260201r74606aa7u39df8a52c473b27e@xxxxxxxxxxxxxx&gt;	&lt;4B5F5E25.9010103@xxxxxx&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>Edward d'Auvergne</strong> on January 27, 2010 - 09:46:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<blockquote class="blockquote"><blockquote class="blockquote"><pre style="margin: 0em;">I would like to introduce the following GUI concept into your code for
+simplifying program usage.  That is of a variable in the main class
+called self.cwd (accessible in the analysis modules as self.gui.cwd).
+This variable is changed every time a file dialog is accessed.  That
+way if I run relax from say my home directory and then navigate to a
+distant directory containing all the relaxation data and where the
+results should go, then each time I open a file dialog, I won't have
+to navigate back there.
+</pre></blockquote><pre style="margin: 0em;">This is not necessary! If we don't specify a starting directory in
+openfile() and the other file modules, that's exactly what happens.
+wx.Filedialog remembers the last folder location.
+
+openfile('select file to open','', 'save.relaxGUI', 'relaxGUI files
+(*.relaxGUI)|*.relaxGUI|all files (*.*)|*.*')
+
+Note, this command would try to open a file in a directory, where you
+navigated just before. Just replace the directory string with '' should
+do it.
+</pre></blockquote><pre style="margin: 0em;">
+
+I had tried this, but it didn't work.  My testing was on the 9 '+'
+buttons in the automatic model-free protocol frame.  I would run relax
+from the installation directory where I am coding, and then navigate
+to the directory with the OMP data.  Then clicking on the next '+'
+button would return me to the installation directory.
+
+I've fixed this in the code now.  Have a look at the openfile()
+function, and the model_*() methods in the model-free module.  I
+physically set the cwd using the os.chdir() command, everytime
+openfile() is called without a directory arg (and using os.getcwd() to
+get the cwd).  This doesn't use a variable in the relax data store,
+just the internal Python working directory.
+
+
+</pre><blockquote class="blockquote"><blockquote class="blockquote"><pre style="margin: 0em;">I have to implement this anyway as the
+structure_pdb() method requires an initial directory which is no
+longer set to the res_noe1 value from the NOE analyses tab.  Note that
+I would not, and should not expect that changing the PDB file in the
+model-free analysis tab would change the PDB file in all other
+analyses (I will be breaking this behaviour).  Do you have any ideas
+for this?
+
+</pre></blockquote><pre style="margin: 0em;">
+
+We can split these, but I taught it makes sense to always use the same
+PDB file.
+</pre></blockquote><pre style="margin: 0em;">
+
+In a basic analysis this might be the case, but people always do
+things in ways you don't expect.  For example if I run the automatic
+model-free protocol 20 times, once for each structure of an ensemble,
+and then would like to compare the results.  This would require 20
+model-free frames, with 20 different structures.  I've implemented
+this support in the relax data store.  The structure
+'ds.relax_gui.analyses' is a list, and each element is a container.
+If you save the program state and open the resultant file, you'll see
+this structure.  To get the PDB file for the NOE analysis number 3 in
+the current hardcoded and fixed analysis frame layout, you would type
+'ds.relax_gui.analyses[2].structure_file'.  Well, this still has to be
+implemented.
+
+Regards,
+
+Edward
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<ul><li><strong>References</strong>:
+<ul>
+<li><strong><a name="00077" href="msg00077.html">A global working directory.</a></strong>
+<ul><li><em>From:</em> Edward d'Auvergne</li></ul></li>
+<li><strong><a name="00080" href="msg00080.html">Re: A global working directory.</a></strong>
+<ul><li><em>From:</em> Michael Bieri</li></ul></li>
+</ul></li></ul>
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Jan 27 10:20:57 2010</div>  
+</body>
+</html>

@@ -1,0 +1,233 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r17170 &#45; /branches/interatomic/generic_fns/dasha.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 03 Jul 2012 23:20:08 +0200 -->
+<!--X-Message-Id: E1SmAVz&#45;00078k&#45;Rm@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r17170 - /branches/interatomic/generic_fns/dasha.py -- July 03, 2012 - 23:20</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r17170 - /branches/interatomic/generic_fns/dasha.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00056" class="tabs">Index by Date</a> | <a href="threads.html#00056" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00055.html">Date Prev</a>] [<a href="msg00057.html">Date Next</a>] [<a href="msg00055.html">Thread Prev</a>] [<a href="msg00057.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 03 Jul 2012 21:20:07 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00056.html">E1SmAVz-00078k-Rm@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on July 03, 2012 - 23:20:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Jul  3 23:20:07 2012
+New Revision: 17170
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=17170&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=17170&amp;view=rev</a>
+Log:
+Converted the Dasha interface code to the interatomic data design.
+
+
+Modified:
+    branches/interatomic/generic_fns/dasha.py
+
+Modified: branches/interatomic/generic_fns/dasha.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/interatomic/generic_fns/dasha.py?rev=17170&amp;r1=17169&amp;r2=17170&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/interatomic/generic_fns/dasha.py?rev=17170&amp;r1=17169&amp;r2=17170&amp;view=diff</a>
+==============================================================================
+--- branches/interatomic/generic_fns/dasha.py (original)
++++ branches/interatomic/generic_fns/dasha.py Tue Jul  3 23:20:07 2012
+@@ -31,9 +31,10 @@
+ 
+ # relax module imports.
+ from generic_fns import angles, diffusion_tensor, pipes, relax_data, value
+-from generic_fns.mol_res_spin import exists_mol_res_spin_data, 
+first_residue_num, last_residue_num, residue_loop, spin_loop
++from generic_fns.interatomic import return_interatom_list
++from generic_fns.mol_res_spin import exists_mol_res_spin_data, 
+first_residue_num, last_residue_num, residue_loop, return_spin, spin_loop
+ from relax_errors import RelaxDirError, RelaxError, RelaxFileError, 
+RelaxNoPdbError, RelaxNoSequenceError, RelaxNoTensorError
+-from relax_io import mkdir_nofail, open_write_file, test_binary
++from relax_io import extract_data, mkdir_nofail, open_write_file, strip, 
+test_binary
+ from specific_fns.setup import model_free_obj
+ 
+ 
+@@ -97,12 +98,6 @@
+     if algor not in ['LM', 'NR']:
+         raise RelaxError(&quot;The Dasha optimisation algorithm '%s' is unknown, 
+it should either be 'LM' or 'NR'.&quot; % algor)
+ 
+-    # Multiple spins per residue not allowed.
+-    for residue in residue_loop():
+-        # Test the number of spins.
+-        if len(residue.spin) &gt; 1:
+-            raise RelaxError(&quot;More than one spin per residue is not 
+supported.&quot;)
+-
+     # Deselect certain spins.
+     __deselect_spins()
+ 
+@@ -144,13 +139,17 @@
+     file.write(&quot;\n# Nucleus type.\n&quot;)
+     nucleus = None
+     for spin in spin_loop():
++        # Skip protons.
++        if spin.isotope == '1H':
++            continue
++
+         # Can only handle one spin type.
+-        if nucleus and spin.heteronuc_type != nucleus:
+-            raise RelaxError(&quot;The nuclei '%s' and '%s' do not match, relax 
+can only handle one nucleus type in Dasha.&quot; % (nucleus, spin.heteronuc_type))
++        if nucleus and spin.isotope != nucleus:
++            raise RelaxError(&quot;The nuclei '%s' and '%s' do not match, relax 
+can only handle one nucleus type in Dasha.&quot; % (nucleus, spin.isotope))
+ 
+         # Set the nucleus.
+         if not nucleus:
+-            nucleus = spin.heteronuc_type
++            nucleus = spin.isotope
+ 
+     # Convert the name and write it.
+     if nucleus == '15N':
+@@ -275,6 +274,13 @@
+             if not spin.select:
+                 continue
+ 
++            # Get the interatomic data containers.
++            interatoms = return_interatom_list(spin._spin_ids[0])
++            if len(interatoms) == 0:
++                raise RelaxNoInteratomError
++            elif len(interatoms) &gt; 1:
++                raise RelaxError(&quot;Only one interatomic data container, hence 
+dipole-dipole interaction, is supported per spin.&quot;)
++
+             # Comment.
+             file.write(&quot;\n\n\n# Residue %s\n\n&quot; % residue.num)
+ 
+@@ -338,7 +344,7 @@
+ 
+             # Bond length.
+             file.write(&quot;\n# Bond length.\n&quot;)
+-            file.write(&quot;set r_hx %s\n&quot; % (spin.r / 1e-10))
++            file.write(&quot;set r_hx %s\n&quot; % (interatoms[0].r / 1e-10))
+ 
+             # CSA value.
+             file.write(&quot;\n# CSA value.\n&quot;)
+@@ -476,8 +482,12 @@
+         else:
+             scaling = 1.0
+ 
++        # Read the values.
++        data = read_results(file=file_name, scaling=scaling)
++
+         # Set the values.
+-        value.read(param=param, scaling=scaling, file=file_name, 
+res_num_col=1, res_name_col=None, data_col=2, error_col=3)
++        for i in range(len(data)):
++            value.set(val=data[i][1], error=data[i][0], param=param, 
+spin_id=data[i][0])
+ 
+         # Clean up of non-existent parameters (set the parameter to None!).
+         for spin in spin_loop():
+@@ -495,5 +505,39 @@
+     if not access(file_name, F_OK):
+         raise RelaxFileError('Dasha', file_name)
+ 
++    # Read the values.
++    data = read_results(file=file_name)
++
+     # Set the values.
+-    value.read(param='chi2', file=file_name, res_num_col=1, 
+res_name_col=None, data_col=2, error_col=3)
++    for i in range(len(data)):
++        spin = return_spin(data[i][0])
++        spin.chi2 = data[i][1]
++
++
++def read_results(file=None, dir=None, scaling=1.0):
++    &quot;&quot;&quot;Extract the data from the Dasha results file.
++
++    @keyword file:          The name of the file to open.
++    @type file:             str
++    @keyword dir:           The directory containing the file (defaults to 
+the current directory if None).
++    @type dir:              str or None
++    @keyword scaling:       The parameter scaling factor.
++    @type scaling:          float
++    &quot;&quot;&quot;
++
++    # Extract the data.
++    data = extract_data(file=file, dir=dir)
++
++    # Remove comments.
++    data = strip(data)
++
++    # Repackage the data as a list of lists of spin ID, value, error.
++    new_data = []
++    for i in range(len(data)):
++        spin_id = ':%s@N' % data[i][0]
++        value = float(data[i][1]) * scaling
++        error = float(data[i][2]) * scaling
++        new_data.append([spin_id, value, error])
++
++    # Return the data.
++    return new_data
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Jul 03 23:40:01 2012</div>  
+</body>
+</html>

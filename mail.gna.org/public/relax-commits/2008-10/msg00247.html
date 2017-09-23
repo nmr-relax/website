@@ -1,0 +1,301 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r7718 &#45;	/branches/multi_processor_merge/specific_fns/model_free/mf_minimise.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 15 Oct 2008 22:40:21 +0200 -->
+<!--X-Message-Id: E1KqDAL&#45;00024w&#45;8h@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r7718 -	/branches/multi_processor_merge/specific_fns/model_free/mf_minimise.py -- October 15, 2008 - 22:40</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r7718 -	/branches/multi_processor_merge/specific_fns/model_free/mf_minimise.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00247" class="tabs">Index by Date</a> | <a href="threads.html#00247" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00246.html">Date Prev</a>] [<a href="msg00248.html">Date Next</a>] [<a href="msg00246.html">Thread Prev</a>] [<a href="msg00248.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 15 Oct 2008 20:40:21 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00247.html">E1KqDAL-00024w-8h@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on October 15, 2008 - 22:40:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Oct 15 22:40:20 2008
+New Revision: 7718
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=7718&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=7718&amp;view=rev</a>
+Log:
+Manually ported r3242  from the multi_processor branch.
+
+The command used was:
+svn merge -r3241:3242 
+svn+ssh://bugman@xxxxxxxxxxx/svn/relax/branches/multi_processor/specific_fns/model_free.py
+ specific_fns/model_free/mf_minimise.py
+
+This was a bugger!
+
+....
+  r3242 | varioustoxins | 2007-03-27 17:04:02 +0200 (Tue, 27 Mar 2007) | 3 
+lines
+  Changed paths:
+     M /branches/multi_processor/specific_fns/model_free.py
+
+  changes to add minimise command processing for multiprocessing
+....
+
+
+Modified:
+    branches/multi_processor_merge/specific_fns/model_free/mf_minimise.py
+
+Modified: 
+branches/multi_processor_merge/specific_fns/model_free/mf_minimise.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/multi_processor_merge/specific_fns/model_free/mf_minimise.py?rev=7718&amp;r1=7717&amp;r2=7718&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/multi_processor_merge/specific_fns/model_free/mf_minimise.py?rev=7718&amp;r1=7717&amp;r2=7718&amp;view=diff</a>
+==============================================================================
+--- branches/multi_processor_merge/specific_fns/model_free/mf_minimise.py 
+(original)
++++ branches/multi_processor_merge/specific_fns/model_free/mf_minimise.py Wed 
+Oct 15 22:40:20 2008
+@@ -25,6 +25,8 @@
+ from numpy import float64, array, dot, zeros
+ from numpy.linalg import inv
+ from re import match
++import cStringIO #FIXME: temporary for pickle tests
++import marshal   #FIXME: temporary for pickle tests
+ 
+ # relax module imports.
+ from float import isNaN, isInf
+@@ -33,6 +35,7 @@
+ from generic_fns.mol_res_spin import count_spins, exists_mol_res_spin_data, 
+return_spin_from_index, spin_loop
+ from maths_fns.mf import Mf
+ from minfx.generic import generic_minimise
++from multi.mpi4py_processor import  MF_minimise_command
+ from physical_constants import h_bar, mu0, return_gyromagnetic_ratio
+ from relax_errors import RelaxError, RelaxInfError, RelaxLenError, 
+RelaxNaNError, RelaxNoModelError, RelaxNoPdbError, RelaxNoResError, 
+RelaxNoSequenceError, RelaxNoTensorError, RelaxNoValueError, 
+RelaxNoVectorsError, RelaxNucleusError, RelaxProtonTypeError, 
+RelaxSpinTypeError
+ 
+@@ -938,12 +941,70 @@
+             relax_data, relax_error, equations, param_types, param_values, 
+r, csa, num_frq, frq, num_ri, remap_table, noe_r1_table, ri_labels, gx, gh, 
+num_params, xh_unit_vectors, diff_type, diff_params = 
+self.minimise_data_setup(model_type, min_algor, num_data_sets, min_options, 
+spin=spin, sim_index=sim_index)
+ 
+ 
+-            # Initialise the function to minimise.
+-            ######################################
+-
+-            self.mf = Mf(init_params=param_vector, model_type=model_type, 
+diff_type=diff_type, diff_params=diff_params, scaling_matrix=scaling_matrix, 
+num_spins=num_spins, equations=equations, param_types=param_types, 
+param_values=param_values, relax_data=relax_data, errors=relax_error, 
+bond_length=r, csa=csa, num_frq=num_frq, frq=frq, num_ri=num_ri, 
+remap_table=remap_table, noe_r1_table=noe_r1_table, ri_labels=ri_labels, 
+gx=gx, gh=gh, h_bar=h_bar, mu0=mu0, num_params=num_params, 
+vectors=xh_unit_vectors)
+-
+-
++#            # Initialise the function to minimise.
++#            ######################################
++#            print 'initialise Mf'
++#            print 'init_params',self.param_vector
++#            print 'param_se',self.param_set
++#            print 'diff_type',diff_type
++#            print 'diff_params',diff_params
++#            print 'scaling_matrix',self.scaling_matrix
++#            print 'num_res',num_res
++#            print 'equations',equations
++#            print 'param_types',param_types
++#            print 'param_values',param_values
++#            print 'relax_data',relax_data
++#            print 'errors',relax_error
++#            print 'bond_length',r
++#            print 'csa=',csa
++#            print 'num_frq',num_frq
++#            print 'frq',frq
++#            print 'num_ri',num_ri
++#            print 'remap_table',remap_table
++#            print 'noe_r1_table',noe_r1_table
++#            print 'ri_labels',ri_labels
++#            print 'gx',self.relax.data.gx
++#            print 'gh',self.relax.data.gh
++#            print 'g_ratio',self.relax.data.g_ratio
++#            print 'h_bar',self.relax.data.h_bar
++#            print 'mu0',self.relax.data.mu0
++#            print 'num_params',num_params
++#            print 'vectors',xh_unit_vectors
++#
++#            data_list =  [ 'initialise Mf',
++#             'init_params',self.param_vector,
++#             'param_set',self.param_set,
++#             'diff_type',diff_type,
++#             'diff_params',diff_params,
++#             'scaling_matrix',self.scaling_matrix,
++#             'num_res',num_res,
++#             'equations',equations,
++#             'param_types',param_types,
++#             'param_values',param_values,
++#             'relax_data',relax_data,
++#             'errors',relax_error,
++#             'bond_length',r,
++#             'csa=',csa,
++#             'num_frq',num_frq,
++#             'frq',frq,
++#             'num_ri',num_ri,
++#             'remap_table',remap_table,
++#             'noe_r1_table',noe_r1_table,
++#             'ri_labels',ri_labels,
++#             'gx',self.relax.data.gx,
++#             'gh',self.relax.data.gh,\
++#             'g_ratio',self.relax.data.g_ratio,
++#             'h_bar',self.relax.data.h_bar,
++#             'mu0',self.relax.data.mu0,
++#             'num_params',num_params,
++#             'vectors',xh_unit_vectors]
++#            for elem in data_list:
++#                marshal.loads(marshal.dumps(elem))
++#            self.mf = Mf(init_params=param_vector, model_type=model_type, 
+diff_type=diff_type, diff_params=diff_params, scaling_matrix=scaling_matrix, 
+num_spins=num_spins, equations=equations, param_types=param_types, 
+param_values=param_values, relax_data=relax_data, errors=relax_error, 
+bond_length=r, csa=csa, num_frq=num_frq, frq=frq, num_ri=num_ri, 
+remap_table=remap_table, noe_r1_table=noe_r1_table, ri_labels=ri_labels, 
+gx=gx, gh=gh, h_bar=h_bar, mu0=mu0, num_params=num_params, 
+vectors=xh_unit_vectors)
++            command=MF_minimise_command()
++            command.set_mf(init_params=param_vector, model_type=model_type, 
+diff_type=diff_type, diff_params=diff_params, scaling_matrix=scaling_matrix, 
+num_spins=num_spins, equations=equations, param_types=param_types, 
+param_values=param_values, relax_data=relax_data, errors=relax_error, 
+bond_length=r, csa=csa, num_frq=num_frq, frq=frq, num_ri=num_ri, 
+remap_table=remap_table, noe_r1_table=noe_r1_table, ri_labels=ri_labels, 
+gx=gx, gh=gh, h_bar=h_bar, mu0=mu0, num_params=num_params, 
+vectors=xh_unit_vectors)
++            #test.assert_mf_equivalent(self.mf)
++            ##self.mf=test.mf
+             # Setup the minimisation algorithm when constraints are present.
+             ################################################################
+ 
+@@ -975,25 +1036,32 @@
+             # Back-calculation.
+             ###################
+ 
++            #FIXME could be neater?
+             if min_algor == 'back_calc':
+-                return self.mf.calc_ri()
++                return command.build_mf().calc_ri()
+ 
+ 
+             # Minimisation.
+             ###############
+-
++            #FIXME remove old version
++#            if constraints:
++#                results = generic_minimise(func=self.mf.func, 
+dfunc=self.mf.dfunc, d2func=self.mf.d2func, args=(), x0=self.param_vector, 
+min_algor=min_algor, min_options=min_options, func_tol=func_tol, 
+grad_tol=grad_tol, maxiter=max_iterations, A=A, b=b, full_output=1, 
+print_flag=print_flag)
++#            else:
++#                results = generic_minimise(func=self.mf.func, 
+dfunc=self.mf.dfunc, d2func=self.mf.d2func, args=(), x0=self.param_vector, 
+min_algor=min_algor, min_options=min_options, func_tol=func_tol, 
+grad_tol=grad_tol, maxiter=max_iterations, full_output=1, 
+print_flag=print_flag)
++#            if results == None:
++#                return
++            #FIXME??? strange contraints
+             # Constrained optimisation.
+             if constraints:
+-                results = generic_minimise(func=self.mf.func, 
+dfunc=self.mf.dfunc, d2func=self.mf.d2func, args=(), x0=param_vector, 
+min_algor=min_algor, min_options=min_options, func_tol=func_tol, 
+grad_tol=grad_tol, maxiter=max_iterations, A=A, b=b, full_output=1, 
+print_flag=verbosity)
+-
+-            # Unconstrained optimisation.
+-            else:
+-                results = generic_minimise(func=self.mf.func, 
+dfunc=self.mf.dfunc, d2func=self.mf.d2func, args=(), x0=param_vector, 
+min_algor=min_algor, min_options=min_options, func_tol=func_tol, 
+grad_tol=grad_tol, maxiter=max_iterations, full_output=1, 
+print_flag=verbosity)
++                command.set_minimise(args=(), x0=param_vector, 
+min_algor=min_algor, min_options=min_options, func_tol=func_tol, 
+grad_tol=grad_tol, maxiter=max_iterations, A=A, b=b, full_output=1, 
+print_flag=verbosity)
++            else:
++                command.set_minimise(args=(), x0=self.param_vector, 
+min_algor=min_algor, min_options=min_options, func_tol=func_tol, 
+grad_tol=grad_tol, maxiter=max_iterations, full_output=1, 
+print_flag=verbosity)
++            command.run(None)
+ 
+             # Disassemble the results.
+             if results == None:
+                 continue
+-            param_vector, func, iter, fc, gc, hc, warning = results
++            param_vector, func, iter, fc, gc, hc, warning = command.results
+             iter_count = iter_count + iter
+             f_count = f_count + fc
+             g_count = g_count + gc
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Oct 15 23:00:02 2008</div>  
+</body>
+</html>

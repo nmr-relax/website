@@ -1,0 +1,205 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r25340 &#45; /trunk/specific_analyses/relax_disp/estimate_r2eff.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 27 Aug 2014 17:16:10 +0200 -->
+<!--X-Message-Id: E1XMexF&#45;00042T&#45;WF@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r25340 - /trunk/specific_analyses/relax_disp/estimate_r2eff.py -- August 27, 2014 - 17:16</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r25340 - /trunk/specific_analyses/relax_disp/estimate_r2eff.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00474" class="tabs">Index by Date</a> | <a href="threads.html#00474" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00473.html">Date Prev</a>] [<a href="msg00475.html">Date Next</a>] [<a href="msg00473.html">Thread Prev</a>] [<a href="msg00475.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 27 Aug 2014 15:16:09 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00474.html">E1XMexF-00042T-WF@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on August 27, 2014 - 17:16:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Wed Aug 27 17:16:09 2014
+New Revision: 25340
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=25340&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=25340&amp;view=rev</a>
+Log:
+Tried to implement a safety test for linearly-dependent columns in the 
+co-variance matrix.
+
+task #7822(<a  rel="nofollow" href="https://gna.org/task/index.php?7822">https://gna.org/task/index.php?7822</a>): Implement user function to 
+estimate R2eff and associated errors for exponential curve fitting.
+
+Modified:
+    trunk/specific_analyses/relax_disp/estimate_r2eff.py
+
+Modified: trunk/specific_analyses/relax_disp/estimate_r2eff.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/relax_disp/estimate_r2eff.py?rev=25340&amp;r1=25339&amp;r2=25340&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/relax_disp/estimate_r2eff.py?rev=25340&amp;r1=25339&amp;r2=25340&amp;view=diff</a>
+==============================================================================
+--- trunk/specific_analyses/relax_disp/estimate_r2eff.py        (original)
++++ trunk/specific_analyses/relax_disp/estimate_r2eff.py        Wed Aug 27 
+17:16:09 2014
+@@ -24,8 +24,8 @@
+ 
+ # Python module imports.
+ from copy import deepcopy
+-from numpy import asarray, array, diag, dot, exp, eye, inf, log, multiply, 
+sqrt, sum, transpose, zeros
+-from numpy.linalg import inv
++from numpy import absolute, any, array, asarray, diag, dot, exp, eye, inf, 
+log, multiply, spacing, sqrt, sum, transpose, zeros
++from numpy.linalg import cond, inv, qr
+ from minfx.generic import generic_minimise
+ from re import match, search
+ import sys
+@@ -34,6 +34,7 @@
+ # relax module imports.
+ from dep_check import scipy_module
+ from lib.text.sectioning import section, subsection
++from lib.warnings import RelaxWarning
+ from pipe_control.mol_res_spin import generate_spin_string, spin_loop
+ from pipe_control.spectrum import error_analysis
+ from specific_analyses.relax_disp.checks import check_model_type
+@@ -365,7 +366,7 @@
+         return 1. / self.errors * (self.func_exp(self.times, *params) - 
+self.values)
+ 
+ 
+-    def multifit_covar(self, J=None, epsrel=None):
++    def multifit_covar(self, J=None, epsrel=0.0):
+         &quot;&quot;&quot;This is the implementation of the multifit covariance.
+ 
+         This is inspired from GNU Scientific Library (GSL).
+@@ -410,7 +411,7 @@
+ 
+         @param J:               The Jacobian matrix.
+         @type J:                numpy array
+-        @param epsrel:          This is not implemented.  Any columns of R 
+which satisfy |R_{kk}| &lt;= epsrel |R_{11}| are considered linearly-dependent 
+and are excluded from the covariance matrix, where the corresponding rows and 
+columns of the covariance matrix are set to zero.
++        @param epsrel:          Any columns of R which satisfy |R_{kk}| &lt;= 
+epsrel |R_{11}| are considered linearly-dependent and are excluded from the 
+covariance matrix, where the corresponding rows and columns of the covariance 
+matrix are set to zero.
+         @type epsrel:           float
+         @return:                The co-variance matrix
+         @rtype:                 square numpy array
+@@ -435,8 +436,39 @@
+         Jt_W = dot(Jt, W)
+         Jt_W_J = dot(Jt_W, J)
+ 
+-        # Invert matrix.
+-        Qxx = inv(Jt_W_J)
++        # Invert matrix by QR decomposition, to check columns of R which 
+satisfy: |R_{kk}| &lt;= epsrel |R_{11}|
++        Q, R = qr(Jt_W_J)
++
++        # Make the state ment matrix.
++        abs_epsrel_R11 = absolute( multiply(epsrel, R[0, 0]) )
++
++        # Make and array of True/False statements.
++        # These are considered linearly-dependent and are excluded from the 
+covariance matrix.
++        # The corresponding rows and columns of the covariance matrix are 
+set to zero
++        epsrel_check = absolute(R) &lt;= abs_epsrel_R11
++
++        # Form the covariance matrix.
++        Qxx = dot(inv(R), transpose(Q) )
++        #Qxx2 = dot(inv(R), inv(Q) )
++        #print(Qxx - Qxx2)
++
++        # Test direct invert matrix of matrix.
++        #Qxx_test = inv(Jt_W_J)
++
++        # Replace values in Covariance matrix with inf.
++        Qxx[epsrel_check] = 0.0
++
++        # Throw a warning, that some colums are considered 
+linearly-dependent and are excluded from the covariance matrix.
++        # Only check for the diagonal, since the that holds the variance.
++        diag_epsrel_check = diag(epsrel_check)
++
++        # If any of the diagonals does not meet the epsrel condition.
++        if any(diag_epsrel_check):
++            for i in range(diag_epsrel_check.shape[0]):
++                abs_Rkk = absolute(R[i, i])
++                if abs_Rkk &lt;= abs_epsrel_R11:
++                    warn(RelaxWarning(&quot;Co-Variance element k,k=%i was found 
+to meet |R_{kk}| &lt;= epsrel |R_{11}|, meaning %1.1f &lt;= %1.3f * %1.1f , and is 
+therefore determined to be linearly-dependent and are excluded from the 
+covariance matrix by setting the value to 0.0.&quot; % (i+1, abs_Rkk, epsrel, 
+abs_epsrel_R11/epsrel) ))
++                    #print(cond(Jt_W_J) &lt; 1./spacing(1.) )
+ 
+         return Qxx
+ 
+@@ -810,6 +842,9 @@
+         # Call class, to store value.
+         E.func_exp_grad(param_vector)
+         jacobian_matrix_exp = E.jacobian_matrix_exp
++        #E.func_exp_chi2_grad(param_vector)
++        #jacobian_matrix_exp = E.jacobian_matrix_exp_chi2
++
+ 
+     # Get the co-variance
+     pcov = E.multifit_covar(J=jacobian_matrix_exp)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Aug 27 18:00:03 2014</div>  
+</body>
+</html>

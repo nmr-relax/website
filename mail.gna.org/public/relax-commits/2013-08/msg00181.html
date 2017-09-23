@@ -1,0 +1,314 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r20664 &#45; in /trunk/lib/spectrum: peak_list.py sparky.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 21 Aug 2013 15:08:04 +0200 -->
+<!--X-Message-Id: E1VC88q&#45;0003PO&#45;2g@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r20664 - in /trunk/lib/spectrum: peak_list.py sparky.py -- August 21, 2013 - 15:08</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r20664 - in /trunk/lib/spectrum: peak_list.py sparky.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00181" class="tabs">Index by Date</a> | <a href="threads.html#00181" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00180.html">Date Prev</a>] [<a href="msg00182.html">Date Next</a>] [<a href="msg00180.html">Thread Prev</a>] [<a href="msg00182.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 21 Aug 2013 13:08:04 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00181.html">E1VC88q-0003PO-2g@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on August 21, 2013 - 15:08:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Aug 21 15:08:03 2013
+New Revision: 20664
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=20664&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=20664&amp;view=rev</a>
+Log:
+Expanded the functionality of the lib.spectrum.sparky.read_list() function.
+
+Now the dimensionality of the peak list is automatically determined, and all 
+peak lists from 1D to
+4D are supported.  The chemical shifts are also automatically detected and 
+extracted from the list
+and placed into the peak list object.  The peak intensity data is also 
+automatically detected,
+therefore the int_col argument is no longer used.
+
+
+Modified:
+    trunk/lib/spectrum/peak_list.py
+    trunk/lib/spectrum/sparky.py
+
+Modified: trunk/lib/spectrum/peak_list.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/lib/spectrum/peak_list.py?rev=20664&amp;r1=20663&amp;r2=20664&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/lib/spectrum/peak_list.py?rev=20664&amp;r1=20663&amp;r2=20664&amp;view=diff</a>
+==============================================================================
+--- trunk/lib/spectrum/peak_list.py (original)
++++ trunk/lib/spectrum/peak_list.py Wed Aug 21 15:08:03 2013
+@@ -135,7 +135,7 @@
+     @type file:             str
+     @keyword dir:           The directory where the file is located.
+     @type dir:              str
+-    @keyword int_col:       The column containing the peak intensity data.  
+If set to None, no intensity data will be returned.
++    @keyword int_col:       The column containing the peak intensity data.  
+If set to None, the auto-detection of intensity data will be attempted.
+     @type int_col:          None or int
+     @keyword spin_id_col:   The column containing the spin ID strings (used 
+by the generic intensity file format).  If supplied, the mol_name_col, 
+res_name_col, res_num_col, spin_name_col, and spin_num_col arguments must be 
+none.
+     @type spin_id_col:      int or None
+@@ -196,7 +196,7 @@
+         print(&quot;Sparky formatted data file.\n&quot;)
+ 
+         # Extract the data.
+-        sparky.read_list(peak_list=peak_list, file_data=file_data, 
+int_col=int_col)
++        sparky.read_list(peak_list=peak_list, file_data=file_data)
+ 
+     # XEasy.
+     elif format == 'xeasy':
+
+Modified: trunk/lib/spectrum/sparky.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/lib/spectrum/sparky.py?rev=20664&amp;r1=20663&amp;r2=20664&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/lib/spectrum/sparky.py?rev=20664&amp;r1=20663&amp;r2=20664&amp;view=diff</a>
+==============================================================================
+--- trunk/lib/spectrum/sparky.py (original)
++++ trunk/lib/spectrum/sparky.py Wed Aug 21 15:08:03 2013
+@@ -32,15 +32,13 @@
+ from lib.io import open_write_file, strip
+ 
+ 
+-def read_list(peak_list=None, file_data=None, int_col=3):
++def read_list(peak_list=None, file_data=None):
+     &quot;&quot;&quot;Extract the peak intensity information from the Sparky peak intensity 
+file.
+ 
+     @keyword peak_list: The peak list object to place all data into.
+     @type peak_list:    lib.spectrum.objects.Peak_list instance
+     @keyword file_data: The data extracted from the file converted into a 
+list of lists.
+     @type file_data:    list of lists of str
+-    @keyword int_col:   The column containing the peak intensity data (for a 
+non-standard formatted file).
+-    @type int_col:      int
+     @raises RelaxError: When the expected peak intensity is not a float.
+     &quot;&quot;&quot;
+ 
+@@ -52,15 +50,45 @@
+         num = num + 1
+     print(&quot;Number of header lines found: %s&quot; % num)
+ 
+-    # Default intensity column.
+-    if int_col == None:
+-        int_col = 3
++    # The columns according to the file.
++    w1_col = None
++    w2_col = None
++    w3_col = None
++    w4_col = None
++    int_col = None
++    for i in range(len(file_data[0])):
++        # The chemical shifts.
++        if file_data[0][i] == 'w1':
++            w1_col = i
++        elif file_data[0][i] == 'w2':
++            w2_col = i
++        elif file_data[0][i] == 'w3':
++            w3_col = i
++        elif file_data[0][i] == 'w4':
++            w4_col = i
++
++        # The peak height.
++        elif file_data[0][i] == 'Data' and file_data[0][i+1] == 'Height':
++            int_col = i
+ 
+     # Remove the header.
+     file_data = file_data[num:]
+ 
+     # Strip the data.
+     file_data = strip(file_data)
++
++    # The dimensionality.
++    if w4_col != None:
++        dim = 4
++    elif w3_col != None:
++        dim = 3
++    elif w2_col != None:
++        dim = 2
++    elif w1_col != None:
++        dim = 1
++    else:
++        raise RelaxError(&quot;The dimensionality of the peak list cannot be 
+determined.&quot;)
++    print(&quot;%sD peak list detected.&quot; % dim)
+ 
+     # Loop over the file data.
+     for line in file_data:
+@@ -68,16 +96,29 @@
+         if line[0] == '?-?':
+             continue
+ 
+-        # First split by the 2D separator.
+-        assign1, assign2 = split('-', line[0])
+-
+-        # The assignment of the first dimension.
+-        row1 = split('([A-Z]+)', assign1)
+-        name1 = row1[-2] + row1[-1]
+-
+-        # The assignment of the second dimension.
+-        row2 = split('([A-Z]+)', assign2)
+-        name2 = row2[-2] + row2[-1]
++        # Split up the assignments.
++        if dim == 1:
++            assign1 = line[0]
++        elif dim == 2:
++            assign1, assign2 = split('-', line[0])
++        elif dim == 3:
++            assign1, assign2, assign3 = split('-', line[0])
++        elif dim == 4:
++            assign1, assign2, assign3, assign4 = split('-', line[0])
++
++        # Process the assignment for each dimension.
++        if dim &gt;= 1:
++            row1 = split('([A-Z]+)', assign1)
++            name1 = row1[-2] + row1[-1]
++        if dim &gt;= 2:
++            row2 = split('([A-Z]+)', assign2)
++            name2 = row2[-2] + row2[-1]
++        if dim &gt;= 3:
++            row3 = split('([A-Z]+)', assign3)
++            name3 = row3[-2] + row3[-1]
++        if dim &gt;= 4:
++            row4 = split('([A-Z]+)', assign4)
++            name4 = row4[-2] + row4[-1]
+ 
+         # The residue number.
+         try:
+@@ -85,14 +126,48 @@
+         except:
+             raise RelaxError(&quot;Improperly formatted Sparky file, cannot 
+process the assignment '%s'.&quot; % line[0])
+ 
++        # Chemical shifts.
++        w1 = None
++        w2 = None
++        w3 = None
++        w4 = None
++        if w1_col != None:
++            try:
++                w1 = float(line[w1_col])
++            except ValueError:
++                raise RelaxError(&quot;The chemical shift from the line %s is 
+invalid.&quot; % line)
++        if w2_col != None:
++            try:
++                w2 = float(line[w2_col])
++            except ValueError:
++                raise RelaxError(&quot;The chemical shift from the line %s is 
+invalid.&quot; % line)
++        if w3_col != None:
++            try:
++                w3 = float(line[w3_col])
++            except ValueError:
++                raise RelaxError(&quot;The chemical shift from the line %s is 
+invalid.&quot; % line)
++        if w4_col != None:
++            try:
++                w4 = float(line[w4_col])
++            except ValueError:
++                raise RelaxError(&quot;The chemical shift from the line %s is 
+invalid.&quot; % line)
++
+         # Intensity.
+-        try:
+-            intensity = float(line[int_col])
+-        except ValueError:
+-            raise RelaxError(&quot;The peak intensity value %s from the line %s 
+is invalid.&quot; % (intensity, line))
++        if int_col != None:
++            try:
++                intensity = float(line[int_col])
++            except ValueError:
++                raise RelaxError(&quot;The peak intensity value from the line %s 
+is invalid.&quot; % line)
+ 
+         # Add the assignment to the peak list object.
+-        peak_list.add(res_nums=[res_num, res_num], spin_names=[name1, 
+name2], intensity=intensity)
++        if dim == 1:
++            peak_list.add(res_nums=[res_num], spin_names=[name1], 
+shifts=[w1], intensity=intensity)
++        elif dim == 2:
++            peak_list.add(res_nums=[res_num, res_num], spin_names=[name1, 
+name2], shifts=[w1, w2], intensity=intensity)
++        elif dim == 3:
++            peak_list.add(res_nums=[res_num, res_num, res_num], 
+spin_names=[name1, name2, name3], shifts=[w1, w2, w3], intensity=intensity)
++        elif dim == 4:
++            peak_list.add(res_nums=[res_num, res_num, res_num, res_num], 
+spin_names=[name1, name2, name3, name4], shifts=[w1, w2, w3, w4], 
+intensity=intensity)
+ 
+ 
+ def write_list(file_prefix=None, dir=None, res_names=None, res_nums=None, 
+atom1_names=None, atom2_names=None, w1=None, w2=None, data_height=None, 
+force=True):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Aug 21 15:20:02 2013</div>  
+</body>
+</html>

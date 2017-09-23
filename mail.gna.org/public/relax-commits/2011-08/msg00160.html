@@ -1,0 +1,184 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r14180 &#45; in /branches/gui_testing: ./	auto_analyses/dauvergne_protocol.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 05 Aug 2011 15:03:55 +0200 -->
+<!--X-Message-Id: E1QpK4B&#45;0001RJ&#45;KU@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r14180 - in /branches/gui_testing: ./	auto_analyses/dauvergne_protocol.py -- August 05, 2011 - 15:03</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r14180 - in /branches/gui_testing: ./	auto_analyses/dauvergne_protocol.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00160" class="tabs">Index by Date</a> | <a href="threads.html#00160" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00159.html">Date Prev</a>] [<a href="msg00161.html">Date Next</a>] [<a href="msg00159.html">Thread Prev</a>] [<a href="msg00161.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 05 Aug 2011 13:03:55 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00160.html">E1QpK4B-0001RJ-KU@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on August 05, 2011 - 15:03:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Aug  5 15:03:55 2011
+New Revision: 14180
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=14180&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=14180&amp;view=rev</a>
+Log:
+Merged revisions 14179 via svnmerge from 
+svn+ssh://bugman@xxxxxxxxxxx/svn/relax/1.3
+
+........
+  r14179 | bugman | 2011-08-05 15:01:19 +0200 (Fri, 05 Aug 2011) | 5 lines
+  
+  The dauvergne_protocol is now more robust if the program is interrupted and 
+restarted later.
+  
+  The opt/results.bz2 file is now searched for, and if not the round is 
+assumed incomplete.
+........
+
+Modified:
+    branches/gui_testing/   (props changed)
+    branches/gui_testing/auto_analyses/dauvergne_protocol.py
+
+Propchange: branches/gui_testing/
+------------------------------------------------------------------------------
+--- svnmerge-integrated (original)
++++ svnmerge-integrated Fri Aug  5 15:03:55 2011
+@@ -1,1 +1,1 @@
+-/1.3:1-14157
++/1.3:1-14179
+
+Modified: branches/gui_testing/auto_analyses/dauvergne_protocol.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/gui_testing/auto_analyses/dauvergne_protocol.py?rev=14180&amp;r1=14179&amp;r2=14180&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/gui_testing/auto_analyses/dauvergne_protocol.py?rev=14180&amp;r1=14179&amp;r2=14180&amp;view=diff</a>
+==============================================================================
+--- branches/gui_testing/auto_analyses/dauvergne_protocol.py (original)
++++ branches/gui_testing/auto_analyses/dauvergne_protocol.py Fri Aug  5 
+15:03:55 2011
+@@ -21,7 +21,7 @@
+ 
+###############################################################################
+ 
+ # Python module imports.
+-from os import getcwd, listdir, sep
++from os import F_OK, access, getcwd, listdir, sep
+ from re import search
+ from string import lower
+ 
+@@ -450,13 +450,7 @@
+ 
+         # Get a list of all files in the directory model.  If no directory 
+exists, set the round to 'init' or 0.
+         try:
+-            # Files are in same directory / no directory specified
+-            if self.results_dir =='':
+-                dir_list = listdir(self.results_dir+sep+model)
+-
+-            # Directory is specified
+-            else:
+-                dir_list = listdir(self.results_dir+model)
++            dir_list = listdir(self.results_dir+sep+model)
+         except:
+             return 0
+ 
+@@ -479,12 +473,35 @@
+                 pass
+         numbers.sort()
+ 
+-        # No directories begining with 'round_' exist, set the round to 1.
++        # No directories beginning with 'round_' exist, set the round to 1.
+         if not len(numbers):
+             return 1
+ 
+-        # Determine the number for the next round (add 1 to the highest 
+number).
+-        return numbers[-1] + 1
++        # The highest number.
++        max_round = numbers[-1]
++
++        # Check that the opt/results file exists for the round (working 
+backwards).
++        for i in range(max_round, -1, -1):
++            # Assume the round is complete.
++            complete_round = i
++
++            # The file root.
++            file_root = self.results_dir + sep + model + sep + &quot;round_%i&quot; %i 
++ sep + 'results'
++
++            # Stop looping when the opt/results file is found.
++            if access(file_root + '.bz2', F_OK):
++                break
++            if access(file_root + '.gz', F_OK):
++                break
++            if access(file_root, F_OK):
++                break
++
++        # No round, so assume the initial state.
++        if complete_round == 0:
++            return 0
++
++        # Determine the number for the next round (add 1 to the highest 
+completed round).
++        return complete_round + 1
+ 
+ 
+     def execute(self):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Aug 05 16:00:02 2011</div>  
+</body>
+</html>

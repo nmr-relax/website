@@ -1,0 +1,294 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r20313 &#45; /branches/relax_disp/target_functions/relax_disp.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 16 Jul 2013 09:31:24 +0200 -->
+<!--X-Message-Id: E1UyzjI&#45;00013C&#45;DE@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r20313 - /branches/relax_disp/target_functions/relax_disp.py -- July 16, 2013 - 09:31</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r20313 - /branches/relax_disp/target_functions/relax_disp.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00055" class="tabs">Index by Date</a> | <a href="threads.html#00055" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00054.html">Date Prev</a>] [<a href="msg00056.html">Date Next</a>] [<a href="msg00054.html">Thread Prev</a>] [<a href="msg00056.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 16 Jul 2013 07:31:24 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00055.html">E1UyzjI-00013C-DE@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on July 16, 2013 - 09:31:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Jul 16 09:31:24 2013
+New Revision: 20313
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=20313&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=20313&amp;view=rev</a>
+Log:
+Created the 'NS 2-site star red' model target function.
+
+This is the model of the numerical solution for the 2-site Bloch-McConnell 
+equations using complex
+conjugate matrices, whereby the simplification R20A = R20B is assumed.  The 
+code in common with the
+'NS 2-site star' model has been shifted into the new 
+calc_ns_2site_star_chi2() method.
+
+This commit follows step 4 of the relaxation dispersion model addition 
+tutorial
+(<a  rel="nofollow" href="http://thread.gmane.org/gmane.science.nmr.relax.devel/3907">http://thread.gmane.org/gmane.science.nmr.relax.devel/3907</a>).
+
+
+Modified:
+    branches/relax_disp/target_functions/relax_disp.py
+
+Modified: branches/relax_disp/target_functions/relax_disp.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/target_functions/relax_disp.py?rev=20313&amp;r1=20312&amp;r2=20313&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_disp/target_functions/relax_disp.py?rev=20313&amp;r1=20312&amp;r2=20313&amp;view=diff</a>
+==============================================================================
+--- branches/relax_disp/target_functions/relax_disp.py (original)
++++ branches/relax_disp/target_functions/relax_disp.py Tue Jul 16 09:31:24 
+2013
+@@ -36,7 +36,7 @@
+ from lib.dispersion.ns_2site_star import r2eff_ns_2site_star
+ from lib.errors import RelaxError
+ from target_functions.chi2 import chi2
+-from specific_analyses.relax_disp.variables import MODEL_CR72, MODEL_DPL94, 
+MODEL_IT99, MODEL_LIST_FULL, MODEL_LM63, MODEL_M61, MODEL_M61B, MODEL_NOREX, 
+MODEL_NS_2SITE_STAR, MODEL_R2EFF
++from specific_analyses.relax_disp.variables import MODEL_CR72, MODEL_DPL94, 
+MODEL_IT99, MODEL_LIST_FULL, MODEL_LM63, MODEL_M61, MODEL_M61B, MODEL_NOREX, 
+MODEL_NS_2SITE_STAR, MODEL_NS_2SITE_STAR_RED, MODEL_R2EFF
+ 
+ 
+ class Dispersion:
+@@ -135,7 +135,7 @@
+             self.end_index.append(self.end_index[-1] + self.num_spins)
+ 
+         # Set up the matrices for the numerical solutions.
+-        if model in [MODEL_NS_2SITE_STAR]:
++        if model in [MODEL_NS_2SITE_STAR_RED, MODEL_NS_2SITE_STAR]:
+             # The matrix that contains only the R2 relaxation terms 
+(&quot;Redfield relaxation&quot;, i.e. non-exchange broadening).
+             self.Rr = zeros((2, 2), complex64)
+ 
+@@ -178,6 +178,68 @@
+             self.func = self.func_M61b
+         if model == MODEL_NS_2SITE_STAR:
+             self.func = self.func_ns_2site_star
++        if model == MODEL_NS_2SITE_STAR_RED:
++            self.func = self.func_ns_2site_star_red
++
++
++    def calc_ns_2site_star_chi2(self, R20A=None, R20B=None, dw=None, 
+pA=None, kex=None):
++        &quot;&quot;&quot;Calculate the chi-squared value of the 'NS 2-site star' models.
++
++        @keyword R20A:  The R2 value for state A in the absence of exchange.
++        @type R20A:     list of float
++        @keyword R20B:  The R2 value for state B in the absence of exchange.
++        @type R20B:     list of float
++        @keyword dw:    The chemical shift differences in ppm for each spin.
++        @type dw:       list of float
++        @keyword pA:    The population of state A.
++        @type pA:       float
++        @keyword kex:   The rate of exchange.
++        @type kex:      float
++        @return:        The chi-squared value.
++        @rtype:         float
++        &quot;&quot;&quot;
++
++        # Once off parameter conversions.
++        pB = 1.0 - pA
++        k_AB = pA * kex
++        k_BA = pB * kex
++
++        # Set up the matrix that contains the exchange terms between the two 
+states A and B.
++        self.Rex[0, 0] = -k_AB
++        self.Rex[0, 1] = k_BA
++        self.Rex[1, 0] = k_AB
++        self.Rex[1, 1] = -k_BA
++
++        # This is a vector that contains the initial magnetizations 
+corresponding to the A and B state transverse magnetizations.
++        self.M0[0] = pA
++        self.M0[1] = pB
++
++        # Chi-squared initialisation.
++        chi2_sum = 0.0
++
++        # Loop over the spins.
++        for spin_index in range(self.num_spins):
++            # Loop over the spectrometer frequencies.
++            for frq_index in range(self.num_frq):
++                # The R20 index.
++                r20_index = frq_index + spin_index*self.num_frq
++
++                # Convert dw from ppm to rad/s.
++                dw_frq = dw[spin_index] * self.frqs[spin_index, frq_index]
++
++                # Back calculate the R2eff values.
++                r2eff_ns_2site_star(Rr=self.Rr, Rex=self.Rex, RCS=self.RCS, 
+R=self.R, M0=self.M0, r20a=R20A[r20_index], r20b=R20B[r20_index], fA=dw_frq, 
+inv_tcpmg=self.inv_relax_time, tcp=self.tau_cpmg, 
+back_calc=self.back_calc[spin_index, frq_index], 
+num_points=self.num_disp_points, power=self.power)
++
++                # For all missing data points, set the back-calculated value 
+to the measured values so that it has no effect on the chi-squared value.
++                for point_index in range(self.num_disp_points):
++                    if self.missing[spin_index, frq_index, point_index]:
++                        self.back_calc[spin_index, frq_index, point_index] = 
+self.values[spin_index, frq_index, point_index]
++
++                # Calculate and return the chi-squared value.
++                chi2_sum += chi2(self.values[spin_index, frq_index], 
+self.back_calc[spin_index, frq_index], self.errors[spin_index, frq_index])
++
++        # Return the total chi-squared value.
++        return chi2_sum
+ 
+ 
+     def func_CR72(self, params):
+@@ -525,44 +587,31 @@
+         pA = params[self.end_index[2]]
+         kex = params[self.end_index[2]+1]
+ 
+-        # Once off parameter conversions.
+-        pB = 1.0 - pA
+-        k_AB = pA * kex
+-        k_BA = pB * kex
+-
+-        # Set up the matrix that contains the exchange terms between the two 
+states A and B.
+-        self.Rex[0, 0] = -k_AB
+-        self.Rex[0, 1] = k_BA
+-        self.Rex[1, 0] = k_AB
+-        self.Rex[1, 1] = -k_BA
+-
+-        # This is a vector that contains the initial magnetizations 
+corresponding to the A and B state transverse magnetizations.
+-        self.M0[0] = pA
+-        self.M0[1] = pB
+-
+-        # Chi-squared initialisation.
+-        chi2_sum = 0.0
+-
+-        # Loop over the spins.
+-        for spin_index in range(self.num_spins):
+-            # Loop over the spectrometer frequencies.
+-            for frq_index in range(self.num_frq):
+-                # The R20 index.
+-                r20_index = frq_index + spin_index*self.num_frq
+-
+-                # Convert dw from ppm to rad/s.
+-                dw_frq = dw[spin_index] * self.frqs[spin_index, frq_index]
+-
+-                # Back calculate the R2eff values.
+-                r2eff_ns_2site_star(Rr=self.Rr, Rex=self.Rex, RCS=self.RCS, 
+R=self.R, M0=self.M0, r20a=R20A[r20_index], r20b=R20B[r20_index], fA=dw_frq, 
+inv_tcpmg=self.inv_relax_time, tcp=self.tau_cpmg, 
+back_calc=self.back_calc[spin_index, frq_index], 
+num_points=self.num_disp_points, power=self.power)
+-
+-                # For all missing data points, set the back-calculated value 
+to the measured values so that it has no effect on the chi-squared value.
+-                for point_index in range(self.num_disp_points):
+-                    if self.missing[spin_index, frq_index, point_index]:
+-                        self.back_calc[spin_index, frq_index, point_index] = 
+self.values[spin_index, frq_index, point_index]
+-
+-                # Calculate and return the chi-squared value.
+-                chi2_sum += chi2(self.values[spin_index, frq_index], 
+self.back_calc[spin_index, frq_index], self.errors[spin_index, frq_index])
+-
+-        # Return the total chi-squared value.
+-        return chi2_sum
++        # Calculate and return the chi-squared value.
++        return self.calc_ns_2site_star_chi2(R20A=R20A, R20B=R20B, dw=dw, 
+pA=pA, kex=kex)
++
++
++    def func_ns_2site_star_red(self, params):
++        &quot;&quot;&quot;Target function for the numerical solution for the 2-site 
+Bloch-McConnell equations using complex conjugate matrices.
++
++        This is the model whereby the simplification R20A = R20B is assumed.
++
++
++        @param params:  The vector of parameter values.
++        @type params:   numpy rank-1 float array
++        @return:        The chi-squared value.
++        @rtype:         float
++        &quot;&quot;&quot;
++
++        # Scaling.
++        if self.scaling_flag:
++            params = dot(params, self.scaling_matrix)
++
++        # Unpack the parameter values.
++        R20 = params[:self.end_index[0]]
++        dw = params[self.end_index[0]:self.end_index[1]]
++        pA = params[self.end_index[1]]
++        kex = params[self.end_index[1]+1]
++
++        # Calculate and return the chi-squared value.
++        return self.calc_ns_2site_star_chi2(R20A=R20, R20B=R20, dw=dw, 
+pA=pA, kex=kex)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Jul 16 09:40:01 2013</div>  
+</body>
+</html>

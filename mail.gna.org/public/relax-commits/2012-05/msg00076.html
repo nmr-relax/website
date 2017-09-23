@@ -1,0 +1,165 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r15939 &#45; in /branches/uf_redesign/prompt: interpreter.py objects.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 03 May 2012 22:35:24 +0200 -->
+<!--X-Message-Id: E1SQ2kG&#45;00086d&#45;Ea@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r15939 - in /branches/uf_redesign/prompt: interpreter.py objects.py -- May 03, 2012 - 22:35</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r15939 - in /branches/uf_redesign/prompt: interpreter.py objects.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00076" class="tabs">Index by Date</a> | <a href="threads.html#00076" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00075.html">Date Prev</a>] [<a href="msg00077.html">Date Next</a>] [<a href="msg00075.html">Thread Prev</a>] [<a href="msg00077.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 03 May 2012 20:35:24 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00076.html">E1SQ2kG-00086d-Ea@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on May 03, 2012 - 22:35:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu May  3 22:35:24 2012
+New Revision: 15939
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=15939&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=15939&amp;view=rev</a>
+Log:
+Primitive auto-generation of the user functions.
+
+This simply creates an object for the user function, but it is not callable 
+yet or uses any of the
+user function data.
+
+
+Modified:
+    branches/uf_redesign/prompt/interpreter.py
+    branches/uf_redesign/prompt/objects.py
+
+Modified: branches/uf_redesign/prompt/interpreter.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/uf_redesign/prompt/interpreter.py?rev=15939&amp;r1=15938&amp;r2=15939&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/uf_redesign/prompt/interpreter.py?rev=15939&amp;r1=15938&amp;r2=15939&amp;view=diff</a>
+==============================================================================
+--- branches/uf_redesign/prompt/interpreter.py (original)
++++ branches/uf_redesign/prompt/interpreter.py Thu May  3 22:35:24 2012
+@@ -36,6 +36,7 @@
+     import readline
+ if dep_check.runpy_module:
+     import runpy
++from string import split
+ import sys
+ 
+ # Python modules accessible on the command prompt.
+@@ -105,7 +106,7 @@
+ from user_functions.data import Uf_info; uf_info = Uf_info()
+ 
+ # Auto-generation objects.
+-from prompt.objects import Class_container
++from prompt.objects import Class_container, Uf_object
+ 
+ 
+ class Interpreter:
+@@ -162,6 +163,21 @@
+ 
+             # Add the object to the local namespace.
+             self._locals[name] = obj
++
++        # Then generate the user functions.
++        for name, data in uf_info.uf_loop():
++            # Split up the name.
++            class_name, uf_name = split(name, '.')
++
++            # Generate a new container.
++            obj = Uf_object(name)
++
++            # Get the class object.
++            class_obj = self._locals[class_name]
++
++            # Add the object to the user function class.
++            setattr(class_obj, uf_name, obj)
++
+ 
+ 
+     def _setup(self):
+
+Modified: branches/uf_redesign/prompt/objects.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/uf_redesign/prompt/objects.py?rev=15939&amp;r1=15938&amp;r2=15939&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/uf_redesign/prompt/objects.py?rev=15939&amp;r1=15938&amp;r2=15939&amp;view=diff</a>
+==============================================================================
+--- branches/uf_redesign/prompt/objects.py (original)
++++ branches/uf_redesign/prompt/objects.py Thu May  3 22:35:24 2012
+@@ -57,3 +57,18 @@
+ 
+         # Return a description.
+         return &quot;&lt;The %s user function class object&gt;&quot; % self._name
++
++
++
++class Uf_object(object):
++    &quot;&quot;&quot;The object for auto-generating the user functions.&quot;&quot;&quot;
++
++    def __init__(self, name):
++        &quot;&quot;&quot;Set up the object.
++
++        @param name:    The name of the user function.
++        @type name:     str
++        &quot;&quot;&quot;
++
++        # Store the args.
++        self._name = name
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu May 03 22:40:02 2012</div>  
+</body>
+</html>

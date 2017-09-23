@@ -1,0 +1,427 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r26026 &#45; /branches/frame_order_cleanup/auto_analyses/frame_order.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 25 Sep 2014 10:20:43 +0200 -->
+<!--X-Message-Id: E1XX4I7&#45;0003WW&#45;1b@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r26026 - /branches/frame_order_cleanup/auto_analyses/frame_order.py -- September 25, 2014 - 10:20</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r26026 - /branches/frame_order_cleanup/auto_analyses/frame_order.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00532" class="tabs">Index by Date</a> | <a href="threads.html#00532" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00531.html">Date Prev</a>] [<a href="msg00533.html">Date Next</a>] [<a href="msg00531.html">Thread Prev</a>] [<a href="msg00533.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 25 Sep 2014 08:20:42 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00532.html">E1XX4I7-0003WW-1b@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on September 25, 2014 - 10:20:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Sep 25 10:20:42 2014
+New Revision: 26026
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=26026&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=26026&amp;view=rev</a>
+Log:
+Improved logic in the auto_analyses.frame_order.summarise() function.
+
+The model names, directories and titles are now being auto-generated from the 
+full list of frame
+order models in lib.frame_order.variables.MODEL_LIST.
+
+To create a common mechanism for determining the model directory name, the
+Frame_order_analysis.model_directory() method has been converted into a 
+module function.
+
+
+Modified:
+    branches/frame_order_cleanup/auto_analyses/frame_order.py
+
+Modified: branches/frame_order_cleanup/auto_analyses/frame_order.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/auto_analyses/frame_order.py?rev=26026&amp;r1=26025&amp;r2=26026&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/auto_analyses/frame_order.py?rev=26026&amp;r1=26025&amp;r2=26026&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/auto_analyses/frame_order.py   (original)
++++ branches/frame_order_cleanup/auto_analyses/frame_order.py   Thu Sep 25 
+10:20:42 2014
+@@ -53,7 +53,7 @@
+ from lib.arg_check import is_bool, is_float, is_int, is_str
+ from lib.errors import RelaxError
+ from lib.frame_order.conversions import convert_axis_alpha_to_spherical
+-from lib.frame_order.variables import MODEL_DOUBLE_ROTOR, MODEL_FREE_ROTOR, 
+MODEL_ISO_CONE, MODEL_ISO_CONE_FREE_ROTOR, MODEL_ISO_CONE_TORSIONLESS, 
+MODEL_LIST_FREE_ROTORS, MODEL_LIST_ISO_CONE, MODEL_LIST_NONREDUNDANT, 
+MODEL_LIST_PSEUDO_ELLIPSE, MODEL_PSEUDO_ELLIPSE, 
+MODEL_PSEUDO_ELLIPSE_FREE_ROTOR, MODEL_PSEUDO_ELLIPSE_TORSIONLESS, 
+MODEL_RIGID, MODEL_ROTOR
++from lib.frame_order.variables import MODEL_DOUBLE_ROTOR, MODEL_FREE_ROTOR, 
+MODEL_ISO_CONE, MODEL_ISO_CONE_FREE_ROTOR, MODEL_ISO_CONE_TORSIONLESS, 
+MODEL_LIST, MODEL_LIST_FREE_ROTORS, MODEL_LIST_ISO_CONE, 
+MODEL_LIST_NONREDUNDANT, MODEL_LIST_PSEUDO_ELLIPSE, MODEL_PSEUDO_ELLIPSE, 
+MODEL_PSEUDO_ELLIPSE_FREE_ROTOR, MODEL_PSEUDO_ELLIPSE_TORSIONLESS, 
+MODEL_RIGID, MODEL_ROTOR
+ from lib.geometry.coord_transform import spherical_to_cartesian
+ from lib.io import open_write_file
+ from lib.order.order_parameters import iso_cone_theta_to_S
+@@ -68,6 +68,29 @@
+ 
+ 
+ 
++def model_directory(model, base_dir=None):
++    &quot;&quot;&quot;Return the directory to be used for the model.
++
++    @param model:       The frame order model name.
++    @type model:        str
++    @keyword base_dir:  The optional base directory to prepend to the file 
+name.
++    @type base_dir:     None or str
++    &quot;&quot;&quot;
++
++    # Convert the model name.
++    dir = model.replace(' ', '_')
++    dir = dir.replace(',', '')
++
++    # Process the base directory.
++    if base_dir == None:
++        base_dir = ''
++    elif base_dir[-1] != sep:
++        base_dir += sep
++
++    # Return the full path.
++    return base_dir + dir
++
++
+ def summarise(file_name='summary', dir=None, force=True):
+     &quot;&quot;&quot;Summarise the frame order auto-analysis results.
+ 
+@@ -76,48 +99,36 @@
+ 
+     @keyword file_name:     The file to save the table into.
+     @type file_name:        str
+-    @keyword dir:           The optional directory to place the file into.
++    @keyword dir:           The optional directory to place the file into.  
+If specified, the results files will also be searched for in this directory.
+     @type dir:              None or str
+     @keyword force:         A flag which if True will cause any preexisting 
+file to be overwritten.
+     @type force:            bool
+     &quot;&quot;&quot;
+ 
+-    # The model names and directories.
+-    model_names = [
+-        'Rigid',
+-        'Free rotor',
+-        'Rotor',
+-        'Iso cone, free rotor',
+-        'Iso cone, torsionless',
+-        'Iso cone, torsionless (perm A)',
+-        'Iso cone',
+-        'Iso cone (perm A)',
+-        'Pseudo ellipse, torsionless',
+-        'Pseudo ellipse, torsionless (perm A)',
+-        'Pseudo ellipse, torsionless (perm B)',
+-        'Pseudo ellipse',
+-        'Pseudo ellipse (perm A)',
+-        'Pseudo ellipse (perm B)',
+-        'Double rotor'
+-    ]
+-    model_dirs = {
+-        'Rigid': 'rigid',
+-        'Free rotor': 'free_rotor',
+-        'Rotor': 'rotor',
+-        'Iso cone, free rotor': 'iso_cone, free_rotor',
+-        'Iso cone, torsionless': 'iso_cone_torsionless',
+-        'Iso cone, torsionless (perm A)': 
+'iso_cone_torsionless_permutation_A',
+-        'Iso cone': 'iso_cone',
+-        'Iso cone (perm A)': 'iso_cone_permutation_A',
+-        'Pseudo ellipse, torsionless': 'pseudo-ellipse_torsionless',
+-        'Pseudo ellipse, torsionless (perm A)': 
+'pseudo-ellipse_torsionless_permutation_A',
+-        'Pseudo ellipse, torsionless (perm B)': 
+'pseudo-ellipse_torsionless_permutation_B',
+-        'Pseudo ellipse': 'pseudo-ellipse',
+-        'Pseudo ellipse (perm A)': 'pseudo-ellipse_permutation_A',
+-        'Pseudo ellipse (perm B)': 'pseudo-ellipse_permutation_B',
+-        'Double rotor': 'double_rotor'
+-    }
+-
++    # The model names, titles and directories, including axis permutations.
++    models = []
++    model_titles = []
++    dirs = []
++    for model in MODEL_LIST:
++        # Add the base model.
++        models.append(model)
++        title = model[0].upper() + model[1:]
++        model_titles.append(title)
++        dirs.append(model_directory(model, base_dir=dir))
++
++        # Axis permutations.
++        if model in MODEL_LIST_ISO_CONE + MODEL_LIST_PSEUDO_ELLIPSE:
++            # The A permutation.
++            models.append(&quot;%s permutation A&quot; % model)
++            model_titles.append(title + ' (perm A)')
++            dirs.append(model_directory(models[-1], base_dir=dir))
++
++            # The B permutation.
++            if model in MODEL_LIST_PSEUDO_ELLIPSE:
++                models.append(&quot;%s permutation B&quot; % model)
++                model_titles.append(title + ' (perm B)')
++                dirs.append(model_directory(models[-1], base_dir=dir))
++        
+     # The analysis directory and structures.
+     contents = []
+     contents.append([&quot;Analysis directory&quot;, getcwd()])
+@@ -136,23 +147,23 @@
+     # Loop over the models.
+     contents1 = []
+     contents2 = []
+-    for i in range(len(model_names)):
++    for i in range(len(models)):
+         # No file.
+-        if not access(model_dirs[model_names[i]]+'/results.bz2', F_OK):
++        if not access(dirs[i]+sep+'results.bz2', F_OK):
+             continue
+ 
+         # Create a data pipe.
+-        pipes.create(model_names[i], 'frame order')
++        pipes.create(models[i], 'frame order')
+ 
+         # Load the data.
+-        results.read(file='results', dir=model_dirs[model_names[i]])
++        results.read(file='results', dir=dirs[i])
+ 
+         # Number of params.
+         k = len(cdp.params)
+ 
+         # Format the model information.
+-        contents1.append([model_names[i], k, cdp.chi2, cdp.chi2 + 2*k, None, 
+None, None, None, None, None, None])
+-        contents2.append([model_names[i], 0.0, 0.0, 0.0, None, None, None, 
+None, None, None])
++        contents1.append([model_titles[i], k, cdp.chi2, cdp.chi2 + 2*k, 
+None, None, None, None, None, None, None])
++        contents2.append([model_titles[i], 0.0, 0.0, 0.0, None, None, None, 
+None, None, None])
+ 
+         # Eigen alpha.
+         if hasattr(cdp, 'eigen_alpha') and cdp.eigen_alpha != None:
+@@ -211,9 +222,11 @@
+     string += format_table(headings=headings1, contents=contents1, 
+custom_format=[None, None, &quot;%.2f&quot;, &quot;%.2f&quot;, &quot;%.3f&quot;, &quot;%.3f&quot;, &quot;%.3f&quot;, &quot;%.2f&quot;, 
+&quot;%.2f&quot;, &quot;%.2f&quot;, &quot;%.2f&quot;])
+     string += format_table(headings=headings2, contents=contents2, 
+custom_format=[None, &quot;%.3f&quot;, &quot;%.3f&quot;, &quot;%.3f&quot;, &quot;%.3f&quot;, &quot;%.3f&quot;, &quot;%.3f&quot;, &quot;%.3f&quot;, 
+&quot;%.3f&quot;, &quot;%.3f&quot;])
+ 
+-    # Write out.
++    # Stdout output.
+     sys.stdout.write(&quot;\n\n\n&quot;)
+     sys.stdout.write(string)
++
++    # Save to file.
+     file = open_write_file(file_name=file_name, dir=dir, force=force)
+     file.write(string)
+     file.close()
+@@ -422,7 +435,7 @@
+             self.interpreter.eliminate()
+ 
+             # Save the results.
+-            
+self.interpreter.results.write(dir=self.model_directory(perm_model), 
+force=True)
++            self.interpreter.results.write(dir=model_directory(perm_model, 
+base_dir=self.results_dir), force=True)
+ 
+             # The PDB representation of the model and visualisation script.
+             self.visualisation(model=perm_model)
+@@ -514,26 +527,6 @@
+ 
+         # Return the increment list.
+         return incs
+-
+-
+-    def model_directory(self, model, pre_run=False):
+-        &quot;&quot;&quot;Return the directory to be used for the model.
+-
+-        @param model:       The frame order model.
+-        @type model:        str
+-        @keyword pre_run:   A flag which if True will prepend the pre-run 
+results directory instead of the current results directory.
+-        @type pre_run:      bool
+-        &quot;&quot;&quot;
+-
+-        # Convert the model name.
+-        dir = model.replace(' ', '_')
+-        dir = dir.replace(',', '')
+-
+-        # Return the full path.
+-        if pre_run:
+-            return self.pre_run_dir + dir
+-        else:
+-            return self.results_dir + dir
+ 
+ 
+     def nested_params_ave_dom_pos(self, model):
+@@ -844,7 +837,7 @@
+             self.interpreter.eliminate()
+ 
+             # Save the results.
+-            self.interpreter.results.write(dir=self.model_directory(model), 
+force=True)
++            self.interpreter.results.write(dir=model_directory(model, 
+base_dir=self.results_dir), force=True)
+ 
+             # The PDB representation of the model and visualisation script.
+             self.visualisation(model=model)
+@@ -876,8 +869,8 @@
+         # The results file already exists, so read its contents instead.
+         if self.read_results(model=model, 
+pipe_name=self.pipe_name_dict[model]):
+             # The PDB representation of the model and the pseudo-Brownian 
+dynamics simulation (in case this was not completed correctly).
+-            
+self.interpreter.frame_order.pdb_model(dir=self.model_directory(model), 
+force=True)
+-            
+self.interpreter.frame_order.simulate(dir=self.model_directory(model), 
+step_size=self.brownian_step_size, snapshot=self.brownian_snapshot, 
+total=self.brownian_total, force=True)
++            
+self.interpreter.frame_order.pdb_model(dir=model_directory(model, 
+base_dir=self.results_dir), force=True)
++            self.interpreter.frame_order.simulate(dir=model_directory(model, 
+base_dir=self.results_dir), step_size=self.brownian_step_size, 
+snapshot=self.brownian_snapshot, total=self.brownian_total, force=True)
+ 
+             # Nothing more to do.
+             return
+@@ -935,11 +928,11 @@
+         self.print_results()
+ 
+         # Save the results.
+-        self.interpreter.results.write(dir=self.model_directory(model), 
+force=True)
++        self.interpreter.results.write(dir=model_directory(model, 
+base_dir=self.results_dir), force=True)
+ 
+         # The PDB representation of the model and the pseudo-Brownian 
+dynamics simulation.
+-        
+self.interpreter.frame_order.pdb_model(dir=self.model_directory(model), 
+force=True)
+-        
+self.interpreter.frame_order.simulate(dir=self.model_directory(model), 
+step_size=self.brownian_step_size, snapshot=self.brownian_snapshot, 
+total=self.brownian_total, force=True)
++        self.interpreter.frame_order.pdb_model(dir=model_directory(model, 
+base_dir=self.results_dir), force=True)
++        self.interpreter.frame_order.simulate(dir=model_directory(model, 
+base_dir=self.results_dir), step_size=self.brownian_step_size, 
+snapshot=self.brownian_snapshot, total=self.brownian_total, force=True)
+ 
+ 
+     def print_results(self):
+@@ -1036,7 +1029,10 @@
+         &quot;&quot;&quot;
+ 
+         # The file name.
+-        path = self.model_directory(model, pre_run=pre_run) + sep + 
+'results.bz2'
++        base_dir = self.results_dir
++        if pre_run:
++            base_dir = self.pre_run_dir
++        path = model_directory(model, base_dir=base_dir) + sep + 
+'results.bz2'
+ 
+         # The file does not exist.
+         if not access(path, F_OK):
+@@ -1130,12 +1126,12 @@
+             raise RelaxError(&quot;The model '%s' does not match the model '%s' 
+of the current data pipe.&quot; % (model.replace(' permuted', ''), cdp.model))
+ 
+         # The PDB representation of the model and the pseudo-Brownian 
+dynamics simulation.
+-        
+self.interpreter.frame_order.pdb_model(dir=self.model_directory(model), 
+force=True)
+-        
+self.interpreter.frame_order.simulate(dir=self.model_directory(model), 
+step_size=self.brownian_step_size, snapshot=self.brownian_snapshot, 
+total=self.brownian_total, force=True)
++        self.interpreter.frame_order.pdb_model(dir=model_directory(model, 
+base_dir=self.results_dir), force=True)
++        self.interpreter.frame_order.simulate(dir=model_directory(model, 
+base_dir=self.results_dir), step_size=self.brownian_step_size, 
+snapshot=self.brownian_snapshot, total=self.brownian_total, force=True)
+ 
+         # Create the visualisation script.
+         subsection(file=sys.stdout, text=&quot;Creating a PyMOL visualisation 
+script.&quot;)
+-        script = open_write_file(file_name='pymol_display.py', 
+dir=self.model_directory(model), force=True)
++        script = open_write_file(file_name='pymol_display.py', 
+dir=model_directory(model, base_dir=self.results_dir), force=True)
+ 
+         # Add a comment for the user.
+         script.write(&quot;# relax script for displaying the frame order results 
+of this '%s' model in PyMOL.\n\n&quot; % model)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Sep 25 10:40:06 2014</div>  
+</body>
+</html>

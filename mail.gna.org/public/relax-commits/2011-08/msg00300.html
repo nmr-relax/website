@@ -1,0 +1,179 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r14320 &#45; /branches/gui_testing/gui/interpreter.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 10 Aug 2011 18:44:31 +0200 -->
+<!--X-Message-Id: E1QrBtP&#45;0000Zs&#45;7P@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r14320 - /branches/gui_testing/gui/interpreter.py -- August 10, 2011 - 18:44</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r14320 - /branches/gui_testing/gui/interpreter.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00300" class="tabs">Index by Date</a> | <a href="threads.html#00300" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00299.html">Date Prev</a>] [<a href="msg00301.html">Date Next</a>] [<a href="msg00299.html">Thread Prev</a>] [<a href="msg00301.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 10 Aug 2011 16:44:31 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00300.html">E1QrBtP-0000Zs-7P@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on August 10, 2011 - 18:44:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Aug 10 18:44:30 2011
+New Revision: 14320
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=14320&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=14320&amp;view=rev</a>
+Log:
+Errors are now handled properly in the interpreter thread for GUI user 
+functions.
+
+
+Modified:
+    branches/gui_testing/gui/interpreter.py
+
+Modified: branches/gui_testing/gui/interpreter.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/gui_testing/gui/interpreter.py?rev=14320&amp;r1=14319&amp;r2=14320&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/gui_testing/gui/interpreter.py?rev=14320&amp;r1=14319&amp;r2=14320&amp;view=diff</a>
+==============================================================================
+--- branches/gui_testing/gui/interpreter.py (original)
++++ branches/gui_testing/gui/interpreter.py Wed Aug 10 18:44:30 2011
+@@ -28,6 +28,7 @@
+ from re import search
+ from string import split
+ from threading import Thread
++from traceback import print_exc
+ 
+ # relax module imports.
+ from prompt import interpreter
+@@ -78,39 +79,47 @@
+     def run(self):
+         &quot;&quot;&quot;Execute the thread.&quot;&quot;&quot;
+ 
+-        # Loop until told to exit.
+-        while not self._exit:
+-            # Get the user function from the queue.
+-            uf, args, kwds = self._queue.get()
++        # Execute the user function, catching errors.
++        try:
++            # Loop until told to exit.
++            while not self._exit:
++                # Get the user function from the queue.
++                uf, args, kwds = self._queue.get()
+ 
+-            # No user function.
+-            if uf == None:
+-                continue
++                # No user function.
++                if uf == None:
++                    continue
+ 
+-            # Execution lock.
+-            status.exec_lock.acquire('gui', mode='interpreter thread')
++                # Execution lock.
++                status.exec_lock.acquire('gui', mode='interpreter thread')
+ 
+-            # Make sure the lock is released if something goes wrong.
+-            try:
+-                # Handle the user function class.
+-                if search('\.', uf):
+-                    # Split the user function.
+-                    uf_class, uf_fn = split(uf, '.')
++                # Make sure the lock is released if something goes wrong.
++                try:
++                    # Handle the user function class.
++                    if search('\.', uf):
++                        # Split the user function.
++                        uf_class, uf_fn = split(uf, '.')
+ 
+-                    # Get the user function class.
+-                    obj = getattr(self._interpreter, uf_class)
++                        # Get the user function class.
++                        obj = getattr(self._interpreter, uf_class)
+ 
+-                    # Get the function.
+-                    fn = getattr(obj, uf_fn)
++                        # Get the function.
++                        fn = getattr(obj, uf_fn)
+ 
+-                # Simple user function.
+-                else:
+-                    fn = getattr(self._interpreter, uf)
++                    # Simple user function.
++                    else:
++                        fn = getattr(self._interpreter, uf)
+ 
+-                # Apply the user function.
+-                apply(fn, args, kwds)
++                    # Apply the user function.
++                    apply(fn, args, kwds)
+ 
+-            # Release the lock.
+-            finally:
+-                status.exec_lock.release()
++                # Release the lock.
++                finally:
++                    status.exec_lock.release()
+ 
++        # Handle all errors.
++        except:
++            # Print the exception.
++            print(&quot;Exception raised in thread.\n&quot;)
++            print_exc()
++            print(&quot;\n\n&quot;)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Aug 10 19:20:01 2011</div>  
+</body>
+</html>

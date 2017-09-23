@@ -1,0 +1,167 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r17030 &#45; /trunk/generic_fns/sequence.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 22 Jun 2012 16:12:49 +0200 -->
+<!--X-Message-Id: E1Si4bR&#45;0005I4&#45;4H@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r17030 - /trunk/generic_fns/sequence.py -- June 22, 2012 - 16:12</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r17030 - /trunk/generic_fns/sequence.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00475" class="tabs">Index by Date</a> | <a href="threads.html#00475" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00474.html">Date Prev</a>] [<a href="msg00476.html">Date Next</a>] [<a href="msg00474.html">Thread Prev</a>] [<a href="msg00476.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 22 Jun 2012 14:12:49 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00475.html">E1Si4bR-0005I4-4H@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on June 22, 2012 - 16:12:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Jun 22 16:12:48 2012
+New Revision: 17030
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=17030&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=17030&amp;view=rev</a>
+Log:
+Fix for the sequence.read user function for a problem with r17028.
+
+The sequence.generate() function was not returning the correct result as it 
+didn't take into account
+the renaming and renumbering of empty spin containers.  Now sequence.read 
+will always print out the
+generated sequence and not result in a RelaxError for most of the system 
+tests.
+
+
+Modified:
+    trunk/generic_fns/sequence.py
+
+Modified: trunk/generic_fns/sequence.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/generic_fns/sequence.py?rev=17030&amp;r1=17029&amp;r2=17030&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/generic_fns/sequence.py?rev=17030&amp;r1=17029&amp;r2=17030&amp;view=diff</a>
+==============================================================================
+--- trunk/generic_fns/sequence.py (original)
++++ trunk/generic_fns/sequence.py Fri Jun 22 16:12:48 2012
+@@ -188,8 +188,6 @@
+     @type select:       bool
+     @keyword verbose:   A flag which if True will cause info about each spin 
+to be printed out as the sequence is generated.
+     @type verbose:      bool
+-    @return:            True if a new spin was created, False otherwise.
+-    @rtype:             bool
+     &quot;&quot;&quot;
+ 
+     # The current data pipe.
+@@ -205,20 +203,13 @@
+         create_residue(mol_name=mol_name, res_num=res_num, 
+res_name=res_name, pipe=pipe)
+ 
+     # A new spin.
+-    new_data = False
+     curr_spin = return_spin(generate_spin_id(mol_name=mol_name, 
+res_num=res_num, res_name=res_name, spin_num=spin_num, spin_name=spin_name), 
+pipe=pipe)
+     if not curr_spin:
+         # Add the spin.
+         curr_spin = create_spin(mol_name=mol_name, res_num=res_num, 
+res_name=res_name, spin_num=spin_num, spin_name=spin_name, pipe=pipe)
+ 
+-        # New data.
+-        new_data = True
+-
+     # Set the selection flag.
+     curr_spin.select = select
+-
+-    # Return the creation status.
+-    return new_data
+ 
+ 
+ def read(file=None, dir=None, file_data=None, spin_id_col=None, 
+mol_name_col=None, res_num_col=None, res_name_col=None, spin_num_col=None, 
+spin_name_col=None, sep=None, spin_id=None):
+@@ -276,15 +267,14 @@
+     # Generate the sequence.
+     for mol_name, res_num, res_name, spin_num, spin_name in 
+read_spin_data(file=file, dir=dir, file_data=file_data, 
+spin_id_col=spin_id_col, mol_name_col=mol_name_col, res_num_col=res_num_col, 
+res_name_col=res_name_col, spin_num_col=spin_num_col, 
+spin_name_col=spin_name_col, sep=sep, spin_id=spin_id):
+         # Add the spin.
+-        new_spin = generate(mol_name=mol_name, res_num=res_num, 
+res_name=res_name, spin_num=spin_num, spin_name=spin_name)
++        generate(mol_name=mol_name, res_num=res_num, res_name=res_name, 
+spin_num=spin_num, spin_name=spin_name)
+ 
+         # Append the new spin.
+-        if new_spin:
+-            mol_names.append(mol_name)
+-            res_nums.append(res_num)
+-            res_names.append(res_name)
+-            spin_nums.append(spin_num)
+-            spin_names.append(spin_name)
++        mol_names.append(mol_name)
++        res_nums.append(res_num)
++        res_names.append(res_name)
++        spin_nums.append(spin_num)
++        spin_names.append(spin_name)
+ 
+     # No data, so fail.
+     if not len(spin_names):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Jun 22 16:20:02 2012</div>  
+</body>
+</html>

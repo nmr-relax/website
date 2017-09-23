@@ -1,0 +1,263 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r18202 &#45; in /trunk: generic_fns/sequence.py user_functions/sequence.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 15 Jan 2013 12:46:18 +0100 -->
+<!--X-Message-Id: E1Tv4y9&#45;0001So&#45;Uj@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r18202 - in /trunk: generic_fns/sequence.py user_functions/sequence.py -- January 15, 2013 - 12:46</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r18202 - in /trunk: generic_fns/sequence.py user_functions/sequence.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00029" class="tabs">Index by Date</a> | <a href="threads.html#00029" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00028.html">Date Prev</a>] [<a href="msg00030.html">Date Next</a>] [<a href="msg00028.html">Thread Prev</a>] [<a href="msg00030.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 15 Jan 2013 11:46:17 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00029.html">E1Tv4y9-0001So-Uj@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on January 15, 2013 - 12:46:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Jan 15 12:46:17 2013
+New Revision: 18202
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=18202&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=18202&amp;view=rev</a>
+Log:
+Added the 'empty' flag to the sequence.copy user function to allow all the 
+spin contents to be copied.
+
+The user function was only copying the basic empty molecule, residue and spin 
+containers, in contrast
+to the interatomic.copy user function which copies all of the container 
+contents as well.  This new
+flag is for backwards compatibility - it allows old scripts to operate as 
+before while enabling the
+new functionality.
+
+
+Modified:
+    trunk/generic_fns/sequence.py
+    trunk/user_functions/sequence.py
+
+Modified: trunk/generic_fns/sequence.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/generic_fns/sequence.py?rev=18202&amp;r1=18201&amp;r2=18202&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/generic_fns/sequence.py?rev=18202&amp;r1=18201&amp;r2=18202&amp;view=diff</a>
+==============================================================================
+--- trunk/generic_fns/sequence.py (original)
++++ trunk/generic_fns/sequence.py Tue Jan 15 12:46:17 2013
+@@ -1,6 +1,6 @@
+ 
+###############################################################################
+ #                                                                            
+ #
+-# Copyright (C) 2003-2012 Edward d'Auvergne                                  
+ #
++# Copyright (C) 2003-2013 Edward d'Auvergne                                  
+ #
+ #                                                                            
+ #
+ # This file is part of the program relax (<a  rel="nofollow" href="http://www.nmr-relax.com">http://www.nmr-relax.com</a>).         
+ #
+ #                                                                            
+ #
+@@ -21,6 +21,11 @@
+ 
+ # Module docstring.
+ &quot;&quot;&quot;Module for handling the molecule, residue, and spin sequence.&quot;&quot;&quot;
++
++# Python module imports.
++from copy import deepcopy
++from re import search
++import sys
+ 
+ # relax module imports.
+ from arg_check import is_int
+@@ -29,7 +34,6 @@
+ from generic_fns import pipes
+ from relax_errors import RelaxError, RelaxDiffMolNumError, 
+RelaxDiffResNumError, RelaxDiffSeqError, RelaxDiffSpinNumError, 
+RelaxFileEmptyError, RelaxInvalidSeqError, RelaxNoSequenceError, 
+RelaxSequenceError
+ from relax_io import open_write_file, read_spin_data, write_spin_data
+-import sys
+ 
+ 
+ 
+@@ -79,19 +83,17 @@
+     set_spin_isotope(spin_id='@H', isotope='1H')
+ 
+ 
+-def copy(pipe_from=None, pipe_to=None, preserve_select=False, verbose=True):
++def copy(pipe_from=None, pipe_to=None, preserve_select=False, empty=True, 
+verbose=True):
+     &quot;&quot;&quot;Copy the molecule, residue, and spin sequence data from one data pipe 
+to another.
+ 
+-    @keyword pipe_from:         The data pipe to copy the sequence data 
+from.  This defaults to the
+-                                current data pipe.
++    @keyword pipe_from:         The data pipe to copy the sequence data 
+from.  This defaults to the current data pipe.
+     @type pipe_from:            str
+-    @keyword pipe_to:           The data pipe to copy the sequence data to.  
+This defaults to the
+-                                current data pipe.
++    @keyword pipe_to:           The data pipe to copy the sequence data to.  
+This defaults to the current data pipe.
+     @type pipe_to:              str
+     @keyword preserve_select:   A flag which if True will cause spin 
+selections to be preserved.
+     @type preserve_select:      bool
+-    @keyword verbose:           A flag which if True will cause info about 
+each spin to be printed
+-                                out as the sequence is generated.
++    @keyword empty:             A flag which if True will create a molecule, 
+residue, and spin sequence in the target pipe lacking all of the spin data of 
+the source pipe.  If False, then the spin data will also be copied.
++    @keyword verbose:           A flag which if True will cause info about 
+each spin to be printed out as the sequence is generated.
+     @type verbose:              bool
+     &quot;&quot;&quot;
+ 
+@@ -117,14 +119,38 @@
+ 
+     # Loop over the spins of the pipe_from data pipe.
+     for spin, mol_name, res_num, res_name in spin_loop(pipe=pipe_from, 
+full_info=True):
++        # Generate the new sequence.
++        new_spin = create_spin(spin_num=spin.num, spin_name=spin.name, 
+res_num=res_num, res_name=res_name, mol_name=mol_name, pipe=pipe_to)
++
+         # Preserve selection.
+         if preserve_select:
+-            select = spin.select
++            new_spin.select = spin.select
+         else:
+             select = True
+ 
+-        # Generate the new sequence.
+-        generate(mol_name, res_num, res_name, spin.num, spin.name, pipe_to, 
+select=select, verbose=verbose)
++        # Copy all the spin data.
++        if not empty:
++            # Duplicate all the objects of the container.
++            for name in dir(spin):
++                # Skip special objects.
++                if search('^_', name):
++                    continue
++
++                # Skip the spin ID.
++                #if name in ['spin_id']:
++                #    continue
++
++                # Skip class methods.
++                if name in list(spin.__class__.__dict__.keys()):
++                    continue
++
++                # Duplicate all other objects.
++                obj = deepcopy(getattr(spin, name))
++                setattr(new_spin, name, obj)
++
++    # Print out.
++    if verbose:
++        display(mol_name_flag=True, res_num_flag=True, res_name_flag=True, 
+spin_num_flag=True, spin_name_flag=True)
+ 
+ 
+ def compare_sequence(pipe1=None, pipe2=None, fail=True):
+
+Modified: trunk/user_functions/sequence.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/user_functions/sequence.py?rev=18202&amp;r1=18201&amp;r2=18202&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/user_functions/sequence.py?rev=18202&amp;r1=18201&amp;r2=18202&amp;view=diff</a>
+==============================================================================
+--- trunk/user_functions/sequence.py (original)
++++ trunk/user_functions/sequence.py Tue Jan 15 12:46:17 2013
+@@ -1,6 +1,6 @@
+ 
+###############################################################################
+ #                                                                            
+ #
+-# Copyright (C) 2003-2012 Edward d'Auvergne                                  
+ #
++# Copyright (C) 2003-2013 Edward d'Auvergne                                  
+ #
+ #                                                                            
+ #
+ # This file is part of the program relax (<a  rel="nofollow" href="http://www.nmr-relax.com">http://www.nmr-relax.com</a>).         
+ #
+ #                                                                            
+ #
+@@ -85,6 +85,13 @@
+     wiz_combo_iter = pipes.pipe_names,
+     wiz_read_only = True,
+     can_be_none = True
++)
++uf.add_keyarg(
++    name = &quot;empty&quot;,
++    default = True,
++    py_type = &quot;bool&quot;,
++    desc_short = &quot;empty sequence flag&quot;,
++    desc = &quot;A flag which if True will create a molecule, residue, and spin 
+sequence in the target pipe lacking all of the spin data of the source pipe.  
+If False, then the spin data will also be copied.&quot;
+ )
+ # Description.
+ uf.desc.append(Desc_container())
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Jan 15 17:20:02 2013</div>  
+</body>
+</html>

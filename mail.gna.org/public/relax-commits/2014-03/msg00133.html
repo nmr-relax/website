@@ -1,0 +1,150 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r22523 &#45; /branches/double_rotor/test_suite/system_tests/scripts/frame_order/cam/base_script.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 25 Mar 2014 08:51:57 +0100 -->
+<!--X-Message-Id: E1WSM9N&#45;000071&#45;7G@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r22523 - /branches/double_rotor/test_suite/system_tests/scripts/frame_order/cam/base_script.py -- March 25, 2014 - 08:51</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r22523 - /branches/double_rotor/test_suite/system_tests/scripts/frame_order/cam/base_script.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00133" class="tabs">Index by Date</a> | <a href="threads.html#00133" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00132.html">Date Prev</a>] [<a href="msg00134.html">Date Next</a>] [<a href="msg00132.html">Thread Prev</a>] [<a href="msg00134.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 25 Mar 2014 07:51:57 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00133.html">E1WSM9N-000071-7G@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on March 25, 2014 - 08:51:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Mar 25 08:51:56 2014
+New Revision: 22523
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=22523&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=22523&amp;view=rev</a>
+Log:
+Fixes for the rotor axis alpha angle conversion in the CaM frame order system 
+test base script.
+
+The pivot point is not the point on the rotor axis closest to the reference 
+point (the CoM).
+Therefore the closest point is now calculated from the pivot point on the 
+axis and the axis vector.
+This closest point is needed for defining the new minimal parameter set for 
+the rotor models.
+
+
+Modified:
+    
+branches/double_rotor/test_suite/system_tests/scripts/frame_order/cam/base_script.py
+
+Modified: 
+branches/double_rotor/test_suite/system_tests/scripts/frame_order/cam/base_script.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/double_rotor/test_suite/system_tests/scripts/frame_order/cam/base_script.py?rev=22523&amp;r1=22522&amp;r2=22523&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/double_rotor/test_suite/system_tests/scripts/frame_order/cam/base_script.py?rev=22523&amp;r1=22522&amp;r2=22523&amp;view=diff</a>
+==============================================================================
+--- 
+branches/double_rotor/test_suite/system_tests/scripts/frame_order/cam/base_script.py
+        (original)
++++ 
+branches/double_rotor/test_suite/system_tests/scripts/frame_order/cam/base_script.py
+        Tue Mar 25 08:51:56 2014
+@@ -30,6 +30,7 @@
+ # relax module imports.
+ from data_store import Relax_data_store; ds = Relax_data_store()
+ from lib.geometry.coord_transform import spherical_to_cartesian
++from lib.geometry.lines import closest_point_ax
+ from lib.geometry.rotations import euler_to_R_zyz, reverse_euler_zyz
+ from lib.geometry.vectors import vector_angle
+ from status import Status; status = Status()
+@@ -130,8 +131,15 @@
+         @rtype:         float
+         &quot;&quot;&quot;
+ 
+-        # The CoM-pivot unit vector.
+-        piv_com = com - pivot
++        # The axis.
++        axis = zeros(3, float64)
++        spherical_to_cartesian([1.0, theta, phi], axis)
++
++        # The closest point on the line to the CoM (shift the pivot).
++        new_piv = closest_point_ax(line_pt=pivot, axis=axis, point=com)
++
++        # The CoM-pivot unit vector (for the shifted pivot).
++        piv_com = com - new_piv
+         piv_com = piv_com / norm(piv_com)
+ 
+         # The vector perpendicular to the CoM-pivot vector.
+@@ -139,12 +147,8 @@
+         perp_vect = cross(piv_com, z_axis)
+         perp_vect = perp_vect / norm(perp_vect)
+ 
+-        # The axis.
+-        axis = zeros(3, float64)
+-        spherical_to_cartesian([1.0, theta, phi], axis)
+-
+         # The alpha angle (the angle between the perpendicular vector and 
+the axis).
+-        alpha = vector_angle(perp_vect, axis, piv_com)
++        alpha = vector_angle(axis, perp_vect, piv_com)
+ 
+         # Return the axis alpha angle.
+         return alpha
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Mar 25 10:20:01 2014</div>  
+</body>
+</html>

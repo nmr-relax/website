@@ -1,0 +1,149 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r25781 &#45; /trunk/pipe_control/error_analysis.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Fri, 12 Sep 2014 13:48:59 +0200 -->
+<!--X-Message-Id: E1XSPLX&#45;0005kH&#45;EH@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r25781 - /trunk/pipe_control/error_analysis.py -- September 12, 2014 - 13:48</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r25781 - /trunk/pipe_control/error_analysis.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00287" class="tabs">Index by Date</a> | <a href="threads.html#00287" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00286.html">Date Prev</a>] [<a href="msg00288.html">Date Next</a>] [<a href="msg00286.html">Thread Prev</a>] [<a href="msg00288.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Fri, 12 Sep 2014 11:48:59 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00287.html">E1XSPLX-0005kH-EH@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on September 12, 2014 - 13:48:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Fri Sep 12 13:48:58 2014
+New Revision: 25781
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=25781&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=25781&amp;view=rev</a>
+Log:
+Implemented the pipe_control.error_analysis.covariance_matrix() function.
+
+This follows from 
+<a  rel="nofollow" href="http://thread.gmane.org/gmane.science.nmr.relax.scm/23526/focus=7096">http://thread.gmane.org/gmane.science.nmr.relax.scm/23526/focus=7096</a>.  It 
+will be
+used by a new error_analysis.covariance_matrix user function.  And it calls 
+the specific API methods
+model_loop(), covariance_matrix(), and set_error() and the relax library
+lib.statistics.multifit_covar() function do to most of the work.
+
+
+Modified:
+    trunk/pipe_control/error_analysis.py
+
+Modified: trunk/pipe_control/error_analysis.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/pipe_control/error_analysis.py?rev=25781&amp;r1=25780&amp;r2=25781&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/pipe_control/error_analysis.py?rev=25781&amp;r1=25780&amp;r2=25781&amp;view=diff</a>
+==============================================================================
+--- trunk/pipe_control/error_analysis.py        (original)
++++ trunk/pipe_control/error_analysis.py        Fri Sep 12 13:48:58 2014
+@@ -31,6 +31,39 @@
+ from lib.errors import RelaxError
+ from pipe_control import pipes
+ from specific_analyses.api import return_api
++
++
++def covariance_matrix(epsrel=0.0, verbosity=2):
++    &quot;&quot;&quot;Estimate model parameter errors via the covariance matrix technique.
++
++    Note that the covariance matrix error estimate is always of lower 
+quality than Monte Carlo simulations.
++
++
++    @param epsrel:          Any columns of R which satisfy |R_{kk}| &lt;= 
+epsrel |R_{11}| are considered linearly-dependent and are excluded from the 
+covariance matrix, where the corresponding rows and columns of the covariance 
+matrix are set to zero.
++    @type epsrel:           float
++    @keyword verbosity:     The amount of information to print.  The higher 
+the value, the greater the verbosity.
++    @type verbosity:        int
++    &quot;&quot;&quot;
++
++    # Test if the current data pipe exists.
++    pipes.test()
++
++    # The specific analysis API object.
++    api = return_api()
++
++    # Loop over the models.
++    for model_info in api.model_loop():
++        # Get the Jacobian and weighting matrix.
++        jacobian, weights = api.covariance_matrix(verbosity=verbosity)
++
++        # Calculate the covariance matrix.
++        pcov = statistics.multifit_covar(J=jacobian, weights=weights)
++
++        # To compute one standard deviation errors on the parameters, take 
+the square root of the diagonal covariance.
++        sd = sqrt(diag(pcov))
++
++        # Set the parameter error.
++        api.set_error(0, sd, model_info=model_info)
+ 
+ 
+ def monte_carlo_create_data(method=None):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Fri Sep 12 14:00:02 2014</div>  
+</body>
+</html>

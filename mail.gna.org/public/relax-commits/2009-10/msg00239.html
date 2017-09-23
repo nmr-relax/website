@@ -1,0 +1,201 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r9803 &#45; /branches/bmrb/generic_fns/relax_data.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Tue, 27 Oct 2009 15:52:18 +0100 -->
+<!--X-Message-Id: E1N2nPG&#45;0004YZ&#45;TO@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r9803 - /branches/bmrb/generic_fns/relax_data.py -- October 27, 2009 - 15:52</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r9803 - /branches/bmrb/generic_fns/relax_data.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00239" class="tabs">Index by Date</a> | <a href="threads.html#00239" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00238.html">Date Prev</a>] [<a href="msg00240.html">Date Next</a>] [<a href="msg00238.html">Thread Prev</a>] [<a href="msg00240.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Tue, 27 Oct 2009 14:52:18 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00239.html">E1N2nPG-0004YZ-TO@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on October 27, 2009 - 15:52:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Tue Oct 27 15:52:18 2009
+New Revision: 9803
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=9803&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=9803&amp;view=rev</a>
+Log:
+Molecule names are converted to entity IDs and vice versa for BMRB writing 
+and reading.
+
+
+Modified:
+    branches/bmrb/generic_fns/relax_data.py
+
+Modified: branches/bmrb/generic_fns/relax_data.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/bmrb/generic_fns/relax_data.py?rev=9803&amp;r1=9802&amp;r2=9803&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/bmrb/generic_fns/relax_data.py?rev=9803&amp;r1=9802&amp;r2=9803&amp;view=diff</a>
+==============================================================================
+--- branches/bmrb/generic_fns/relax_data.py (original)
++++ branches/bmrb/generic_fns/relax_data.py Tue Oct 27 15:52:18 2009
+@@ -25,7 +25,7 @@
+ 
+ # Python module imports.
+ from copy import deepcopy
+-from numpy import ones
++from numpy import int32, ones, zeros
+ import string
+ import sys
+ from warnings import warn
+@@ -33,7 +33,7 @@
+ # relax module imports.
+ from data import Relax_data_store; ds = Relax_data_store()
+ from data.exp_info import ExpInfo
+-from generic_fns.mol_res_spin import create_spin, exists_mol_res_spin_data, 
+generate_spin_id, return_spin, spin_index_loop, spin_loop
++from generic_fns.mol_res_spin import create_spin, exists_mol_res_spin_data, 
+generate_spin_id, get_molecule_names, return_spin, spin_index_loop, spin_loop
+ from generic_fns import pipes
+ from generic_fns import value
+ from relax_errors import RelaxError, RelaxNoRiError, RelaxNoSequenceError, 
+RelaxNoSpinError, RelaxRiError
+@@ -212,7 +212,7 @@
+     &quot;&quot;&quot;
+ 
+     # Get the relaxation data.
+-    for data_type, frq, res_nums, res_names, spin_names, val, err in 
+star.relaxation.loop():
++    for data_type, frq, entity_ids, res_nums, res_names, spin_names, val, 
+err in star.relaxation.loop():
+         # Create the labels.
+         ri_label = data_type
+         frq_label = str(int(frq*1e-6))
+@@ -221,8 +221,14 @@
+         if test_labels(ri_label, frq_label):
+             raise RelaxRiError(ri_label, frq_label)
+ 
++        # Convert entity IDs to molecule names.
++        mol_names = []
++        names = get_molecule_names()
++        for id in entity_ids:
++            mol_names.append(names[int(id)-1])
++
+         # Pack the data.
+-        pack_data(ri_label, frq_label, frq, val, err, mol_names=None, 
+res_nums=res_nums, res_names=res_names, spin_nums=None, 
+spin_names=spin_names, gen_seq=True)
++        pack_data(ri_label, frq_label, frq, val, err, mol_names=mol_names, 
+res_nums=res_nums, res_names=res_names, spin_nums=None, 
+spin_names=spin_names, gen_seq=True)
+ 
+ 
+ 
+@@ -237,6 +243,7 @@
+     cdp = pipes.get_pipe()
+ 
+     # Initialise the spin specific data lists.
++    mol_name_list = []
+     res_num_list = []
+     res_name_list = []
+     atom_name_list = []
+@@ -273,6 +280,7 @@
+             raise RelaxError(&quot;For the BMRB, the spin isotope type of '%s' 
+must be specified.&quot; % spin_id)
+ 
+         # The molecule/residue/spin info.
++        mol_name_list.append(mol_name)
+         res_num_list.append(str(res_num))
+         res_name_list.append(str(res_name))
+         atom_name_list.append(str(spin.name))
+@@ -305,6 +313,14 @@
+         # Other info.
+         isotope_list.append(int(string.strip(spin.heteronuc_type, 
+string.ascii_letters)))
+ 
++    # Convert the molecule names into the entity IDs.
++    entity_ids = zeros(len(mol_name_list), int32)
++    mol_names = get_molecule_names()
++    for i in range(len(mol_name_list)):
++        for j in range(len(mol_names)):
++            if mol_name_list[i] == mol_names[j]:
++                entity_ids[i] = j+1
++
+     # Check the temperature control methods.
+     if not hasattr(cdp, 'exp_info') or not hasattr(cdp.exp_info, 
+'temp_calibration'):
+         raise RelaxError(&quot;The temperature calibration methods have not been 
+specified.&quot;)
+@@ -328,7 +344,7 @@
+             raise RelaxError(&quot;The temperature control method for the '%s' 
+ri_label and '%s' frq_label have not been specified.&quot; % (ri_label, frq_label))
+ 
+         # Add the relaxation data.
+-        star.relaxation.add(data_type=ri_label, 
+frq=cdp.frq[cdp.remap_table[i]], res_nums=res_num_list, 
+res_names=res_name_list, atom_names=atom_name_list, isotope=isotope_list, 
+data=relax_data_list[i], errors=relax_error_list[i], 
+temp_calibration=temp_calib, temp_control=temp_control)
++        star.relaxation.add(data_type=ri_label, 
+frq=cdp.frq[cdp.remap_table[i]], entity_ids=entity_ids, 
+res_nums=res_num_list, res_names=res_name_list, atom_names=atom_name_list, 
+isotope=isotope_list, data=relax_data_list[i], errors=relax_error_list[i], 
+temp_calibration=temp_calib, temp_control=temp_control)
+ 
+ 
+ def copy(pipe_from=None, pipe_to=None, ri_label=None, frq_label=None):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Tue Oct 27 16:00:02 2009</div>  
+</body>
+</html>

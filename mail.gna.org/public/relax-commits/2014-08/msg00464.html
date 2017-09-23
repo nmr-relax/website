@@ -1,0 +1,165 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r25330 &#45; /trunk/specific_analyses/relax_disp/estimate_r2eff.py -->
+<!--X-From-R13: gyvaargNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 27 Aug 2014 11:29:25 +0200 -->
+<!--X-Message-Id: E1XMZXh&#45;0004wj&#45;12@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r25330 - /trunk/specific_analyses/relax_disp/estimate_r2eff.py -- August 27, 2014 - 11:29</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r25330 - /trunk/specific_analyses/relax_disp/estimate_r2eff.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00464" class="tabs">Index by Date</a> | <a href="threads.html#00464" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00463.html">Date Prev</a>] [<a href="msg00465.html">Date Next</a>] [<a href="msg00463.html">Thread Prev</a>] [<a href="msg00465.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 27 Aug 2014 09:29:25 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00464.html">E1XMZXh-0004wj-12@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>tlinnet</strong> on August 27, 2014 - 11:29:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: tlinnet
+Date: Wed Aug 27 11:29:24 2014
+New Revision: 25330
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=25330&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=25330&amp;view=rev</a>
+Log:
+Tried to implement the Jacobian from C-code.
+
+This though also report errors which are to small.
+
+Maybe some scaling is wrong.
+
+task #7822(<a  rel="nofollow" href="https://gna.org/task/index.php?7822">https://gna.org/task/index.php?7822</a>): Implement user function to 
+estimate R2eff and associated errors for exponential curve fitting.
+
+Modified:
+    trunk/specific_analyses/relax_disp/estimate_r2eff.py
+
+Modified: trunk/specific_analyses/relax_disp/estimate_r2eff.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/relax_disp/estimate_r2eff.py?rev=25330&amp;r1=25329&amp;r2=25330&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/specific_analyses/relax_disp/estimate_r2eff.py?rev=25330&amp;r1=25329&amp;r2=25330&amp;view=diff</a>
+==============================================================================
+--- trunk/specific_analyses/relax_disp/estimate_r2eff.py        (original)
++++ trunk/specific_analyses/relax_disp/estimate_r2eff.py        Wed Aug 27 
+11:29:24 2014
+@@ -42,7 +42,7 @@
+ from specific_analyses.relax_disp.variables import MODEL_R2EFF
+ from specific_analyses.relax_fit.optimisation import func_wrapper, 
+dfunc_wrapper, d2func_wrapper
+ from target_functions.chi2 import chi2_rankN
+-from target_functions.relax_fit import setup
++from target_functions.relax_fit import jacobian, setup
+ 
+ 
+ # Scipy installed.
+@@ -734,7 +734,7 @@
+     E.set_settings_minfx(min_algor=min_algor)
+ 
+     # Do C code
+-    do_C = False
++    do_C = True
+ 
+     if do_C:
+         # Initialise the function to minimise.
+@@ -766,19 +766,27 @@
+     param_vector, chi2, iter_count, f_count, g_count, h_count, warning = 
+results_minfx
+ 
+     # Get the Jacobian.
+-    # First make a call to the Jacobian function, which store it in the 
+class.
+-    E.func_exp_grad(params=param_vector)
+-    jacobian_matrix = deepcopy(E.jacobian_matrix)
+-
++    if do_C:
++        # First make a call to the Jacobian function, which store it in the 
+class.
++        jacobian_matrix = transpose(asarray( jacobian(param_vector) ) )
++
++        # Compare with python code.
++        #E.func_exp_grad(params=param_vector)
++        #jacobian_matrix2 = deepcopy(E.jacobian_matrix)
++        #print jacobian_matrix
++        #print &quot; &quot;
++        #print jacobian_matrix2
++    else:
++        jacobian_matrix = deepcopy(E.jacobian_matrix)
++
++    # Get the co-variance
++    pcov = E.multifit_covar(J=jacobian_matrix)
++
++    # To compute one standard deviation errors on the parameters, take the 
+square root of the diagonal covariance.
++    param_vector_error = sqrt(diag(pcov))
+     # Set error to inf.
+     #param_vector_error = [inf, inf]
+ 
+-    # Get the co-variance
+-    pcov = E.multifit_covar(J=jacobian_matrix)
+-
+-    # To compute one standard deviation errors on the parameters, take the 
+square root of the diagonal covariance.
+-    param_vector_error = sqrt(diag(pcov))
+-
+     # Pack to list.
+     results = [param_vector, param_vector_error, chi2, iter_count, f_count, 
+g_count, h_count, warning]
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Aug 27 12:00:03 2014</div>  
+</body>
+</html>

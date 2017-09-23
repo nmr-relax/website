@@ -1,0 +1,649 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r18607 &#45; in /trunk/generic_fns: pcs.py rdc.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 04 Mar 2013 14:23:48 +0100 -->
+<!--X-Message-Id: E1UCVMp&#45;0006np&#45;W9@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r18607 - in /trunk/generic_fns: pcs.py rdc.py -- March 04, 2013 - 14:23</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r18607 - in /trunk/generic_fns: pcs.py rdc.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00025" class="tabs">Index by Date</a> | <a href="threads.html#00025" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00024.html">Date Prev</a>] [<a href="msg00026.html">Date Next</a>] [<a href="msg00024.html">Thread Prev</a>] [<a href="msg00026.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 04 Mar 2013 13:23:47 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00025.html">E1UCVMp-0006np-W9@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on March 04, 2013 - 14:23:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Mon Mar  4 14:23:47 2013
+New Revision: 18607
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=18607&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=18607&amp;view=rev</a>
+Log:
+Large improvements to the checking for all the rdc and pcs user functions.
+
+The new methods check_pipe_setup() have been added to replace all other 
+checking.  This
+standardises all error checking and provides much better coverage.  The 
+results is that a user will
+be much less likely to encounter a Python traceback when they forget 
+something, and will be told via
+a RelaxError what they are missing.
+
+
+Modified:
+    trunk/generic_fns/pcs.py
+    trunk/generic_fns/rdc.py
+
+Modified: trunk/generic_fns/pcs.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/generic_fns/pcs.py?rev=18607&amp;r1=18606&amp;r2=18607&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/generic_fns/pcs.py?rev=18607&amp;r1=18606&amp;r2=18607&amp;view=diff</a>
+==============================================================================
+--- trunk/generic_fns/pcs.py (original)
++++ trunk/generic_fns/pcs.py Mon Mar  4 14:23:47 2013
+@@ -50,9 +50,8 @@
+     @type align_id:         str
+     &quot;&quot;&quot;
+ 
+-    # Arg check.
+-    if align_id and align_id not in cdp.align_ids:
+-        raise RelaxError(&quot;The alignment ID '%s' is not in the alignment ID 
+list %s.&quot; % (align_id, cdp.align_ids))
++    # Check the pipe setup.
++    check_pipe_setup(pcs_id=align_id, sequence=True, N=True, tensors=True, 
+paramag_centre=True)
+ 
+     # Convert the align IDs to an array, or take all IDs.
+     if align_id:
+@@ -135,8 +134,8 @@
+     if pipe == None:
+         pipe = pipes.cdp_name()
+ 
+-    # Test the data pipe.
+-    pipes.test(pipe)
++    # Check the pipe setup.
++    check_pipe_setup(pipe=pipe)
+ 
+     # Get the data pipes.
+     source_dp = pipes.get_pipe(pipe)
+@@ -204,6 +203,64 @@
+         cdp.paramagnetic_centre = full_pos_list
+ 
+ 
++def check_pipe_setup(pipe=None, pcs_id=None, sequence=False, N=False, 
+tensors=False, pcs=False, paramag_centre=False):
++    &quot;&quot;&quot;Check that the current data pipe has been setup sufficiently.
++
++    @keyword pipe:              The data pipe to check, defaulting to the 
+current pipe.
++    @type pipe:                 None or str
++    @keyword pcs_id:            The PCS ID string to check for in 
+cdp.pcs_ids.
++    @type pcs_id:               None or str
++    @keyword sequence:          A flag which when True will invoke the 
+sequence data check.
++    @type sequence:             bool
++    @keyword N:                 A flag which if True will check that cdp.N 
+is set.
++    @type N:                    bool
++    @keyword tensors:           A flag which if True will check that 
+alignment tensors exist.
++    @type tensors:              bool
++    @keyword pcs:               A flag which if True will check that PCSs 
+exist.
++    @type pcs:                  bool
++    @keyword paramag_centre:    A flag which if True will check that the 
+paramagnetic centre has been set.
++    @type paramag_centre:       bool
++    &quot;&quot;&quot;
++
++    # The data pipe.
++    if pipe == None:
++        pipe = pipes.cdp_name()
++
++    # Get the data pipe.
++    dp = pipes.get_pipe(pipe)
++
++    # Test if the current data pipe exists.
++    pipes.test(pipe)
++
++    # Test if sequence data exists.
++    if sequence and not exists_mol_res_spin_data(pipe):
++        raise RelaxNoSequenceError(pipe)
++
++    # Check for dp.N.
++    if N and not hasattr(dp, 'N'):
++        raise RelaxError(&quot;The number of states N has not been set.&quot;)
++
++    # Check that alignment tensors are present.
++    if tensors and (not hasattr(dp, 'align_tensors') or 
+len(dp.align_tensors) == 0):
++        raise RelaxNoTensorError('alignment')
++
++    # Test for the alignment ID.
++    if pcs_id and (not hasattr(dp, 'align_ids') or pcs_id not in 
+dp.align_ids):
++        raise RelaxNoAlignError(pcs_id, pipe)
++
++    # Test if PCS data exists.
++    if pcs and not hasattr(dp, 'align_ids'):
++        raise RelaxNoAlignError()
++    if pcs and not hasattr(dp, 'pcs_ids'):
++        raise RelaxNoPCSError()
++    elif pcs and pcs_id and pcs_id not in dp.pcs_ids:
++        raise RelaxNoPCSError(pcs_id)
++
++    # Test if the paramagnetic centre is set.
++    if paramag_centre and not hasattr(cdp, 'paramagnetic_centre'):
++        raise RelaxError(&quot;The paramagnetic centre has not been defined.&quot;)
++
++
+ def copy(pipe_from=None, pipe_to=None, align_id=None):
+     &quot;&quot;&quot;Copy the PCS data from one data pipe to another.
+ 
+@@ -223,31 +280,13 @@
+     elif pipe_to == None:
+         pipe_to = pipes.cdp_name()
+ 
+-    # Test if the pipe_from and pipe_to data pipes exist.
+-    pipes.test(pipe_from)
+-    pipes.test(pipe_to)
++    # Check the pipe setup.
++    check_pipe_setup(pipe=pipe_from, pcs_id=align_id, sequence=True, 
+pcs=True)
++    check_pipe_setup(pipe=pipe_to, sequence=True)
+ 
+     # Get the data pipes.
+     dp_from = pipes.get_pipe(pipe_from)
+     dp_to = pipes.get_pipe(pipe_to)
+-
+-    # Test if pipe_from contains sequence data.
+-    if not exists_mol_res_spin_data(pipe_from):
+-        raise RelaxNoSequenceError
+-
+-    # Test if pipe_to contains sequence data.
+-    if not exists_mol_res_spin_data(pipe_to):
+-        raise RelaxNoSequenceError
+-
+-    # Test if alignment ID string exists for pipe_from.
+-    if align_id and (not hasattr(dp_from, 'align_ids') or align_id not in 
+dp_from.align_ids):
+-        raise RelaxNoAlignError(align_id, pipe_from)
+-
+-    # Test if PCS data for the alignment ID exists.
+-    if not hasattr(dp_from, 'pcs_ids'):
+-        raise RelaxError(&quot;No PCS data exists.&quot;)
+-    elif align_id and align_id not in dp_from.pcs_ids:
+-        raise RelaxNoPCSError(align_id)
+ 
+     # The IDs.
+     if align_id == None:
+@@ -305,12 +344,8 @@
+     @type force:        bool
+     &quot;&quot;&quot;
+ 
+-    # Test if the current pipe exists.
+-    pipes.test()
+-
+-    # Test if the sequence data is loaded.
+-    if not exists_mol_res_spin_data():
+-        raise RelaxNoSequenceError
++    # Check the pipe setup.
++    check_pipe_setup(sequence=True)
+ 
+     # Does PCS data exist?
+     if not hasattr(cdp, 'pcs_ids') or not cdp.pcs_ids:
+@@ -412,16 +447,8 @@
+     @type align_id:     str or None
+     &quot;&quot;&quot;
+ 
+-    # Test if the current data pipe exists.
+-    pipes.test()
+-
+-    # Test if sequence data exists.
+-    if not exists_mol_res_spin_data():
+-        raise RelaxNoSequenceError
+-
+-    # Check that the ID exists.
+-    if align_id and not align_id in cdp.pcs_ids:
+-        raise RelaxError(&quot;The PCS alignment id '%s' does not exist&quot; % 
+align_id)
++    # Check the pipe setup.
++    check_pipe_setup(sequence=True, pcs_id=align_id, pcs=True)
+ 
+     # The IDs.
+     if not align_id:
+@@ -462,6 +489,9 @@
+     @type bc:           bool
+     &quot;&quot;&quot;
+ 
++    # Check the pipe setup.
++    check_pipe_setup(sequence=True, pcs_id=align_id, pcs=True)
++
+     # Call the write method with sys.stdout as the file.
+     write(align_id=align_id, file=sys.stdout, bc=bc)
+ 
+@@ -472,6 +502,9 @@
+     @keyword spin_id:   The spin ID string used to restrict the Q-factor 
+calculation to a subset of all spins.
+     @type spin_id:      None or str
+     &quot;&quot;&quot;
++
++    # Check the pipe setup.
++    check_pipe_setup(sequence=True)
+ 
+     # No PCSs, so no Q factors can be calculated.
+     if not hasattr(cdp, 'pcs_ids') or not len(cdp.pcs_ids):
+@@ -572,8 +605,8 @@
+     @type spin_id:          None or str
+     &quot;&quot;&quot;
+ 
+-    # Test if the current data pipe exists.
+-    pipes.test()
++    # Check the pipe setup.
++    check_pipe_setup(sequence=True)
+ 
+     # Test if sequence data exists.
+     if not exists_mol_res_spin_data():
+@@ -681,21 +714,8 @@
+     @type sd:           float or int.
+     &quot;&quot;&quot;
+ 
+-    # Test if sequence data exists.
+-    if not exists_mol_res_spin_data():
+-        raise RelaxNoSequenceError
+-
+-    # Test if PCS data exists.
+-    if not hasattr(cdp, 'pcs_ids'):
+-        raise RelaxNoPCSError()
+-
+-    # Test if data corresponding to 'align_id' exists.
+-    if align_id and align_id not in cdp.pcs_ids:
+-        raise RelaxNoPCSError(align_id)
+-
+-    # Arg check.
+-    if align_id and align_id not in cdp.pcs_ids:
+-        raise RelaxError(&quot;The alignment ID '%s' is not in the PCS ID list 
+%s.&quot; % (align_id, cdp.pcs_ids))
++    # Check the pipe setup.
++    check_pipe_setup(sequence=True, pcs_id=align_id, pcs=True)
+ 
+     # Convert the align IDs to an array, or take all IDs.
+     if align_id:
+@@ -756,22 +776,8 @@
+     @type force:        bool
+     &quot;&quot;&quot;
+ 
+-    # Test if the current pipe exists.
+-    pipes.test()
+-
+-    # Test if sequence data exists.
+-    if not exists_mol_res_spin_data():
+-        raise RelaxNoSequenceError
+-
+-    # Test if data corresponding to 'align_id' exists.
+-    if not hasattr(cdp, 'pcs_ids'):
+-        raise RelaxNoPCSError(align_id)
+-    if align_id and align_id not in cdp.pcs_ids:
+-        raise RelaxNoPCSError(align_id)
+-
+-    # Arg check.
+-    if align_id and align_id not in cdp.align_ids:
+-        raise RelaxError(&quot;The alignment ID '%s' is not in the alignment ID 
+list %s.&quot; % (align_id, cdp.align_ids))
++    # Check the pipe setup.
++    check_pipe_setup(sequence=True, pcs_id=align_id, pcs=True, 
+paramag_centre=True)
+ 
+     # Convert the align IDs to an array, or take all IDs.
+     if align_id:
+@@ -901,13 +907,8 @@
+     @type weight:       float or int.
+     &quot;&quot;&quot;
+ 
+-    # Test if sequence data exists.
+-    if not exists_mol_res_spin_data():
+-        raise RelaxNoSequenceError
+-
+-    # Test if data corresponding to 'align_id' exists.
+-    if not hasattr(cdp, 'pcs_ids') or align_id not in cdp.pcs_ids:
+-        raise RelaxNoPCSError(align_id)
++    # Check the pipe setup.
++    check_pipe_setup(sequence=True, pcs_id=align_id, pcs=True)
+ 
+     # Loop over the spins.
+     for spin in spin_loop(spin_id):
+@@ -934,16 +935,8 @@
+     @type force:        bool
+     &quot;&quot;&quot;
+ 
+-    # Test if the current pipe exists.
+-    pipes.test()
+-
+-    # Test if the sequence data is loaded.
+-    if not exists_mol_res_spin_data():
+-        raise RelaxNoSequenceError
+-
+-    # Test if data corresponding to 'align_id' exists.
+-    if not hasattr(cdp, 'pcs_ids') or align_id not in cdp.pcs_ids:
+-        raise RelaxNoPCSError(align_id)
++    # Check the pipe setup.
++    check_pipe_setup(sequence=True, pcs_id=align_id, pcs=True)
+ 
+     # Open the file for writing.
+     file = open_write_file(file, dir, force)
+
+Modified: trunk/generic_fns/rdc.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/generic_fns/rdc.py?rev=18607&amp;r1=18606&amp;r2=18607&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/generic_fns/rdc.py?rev=18607&amp;r1=18606&amp;r2=18607&amp;view=diff</a>
+==============================================================================
+--- trunk/generic_fns/rdc.py (original)
++++ trunk/generic_fns/rdc.py Mon Mar  4 14:23:47 2013
+@@ -51,9 +51,8 @@
+     @type align_id:         str
+     &quot;&quot;&quot;
+ 
+-    # Arg check.
+-    if align_id and align_id not in cdp.align_ids:
+-        raise RelaxError(&quot;The alignment ID '%s' is not in the alignment ID 
+list %s.&quot; % (align_id, cdp.align_ids))
++    # Check the pipe setup.
++    check_pipe_setup(rdc_id=align_id, sequence=True, N=True, tensors=True)
+ 
+     # Convert the align IDs to an array, or take all IDs.
+     if align_id:
+@@ -122,6 +121,58 @@
+             # The absolute value.
+             if hasattr(interatom, 'absolute_rdc') and id in 
+interatom.absolute_rdc.keys() and interatom.absolute_rdc[id]:
+                 interatom.rdc_bc[id] = abs(interatom.rdc_bc[id])
++
++
++def check_pipe_setup(pipe=None, rdc_id=None, sequence=False, N=False, 
+tensors=False, rdc=False):
++    &quot;&quot;&quot;Check that the current data pipe has been setup sufficiently.
++
++    @keyword pipe:      The data pipe to check, defaulting to the current 
+pipe.
++    @type pipe:         None or str
++    @keyword rdc_id:    The RDC ID string to check for in cdp.rdc_ids.
++    @type rdc_id:       None or str
++    @keyword sequence:  A flag which when True will invoke the sequence data 
+check.
++    @type sequence:     bool
++    @keyword N:         A flag which if True will check that cdp.N is set.
++    @type N:            bool
++    @keyword tensors:   A flag which if True will check that alignment 
+tensors exist.
++    @type tensors:      bool
++    @keyword rdc:       A flag which if True will check that RDCs exist.
++    @type rdc:          bool
++    &quot;&quot;&quot;
++
++    # The data pipe.
++    if pipe == None:
++        pipe = pipes.cdp_name()
++
++    # Get the data pipe.
++    dp = pipes.get_pipe(pipe)
++
++    # Test if the current data pipe exists.
++    pipes.test(pipe)
++
++    # Test if sequence data exists.
++    if sequence and not exists_mol_res_spin_data(pipe):
++        raise RelaxNoSequenceError(pipe)
++
++    # Check for dp.N.
++    if N and not hasattr(dp, 'N'):
++        raise RelaxError(&quot;The number of states N has not been set.&quot;)
++
++    # Check that alignment tensors are present.
++    if tensors and (not hasattr(dp, 'align_tensors') or 
+len(dp.align_tensors) == 0):
++        raise RelaxNoTensorError('alignment')
++
++    # Test for the alignment ID.
++    if rdc_id and (not hasattr(dp, 'align_ids') or rdc_id not in 
+dp.align_ids):
++        raise RelaxNoAlignError(rdc_id, pipe)
++
++    # Test if RDC data exists.
++    if rdc and not hasattr(dp, 'align_ids'):
++        raise RelaxNoAlignError()
++    if rdc and not hasattr(dp, 'rdc_ids'):
++        raise RelaxNoRDCError()
++    elif rdc and rdc_id and rdc_id not in dp.rdc_ids:
++        raise RelaxNoRDCError(rdc_id)
+ 
+ 
+ def convert(value, align_id, to_intern=False):
+@@ -175,31 +226,13 @@
+     elif pipe_to == None:
+         pipe_to = pipes.cdp_name()
+ 
+-    # Test if the pipe_from and pipe_to data pipes exist.
+-    pipes.test(pipe_from)
+-    pipes.test(pipe_to)
++    # Check the pipe setup.
++    check_pipe_setup(pipe=pipe_from, rdc_id=align_id, sequence=True, 
+rdc=True)
++    check_pipe_setup(pipe=pipe_to, sequence=True)
+ 
+     # Get the data pipes.
+     dp_from = pipes.get_pipe(pipe_from)
+     dp_to = pipes.get_pipe(pipe_to)
+-
+-    # Test if pipe_from contains sequence data.
+-    if not exists_mol_res_spin_data(pipe_from):
+-        raise RelaxNoSequenceError
+-
+-    # Test if pipe_to contains sequence data.
+-    if not exists_mol_res_spin_data(pipe_to):
+-        raise RelaxNoSequenceError
+-
+-    # Test if alignment ID string exists for pipe_from.
+-    if align_id and (not hasattr(dp_from, 'align_ids') or align_id not in 
+dp_from.align_ids):
+-        raise RelaxNoAlignError(align_id, pipe_from)
+-
+-    # Test if RDC data for the alignment ID exists.
+-    if not hasattr(dp_from, 'rdc_ids'):
+-        raise RelaxError(&quot;No RDC data exists.&quot;)
+-    elif align_id and align_id not in dp_from.rdc_ids:
+-        raise RelaxNoRDCError(align_id)
+ 
+     # Test that the interatomic data is consistent between the two data pipe.
+     consistent_interatomic_data(pipe1=pipe_to, pipe2=pipe_from)
+@@ -260,12 +293,8 @@
+     @type force:        bool
+     &quot;&quot;&quot;
+ 
+-    # Test if the current pipe exists.
+-    pipes.test()
+-
+-    # Test if the sequence data is loaded.
+-    if not exists_mol_res_spin_data():
+-        raise RelaxNoSequenceError
++    # Check the pipe setup.
++    check_pipe_setup(sequence=True)
+ 
+     # Does RDC data exist?
+     if not hasattr(cdp, 'rdc_ids') or not cdp.rdc_ids:
+@@ -341,16 +370,8 @@
+     @type align_id:     str or None
+     &quot;&quot;&quot;
+ 
+-    # Test if the current data pipe exists.
+-    pipes.test()
+-
+-    # Test if sequence data exists.
+-    if not exists_mol_res_spin_data():
+-        raise RelaxNoSequenceError
+-
+-    # Check that the ID exists.
+-    if align_id and not align_id in cdp.rdc_ids:
+-        raise RelaxError(&quot;The RDC alignment id '%s' does not exist&quot; % 
+align_id)
++    # Check the pipe setup.
++    check_pipe_setup(sequence=True, rdc_id=align_id, rdc=True)
+ 
+     # The IDs.
+     if not align_id:
+@@ -391,6 +412,9 @@
+     @type bc:           bool
+     &quot;&quot;&quot;
+ 
++    # Check the pipe setup.
++    check_pipe_setup(sequence=True, rdc_id=align_id, rdc=True)
++
+     # Call the write method with sys.stdout as the file.
+     write(align_id=align_id, file=sys.stdout, bc=bc)
+ 
+@@ -401,6 +425,9 @@
+     @keyword spin_id:   The spin ID string used to restrict the Q-factor 
+calculation to a subset of all spins.
+     @type spin_id:      None or str
+     &quot;&quot;&quot;
++
++    # Check the pipe setup.
++    check_pipe_setup(sequence=True)
+ 
+     # No RDCs, so no Q factors can be calculated.
+     if not hasattr(cdp, 'rdc_ids') or not len(cdp.rdc_ids):
+@@ -535,12 +562,8 @@
+     @type absolute:         bool
+     &quot;&quot;&quot;
+ 
+-    # Test if the current data pipe exists.
+-    pipes.test()
+-
+-    # Test if sequence data exists.
+-    if not exists_mol_res_spin_data():
+-        raise RelaxNoSequenceError
++    # Check the pipe setup.
++    check_pipe_setup(sequence=True)
+ 
+     # Either the data or error column must be supplied.
+     if data_col == None and error_col == None:
+@@ -721,21 +744,8 @@
+     @type sd:           float or int.
+     &quot;&quot;&quot;
+ 
+-    # Test if sequence data exists.
+-    if not exists_mol_res_spin_data():
+-        raise RelaxNoSequenceError
+-
+-    # Test if RDC data exists.
+-    if not hasattr(cdp, 'rdc_ids'):
+-        raise RelaxNoRDCError()
+-
+-    # Test if data corresponding to 'align_id' exists.
+-    if align_id and align_id not in cdp.rdc_ids:
+-        raise RelaxNoRDCError(align_id)
+-
+-    # Arg check.
+-    if align_id and align_id not in cdp.rdc_ids:
+-        raise RelaxError(&quot;The alignment ID '%s' is not in the RDC ID list 
+%s.&quot; % (align_id, cdp.rdc_ids))
++    # Check the pipe setup.
++    check_pipe_setup(sequence=True, rdc_id=align_id, rdc=True)
+ 
+     # Convert the align IDs to an array, or take all IDs.
+     if align_id:
+@@ -765,13 +775,8 @@
+     @type weight:       float or int.
+     &quot;&quot;&quot;
+ 
+-    # Test if sequence data exists.
+-    if not exists_mol_res_spin_data():
+-        raise RelaxNoSequenceError
+-
+-    # Test if data corresponding to 'align_id' exists.
+-    if not hasattr(cdp, 'rdc_ids') or align_id not in cdp.rdc_ids:
+-        raise RelaxNoRDCError(align_id)
++    # Check the pipe setup.
++    check_pipe_setup(sequence=True, rdc_id=align_id, rdc=True)
+ 
+     # Loop over the interatomic data.
+     for interatom in interatomic_loop():
+@@ -798,16 +803,8 @@
+     @type force:        bool
+     &quot;&quot;&quot;
+ 
+-    # Test if the current pipe exists.
+-    pipes.test()
+-
+-    # Test if the sequence data is loaded.
+-    if not exists_mol_res_spin_data():
+-        raise RelaxNoSequenceError
+-
+-    # Test if data corresponding to 'align_id' exists.
+-    if not hasattr(cdp, 'rdc_ids') or align_id not in cdp.rdc_ids:
+-        raise RelaxNoRDCError(align_id)
++    # Check the pipe setup.
++    check_pipe_setup(sequence=True, rdc_id=align_id, rdc=True)
+ 
+     # Open the file for writing.
+     file = open_write_file(file, dir, force)
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Mar 04 14:40:02 2013</div>  
+</body>
+</html>

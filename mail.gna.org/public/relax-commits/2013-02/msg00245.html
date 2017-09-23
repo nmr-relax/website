@@ -1,0 +1,272 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r18573 &#45; in /trunk: generic_fns/structure/main.py	user_functions/structure.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Wed, 27 Feb 2013 19:40:49 +0100 -->
+<!--X-Message-Id: E1UAlvs&#45;0002zt&#45;QV@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r18573 - in /trunk: generic_fns/structure/main.py	user_functions/structure.py -- February 27, 2013 - 19:40</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r18573 - in /trunk: generic_fns/structure/main.py	user_functions/structure.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00245" class="tabs">Index by Date</a> | <a href="threads.html#00245" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00244.html">Date Prev</a>] [<a href="msg00246.html">Date Next</a>] [<a href="msg00244.html">Thread Prev</a>] [<a href="msg00246.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Wed, 27 Feb 2013 18:40:48 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00245.html">E1UAlvs-0002zt-QV@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on February 27, 2013 - 19:40:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Wed Feb 27 19:40:48 2013
+New Revision: 18573
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=18573&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=18573&amp;view=rev</a>
+Log:
+Created the structure.web_of_motion user function.
+
+This is used to create a special PDB file which represents the atomic motions 
+between different
+structural models.  Identical atoms of the selected models are concatenated 
+into one model, within
+a temporary internal structural object, and linked together using PDB CONECT 
+records.
+
+
+Modified:
+    trunk/generic_fns/structure/main.py
+    trunk/user_functions/structure.py
+
+Modified: trunk/generic_fns/structure/main.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/generic_fns/structure/main.py?rev=18573&amp;r1=18572&amp;r2=18573&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/generic_fns/structure/main.py?rev=18573&amp;r1=18572&amp;r2=18573&amp;view=diff</a>
+==============================================================================
+--- trunk/generic_fns/structure/main.py (original)
++++ trunk/generic_fns/structure/main.py Wed Feb 27 19:40:48 2013
+@@ -916,6 +916,81 @@
+         raise RelaxError(&quot;No vectors could be extracted.&quot;)
+ 
+ 
++def web_of_motion(file=None, dir=None, models=None, force=False):
++    &quot;&quot;&quot;Create a PDB representation of the motion between a set of models.
++
++    This will create a PDB file containing the atoms of all models, with 
+identical atoms links using CONECT records.  This function only supports the 
+internal structural object.
++
++    @keyword file:          The name of the PDB file to write.
++    @type file:             str
++    @keyword dir:           The directory where the PDB file will be placed. 
+ If set to None, then the file will be placed in the current directory.
++    @type dir:              str or None
++    @keyword models:        The optional list of models to restrict this to.
++    @type models:           list of int or None
++    @keyword force:         The force flag which if True will cause the file 
+to be overwritten.
++    @type force:            bool
++    &quot;&quot;&quot;
++
++    # Test if the current data pipe exists.
++    pipes.test()
++
++    # Test if the structure exists.
++    if not hasattr(cdp, 'structure') or not cdp.structure.num_models() or 
+not cdp.structure.num_molecules():
++        raise RelaxNoPdbError
++
++    # Validate the models.
++    cdp.structure.validate_models()
++
++    # Check the structural object type.
++    if cdp.structure.id != 'internal':
++        raise RelaxError(&quot;The %s structure type is not supported.&quot; % 
+cdp.structure.id)
++
++    # Initialise the structural object.
++    web = Internal()
++
++    # Loop over the molecules.
++    for i in range(len(cdp.structure.structural_data[0].mol)):
++        # Alias the molecule of the first model.
++        mol1 = cdp.structure.structural_data[0].mol[i]
++
++        # Loop over the atoms.
++        for j in range(len(mol1.atom_name)):
++            # Loop over the models.
++            for k in range(len(cdp.structure.structural_data)):
++                # Alias.
++                mol = cdp.structure.structural_data[k].mol[i]
++
++                # Add the atom.
++                web.add_atom(mol_name=mol1.mol_name, 
+atom_name=mol.atom_name[j], res_name=mol.res_name[j], res_num=mol.res_num[j], 
+pos=[mol.x[j], mol.y[j], mol.z[j]], element=mol.element[j], 
+chain_id=mol.chain_id[j], segment_id=mol.seg_id[j], 
+pdb_record=mol.pdb_record[j])
++
++            # Loop over the models again, this time twice.
++            for k in range(len(cdp.structure.structural_data)):
++                for l in range(len(cdp.structure.structural_data)):
++                    # Skip identical atoms.
++                    if k == l:
++                        continue
++
++                    # The atom index.
++                    index1 = j*len(cdp.structure.structural_data) + l
++                    index2 = j*len(cdp.structure.structural_data) + k
++
++                    # Connect to the previous atoms.
++                    web.connect_atom(mol_name=mol1.mol_name, index1=index1, 
+index2=index2)
++
++    # The file path.
++    file_path = get_file_path(file, dir)
++
++    # Add '.pdb' to the end of the file path if it isn't there yet.
++    if not search(&quot;.pdb$&quot;, file_path):
++        file_path = file_path + '.pdb'
++
++    # Open the file for writing.
++    file = open_write_file(file_path, force=force)
++
++    # Write the structure.
++    web.write_pdb(file)
++
++
+ def write_pdb(file=None, dir=None, model_num=None, compress_type=0, 
+force=False):
+     &quot;&quot;&quot;The PDB writing function.
+ 
+
+Modified: trunk/user_functions/structure.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/trunk/user_functions/structure.py?rev=18573&amp;r1=18572&amp;r2=18573&amp;view=diff">http://svn.gna.org/viewcvs/relax/trunk/user_functions/structure.py?rev=18573&amp;r1=18572&amp;r2=18573&amp;view=diff</a>
+==============================================================================
+--- trunk/user_functions/structure.py (original)
++++ trunk/user_functions/structure.py Wed Feb 27 19:40:48 2013
+@@ -838,6 +838,57 @@
+ uf.wizard_image = WIZARD_IMAGE_PATH + 'structure' + sep + '2JK4.png'
+ 
+ 
++# The structure.web_of_motion user function.
++uf = uf_info.add_uf('structure.web_of_motion')
++uf.title = &quot;Create a PDB representation of motion between models using a web 
+of interconnecting lines.&quot;
++uf.title_short = &quot;Web of motion between models.&quot;
++uf.add_keyarg(
++    name = &quot;file&quot;,
++    py_type = &quot;str&quot;,
++    arg_type = &quot;file sel&quot;,
++    desc_short = &quot;file name&quot;,
++    desc = &quot;The name of the PDB file.&quot;,
++    wiz_filesel_wildcard = &quot;PDB files (*.pdb)|*.pdb;*.PDB&quot;,
++    wiz_filesel_style = FD_SAVE
++)
++uf.add_keyarg(
++    name = &quot;dir&quot;,
++    py_type = &quot;str&quot;,
++    arg_type = &quot;dir&quot;,
++    desc_short = &quot;directory name&quot;,
++    desc = &quot;The directory to save the file to.&quot;,
++    can_be_none = True
++)
++uf.add_keyarg(
++    name = &quot;models&quot;,
++    py_type = &quot;int_list&quot;,
++    desc_short = &quot;model numbers&quot;,
++    desc = &quot;Restrict the web to a subset of models.&quot;,
++    can_be_none = True
++)
++uf.add_keyarg(
++    name = &quot;force&quot;,
++    default = False,
++    py_type = &quot;bool&quot;,
++    desc_short = &quot;force flag&quot;,
++    desc = &quot;A flag which if set to True will cause any pre-existing files to 
+be overwritten.&quot;
++)
++# Description.
++uf.desc.append(Desc_container())
++uf.desc[-1].add_paragraph(&quot;This will create a PDB representation of the 
+motion between the atoms of a given set of structural models.  Identical 
+atoms of the selected models are concatenated into one model, within a 
+temporary internal structural object, and linked together using PDB CONECT 
+records.&quot;)
++# Prompt examples.
++uf.desc.append(Desc_container(&quot;Prompt examples&quot;))
++uf.desc[-1].add_paragraph(&quot;To create a web of motion for the models 1, 3, 
+and 5, type one of:&quot;)
++uf.desc[-1].add_prompt(&quot;relax&gt; structure.web_of_motion('web.pdb', '.', [1, 
+3, 5])&quot;)
++uf.desc[-1].add_prompt(&quot;relax&gt; structure.web_of_motion(file='web.pdb', 
+models=[1, 3, 5])&quot;)
++uf.desc[-1].add_prompt(&quot;relax&gt; structure.web_of_motion(file='web.pdb', 
+dir='.', models=[1, 3, 5])&quot;)
++uf.backend = generic_fns.structure.main.web_of_motion
++uf.menu_text = &quot;&amp;web_of_motion&quot;
++uf.wizard_size = (900, 600)
++uf.wizard_apply_button = False
++uf.wizard_image = WIZARD_IMAGE_PATH + 'structure' + sep + '2JK4.png'
++
++
+ # The structure.write_pdb user function.
+ uf = uf_info.add_uf('structure.write_pdb')
+ uf.title = &quot;Writing structures to a PDB file.&quot;
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Wed Feb 27 20:00:04 2013</div>  
+</body>
+</html>

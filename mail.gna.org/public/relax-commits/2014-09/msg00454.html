@@ -1,0 +1,402 @@
+<!-- MHonArc v2.6.18 -->
+<!--X-Subject: r25948 &#45; in /branches/frame_order_cleanup: lib/frame_order/ specific_analyses/frame_order/ -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 22 Sep 2014 11:52:25 +0200 -->
+<!--X-Message-Id: E1XW0ID&#45;0000No&#45;2n@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r25948 - in /branches/frame_order_cleanup: lib/frame_order/ specific_analyses/frame_order/ -- September 22, 2014 - 11:52</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r25948 - in /branches/frame_order_cleanup: lib/frame_order/ specific_analyses/frame_order/</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00454" class="tabs">Index by Date</a> | <a href="threads.html#00454" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00453.html">Date Prev</a>] [<a href="msg00455.html">Date Next</a>] [<a href="msg00453.html">Thread Prev</a>] [<a href="msg00455.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 22 Sep 2014 09:52:25 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00454.html">E1XW0ID-0000No-2n@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on September 22, 2014 - 11:52:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Mon Sep 22 11:52:24 2014
+New Revision: 25948
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=25948&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=25948&amp;view=rev</a>
+Log:
+Created the backend framework for the frame_order.simulate user function.
+
+The backend specific_analyses.frame_order.uf.simulate() function performs all 
+data checks required,
+prepares the output file object, assembles the frame order parameter values 
+and pivot point, and
+creates a copy of the structural object object with the ensemble collapsed 
+into a single model.
+
+All this data is then passed into the new 
+lib.frame_order.simulation.brownian() function.  This
+initialises all required data structures and the structural object.  The main 
+loop of the simulation
+is also implemented, taking snapshots at every fixed number of steps and 
+terminating the loop once
+the total number of snapshots are reached.  The snapshot consists of copying 
+the original unrotated
+structural model and rotating it into the new position.  The rotation is 
+currently the identity
+matrix.
+
+The old specific_analyses.frame_order.geometric.create_distribution() stub 
+function has been
+deleted.
+
+
+Added:
+    branches/frame_order_cleanup/lib/frame_order/simulation.py
+Modified:
+    branches/frame_order_cleanup/lib/frame_order/__init__.py
+    branches/frame_order_cleanup/specific_analyses/frame_order/geometric.py
+    branches/frame_order_cleanup/specific_analyses/frame_order/uf.py
+
+Modified: branches/frame_order_cleanup/lib/frame_order/__init__.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/frame_order/__init__.py?rev=25948&amp;r1=25947&amp;r2=25948&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/frame_order/__init__.py?rev=25948&amp;r1=25947&amp;r2=25948&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/lib/frame_order/__init__.py    (original)
++++ branches/frame_order_cleanup/lib/frame_order/__init__.py    Mon Sep 22 
+11:52:24 2014
+@@ -34,5 +34,6 @@
+     'pseudo_ellipse_free_rotor',
+     'pseudo_ellipse',
+     'pseudo_ellipse_torsionless',
+-    'rotor'
++    'rotor',
++    'simulation'
+ ]
+
+Added: branches/frame_order_cleanup/lib/frame_order/simulation.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/frame_order/simulation.py?rev=25948&amp;view=auto">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/lib/frame_order/simulation.py?rev=25948&amp;view=auto</a>
+==============================================================================
+--- branches/frame_order_cleanup/lib/frame_order/simulation.py  (added)
++++ branches/frame_order_cleanup/lib/frame_order/simulation.py  Mon Sep 22 
+11:52:24 2014
+@@ -0,0 +1,101 @@
++###############################################################################
++#                                                                            
+ #
++# Copyright (C) 2014 Edward d'Auvergne                                       
+ #
++#                                                                            
+ #
++# This file is part of the program relax (<a  rel="nofollow" href="http://www.nmr-relax.com">http://www.nmr-relax.com</a>).         
+ #
++#                                                                            
+ #
++# This program is free software: you can redistribute it and/or modify       
+ #
++# it under the terms of the GNU General Public License as published by       
+ #
++# the Free Software Foundation, either version 3 of the License, or          
+ #
++# (at your option) any later version.                                        
+ #
++#                                                                            
+ #
++# This program is distributed in the hope that it will be useful,            
+ #
++# but WITHOUT ANY WARRANTY; without even the implied warranty of             
+ #
++# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the              
+ #
++# GNU General Public License for more details.                               
+ #
++#                                                                            
+ #
++# You should have received a copy of the GNU General Public License          
+ #
++# along with this program.  If not, see &lt;<a  rel="nofollow" href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.      
+ #
++#                                                                            
+ #
++###############################################################################
++
++# Module docstring.
++&quot;&quot;&quot;Module for simulating the frame order motions.&quot;&quot;&quot;
++
++# Python module imports.
++from numpy import eye, float64
++import sys
++
++# relax module imports.
++from lib.errors import RelaxError
++
++
++def brownian(file=None, model=None, structure=None, parameters={}, 
+pivot=None, step_size=2.0, snapshot=10, total=1000):
++    &quot;&quot;&quot;Pseudo-Brownian dynamics simulation of the frame order motions.
++
++    @keyword file:          The opened and writable file object to place the 
+snapshots into.
++    @type file:             str
++    @keyword structure:     The internal structural object containing the 
+domain to simulate as a single model.
++    @type structure:        lib.structure.internal.object.Internal instance
++    @keyword model:         The frame order model to simulate.
++    @type model:            str
++    @keyword parameters:    The dictionary of model parameter values.  The 
+key is the parameter name and the value is the value.
++    @type parameters:       dict of float
++    @keyword pivot:         The pivot point of the frame order motions.
++    @type pivot:            numpy rank-1, 3D float64 array
++    @keyword step_size:     The rotation will be of a random direction but 
+with this fixed angle.  The value is in degrees.
++    @type step_size:        float
++    @keyword snapshot:      The number of steps in the simulation when 
+snapshots will be taken.
++    @type snapshot:         int
++    @keyword total:         The total number of snapshots to take before 
+stopping the simulation.
++    @type total:            int
++    &quot;&quot;&quot;
++
++    # Check the structural object.
++    if structure.num_models() &gt; 1:
++        raise RelaxError(&quot;Only a single model is supported.&quot;)
++
++    # Set the model number.
++    structure.set_model(model_orig=None, model_new=1)
++
++    # The initial state.
++    state = eye(3, dtype=float64)
++
++    # Initialise the rotation matrix.
++    R = eye(3, dtype=float64)
++
++    # Printout.
++    print(&quot;\nRunning the simulation:&quot;)
++
++    # Simulate.
++    current_snapshot = 1
++    step = 1
++    while 1:
++        # End the simulation.
++        if current_snapshot == total:
++            print(&quot;\nEnd of simulation.&quot;)
++            break
++
++        # Take a snapshot.
++        if step == snapshot:
++            # Progress.
++            sys.stdout.write('.')
++            sys.stdout.flush()
++
++            # Increment the snapshot number.
++            current_snapshot += 1
++
++            # Copy the original structural data.
++            structure.add_model(model=current_snapshot, coords_from=1)
++
++            # Rotate the model.
++            structure.rotate(R=R, origin=pivot, model=current_snapshot, 
+atom_id=None)
++
++            # Reset the step counter.
++            step = 0
++
++        # Increment.
++        step += 1
++
++    # Save the result.
++    structure.write_pdb(file=file)
+
+Modified: 
+branches/frame_order_cleanup/specific_analyses/frame_order/geometric.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/specific_analyses/frame_order/geometric.py?rev=25948&amp;r1=25947&amp;r2=25948&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/specific_analyses/frame_order/geometric.py?rev=25948&amp;r1=25947&amp;r2=25948&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/specific_analyses/frame_order/geometric.py   
+  (original)
++++ branches/frame_order_cleanup/specific_analyses/frame_order/geometric.py   
+  Mon Sep 22 11:52:24 2014
+@@ -646,27 +646,6 @@
+             pdb_file.close()
+ 
+ 
+-def create_distribution(format='PDB', file=None, dir=None, compress_type=0, 
+model=1, force=False):
+-    &quot;&quot;&quot;Create a PDB file of a distribution of positions coving the full 
+dynamics of the moving domain.
+-
+-    @keyword format:        The format for outputting the geometric 
+representation.  Currently only the 'PDB' format is supported.
+-    @type format:           str
+-    @keyword file:          The name of the file which will contain multiple 
+models spanning the full dynamics distribution of the frame order model.
+-    @type file:             str
+-    @keyword dir:           The name of the directory to place the PDB file 
+into.
+-    @type dir:              str
+-    @keyword compress_type: The compression type.  The integer values 
+correspond to the compression type: 0, no compression; 1, Bzip2 compression; 
+2, Gzip compression.
+-    @type compress_type:    int
+-    @keyword model:         Only one model from an analysed ensemble can be 
+used for the PDB representation of the Monte Carlo simulations, as these 
+consists of one model per simulation.
+-    @type model:            int
+-    @keyword force:         Flag which if set to True will cause any 
+pre-existing file to be overwritten.
+-    @type force:            bool
+-    &quot;&quot;&quot;
+-
+-    # Printout.
+-    subsection(file=sys.stdout, text=&quot;Creating a PDB file of a distribution 
+of positions coving the full dynamics of the moving domain.&quot;)
+-
+-
+ def create_geometric_rep(format='PDB', file=None, dir=None, compress_type=0, 
+size=30.0, inc=36, force=False):
+     &quot;&quot;&quot;Create a PDB file containing a geometric object representing the 
+frame order dynamics.
+ 
+
+Modified: branches/frame_order_cleanup/specific_analyses/frame_order/uf.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/specific_analyses/frame_order/uf.py?rev=25948&amp;r1=25947&amp;r2=25948&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/frame_order_cleanup/specific_analyses/frame_order/uf.py?rev=25948&amp;r1=25947&amp;r2=25948&amp;view=diff</a>
+==============================================================================
+--- branches/frame_order_cleanup/specific_analyses/frame_order/uf.py    
+(original)
++++ branches/frame_order_cleanup/specific_analyses/frame_order/uf.py    Mon 
+Sep 22 11:52:24 2014
+@@ -23,6 +23,7 @@
+ &quot;&quot;&quot;Module for all of the frame order specific user functions.&quot;&quot;&quot;
+ 
+ # Python module imports.
++from copy import deepcopy
+ from math import pi
+ from numpy import array, cross, float64, ones, transpose, zeros
+ from numpy.linalg import norm
+@@ -32,14 +33,16 @@
+ from lib.arg_check import is_float_array
+ from lib.check_types import is_float
+ from lib.errors import RelaxError, RelaxFault
++from lib.frame_order.simulation import brownian
+ from lib.geometry.coord_transform import cartesian_to_spherical, 
+spherical_to_cartesian
+ from lib.geometry.rotations import euler_to_R_zyz, R_to_euler_zyz
++from lib.io import open_write_file
+ from lib.warnings import RelaxWarning
+ from pipe_control import pipes
+-from specific_analyses.frame_order.checks import check_domain
+-from specific_analyses.frame_order.geometric import create_ave_pos, 
+create_distribution, create_geometric_rep
++from specific_analyses.frame_order.checks import check_domain, check_model, 
+check_parameters, check_pivot
++from specific_analyses.frame_order.geometric import create_ave_pos, 
+create_geometric_rep
+ from specific_analyses.frame_order.optimisation import count_sobol_points
+-from specific_analyses.frame_order.parameters import update_model
++from specific_analyses.frame_order.parameters import assemble_param_vector, 
+update_model
+ from specific_analyses.frame_order.variables import MODEL_ISO_CONE, 
+MODEL_ISO_CONE_FREE_ROTOR, MODEL_ISO_CONE_TORSIONLESS, MODEL_LIST, 
+MODEL_LIST_FREE_ROTORS, MODEL_LIST_ISO_CONE, MODEL_LIST_PSEUDO_ELLIPSE, 
+MODEL_LIST_RESTRICTED_TORSION, MODEL_PSEUDO_ELLIPSE, 
+MODEL_PSEUDO_ELLIPSE_TORSIONLESS, MODEL_RIGID
+ 
+ 
+@@ -382,8 +385,34 @@
+     @type force:        bool
+     &quot;&quot;&quot;
+ 
++    # Checks.
++    pipes.test()
++    check_model()
++    check_domain()
++    check_parameters()
++    check_pivot()
++
++    # Open the output file.
++    file = open_write_file(file_name=file, dir=dir, force=force)
++
++    # The parameter values.
++    values = assemble_param_vector()
++    params = {}
++    i = 0
++    for name in cdp.params:
++        params[name] = values[i]
++        i += 1
++
++    # The structure.
++    structure = deepcopy(cdp.structure)
++    if structure.num_models() &gt; 1:
++        structure.collapse_ensemble(model_num=model)
++
++    # The pivot point.
++    pivot = array([cdp.pivot_x, cdp.pivot_y, cdp.pivot_z], float64)
++
+     # Create the distribution.
+-    create_distribution(file=file, dir=dir, model=model, force=force)
++    brownian(file=file, model=cdp.model, structure=structure, 
+parameters=params, pivot=pivot, step_size=step_size, snapshot=snapshot, 
+total=total)
+ 
+ 
+ def sobol_setup(max_num=200, oversample=100):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Sep 22 12:20:02 2014</div>  
+</body>
+</html>

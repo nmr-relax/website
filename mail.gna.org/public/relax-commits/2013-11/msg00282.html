@@ -1,0 +1,349 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r21624 &#45;	/branches/relax_disp/specific_analyses/relax_disp/disp_data.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Sun, 24 Nov 2013 17:50:45 +0100 -->
+<!--X-Message-Id: E1VkctR&#45;0003zl&#45;8S@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r21624 -	/branches/relax_disp/specific_analyses/relax_disp/disp_data.py -- November 24, 2013 - 17:50</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r21624 -	/branches/relax_disp/specific_analyses/relax_disp/disp_data.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00282" class="tabs">Index by Date</a> | <a href="threads.html#00282" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00281.html">Date Prev</a>] [<a href="msg00283.html">Date Next</a>] [<a href="msg00281.html">Thread Prev</a>] [<a href="msg00283.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Sun, 24 Nov 2013 16:50:45 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00282.html">E1VkctR-0003zl-8S@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on November 24, 2013 - 17:50:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Sun Nov 24 17:50:44 2013
+New Revision: 21624
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=21624&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=21624&amp;view=rev</a>
+Log:
+Interpolated curves are now produced for the numeric CPMG-type models.
+
+This if for the relax_disp.plot_disp_curves user function.  The resolution of 
+these are limited to
+the frequency of a single CPMG block in the relaxation time period.  
+Therefore the plots are
+produced slightly differently.
+
+To enable this functionality, the new count_exp() and return_relax_times() 
+functions have been added
+to the specific_analyses.relax_disp.disp_data module.
+
+
+Modified:
+    branches/relax_disp/specific_analyses/relax_disp/disp_data.py
+
+Modified: branches/relax_disp/specific_analyses/relax_disp/disp_data.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp/disp_data.py?rev=21624&amp;r1=21623&amp;r2=21624&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp/disp_data.py?rev=21624&amp;r1=21623&amp;r2=21624&amp;view=diff</a>
+==============================================================================
+--- branches/relax_disp/specific_analyses/relax_disp/disp_data.py (original)
++++ branches/relax_disp/specific_analyses/relax_disp/disp_data.py Sun Nov 24 
+17:50:44 2013
+@@ -33,8 +33,7 @@
+ &quot;&quot;&quot;
+ 
+ # Python module imports.
+-from copy import deepcopy
+-from math import atan, pi, sqrt
++from math import atan, floor, pi, sqrt
+ from numpy import array, float64, int32, ones, zeros
+ from random import gauss
+ import sys
+@@ -134,6 +133,17 @@
+     return intensity
+ 
+ 
++def count_exp():
++    &quot;&quot;&quot;Count the number of experiments present.
++
++    @return:    The experiment count
++    @rtype:     int
++    &quot;&quot;&quot;
++
++    # The normal count variable.
++    return len(cdp.exp_type_list)
++
++
+ def count_frq():
+     &quot;&quot;&quot;Count the number of spectrometer frequencies present.
+ 
+@@ -1137,6 +1147,7 @@
+         set_colours = []
+         x_axis_type_zero = []
+         symbols = []
++        symbol_sizes = []
+         linetype = []
+         linestyle = []
+ 
+@@ -1154,35 +1165,66 @@
+ 
+         # Set up the interpolated curve data structures.
+         interpolated_flag = False
+-        if not spin.model in [MODEL_R2EFF] + MODEL_LIST_NUMERIC_CPMG:
++        if not spin.model in [MODEL_R2EFF]:
+             # Set the flag.
+             interpolated_flag = True
+ 
+-            # Interpolate the CPMG frequencies.
+-            cpmg_frqs = return_cpmg_frqs(ref_flag=False)
+-            cpmg_frqs_new = deepcopy(cpmg_frqs)
+-            if cpmg_frqs != None and len(cpmg_frqs[0][0]):
+-                cpmg_frqs_new = []
+-                for exp_type_index in range(len(cpmg_frqs)):
+-                    # Add a new dimension.
+-                    cpmg_frqs_new.append([])
+-
+-                    # Then loop over the spectrometer frequencies.
+-                    for frq_index in range(len(cpmg_frqs[exp_type_index])):
++            # Initialise some structures.
++            cpmg_frqs_new = None
++            spin_lock_nu1_new = None
++
++            # Interpolate the CPMG frequencies (numeric models).
++            if spin.model in MODEL_LIST_NUMERIC_CPMG:
++                cpmg_frqs = return_cpmg_frqs(ref_flag=False)
++                relax_times = return_relax_times()
++                if cpmg_frqs != None and len(cpmg_frqs[0][0]):
++                    cpmg_frqs_new = []
++                    for exp_type_index in range(len(cpmg_frqs)):
+                         # Add a new dimension.
+-                        cpmg_frqs_new[exp_type_index].append([])
+-
+-                        # Interpolate (adding the extended amount to the 
+end).
+-                        for point_index in range(num_points):
+-                            point = (point_index + 1) * 
+(max(cpmg_frqs[exp_type_index][frq_index])+extend) / num_points
+-                            
+cpmg_frqs_new[exp_type_index][frq_index].append(point)
+-
+-                        # Convert to a numpy array.
+-                        cpmg_frqs_new[exp_type_index][frq_index] = 
+array(cpmg_frqs_new[exp_type_index][frq_index], float64)
++                        cpmg_frqs_new.append([])
++
++                        # Then loop over the spectrometer frequencies.
++                        for frq_index in 
+range(len(cpmg_frqs[exp_type_index])):
++                            # Add a new dimension.
++                            cpmg_frqs_new[exp_type_index].append([])
++
++                            # The minimum frequency unit.
++                            min_frq = 1.0 / 
+relax_times[exp_type_index][frq_index]
++                            max_frq = 
+max(cpmg_frqs[exp_type_index][frq_index]) + floor(extend / min_frq) * min_frq
++                            num_points = int(max_frq / min_frq)
++
++                            # Interpolate (adding the extended amount to the 
+end).
++                            for point_index in range(num_points):
++                                point = (point_index + 1) * max_frq / 
+num_points
++                                
+cpmg_frqs_new[exp_type_index][frq_index].append(point)
++
++                            # Convert to a numpy array.
++                            cpmg_frqs_new[exp_type_index][frq_index] = 
+array(cpmg_frqs_new[exp_type_index][frq_index], float64)
++
++            # Interpolate the CPMG frequencies (analytic models).
++            else:
++                cpmg_frqs = return_cpmg_frqs(ref_flag=False)
++                if cpmg_frqs != None and len(cpmg_frqs[0][0]):
++                    cpmg_frqs_new = []
++                    for exp_type_index in range(len(cpmg_frqs)):
++                        # Add a new dimension.
++                        cpmg_frqs_new.append([])
++
++                        # Then loop over the spectrometer frequencies.
++                        for frq_index in 
+range(len(cpmg_frqs[exp_type_index])):
++                            # Add a new dimension.
++                            cpmg_frqs_new[exp_type_index].append([])
++
++                            # Interpolate (adding the extended amount to the 
+end).
++                            for point_index in range(num_points):
++                                point = (point_index + 1) * 
+(max(cpmg_frqs[exp_type_index][frq_index])+extend) / num_points
++                                
+cpmg_frqs_new[exp_type_index][frq_index].append(point)
++
++                            # Convert to a numpy array.
++                            cpmg_frqs_new[exp_type_index][frq_index] = 
+array(cpmg_frqs_new[exp_type_index][frq_index], float64)
+ 
+             # Interpolate the spin-lock field strengths.
+             spin_lock_nu1 = return_spin_lock_nu1(ref_flag=False)
+-            spin_lock_nu1_new = deepcopy(spin_lock_nu1)
+             if spin_lock_nu1 != None and len(spin_lock_nu1[0][0]):
+                 spin_lock_nu1_new = []
+                 for exp_type_index in range(len(spin_lock_nu1)):
+@@ -1214,6 +1256,7 @@
+             set_colours.append([])
+             x_axis_type_zero.append([])
+             symbols.append([])
++            symbol_sizes.append([])
+             linetype.append([])
+             linestyle.append([])
+ 
+@@ -1242,6 +1285,7 @@
+                 set_colours[graph_index].append(color_order[frq_index])
+                 x_axis_type_zero[graph_index].append(True)
+                 symbols[graph_index].append(1)
++                symbol_sizes[graph_index].append(0.45)
+                 linetype[graph_index].append(0)
+                 linestyle[graph_index].append(0)
+ 
+@@ -1283,6 +1327,7 @@
+                 set_colours[graph_index].append(color_order[frq_index])
+                 x_axis_type_zero[graph_index].append(True)
+                 symbols[graph_index].append(4)
++                symbol_sizes[graph_index].append(0.45)
+                 linetype[graph_index].append(1)
+                 if interpolated_flag:
+                     linestyle[graph_index].append(2)
+@@ -1326,7 +1371,11 @@
+                     # The other settings.
+                     set_colours[graph_index].append(color_order[frq_index])
+                     x_axis_type_zero[graph_index].append(True)
+-                    symbols[graph_index].append(0)
++                    if spin.model in MODEL_LIST_NUMERIC_CPMG:
++                        symbols[graph_index].append(8)
++                    else:
++                        symbols[graph_index].append(0)
++                    symbol_sizes[graph_index].append(0.20)
+                     linetype[graph_index].append(1)
+                     linestyle[graph_index].append(1)
+ 
+@@ -1363,6 +1412,7 @@
+                 set_colours[graph_index].append(color_order[frq_index])
+                 x_axis_type_zero[graph_index].append(True)
+                 symbols[graph_index].append(9)
++                symbol_sizes[graph_index].append(0.45)
+                 linetype[graph_index].append(1)
+                 linestyle[graph_index].append(3)
+ 
+@@ -1412,7 +1462,7 @@
+             sets.append(len(data[gi]))
+             legend.append(False)
+         legend[0] = True
+-        write_xy_header(file=file, title=title, graph_num=graph_num, 
+sets=sets, set_names=set_labels, set_colours=set_colours, 
+x_axis_type_zero=x_axis_type_zero, symbols=symbols, linetype=linetype, 
+linestyle=linestyle, axis_labels=axis_labels, legend=legend, 
+legend_box_fill_pattern=[0]*graph_num, legend_char_size=[0.8]*graph_num)
++        write_xy_header(file=file, title=title, graph_num=graph_num, 
+sets=sets, set_names=set_labels, set_colours=set_colours, 
+x_axis_type_zero=x_axis_type_zero, symbols=symbols, 
+symbol_sizes=symbol_sizes, linetype=linetype, linestyle=linestyle, 
+axis_labels=axis_labels, legend=legend, 
+legend_box_fill_pattern=[0]*graph_num, legend_char_size=[0.8]*graph_num)
+ 
+         # Write the data.
+         graph_type = 'xy'
+@@ -2469,6 +2519,36 @@
+     return values, errors, missing, frqs, frqs_H, exp_types, relax_times
+ 
+ 
++def return_relax_times():
++    &quot;&quot;&quot;Return the list of relaxation times.
++
++    @return:            The list of relaxation times in s.
++    @rtype:             list of lists of numpy rank-1 float64 array
++    &quot;&quot;&quot;
++
++    # No data.
++    if not hasattr(cdp, 'relax_times'):
++        return None
++
++    # Initialise.
++    relax_times = zeros((count_exp(), count_frq()), float64)
++
++    # Loop over the experiment types.
++    for exp_type, frq, point, time, exp_type_index, frq_index, point_index, 
+time_index in loop_exp_frq_point_time(return_indices=True):
++        # Fetch all of the matching intensity keys.
++        keys = find_intensity_keys(exp_type=exp_type, frq=frq, point=point, 
+time=time, raise_error=False)
++
++        # No data.
++        if not len(keys):
++            continue
++
++        # Add the data.
++        relax_times[exp_type_index][frq_index] = cdp.relax_times[keys[0]]
++
++    # Return the data.
++    return relax_times
++
++
+ def return_spin_lock_nu1(ref_flag=True):
+     &quot;&quot;&quot;Return the list of spin-lock field strengths.
+ 
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Sun Nov 24 18:00:02 2013</div>  
+</body>
+</html>

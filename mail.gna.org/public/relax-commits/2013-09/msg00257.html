@@ -1,0 +1,302 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r20992 &#45; /branches/relax_disp/specific_analyses/relax_disp/catia.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Thu, 12 Sep 2013 20:59:44 +0200 -->
+<!--X-Message-Id: E1VKC7E&#45;0005Ta&#45;J9@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r20992 - /branches/relax_disp/specific_analyses/relax_disp/catia.py -- September 12, 2013 - 20:59</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r20992 - /branches/relax_disp/specific_analyses/relax_disp/catia.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00257" class="tabs">Index by Date</a> | <a href="threads.html#00257" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00256.html">Date Prev</a>] [<a href="msg00258.html">Date Next</a>] [<a href="msg00256.html">Thread Prev</a>] [<a href="msg00258.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Thu, 12 Sep 2013 18:59:44 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00257.html">E1VKC7E-0005Ta-J9@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on September 12, 2013 - 20:59:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Thu Sep 12 20:59:44 2013
+New Revision: 20992
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=20992&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=20992&amp;view=rev</a>
+Log:
+The relax_disp.catia_input user function now creates the main CATIA input 
+file and all R2eff data files.
+
+
+Modified:
+    branches/relax_disp/specific_analyses/relax_disp/catia.py
+
+Modified: branches/relax_disp/specific_analyses/relax_disp/catia.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp/catia.py?rev=20992&amp;r1=20991&amp;r2=20992&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/relax_disp/specific_analyses/relax_disp/catia.py?rev=20992&amp;r1=20991&amp;r2=20992&amp;view=diff</a>
+==============================================================================
+--- branches/relax_disp/specific_analyses/relax_disp/catia.py (original)
++++ branches/relax_disp/specific_analyses/relax_disp/catia.py Thu Sep 12 
+20:59:44 2013
+@@ -22,11 +22,16 @@
+ # Module docstring.
+ &quot;&quot;&quot;Functions for interfacing with Flemming Hansen's CATIA program.&quot;&quot;&quot;
+ 
++# Python module imports.
++from os import sep
++
+ # relax module imports.
+-from lib.io import mkdir_nofail
++from lib.errors import RelaxError
++from lib.io import mkdir_nofail, open_write_file
+ from pipe_control import pipes
+-from pipe_control.mol_res_spin import check_mol_res_spin_data
++from pipe_control.mol_res_spin import check_mol_res_spin_data, spin_loop
+ from specific_analyses.relax_disp.checks import check_model_type, 
+check_spectra_id_setup
++from specific_analyses.relax_disp.disp_data import loop_frq, loop_point, 
+return_param_key_from_data
+ 
+ 
+ def catia_input(file='Fit.catia', dir=None, force=False):
+@@ -46,6 +51,172 @@
+     check_spectra_id_setup()
+     check_model_type()
+ 
++    # Check that this is CPMG data.
++    for id in cdp.spectrum_ids:
++        if cdp.exp_type[id] != 'CPMG':
++            raise RelaxError(&quot;Only CPMG type data is supported.&quot;)
++
+     # Directory creation.
+     if dir != None:
+         mkdir_nofail(dir, verbosity=0)
++
++    # Create the R2eff files.
++    write_r2eff_files(base_dir=dir, force=force)
++
++    # Create the main execution file.
++    write_main_file(file=file, dir=dir, force=force)
++
++
++def write_main_file(file=None, dir=None, f_tol=1e-25, max_iter=10000000, 
+r1=False, force=False):
++    &quot;&quot;&quot;Create the main CATIA execution file.
++
++    @keyword file:      The main CATIA execution file.
++    @type file:         str
++    @keyword dir:       The directory to place the files into.
++    @type dir:          str or None
++    @keyword r1:        A flag which if True will cause the R1 data to be 
+used for off-resonance effets.
++    @type r1:           bool
++    @keyword force:     A flag which if True will cause a pre-existing file 
+to be overwritten.
++    @type force:        bool
++    &quot;&quot;&quot;
++
++    # The file.
++    catia_in = open_write_file(file_name=file, dir=dir, force=force)
++
++    # The R2eff input sets.
++    for frq in loop_frq():
++        frq_label = int(frq*1e-6)
++        file_name = &quot;data_set_%i.inp&quot; % frq_label
++        catia_in.write(&quot;ReadDataset(%s)\n&quot; % file_name)
++
++    # Write out the data.
++    catia_in.write(&quot;ReadParam_Global(ParamGlobal.inp)\n&quot;)
++    catia_in.write(&quot;ReadParam_Local(ParamSet1.inp)\n&quot;)
++    catia_in.write(&quot;\n&quot;)
++
++    # The R1 data for off-resonance effects.
++    if r1:
++        catia_in.write(&quot;ReadParam(Omega;%s;0;1)\n&quot; % shift_file)
++        for frq in loop_frq():
++            frq_label = int(frq*1e-6)
++            param = &quot;R1iph_%s&quot; % frq_label
++            r1_file = &quot;R1_%s.out&quot; % frq_label
++            catia_in.write(&quot;ReadParam(%s;%s;0;1)\n&quot; % (param, r1_file))
++        catia_in.write(&quot;\n&quot;)
++
++        # Fix these parameters.
++        catia_in.write(&quot;FreeLocalParam(all;Omega;false)\n&quot;)
++        for frq in loop_frq():
++            frq_label = int(frq*1e-6)
++            param = &quot;R1iph_%s&quot; % frq_label
++            catia_in.write(&quot;FreeLocalParam(all;%s;false)\n&quot; % param)
++        catia_in.write(&quot;\n&quot;)
++
++    # Minimisation.
++    catia_in.write(&quot;Minimize(print=y;tol=%s;maxiter=%i)\n&quot; % (f_tol, 
+max_iter))
++    catia_in.write(&quot;\n&quot;)
++
++    # Plotting.
++    catia_in.write(&quot;PrintParam(output/GlobalParam.fit;global)\n&quot;)
++    catia_in.write(&quot;PrintParam(output/DeltaOmega.fit;DeltaO)\n&quot;)
++    catia_in.write(&quot;PrintData(output/)\n&quot;)
++    catia_in.write(&quot;\n&quot;)
++
++    # Calculate the chi-squared value (not sure why, it's calculated in the 
+minimisation).
++    catia_in.write(&quot;ChiSq(all;all)\n&quot;)
++
++    # Exit the program.
++    catia_in.write(&quot;exit(0)\n&quot;)
++
++
++def write_r2eff_files(input_dir='input_r2eff', base_dir=None, force=False):
++    &quot;&quot;&quot;Create the CATIA R2eff input files.
++
++    @keyword input_dir: The special directory for the R2eff input files.
++    @type input_dir:    str
++    @keyword base_dir:  The base directory to place the files into.
++    @type base_dir:     str
++    @keyword force:     A flag which if True will cause a pre-existing file 
+to be overwritten.
++    @type force:        bool
++    &quot;&quot;&quot;
++
++    # Create the directory for the R2eff files for each field and spin.
++    dir = base_dir + sep + input_dir
++    mkdir_nofail(dir, verbosity=0)
++
++    # Determine the isotope information.
++    isotope = None
++    for spin in spin_loop(skip_desel=True):
++        if hasattr(spin, 'isotope'):
++            if isotope == None:
++                isotope = spin.isotope
++            elif spin.isotope != isotope:
++                raise RelaxError(&quot;CATIA only supports one spin type.&quot;)
++    if isotope == None:
++        raise RelaxError(&quot;The spin isotopes have not been specified.&quot;)
++
++    # Isotope translation.
++    if isotope == '1H':
++        isotope = 'H1'
++    elif isotope == '13C':
++        isotope = 'C13'
++    elif isotope == '15N':
++        isotope = 'N15'
++
++    # Loop over the frequencies.
++    for frq in loop_frq():
++        # The frequency string in MHz.
++        frq_string = int(frq*1e-6)
++
++        # The set files.
++        file_name = &quot;data_set_%i.inp&quot; % frq_string
++        set_file = open_write_file(file_name=file_name, dir=base_dir, 
+force=force)
++        id = frq_string
++        set_file.write(&quot;ID=%s\n&quot; % id)
++        set_file.write(&quot;Sfrq = %s\n&quot; % frq_string)
++        set_file.write(&quot;Temperature = %s\n&quot; % 0.0)
++        set_file.write(&quot;Nucleus = %s\n&quot; % isotope)
++        set_file.write(&quot;Couplednucleus = %s\n&quot; % 'H1')
++        set_file.write(&quot;Time_equil = %s\n&quot; % 0.0)
++        set_file.write(&quot;Pwx_cp = %s\n&quot; % 0.0)
++        set_file.write(&quot;Taub = %s\n&quot; % 0.0)
++        set_file.write(&quot;Time_T2 = %s\n&quot;% cdp.relax_time_list[0])
++        set_file.write(&quot;Xcar = %s\n&quot; % 0.0)
++        set_file.write(&quot;Seqfil = %s\n&quot; % 'CW_CPMG')
++        set_file.write(&quot;Minerror = %s\n&quot; % &quot;(2.%;0.5/s)&quot;)
++        set_file.write(&quot;Basis = (%s)\n&quot; % &quot;Iph_7&quot;)
++        set_file.write(&quot;Format = (%i;%i;%i)\n&quot; % (0, 1, 2))
++        set_file.write(&quot;DataDirectory = %s\n&quot; % dir)
++        set_file.write(&quot;Data = (\n&quot;)
++
++        # Loop over the spins.
++        for spin, mol_name, res_num, res_name, spin_id in 
+spin_loop(full_info=True, return_id=True, skip_desel=True):
++            # The file.
++            file_name = &quot;spin%s_%i.cpmg&quot; % (spin_id.replace('#', 
+'_').replace(':', '_').replace('@', '_'), frq_string)
++            file = open_write_file(file_name=file_name, dir=dir, force=force)
++
++            # Write the header.
++            file.write(&quot;# %18s %20s %20s\n&quot; % (&quot;nu_cpmg(Hz)&quot;, &quot;R2(1/s)&quot;, 
+&quot;Esd(R2)&quot;))
++
++            # Loop over the dispersion points.
++            for point in loop_point(exp_type='CPMG'):
++                # The key.
++                key = return_param_key_from_data(frq=frq, point=point)
++
++                # No data.
++                if key not in spin.r2eff:
++                    continue
++
++                # Write out the data.
++                file.write(&quot;%20.15f %20.15f %20.15f\n&quot; % (point, 
+spin.r2eff[key], spin.r2eff_err[key]))
++
++            # Close the file.
++            file.close()
++
++            # Add the file name to the set.
++            catia_spin_id = &quot;%i%s&quot; % (res_num, spin.name)
++            set_file.write(&quot; [%s;%s];\n&quot; % (catia_spin_id, file_name))
++
++        # Terminate the set file.
++        set_file.write(&quot;)\n&quot;)
++        set_file.close()
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Thu Sep 12 21:20:02 2013</div>  
+</body>
+</html>

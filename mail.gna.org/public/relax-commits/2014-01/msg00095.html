@@ -1,0 +1,340 @@
+<!-- MHonArc v2.6.16 -->
+<!--X-Subject: r22048 &#45;	/branches/double_rotor/test_suite/shared_data/frame_order/cam/generate_base.py -->
+<!--X-From-R13: rqjneqNaze&#45;erynk.pbz -->
+<!--X-Date: Mon, 27 Jan 2014 15:58:22 +0100 -->
+<!--X-Message-Id: E1W7ndm&#45;0005Ia&#45;PR@subversion.gna.org -->
+<!--X-Content-Type: text/plain -->
+<!--X-Head-End-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>r22048 -	/branches/double_rotor/test_suite/shared_data/frame_order/cam/generate_base.py -- January 27, 2014 - 15:58</title>
+<link rel="stylesheet" type="text/css" href="/archives-color-gna.css"> 
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--X-Body-Begin-->
+<!--X-User-Header-->
+<!--X-User-Header-End-->
+<!--X-TopPNI-->
+<h2><img src="https://gna.org/images/gna.theme/mail.orig.png" width="48" height="48"
+alt="mail" class="pageicon" />r22048 -	/branches/double_rotor/test_suite/shared_data/frame_order/cam/generate_base.py</h2>
+<br />
+<div class="topmenu">
+<a href="../" class="tabs">Others Months</a> | <a href="index.html#00095" class="tabs">Index by Date</a> | <a href="threads.html#00095" class="tabs">Thread Index</a><br />
+<span class="smaller">&gt;&gt;&nbsp;&nbsp;
+[<a href="msg00094.html">Date Prev</a>] [<a href="msg00096.html">Date Next</a>] [<a href="msg00094.html">Thread Prev</a>] [<a href="msg00096.html">Thread Next</a>]
+</div>
+
+<!--X-TopPNI-End-->
+<!--X-MsgBody-->
+<!--X-Subject-Header-Begin-->
+<h3><a name="header" href="#header">Header</a></h3>
+<!--X-Subject-Header-End-->
+<!--X-Head-of-Message-->
+<ul class="headdata">
+<li class="menuitem">
+<em>To</em>: relax-commits@xxxxxxx</li>
+<li class="menuitem">
+<em>Date</em>: Mon, 27 Jan 2014 14:58:22 -0000</li>
+<li class="menuitem">
+<em>Message-id</em>: &lt;<a href="msg00095.html">E1W7ndm-0005Ia-PR@subversion.gna.org</a>&gt;</li>
+</ul>
+<!--X-Head-of-Message-End-->
+<!--X-Head-Body-Sep-Begin-->
+</div><!-- end headdata -->
+<br />
+<h3><a name="content" href="#content">Content</a></h3>
+<div class="postedby">Posted by <strong>edward</strong> on January 27, 2014 - 15:58:</div>
+<div class="msgdata">
+<!--X-Head-Body-Sep-End-->
+<!--X-Body-of-Message-->
+<pre style="margin: 0em;">Author: bugman
+Date: Mon Jan 27 15:58:22 2014
+New Revision: 22048
+
+URL: <a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax?rev=22048&amp;view=rev">http://svn.gna.org/viewcvs/relax?rev=22048&amp;view=rev</a>
+Log:
+Improvements and expansion of the frame order test data generation base 
+script.
+
+More of the class variables are now defined in this base class and dummy 
+methods are provided to
+allow certain operations to be skipped (print_axis_system(), axes_to_pdb() 
+and build_axes()).
+Importantly, the script can now handle multiple modes of motion with the 
+introduction of the key
+_multi_system() and _state_loop() methods.
+
+
+Modified:
+    
+branches/double_rotor/test_suite/shared_data/frame_order/cam/generate_base.py
+
+Modified: 
+branches/double_rotor/test_suite/shared_data/frame_order/cam/generate_base.py
+URL: 
+<a  rel="nofollow" href="http://svn.gna.org/viewcvs/relax/branches/double_rotor/test_suite/shared_data/frame_order/cam/generate_base.py?rev=22048&amp;r1=22047&amp;r2=22048&amp;view=diff">http://svn.gna.org/viewcvs/relax/branches/double_rotor/test_suite/shared_data/frame_order/cam/generate_base.py?rev=22048&amp;r1=22047&amp;r2=22048&amp;view=diff</a>
+==============================================================================
+--- 
+branches/double_rotor/test_suite/shared_data/frame_order/cam/generate_base.py 
+(original)
++++ 
+branches/double_rotor/test_suite/shared_data/frame_order/cam/generate_base.py 
+Mon Jan 27 15:58:22 2014
+@@ -30,6 +30,7 @@
+ import sys
+ 
+ # relax module imports.
++from lib.check_types import is_float
+ from lib.frame_order.format import print_frame_order_2nd_degree
+ from lib.geometry.coord_transform import cartesian_to_spherical
+ from lib.geometry.rotations import axis_angle_to_R, R_to_euler_zyz
+@@ -47,6 +48,16 @@
+     PIVOT = array([ 37.254, 0.5, 16.7465])
+     COM = array([ 26.83678091, -12.37906417,  28.34154128])
+ 
++    # The number of rotation modes.
++    MODES = 1
++
++    # The number of states for each rotation mode.
++    N = 100
++
++    # The tilt angles.
++    TILT_ANGLE = 0
++    INC = 0
++
+     # The PDB distribution flag.
+     DIST_PDB = False
+ 
+@@ -70,10 +81,11 @@
+ 
+         # Build the axis system.
+         self.build_axes()
+-        self._print_axis_system()
++        self.print_axis_system()
+         self.axes_to_pdb()
+ 
+         # Create the distribution.
++        self._multi_system()
+         self._create_distribution()
+ 
+         # Back-calculate the RDCs and PCSs.
+@@ -137,13 +149,13 @@
+         for spin in spin_loop():
+             if hasattr(spin, 'pos'):
+                 spin.orig_pos = array(spin.pos, float16)
+-                spin.pos = zeros((self.N, 3), float16)
++                spin.pos = zeros((self.N**self.MODES, 3), float16)
+ 
+         # Store and then reinitalise the bond vector.
+         for interatom in interatomic_loop():
+             if hasattr(interatom, 'vector'):
+                 interatom.orig_vect = array(interatom.vector, float16)
+-                interatom.vector = zeros((self.N, 3), float16)
++                interatom.vector = zeros((self.N**self.MODES, 3), float16)
+ 
+ 
+     def _create_distribution(self):
+@@ -181,40 +193,44 @@
+ 
+         # Load N copies of the original C-domain.
+         if self.DIST_PDB:
+-            # Loop over the N states.
+-            for i in range(self.N):
++            # Loop over each position.
++            for global_index, mode_indices in self._state_loop():
+                 # Load the structure for the PDB distribution.
+-                self.interpreter.structure.read_pdb('1J7P_1st_NH.pdb', 
+dir=self.path, set_mol_name='C-dom', set_model_num=i+1)
+-
+-        # Loop over the N states.
++                self.interpreter.structure.read_pdb('1J7P_1st_NH.pdb', 
+dir=self.path, set_mol_name='C-dom', set_model_num=global_index+1)
++
++        # Turn off the relax interpreter echoing to allow the progress meter 
+to be shown correctly.
+         self.interpreter.off()
+-        for i in range(self.N):
+-            # Print out.
+-            self._progress(i)
+-
+-            # Generate the distribution specific rotation.
+-            self.rotation(i)
+-
+-            # Rotate the atomic position.
+-            for spin in spin_loop():
+-                if hasattr(spin, 'pos'):
+-                    spin.pos[i] = dot(self.R, (spin.orig_pos[0] - 
+self.PIVOT)) + self.PIVOT
+-
+-            # Rotate the NH vector.
+-            for interatom in interatomic_loop():
+-                if hasattr(interatom, 'vector'):
+-                    interatom.vector[i] = dot(self.R, interatom.orig_vect)
+-
+-            # Decompose the rotation into Euler angles and store them.
+-            a, b, g = R_to_euler_zyz(self.R)
+-            rot_file.write('%10.7f %10.7f %10.7f\n' % (a, b, g))
+-
+-            # The frame order matrix component.
+-            self.daeg += kron_prod(self.R, self.R)
+-
+-            # Rotate the structure for the PDB distribution.
+-            if self.DIST_PDB:
+-                self.interpreter.structure.rotate(R=self.R, 
+origin=self.PIVOT, model=i+1)
++
++        # Loop over each position.
++        for global_index, mode_indices in self._state_loop():
++            # The progress meter.
++            self._progress(global_index)
++
++            # Loop over each motional mode.
++            for motion_index in range(self.MODES):
++                # Generate the distribution specific rotation.
++                self.rotation(mode_indices[motion_index], 
+motion_index=motion_index)
++
++                # Rotate the atomic position.
++                for spin in spin_loop():
++                    if hasattr(spin, 'pos'):
++                        spin.pos[global_index] = dot(self.R, 
+(spin.orig_pos[0] - self.PIVOT[motion_index])) + self.PIVOT[motion_index]
++
++                # Rotate the NH vector.
++                for interatom in interatomic_loop():
++                    if hasattr(interatom, 'vector'):
++                        interatom.vector[global_index] = dot(self.R, 
+interatom.orig_vect)
++
++                # Decompose the rotation into Euler angles and store them.
++                a, b, g = R_to_euler_zyz(self.R)
++                rot_file.write('%10.7f %10.7f %10.7f\n' % (a, b, g))
++
++                # The frame order matrix component.
++                self.daeg += kron_prod(self.R, self.R)
++
++                # Rotate the structure for the PDB distribution.
++                if self.DIST_PDB:
++                    self.interpreter.structure.rotate(R=self.R, 
+origin=self.PIVOT[motion_index], model=global_index+1)
+ 
+         # Print out.
+         sys.stdout.write('\n\n')
+@@ -232,8 +248,12 @@
+             self.interpreter.structure.write_pdb('distribution.pdb', 
+compress_type=2, force=True)
+ 
+ 
+-    def _print_axis_system(self):
+-        &quot;&quot;&quot;Print out of the full system.&quot;&quot;&quot;
++    def print_axis_system(self):
++        &quot;&quot;&quot;Dummy base method for printing out the axis system to a file.&quot;&quot;&quot;
++
++
++    def print_axis_system_full(self):
++        &quot;&quot;&quot;Print out of the full system to file.&quot;&quot;&quot;
+ 
+         # Open the file.
+         file = open(self.save_path+sep+'axis_system', 'w')
+@@ -267,6 +287,26 @@
+         file.write(&quot;    phi:   %.20f\n&quot; % wrap_angles(p, 0, 2*pi))
+ 
+ 
++    def _multi_system(self):
++        &quot;&quot;&quot;Convert the angle, pivot and axis data structures for handling 
+multiple motional modes.&quot;&quot;&quot;
++
++        # The tilt angle.
++        if is_float(self.TILT_ANGLE):
++            self.TILT_ANGLE = [self.TILT_ANGLE]
++
++        # The increment value.
++        if is_float(self.INC):
++            self.INC = [self.INC]
++
++        # The pivot.
++        if is_float(self.PIVOT[0]):
++            self.PIVOT = [self.PIVOT]
++
++        # The axis.
++        if is_float(self.axes[0]):
++            self.axes = [self.axes]
++
++
+     def _progress(self, i, a=5, b=100):
+         &quot;&quot;&quot;A simple progress write out (which goes to the terminal 
+STDERR).&quot;&quot;&quot;
+ 
+@@ -281,6 +321,30 @@
+         # Dump the progress.
+         if i % b == 0:
+             sys.stderr.write('\b%i\n' % i)
++
++
++    def _state_loop(self):
++        &quot;&quot;&quot;Generator method for looping over all states of all motional 
+modes.
++
++        @return:    The global index, the list of indices for each mode
++        @rtype:     int, list of int
++        &quot;&quot;&quot;
++
++        # Single mode.
++        if self.MODES == 1:
++            for i in range(self.N):
++                yield i, [i]
++
++        # Double mode.
++        if self.MODES == 2:
++            global_index = -1
++            for i in range(self.N):
++                for j in range(self.N):
++                    global_index += 1
++                    yield global_index, [i, j]
++
++    def axes_to_pdb(self):
++        &quot;&quot;&quot;Dummy base method for creating a PDB for the motional axis 
+system.&quot;&quot;&quot;
+ 
+ 
+     def axes_to_pdb_full(self):
+@@ -327,6 +391,10 @@
+ 
+         # Write out the PDB.
+         self.interpreter.structure.write_pdb('axis.pdb', dir=self.save_path, 
+compress_type=0, force=True)
++
++
++    def build_axes(self):
++        &quot;&quot;&quot;Dummy base method for creating the axis system.&quot;&quot;&quot;
+ 
+ 
+     def build_axes_alt(self):
+
+
+
+</pre>
+<!--X-Body-of-Message-End-->
+<!--X-MsgBody-End-->
+<!--X-Follow-Ups-->
+</div><!-- end msgdata -->
+<br />
+<h3><a name="related" href="#related">Related Messages</a></h3>
+<div class="relateddata">
+<!--X-Follow-Ups-End-->
+<!--X-References-->
+<!--X-References-End-->
+<!--X-BotPNI-->
+</div><!-- end relateddata -->
+<!-- NoBotLinksApartFromRelatedMessages -->
+
+<!--X-BotPNI-End-->
+<!--X-User-Footer-->
+<!--X-User-Footer-End-->
+<div class="footer">You are on the <a href="http://gna.org">Gna!</a> mail server.</div><br />
+<div class="right">Powered by <a href="http://www.mhonarc.org">MHonArc</a>, Updated Mon Jan 27 19:00:02 2014</div>  
+</body>
+</html>
