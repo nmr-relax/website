@@ -3,7 +3,7 @@
 # This Python script is for setting up all of the meta refresh redirects required for the relax website.
 
 # Some base URLs.
-url = 'http://www.nmr-relax.com'
+url = ''
 url_wiki = 'http://wiki.nmr-relax.com/'
 
 # Initialise the list of redirects to build.  The first element is the old page which will be turned into a redirect, the second is the new page the redirect points to.
