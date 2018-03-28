@@ -66,7 +66,7 @@ redirects += [
     ['manual/NOE_script_mode_sample_script.html', '%s/manual/NOE_script_mode_the_sample_script.html'%url],
     ['manual/NS_2_site_expanded_CPMG_model.html', '%s/manual/The_NS_2_site_expanded_CPMG_model.html'%url],
     ['manual/NS_2_site_R1_model.html', '%s/manual/The_NS_2_site_R1_rho_model.html'%url],
-    ['manual/NS_3_site_linear_R1_model.html', '%s/manual/The_NS_MMQ_3_site_linear_model.html'%url],
+    ['manual/NS_3_site_linear_R1_model.html', '%s/manual/The_NS_3_site_linear_R1_rho_model.html'%url],
     ['manual/NS_3_site_R1_model.html', '%s/manual/The_NS_3_site_R1_rho_model.html'%url],
     ['manual/NS_MMQ_2_site_model.html', '%s/manual/The_NS_MMQ_2_site_model.html'%url],
     ['manual/NS_MMQ_3_site_linear_model.html', '%s/manual/NS_MMQ_3_site_linear_model.html'%url],
