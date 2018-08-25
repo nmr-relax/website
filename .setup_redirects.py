@@ -69,7 +69,7 @@ redirects += [
     ['manual/NS_3_site_linear_R1_model.html', '%s/manual/The_NS_3_site_linear_R1_rho_model.html'%url],
     ['manual/NS_3_site_R1_model.html', '%s/manual/The_NS_3_site_R1_rho_model.html'%url],
     ['manual/NS_MMQ_2_site_model.html', '%s/manual/The_NS_MMQ_2_site_model.html'%url],
-    ['manual/NS_MMQ_3_site_linear_model.html', '%s/manual/NS_MMQ_3_site_linear_model.html'%url],
+    ['manual/NS_MMQ_3_site_linear_model.html', '%s/manual/The_NS_MMQ_3_site_linear_model.html'%url],
     ['manual/NS_MMQ_3_site_model.html', '%s/manual/The_NS_MMQ_3_site_model.html'%url],
     ['manual/prompt.html', '%s/manual/The_prompt.html'%url],
     ['manual/R2eff_model.html', '%s/manual/The_R2eff_model.html'%url],
