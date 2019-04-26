@@ -458,6 +458,10 @@ $key = q/cite_dAuvergneGooley08b/;
 $external_labels{$key} = "$URL/" . q|Bibliography.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/cite_dAuvergneGriesinger19/;
+$external_labels{$key} = "$URL/" . q|Bibliography.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/commit_log_format/;
 $external_labels{$key} = "$URL/" . q|Format_of_the_commit_logs.html|; 
 $noresave{$key} = "$nosave";
