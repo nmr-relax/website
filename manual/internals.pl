@@ -458,6 +458,10 @@ $key = q/cite_dAuvergneGooley08b/;
 $ref_files{$key} = "$dir".q|Bibliography.html|; 
 $noresave{$key} = "$nosave";
 
+$key = q/cite_dAuvergneGriesinger19/;
+$ref_files{$key} = "$dir".q|Bibliography.html|; 
+$noresave{$key} = "$nosave";
+
 $key = q/commit_log_format/;
 $ref_files{$key} = "$dir".q|Format_of_the_commit_logs.html|; 
 $noresave{$key} = "$nosave";
